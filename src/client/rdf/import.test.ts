@@ -1,6 +1,6 @@
 import { assertEquals, assertRejects } from "@std/assert";
 import { DataFactory, Store } from "n3";
-import { applyImport } from "./import.ts";
+import { executeImport } from "./import.ts";
 
 const { namedNode, quad, literal } = DataFactory;
 
@@ -20,7 +20,7 @@ Deno.test("applyImport - merge mode combines quads without deleting existing", a
   const store = new Store();
   store.add(q1);
 
-  await applyImport(store, {
+  await executeImport(store, {
     mode: "merge",
     source: {
       kind: "quads",
@@ -41,7 +41,7 @@ Deno.test("applyImport - replace mode wipes existing data before importing", asy
   const store = new Store();
   store.add(q1);
 
-  await applyImport(store, {
+  await executeImport(store, {
     mode: "replace",
     source: {
       kind: "quads",
@@ -65,7 +65,7 @@ Deno.test("applyImport - source: dataset handles DatasetCore objects (e.g., othe
   sourceDataset.add(q1);
   sourceDataset.add(q2);
 
-  await applyImport(targetStore, {
+  await executeImport(targetStore, {
     mode: "merge",
     source: {
       kind: "dataset",
@@ -87,7 +87,7 @@ Deno.test("applyImport - source: serialized parses strings correctly (Turtle)", 
   const turtlePayload =
     `<http://example.org/s3> <http://example.org/p3> "serialized_value" .`;
 
-  await applyImport(store, {
+  await executeImport(store, {
     mode: "merge",
     source: {
       kind: "serialized",
@@ -113,7 +113,7 @@ Deno.test("applyImport - source: serialized uses application/n-quads as default"
   const nQuadsPayload =
     `<http://example.org/s4> <http://example.org/p4> <http://example.org/o4> <http://example.org/g4> .`;
 
-  await applyImport(store, {
+  await executeImport(store, {
     mode: "merge",
     source: {
       kind: "serialized",
@@ -138,7 +138,7 @@ Deno.test("applyImport - replace mode combined with serialized data correctly cl
   const turtlePayload =
     `<http://example.org/s_new> <http://example.org/p_new> "brand_new" .`;
 
-  await applyImport(store, {
+  await executeImport(store, {
     mode: "replace",
     source: {
       kind: "serialized",
@@ -166,7 +166,7 @@ Deno.test("applyImport - throws correctly when parsed serialized data is complet
 
   await assertRejects(
     async () => {
-      await applyImport(store, {
+      await executeImport(store, {
         mode: "merge",
         source: {
           kind: "serialized",

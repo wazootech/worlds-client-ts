@@ -1,7 +1,6 @@
 import type * as rdfjs from "@rdfjs/types";
 import { Readable } from "node:stream";
 import { Parser } from "n3";
-
 import { getFormat } from "./formats.ts";
 
 /**
@@ -41,9 +40,9 @@ function parseQuads(
 }
 
 /**
- * applyImport applies an import request to a store.
+ * executeImport applies an import request to a store.
  */
-export async function applyImport(
+export async function executeImport(
   store: rdfjs.Store,
   request: ImportRequest,
 ): Promise<ImportResponse> {

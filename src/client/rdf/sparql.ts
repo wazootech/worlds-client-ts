@@ -1,6 +1,9 @@
 import type * as rdfjs from "@rdfjs/types";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
+/**
+ * SparqlRequest is the request type for the sparql function.
+ */
 export interface SparqlRequest {
   /** The raw SPARQL query string. */
   query: string;
@@ -12,11 +15,17 @@ export interface SparqlRequest {
   timeoutMs?: number;
 }
 
+/**
+ * SparqlResponse is the response type for the sparql function.
+ */
 export type SparqlResponse =
   | { kind: "select"; data: SparqlSelectResults }
   | { kind: "ask"; data: SparqlAskResults }
   | { kind: "void" };
 
+/**
+ * SparqlAskResults is the response type for an ASK query.
+ */
 export type SparqlAskResults = {
   head: {
     link?: Array<string> | null;
@@ -24,6 +33,9 @@ export type SparqlAskResults = {
   boolean: boolean;
 };
 
+/**
+ * SparqlSelectResults is the response type for a SELECT query.
+ */
 export type SparqlSelectResults = {
   head: {
     vars: Array<string>;
@@ -35,7 +47,7 @@ export type SparqlSelectResults = {
 };
 
 /**
- * A value in a SPARQL binding (JSON-SPARQL shape).
+ * A value in a SPARQL binding.
  */
 export type SparqlValue =
   | { type: "uri"; value: string }
@@ -55,6 +67,9 @@ export type SparqlValue =
     };
   };
 
+/**
+ * SparqlBinding is a binding for a SPARQL query.
+ */
 export type SparqlBinding = Record<string, SparqlValue>;
 
 /** Default timeout for SPARQL queries (30 seconds). */
@@ -66,10 +81,13 @@ const DEFAULT_SPARQL_TIMEOUT_MS = 30_000;
 export const queryEngine: QueryEngine = new QueryEngine();
 
 /**
- * Executes a SPARQL query on an in-memory Store.
- * Supported: SELECT (bindings), ASK (boolean), UPDATE (void).
+ * executeSparql executes a SPARQL query on an RDFJS Store.
+ *
+ * @param store The RDFJS Store to execute the query on.
+ * @param request The SPARQL query request.
+ * @returns The SPARQL query response.
  */
-export async function applySparql(
+export async function executeSparql(
   store: rdfjs.Store,
   request: SparqlRequest,
 ): Promise<SparqlResponse> {

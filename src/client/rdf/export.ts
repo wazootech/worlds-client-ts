@@ -1,5 +1,10 @@
 import type * as rdfjs from "@rdfjs/types";
+import { Writer } from "n3";
+import { getFormat } from "./formats.ts";
 
+/**
+ * ExportRequest is the request type for the export function.
+ */
 export interface ExportRequest {
   /** Desired output format. */
   format:
@@ -7,14 +12,14 @@ export interface ExportRequest {
     | { kind: "serialized"; contentType?: string };
 }
 
+/**
+ * ExportResponse is the response type for the export function.
+ */
 export type ExportResponse =
   | { kind: "quads"; quads: rdfjs.Quad[] }
   | { kind: "serialized"; data: string; contentType: string };
 
-import { Writer } from "n3";
-import { getFormat } from "./formats.ts";
-
-export async function applyExport(
+export async function executeExport(
   store: rdfjs.Store,
   request: ExportRequest,
 ): Promise<ExportResponse> {

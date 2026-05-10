@@ -3,7 +3,7 @@ import type { Quad } from "n3";
 import { DataFactory, Parser, Store } from "n3";
 import { canonize } from "rdf-canonize";
 import { encodeBase64Url } from "@std/encoding/base64url";
-import { applySparql } from "./sparql.ts";
+import { executeSparql } from "./sparql.ts";
 
 Deno.test("Comunica QueryEngine can query an n3 Store (RDFJS)", async () => {
   const store = new Store();
@@ -18,7 +18,7 @@ Deno.test("Comunica QueryEngine can query an n3 Store (RDFJS)", async () => {
     DataFactory.namedNode("https://example.com/o2"),
   );
 
-  const response = await applySparql(store, {
+  const response = await executeSparql(store, {
     query:
       "SELECT ?o WHERE { <https://example.com/s> <https://example.com/p> ?o } ORDER BY ?o",
   });
@@ -71,7 +71,7 @@ Deno.test("Same SPARQL query works on bnodes vs processed (canonicalized + subje
 
   await t.step("query raw dataset with blank nodes", async () => {
     const original = new Store(quads);
-    const response = await applySparql(original, { query });
+    const response = await executeSparql(original, { query });
     if (response.kind !== "select") throw new Error("Expected select");
 
     bnodeRows = response.data.results.bindings.map((b) => ({
@@ -116,7 +116,7 @@ Deno.test("Same SPARQL query works on bnodes vs processed (canonicalized + subje
         );
       }
 
-      const response = await applySparql(processed, { query });
+      const response = await executeSparql(processed, { query });
       if (response.kind !== "select") throw new Error("Expected select");
 
       const processedRows = response.data.results.bindings.map((b) => ({

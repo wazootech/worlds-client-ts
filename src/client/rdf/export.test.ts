@@ -1,6 +1,6 @@
 import { assertEquals } from "@std/assert";
 import { DataFactory, Store } from "n3";
-import { applyExport } from "./export.ts";
+import { executeExport } from "./export.ts";
 
 const { namedNode, quad, literal } = DataFactory;
 
@@ -10,7 +10,7 @@ Deno.test("applyExport - returns all store quads directly when kind is 'quads'",
   const store = new Store();
   store.add(q1);
 
-  const response = await applyExport(store, {
+  const response = await executeExport(store, {
     format: { kind: "quads" },
   });
 
@@ -26,7 +26,7 @@ Deno.test("applyExport - returns serialized dump when kind is 'serialized'", asy
   const store = new Store();
   store.add(q1);
 
-  const response = await applyExport(store, {
+  const response = await executeExport(store, {
     format: { kind: "serialized", contentType: "text/turtle" },
   });
 
