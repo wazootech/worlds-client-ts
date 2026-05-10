@@ -1,6 +1,20 @@
 import type * as rdfjs from "@rdfjs/types";
 
 /**
+ * SearchFilters provides standard scoping properties usable by both include and exclude vectors.
+ */
+export interface SearchFilters {
+  /** Limit results to specific subject IRIs. */
+  subjects?: Array<string>;
+
+  /** Limit results to specific predicates. */
+  predicates?: Array<string>;
+
+  /** Limit by specific object rdf:types. */
+  types?: Array<string>;
+}
+
+/**
  * SearchRequest defines the parameters for executing a search.
  */
 export interface SearchRequest {
@@ -13,14 +27,11 @@ export interface SearchRequest {
   /** Cursor for iterating to the next result set. */
   pageToken?: string;
 
-  /** Optional filter to limit results to specific subject IRIs. */
-  subjects?: Array<string>;
+  /** Filter conditions limiting where the system searches. */
+  include?: SearchFilters;
 
-  /** Optional filter to limit results to specific predicates. */
-  predicates?: Array<string>;
-
-  /** Optional filter by specific object types. */
-  types?: Array<string>;
+  /** Filter conditions explicitly excluding hits. */
+  exclude?: SearchFilters;
 
   /** Selected execution algorithm. */
   mode?: "hybrid" | "vector" | "fts";
