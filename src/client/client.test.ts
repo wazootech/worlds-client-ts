@@ -7,7 +7,7 @@ Deno.test("Client.import delegates to executeImport and populates store", async 
 
   // Provide mock store via options
   const client = new Client({
-    getRdfjsStore: () => Promise.resolve(store),
+    store,
   });
 
   // Perform import via the client
@@ -32,7 +32,7 @@ Deno.test("Client.export delegates to executeExport", async () => {
   const store = new Store();
 
   const client = new Client({
-    getRdfjsStore: () => Promise.resolve(store),
+    store,
   });
 
   // Expect empty array back since store is empty
@@ -46,7 +46,7 @@ Deno.test("Client.sparql delegates to executeSparql", async () => {
   const store = new Store();
 
   const client = new Client({
-    getRdfjsStore: () => Promise.resolve(store),
+    store,
   });
 
   const response = await client.sparql({
@@ -67,7 +67,7 @@ Deno.test("Client.search delegates to executeSearch and returns hits", async () 
   );
 
   const client = new Client({
-    getRdfjsStore: () => Promise.resolve(store),
+    store,
   });
 
   const response = await client.search({ query: "integrate" });

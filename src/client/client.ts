@@ -16,10 +16,9 @@ import { executeSearch } from "#/client/search/search.ts";
  */
 export interface ClientOptions {
   /**
-   * getRdfjsStore is a function that provides the client with access to an
-   * RDFJS store.
+   * store is the RDFJS store that the client will use to store and retrieve data.
    */
-  getRdfjsStore(): Promise<rdfjs.Store>;
+  store: rdfjs.Store;
 }
 
 /**
@@ -29,22 +28,18 @@ export class Client implements ClientInterface {
   public constructor(private readonly options: ClientOptions) {}
 
   public async import(request: ImportRequest): Promise<ImportResponse> {
-    const store = await this.options.getRdfjsStore();
-    return await executeImport(store, request);
+    return await executeImport(this.options.store, request);
   }
 
   public async export(request: ExportRequest): Promise<ExportResponse> {
-    const store = await this.options.getRdfjsStore();
-    return await executeExport(store, request);
+    return await executeExport(this.options.store, request);
   }
 
   public async sparql(request: SparqlRequest): Promise<SparqlResponse> {
-    const store = await this.options.getRdfjsStore();
-    return await executeSparql(store, request);
+    return await executeSparql(this.options.store, request);
   }
 
   public async search(request: SearchRequest): Promise<SearchResponse> {
-    const store = await this.options.getRdfjsStore();
-    return await executeSearch(store, request);
+    return await executeSearch(this.options.store, request);
   }
 }
