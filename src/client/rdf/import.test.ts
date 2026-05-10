@@ -135,7 +135,8 @@ Deno.test("applyImport - replace mode combined with serialized data correctly cl
   const store = new Store();
   store.add(q1);
 
-  const turtlePayload = `<http://example.org/s_new> <http://example.org/p_new> "brand_new" .`;
+  const turtlePayload =
+    `<http://example.org/s_new> <http://example.org/p_new> "brand_new" .`;
 
   await applyImport(store, {
     mode: "replace",
@@ -146,16 +147,20 @@ Deno.test("applyImport - replace mode combined with serialized data correctly cl
     },
   });
 
-  assertEquals(store.size, 1, "Should clear old quads even when source is serialized");
+  assertEquals(
+    store.size,
+    1,
+    "Should clear old quads even when source is serialized",
+  );
   assertEquals(store.has(q1), false, "Old data should be eliminated");
-  
+
   const quads = store.getQuads(null, null, null, null);
   assertEquals(quads[0].object.value, "brand_new");
 });
 
 Deno.test("applyImport - throws correctly when parsed serialized data is completely invalid", async () => {
   const store = new Store();
-  
+
   // Invalid turtle that violates syntax
   const garbageData = `This is NOT valid turtle syntax @#%!$`;
 

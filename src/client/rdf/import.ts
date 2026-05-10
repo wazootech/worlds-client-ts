@@ -2,6 +2,8 @@ import type * as rdfjs from "@rdfjs/types";
 import { Readable } from "node:stream";
 import { Parser } from "n3";
 
+import { getFormat } from "./formats.ts";
+
 /**
  * ImportMode is the type of import to perform.
  * merge: Merge the import into the store.
@@ -32,8 +34,8 @@ function parseQuads(
   data: string,
   contentType?: string,
 ): rdfjs.Stream<rdfjs.Quad> {
-  // N3.Parser supports returning array of quads if used synchronously without callback
-  const parser = new Parser({ format: contentType ?? "application/n-quads" });
+  const { n3Format } = getFormat(contentType);
+  const parser = new Parser({ format: n3Format });
   const quads = parser.parse(data);
   return Readable.from(quads) as unknown as rdfjs.Stream<rdfjs.Quad>;
 }
