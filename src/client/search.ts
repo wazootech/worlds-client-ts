@@ -64,18 +64,6 @@ export interface SearchResult {
   vecRank?: number | null;
   ftsRank?: number | null;
   score: number;
-  /** Embedded metadata from the source origin. */
-  world?: World;
-}
-
-/**
- * Basic metadata referencing the world origin.
- */
-export interface World {
-  id: string;
-  name: string;
-  namespace?: string;
-  revision?: number;
 }
 
 /**
