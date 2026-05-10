@@ -90,9 +90,32 @@ export async function executeSearch(
   const stream = store.match(null, null, null, null);
   const results: Array<SearchResult> = [];
 
+  // Prepare fast lookup sets for inclusion/exclusion rules
+  const includeSubjects = request.include?.subjects
+    ? new Set(request.include.subjects)
+    : null;
+  const includePreds = request.include?.predicates
+    ? new Set(request.include.predicates)
+    : null;
+
+  const excludeSubjects = request.exclude?.subjects
+    ? new Set(request.exclude.subjects)
+    : null;
+  const excludePreds = request.exclude?.predicates
+    ? new Set(request.exclude.predicates)
+    : null;
+
   await new Promise<void>((resolve, reject) => {
     stream.on("data", (quad: rdfjs.Quad) => {
-      // We only inspect Literals for local keyword searching
+      // 1. Primary Filter: Exclusions ALWAYS trump
+      if (excludeSubjects?.has(quad.subject.value)) return;
+      if (excludePreds?.has(quad.predicate.value)) return;
+
+      // 2. Scope Filter: Inclusions strictly limit visibility
+      if (includeSubjects && !includeSubjects.has(quad.subject.value)) return;
+      if (includePreds && !includePreds.has(quad.predicate.value)) return;
+
+      // 3. Type Filter: Only inspect Literals for local keyword searching
       if (quad.object.termType === "Literal") {
         const value = quad.object.value;
         if (value.toLowerCase().includes(query)) {
@@ -100,7 +123,7 @@ export async function executeSearch(
             subject: quad.subject.value,
             predicate: quad.predicate.value,
             object: value,
-            score: 1.0, // Placeholder uniform score for simple local matching
+            score: 1.0,
             ftsRank: 1,
           });
         }
