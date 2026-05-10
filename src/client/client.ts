@@ -5,6 +5,10 @@ import type { ExportRequest, ExportResponse } from "#/client/rdf/export.ts";
 import type { SparqlRequest, SparqlResponse } from "#/client/rdf/sparql.ts";
 import type { SearchRequest, SearchResponse } from "#/client/search/search.ts";
 
+import { executeImport } from "#/client/rdf/import.ts";
+import { executeExport } from "#/client/rdf/export.ts";
+import { executeSparql } from "#/client/rdf/sparql.ts";
+
 /**
  * ClientOptions are the options for the Client.
  */
@@ -18,16 +22,19 @@ export interface ClientOptions {
 export class Client implements ClientInterface {
   public constructor(private readonly options: ClientOptions) {}
 
-  public import(_request: ImportRequest): Promise<ImportResponse> {
-    throw new Error("Method not implemented.");
+  public async import(request: ImportRequest): Promise<ImportResponse> {
+    const store = await this.options.getRdfjsStore();
+    return await executeImport(store, request);
   }
 
-  public export(_request: ExportRequest): Promise<ExportResponse> {
-    throw new Error("Method not implemented.");
+  public async export(request: ExportRequest): Promise<ExportResponse> {
+    const store = await this.options.getRdfjsStore();
+    return await executeExport(store, request);
   }
 
-  public sparql(_request: SparqlRequest): Promise<SparqlResponse> {
-    throw new Error("Method not implemented.");
+  public async sparql(request: SparqlRequest): Promise<SparqlResponse> {
+    const store = await this.options.getRdfjsStore();
+    return await executeSparql(store, request);
   }
 
   public search(_request: SearchRequest): Promise<SearchResponse> {
