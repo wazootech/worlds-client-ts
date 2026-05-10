@@ -17,8 +17,8 @@ export type ImportSource =
   | { kind: "serialized"; data: string; contentType?: string };
 
 export interface ImportRequest {
-  /** mode of import */
-  mode: ImportMode;
+  /** mode of import (defaults to "merge") */
+  mode?: ImportMode;
 
   /** source of data */
   source: ImportSource;
@@ -46,7 +46,8 @@ export async function executeImport(
   store: rdfjs.Store,
   request: ImportRequest,
 ): Promise<ImportResponse> {
-  if (request.mode === "replace") {
+  const mode = request.mode ?? "merge";
+  if (mode === "replace") {
     // Note: store.removeMatches is also streaming/async in standard RDF.js
     // But some stores like N3 offer it synchronously. We promise-ify the import stream below.
     store.removeMatches(null, null, null, null);

@@ -180,3 +180,22 @@ Deno.test("applyImport - throws correctly when parsed serialized data is complet
     "Should reject the promise when parsing invalid serial data",
   );
 });
+
+Deno.test("executeImport - omitting mode defaults to merge", async () => {
+  const store = new Store();
+  store.add(q1);
+
+  // No mode property explicitly provided
+  await executeImport(store, {
+    source: {
+      kind: "quads",
+      quads: [q2],
+    },
+  });
+
+  assertEquals(
+    store.size,
+    2,
+    "Should correctly default to merge and combine data",
+  );
+});

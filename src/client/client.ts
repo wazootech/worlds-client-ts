@@ -13,6 +13,10 @@ import { executeSparql } from "#/client/rdf/sparql.ts";
  * ClientOptions are the options for the Client.
  */
 export interface ClientOptions {
+  /**
+   * getRdfjsStore is a function that provides the client with access to an
+   * RDFJS store.
+   */
   getRdfjsStore(): Promise<rdfjs.Store>;
 }
 
