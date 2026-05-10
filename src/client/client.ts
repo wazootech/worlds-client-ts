@@ -1,15 +1,17 @@
 import type * as rdfjs from "@rdfjs/types";
 import type { ClientInterface } from "./interface.ts";
-import type { ImportRequest, ImportResponse } from "#/client/rdf/import.ts";
-import type { ExportRequest, ExportResponse } from "#/client/rdf/export.ts";
-import type { SparqlRequest, SparqlResponse } from "#/client/rdf/sparql.ts";
-import type { SearchRequest, SearchResponse } from "#/client/search/search.ts";
+import type {
+  ExportRequest,
+  ExportResponse,
+  ImportRequest,
+  ImportResponse,
+} from "./import-export.ts";
+import type { SparqlRequest, SparqlResponse } from "./sparql.ts";
+import type { SearchRequest, SearchResponse } from "./search.ts";
 
-import { executeImport } from "#/client/rdf/import.ts";
-import { executeExport } from "#/client/rdf/export.ts";
-import { executeSparql } from "#/client/rdf/sparql.ts";
-
-import { executeSearch } from "#/client/search/search.ts";
+import { executeExport, executeImport } from "./import-export.ts";
+import { executeSparql } from "./sparql.ts";
+import { executeSearch } from "./search.ts";
 
 /**
  * ClientOptions are the options for the Client.
