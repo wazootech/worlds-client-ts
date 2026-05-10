@@ -1,4 +1,4 @@
-/** 
+/**
  * RdfFormat is a type that represents the content type and n3Format for a given format.
  */
 export interface RdfFormat {
