@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { Store } from "n3";
+import { DataFactory, Store } from "n3";
 import { Client } from "./client.ts";
 
 Deno.test("Client.import delegates to executeImport and populates store", async () => {
@@ -57,13 +57,20 @@ Deno.test("Client.sparql delegates to executeSparql", async () => {
   assertEquals(response.data.boolean, false);
 });
 
-Deno.test("Client.search delegates to executeSearch", async () => {
+Deno.test("Client.search delegates to executeSearch and returns hits", async () => {
   const store = new Store();
+  // Populate with matching hit
+  store.addQuad(
+    DataFactory.namedNode("http://example.com/sub"),
+    DataFactory.namedNode("http://example.com/pred"),
+    DataFactory.literal("Integrate all systems."),
+  );
 
   const client = new Client({
     getRdfjsStore: () => Promise.resolve(store),
   });
 
-  const response = await client.search({ query: "findme" });
-  assertEquals(response.results?.length, 0);
+  const response = await client.search({ query: "integrate" });
+  assertEquals(response.results?.length, 1);
+  assertEquals(response.results?.[0].object, "Integrate all systems.");
 });
