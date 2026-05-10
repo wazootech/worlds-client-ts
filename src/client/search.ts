@@ -4,65 +4,51 @@ import type * as rdfjs from "@rdfjs/types";
  * SearchFilters provides standard scoping properties usable by both include and exclude vectors.
  */
 export interface SearchFilters {
-  /** Limit results to specific subject IRIs. */
+  /**
+   * Limit search scope to these specific subject IRIs.
+   *
+   * @tip This is the intended integration point for SPARQL composition.
+   * Run a `client.sparql()` query (e.g., `SELECT ?subject WHERE { ?subject a :Type }`),
+   * extract the identifiers, and pass them here to dynamically bound search space.
+   */
   subjects?: Array<string>;
 
-  /** Limit results to specific predicates. */
+  /**
+   * Limit search scope to specific attribute predicates.
+   * Use this to restrict keyword matching only to certain fields like `rdfs:comment`.
+   */
   predicates?: Array<string>;
-
-  /** Limit by specific object rdf:types. */
-  types?: Array<string>;
 }
 
 /**
- * SearchRequest defines the parameters for executing a search.
+ * SearchRequest defines the parameters for executing a keyword search.
  */
 export interface SearchRequest {
-  /** Search text to query against. */
+  /** The fuzzy text query evaluated against the graph's Literal objects. */
   query: string;
 
-  /** Page size for limiting result output. */
-  pageSize?: number;
-
-  /** Cursor for iterating to the next result set. */
-  pageToken?: string;
-
-  /** Filter conditions limiting where the system searches. */
+  /** Positive boundary conditions. If specified, results MUST match these criteria. */
   include?: SearchFilters;
 
-  /** Filter conditions explicitly excluding hits. */
+  /** Negative boundary conditions. Results matching these criteria are automatically suppressed. */
   exclude?: SearchFilters;
-
-  /** Selected execution algorithm. */
-  mode?: "hybrid" | "vector" | "fts";
-
-  /** Influence of vector vs full-text matching. */
-  weights?: {
-    vector?: number;
-    fts?: number;
-  };
 }
 
 /**
- * SearchResponse packages the list of hits and potential pagination context.
+ * SearchResponse packages the set of discovered triple hits.
  */
 export interface SearchResponse {
-  /** Found matches. */
+  /** Total collected hits matching criteria. */
   results?: Array<SearchResult>;
-
-  /** Opaque token pointing to the next page of results. */
-  nextPageToken?: string;
 }
 
 /**
- * A specific match from the graph including the triple source and relevance scores.
+ * A specific fuzzy match including source coordinates and relevance scoring.
  */
 export interface SearchResult {
   subject: string;
   predicate: string;
   object: string;
-  vecRank?: number | null;
-  ftsRank?: number | null;
   score: number;
 }
 
@@ -103,7 +89,7 @@ export async function executeSearch(
       if (includeSubjects && !includeSubjects.has(quad.subject.value)) return;
       if (includePreds && !includePreds.has(quad.predicate.value)) return;
 
-      // 3. Type Filter: Only inspect Literals for local keyword searching
+      // 3. Text Filter: Match literal string objects
       if (quad.object.termType === "Literal") {
         const value = quad.object.value;
         if (value.toLowerCase().includes(query)) {
@@ -112,7 +98,6 @@ export async function executeSearch(
             predicate: quad.predicate.value,
             object: value,
             score: 1.0,
-            ftsRank: 1,
           });
         }
       }
