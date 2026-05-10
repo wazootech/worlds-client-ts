@@ -19,6 +19,9 @@
   "links": [
     "./vendor/jsonld-context-parser"
   ],
+  "exclude": [
+    "vendor/jsonld-context-parser/**"
+  ],
   "tasks": {
     "fmt": "deno fmt",
     "fmt:check": "deno fmt --check",
@@ -34,15 +37,5 @@
         "test"
       ]
     }
-  },
-  "fmt": {
-    "exclude": [
-      "vendor/jsonld-context-parser/**"
-    ]
-  },
-  "lint": {
-    "exclude": [
-      "vendor/jsonld-context-parser/**"
-    ]
   }
 }
