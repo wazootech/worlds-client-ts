@@ -9,6 +9,8 @@ import { executeImport } from "#/client/rdf/import.ts";
 import { executeExport } from "#/client/rdf/export.ts";
 import { executeSparql } from "#/client/rdf/sparql.ts";
 
+import { executeSearch } from "#/client/search/search.ts";
+
 /**
  * ClientOptions are the options for the Client.
  */
@@ -41,7 +43,8 @@ export class Client implements ClientInterface {
     return await executeSparql(store, request);
   }
 
-  public search(_request: SearchRequest): Promise<SearchResponse> {
-    throw new Error("Method not implemented.");
+  public async search(request: SearchRequest): Promise<SearchResponse> {
+    const store = await this.options.getRdfjsStore();
+    return await executeSearch(store, request);
   }
 }

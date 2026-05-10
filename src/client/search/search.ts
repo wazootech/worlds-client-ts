@@ -1,9 +1,105 @@
-// deno-lint-ignore no-empty-interface
+import type * as rdfjs from "@rdfjs/types";
+
+/**
+ * SearchRequest defines the parameters for executing a search.
+ */
 export interface SearchRequest {
-  // TODO: define SearchRequest
+  /** Search text to query against. */
+  query: string;
+
+  /** Page size for limiting result output. */
+  pageSize?: number;
+
+  /** Cursor for iterating to the next result set. */
+  pageToken?: string;
+
+  /** Optional filter to limit results to specific subject IRIs. */
+  subjects?: Array<string>;
+
+  /** Optional filter to limit results to specific predicates. */
+  predicates?: Array<string>;
+
+  /** Optional filter by specific object types. */
+  types?: Array<string>;
+
+  /** Selected execution algorithm. */
+  mode?: "hybrid" | "vector" | "fts";
+
+  /** Influence of vector vs full-text matching. */
+  weights?: {
+    vector?: number;
+    fts?: number;
+  };
 }
 
-// deno-lint-ignore no-empty-interface
+/**
+ * SearchResponse packages the list of hits and potential pagination context.
+ */
 export interface SearchResponse {
-  // TODO: define SearchResponse
+  /** Found matches. */
+  results?: Array<SearchResult>;
+
+  /** Opaque token pointing to the next page of results. */
+  nextPageToken?: string;
+}
+
+/**
+ * A specific match from the graph including the triple source and relevance scores.
+ */
+export interface SearchResult {
+  subject: string;
+  predicate: string;
+  object: string;
+  vecRank?: number | null;
+  ftsRank?: number | null;
+  score: number;
+  /** Embedded metadata from the source origin. */
+  world?: World;
+}
+
+/**
+ * Basic metadata referencing the world origin.
+ */
+export interface World {
+  id: string;
+  name: string;
+  namespace?: string;
+  revision?: number;
+}
+
+/**
+ * executeSearch executes a keyword search request against an in-memory RDFJS store.
+ * Currently performs case-insensitive string inclusion scanning of Literal objects.
+ */
+export async function executeSearch(
+  store: rdfjs.Store,
+  request: SearchRequest,
+): Promise<SearchResponse> {
+  const query = request.query.toLowerCase();
+  const stream = store.match(null, null, null, null);
+  const results: Array<SearchResult> = [];
+
+  await new Promise<void>((resolve, reject) => {
+    stream.on("data", (quad: rdfjs.Quad) => {
+      // We only inspect Literals for local keyword searching
+      if (quad.object.termType === "Literal") {
+        const value = quad.object.value;
+        if (value.toLowerCase().includes(query)) {
+          results.push({
+            subject: quad.subject.value,
+            predicate: quad.predicate.value,
+            object: value,
+            score: 1.0, // Placeholder uniform score for simple local matching
+            ftsRank: 1,
+          });
+        }
+      }
+    });
+    stream.on("end", resolve);
+    stream.on("error", reject);
+  });
+
+  return {
+    results,
+  };
 }

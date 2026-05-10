@@ -56,3 +56,14 @@ Deno.test("Client.sparql delegates to executeSparql", async () => {
   if (response.kind !== "ask") throw new Error("Should be ask");
   assertEquals(response.data.boolean, false);
 });
+
+Deno.test("Client.search delegates to executeSearch", async () => {
+  const store = new Store();
+
+  const client = new Client({
+    getRdfjsStore: () => Promise.resolve(store),
+  });
+
+  const response = await client.search({ query: "findme" });
+  assertEquals(response.results?.length, 0);
+});
