@@ -1,4 +1,4 @@
-import { Client } from "@worlds/sdk";
+import { Client } from "@worlds/client";
 import { Store } from "n3";
 
 if (import.meta.main) {
