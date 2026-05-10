@@ -1,5 +1,4 @@
 import type * as rdfjs from "@rdfjs/types";
-
 import { Readable } from "node:stream";
 import { Parser } from "n3";
 
@@ -34,7 +33,7 @@ function parseQuads(
   contentType?: string,
 ): rdfjs.Stream<rdfjs.Quad> {
   // N3.Parser supports returning array of quads if used synchronously without callback
-  const parser = new Parser({ format: contentType || "application/n-quads" });
+  const parser = new Parser({ format: contentType ?? "application/n-quads" });
   const quads = parser.parse(data);
   return Readable.from(quads) as unknown as rdfjs.Stream<rdfjs.Quad>;
 }

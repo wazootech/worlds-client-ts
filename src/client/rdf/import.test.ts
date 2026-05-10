@@ -1,4 +1,4 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals, assertRejects } from "@std/assert";
 import { DataFactory, Store } from "n3";
 import { applyImport } from "./import.ts";
 
@@ -129,4 +129,49 @@ Deno.test("applyImport - source: serialized uses application/n-quads as default"
   );
   const imported = store.getQuads(null, null, null, null)[0];
   assertEquals(imported.graph.value, "http://example.org/g4");
+});
+
+Deno.test("applyImport - replace mode combined with serialized data correctly clears and imports", async () => {
+  const store = new Store();
+  store.add(q1);
+
+  const turtlePayload = `<http://example.org/s_new> <http://example.org/p_new> "brand_new" .`;
+
+  await applyImport(store, {
+    mode: "replace",
+    source: {
+      kind: "serialized",
+      data: turtlePayload,
+      contentType: "text/turtle",
+    },
+  });
+
+  assertEquals(store.size, 1, "Should clear old quads even when source is serialized");
+  assertEquals(store.has(q1), false, "Old data should be eliminated");
+  
+  const quads = store.getQuads(null, null, null, null);
+  assertEquals(quads[0].object.value, "brand_new");
+});
+
+Deno.test("applyImport - throws correctly when parsed serialized data is completely invalid", async () => {
+  const store = new Store();
+  
+  // Invalid turtle that violates syntax
+  const garbageData = `This is NOT valid turtle syntax @#%!$`;
+
+  await assertRejects(
+    async () => {
+      await applyImport(store, {
+        mode: "merge",
+        source: {
+          kind: "serialized",
+          data: garbageData,
+          contentType: "text/turtle",
+        },
+      });
+    },
+    Error,
+    undefined,
+    "Should reject the promise when parsing invalid serial data",
+  );
 });
