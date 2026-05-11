@@ -1,16 +1,25 @@
 import { assertEquals } from "@std/assert";
 import { DataFactory, Store } from "n3";
 import { Client } from "./client.ts";
+import { RdfjsQuadStore } from "./quad-store/mod.ts";
+import { ComunicaSparqlEngine } from "./sparql-engine/mod.ts";
+import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
+import { RdfjsSearchIndex } from "./search-index/mod.ts";
 
-Deno.test("Client.import delegates to executeImport and populates store", async () => {
-  const store = new Store();
+const queryEngine = new QueryEngine();
 
-  // Provide mock store via options
-  const client = new Client({
-    store,
+function createTestClient(store: Store): Client {
+  return new Client({
+    quadStore: new RdfjsQuadStore(store),
+    sparqlEngine: new ComunicaSparqlEngine({ queryEngine, store }),
+    searchIndex: new RdfjsSearchIndex(store),
   });
+}
 
-  // Perform import via the client
+Deno.test("Client.import delegates to quadStore.import", async () => {
+  const store = new Store();
+  const client = createTestClient(store);
+
   await client.import({
     mode: "merge",
     source: {
@@ -24,30 +33,23 @@ Deno.test("Client.import delegates to executeImport and populates store", async 
   assertEquals(
     store.size,
     1,
-    "Client should have successfully invoked importer on its store",
+    "Client should have successfully invoked quadStore import",
   );
 });
 
-Deno.test("Client.export delegates to executeExport", async () => {
+Deno.test("Client.export delegates to quadStore.export", async () => {
   const store = new Store();
+  const client = createTestClient(store);
 
-  const client = new Client({
-    store,
-  });
-
-  // Expect empty array back since store is empty
   const response = await client.export({ format: { kind: "quads" } });
 
   if (response.kind !== "quads") throw new Error("Should be quads");
   assertEquals(response.quads.length, 0);
 });
 
-Deno.test("Client.sparql delegates to executeSparql", async () => {
+Deno.test("Client.sparql delegates to sparqlEngine.execute", async () => {
   const store = new Store();
-
-  const client = new Client({
-    store,
-  });
+  const client = createTestClient(store);
 
   const response = await client.sparql({
     query: "ASK WHERE { ?s ?p ?o }",
@@ -57,18 +59,15 @@ Deno.test("Client.sparql delegates to executeSparql", async () => {
   assertEquals(response.data.boolean, false);
 });
 
-Deno.test("Client.search delegates to executeSearch and returns hits", async () => {
+Deno.test("Client.search delegates to searchIndex.search", async () => {
   const store = new Store();
-  // Populate with matching hit
   store.addQuad(
     DataFactory.namedNode("http://example.com/sub"),
     DataFactory.namedNode("http://example.com/pred"),
     DataFactory.literal("Integrate all systems."),
   );
 
-  const client = new Client({
-    store,
-  });
+  const client = createTestClient(store);
 
   const response = await client.search({ query: "integrate" });
   assertEquals(response.results?.length, 1);

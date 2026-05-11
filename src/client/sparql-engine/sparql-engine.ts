@@ -1,84 +1,48 @@
 import type * as rdfjs from "@rdfjs/types";
-import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
+import type { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
+import type {
+  SparqlAskResults,
+  SparqlBinding,
+  SparqlEngineInterface,
+  SparqlRequest,
+  SparqlResponse,
+  SparqlSelectResults,
+  SparqlValue,
+} from "./interface.ts";
 
 /**
- * SparqlRequest is the request type for the sparql function.
+ * ComunicaSparqlEngineOptions are the options for ComunicaSparqlEngine.
  */
-export interface SparqlRequest {
-  /** The raw SPARQL query string. */
-  query: string;
+export interface ComunicaSparqlEngineOptions {
+  /**
+   * store is the RDFJS store to execute the query on.
+   */
+  store: rdfjs.Store;
 
-  /** Base IRI for the query. */
-  baseIRI?: string;
-
-  /** Query timeout in milliseconds (defaults to 30 seconds). */
-  timeoutMs?: number;
+  /**
+   * queryEngine is the Comunica query engine to use.
+   */
+  queryEngine: QueryEngine;
 }
 
 /**
- * SparqlResponse is the response type for the sparql function.
+ * ComunicaSparqlEngine is the standard implementation of SparqlEngineInterface
+ * that uses the Comunica engine over a local RDFJS store.
  */
-export type SparqlResponse =
-  | { kind: "select"; data: SparqlSelectResults }
-  | { kind: "ask"; data: SparqlAskResults }
-  | { kind: "void" };
+export class ComunicaSparqlEngine implements SparqlEngineInterface {
+  constructor(private readonly options: ComunicaSparqlEngineOptions) {}
 
-/**
- * SparqlAskResults is the response type for an ASK query.
- */
-export type SparqlAskResults = {
-  head: {
-    link?: Array<string> | null;
-  };
-  boolean: boolean;
-};
-
-/**
- * SparqlSelectResults is the response type for a SELECT query.
- */
-export type SparqlSelectResults = {
-  head: {
-    vars: Array<string>;
-    link?: Array<string> | null;
-  };
-  results: {
-    bindings: Array<SparqlBinding>;
-  };
-};
-
-/**
- * A value in a SPARQL binding.
- */
-export type SparqlValue =
-  | { type: "uri"; value: string }
-  | { type: "bnode"; value: string }
-  | {
-    type: "literal";
-    value: string;
-    "xml:lang"?: string;
-    datatype?: string;
+  public async execute(request: SparqlRequest): Promise<SparqlResponse> {
+    return await executeSparql(
+      this.options.queryEngine,
+      this.options.store,
+      request,
+    );
   }
-  | {
-    type: "triple";
-    value: {
-      subject: SparqlValue;
-      predicate: SparqlValue;
-      object: SparqlValue;
-    };
-  };
-
-/**
- * SparqlBinding is a binding for a SPARQL query.
- */
-export type SparqlBinding = Record<string, SparqlValue>;
+}
 
 /** Default timeout for SPARQL queries (30 seconds). */
 const DEFAULT_SPARQL_TIMEOUT_MS = 30_000;
-
-/**
- * queryEngine is a singleton instance of the Comunica QueryEngine.
- */
-export const queryEngine: QueryEngine = new QueryEngine();
 
 /**
  * executeSparql executes a SPARQL query on an RDFJS Store.
@@ -88,14 +52,13 @@ export const queryEngine: QueryEngine = new QueryEngine();
  * @returns The SPARQL query response.
  */
 export async function executeSparql(
+  queryEngine: QueryEngine,
   store: rdfjs.Store,
   request: SparqlRequest,
 ): Promise<SparqlResponse> {
   const timeoutMs = request.timeoutMs ?? DEFAULT_SPARQL_TIMEOUT_MS;
-
   return await new Promise((resolve, reject) => {
     let timer: number | undefined = undefined;
-
     const clearTimer = () => {
       if (timer !== undefined) {
         clearTimeout(timer);

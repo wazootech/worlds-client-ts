@@ -1,6 +1,29 @@
 import type * as rdfjs from "@rdfjs/types";
 import { Readable } from "node:stream";
 import { Parser, Writer } from "n3";
+import type {
+  ExportRequest,
+  ExportResponse,
+  ImportRequest,
+  ImportResponse,
+  QuadStoreInterface,
+} from "./interface.ts";
+
+/**
+ * RdfjsQuadStore is the standard implementation of the QuadStoreInterface that uses
+ * an underlying in-memory or compatible RDFJS Store.
+ */
+export class RdfjsQuadStore implements QuadStoreInterface {
+  constructor(private readonly store: rdfjs.Store) {}
+
+  public async import(request: ImportRequest): Promise<ImportResponse> {
+    return await executeImport(this.store, request);
+  }
+
+  public async export(request: ExportRequest): Promise<ExportResponse> {
+    return await executeExport(this.store, request);
+  }
+}
 
 /**
  * RdfFormat is a type that represents the content type and n3Format for a given format.
@@ -33,30 +56,6 @@ export function getFormat(contentType: string | undefined): RdfFormat {
   const format = contentType?.toLowerCase() || "application/n-quads";
   return FORMATS[format] || FORMATS["application/n-quads"];
 }
-
-/**
- * ImportMode is the type of import to perform.
- */
-export type ImportMode = "merge" | "replace";
-
-/** What data are we importing? */
-export type ImportSource =
-  | { kind: "quads"; quads: Iterable<rdfjs.Quad> }
-  | { kind: "dataset"; dataset: rdfjs.DatasetCore }
-  | { kind: "serialized"; data: string; contentType?: string };
-
-export interface ImportRequest {
-  /** mode of import (defaults to "merge") */
-  mode?: ImportMode;
-
-  /** source of data */
-  source: ImportSource;
-}
-
-/**
- * ImportResponse is the response from an import operation.
- */
-export type ImportResponse = void;
 
 function parseQuads(
   data: string,
@@ -101,23 +100,6 @@ export async function executeImport(
     res.on("error", reject);
   });
 }
-
-/**
- * ExportRequest is the request type for the export function.
- */
-export interface ExportRequest {
-  /** Desired output format. */
-  format:
-    | { kind: "quads" }
-    | { kind: "serialized"; contentType?: string };
-}
-
-/**
- * ExportResponse is the response type for the export function.
- */
-export type ExportResponse =
-  | { kind: "quads"; quads: rdfjs.Quad[] }
-  | { kind: "serialized"; data: string; contentType: string };
 
 /**
  * executeExport extracts all quads from the store in requested shape.

@@ -3,9 +3,9 @@ import type {
   ExportResponse,
   ImportRequest,
   ImportResponse,
-} from "./import-export.ts";
-import type { SparqlRequest, SparqlResponse } from "./sparql.ts";
-import type { SearchRequest, SearchResponse } from "./search.ts";
+} from "./quad-store/mod.ts";
+import type { SearchRequest, SearchResponse } from "./search-index/mod.ts";
+import type { SparqlRequest, SparqlResponse } from "./sparql-engine/mod.ts";
 
 /**
  * ClientInterface is the client interface for the Worlds API.

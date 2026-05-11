@@ -1,6 +1,6 @@
 import { assertEquals, assertRejects } from "@std/assert";
 import { DataFactory, Store } from "n3";
-import { executeExport, executeImport } from "./import-export.ts";
+import { executeExport, executeImport } from "./quad-store.ts";
 
 const { namedNode, quad, literal } = DataFactory;
 

@@ -1,6 +1,6 @@
 import { assertEquals } from "@std/assert";
 import { DataFactory, Store } from "n3";
-import { executeSearch } from "./search.ts";
+import { executeSearch } from "./search-index.ts";
 
 Deno.test("executeSearch - returns literal matching text locally", async () => {
   const store = new Store();

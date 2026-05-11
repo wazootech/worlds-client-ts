@@ -1,62 +1,63 @@
-import type * as rdfjs from "@rdfjs/types";
 import type { ClientInterface } from "./interface.ts";
 import type {
   ExportRequest,
   ExportResponse,
   ImportRequest,
   ImportResponse,
-} from "./import-export.ts";
-import type { SparqlRequest, SparqlResponse } from "./sparql.ts";
+  QuadStoreInterface,
+} from "./quad-store/mod.ts";
 import type {
+  SparqlEngineInterface,
+  SparqlRequest,
+  SparqlResponse,
+} from "./sparql-engine/mod.ts";
+import type {
+  SearchIndexInterface,
   SearchRequest,
   SearchResponse,
-  SearchServiceInterface,
-} from "./search.ts";
-
-import { executeExport, executeImport } from "./import-export.ts";
-import { executeSparql } from "./sparql.ts";
-import { DefaultSearchService, executeSearch } from "./search.ts";
+} from "./search-index/mod.ts";
 
 /**
  * ClientOptions are the options for the Client.
  */
 export interface ClientOptions {
   /**
-   * store is the RDFJS store that the client will use to store and retrieve data.
+   * quadStore manages the ingestion and extraction of triple/quad data.
    */
-  store: rdfjs.Store;
+  quadStore: QuadStoreInterface;
 
   /**
-   * searchService is the search service that the client will use to search the store.
+   * sparqlEngine evaluates declarative queries and updates against the graph.
    */
-  searchService?: SearchServiceInterface;
+  sparqlEngine: SparqlEngineInterface;
+
+  /**
+   * searchIndex enables high-performance keyword search across the graph literals.
+   */
+  searchIndex: SearchIndexInterface;
 }
 
 /**
- * Client is the client for the Worlds API.
+ * Client is the standard gateway client for the Worlds API.
+ * It aggregates the specialized capabilities for data persistence,
+ * declarative querying, and fuzzy searching.
  */
 export class Client implements ClientInterface {
-  public constructor(private readonly options: ClientOptions) {
-    this.options.searchService ??= new DefaultSearchService(options.store);
-  }
+  public constructor(private readonly options: ClientOptions) {}
 
   public async import(request: ImportRequest): Promise<ImportResponse> {
-    return await executeImport(this.options.store, request);
+    return await this.options.quadStore.import(request);
   }
 
   public async export(request: ExportRequest): Promise<ExportResponse> {
-    return await executeExport(this.options.store, request);
+    return await this.options.quadStore.export(request);
   }
 
   public async sparql(request: SparqlRequest): Promise<SparqlResponse> {
-    return await executeSparql(this.options.store, request);
+    return await this.options.sparqlEngine.execute(request);
   }
 
   public async search(request: SearchRequest): Promise<SearchResponse> {
-    if (this.options.searchService) {
-      return await this.options.searchService.search(request);
-    }
-
-    return await executeSearch(this.options.store, request);
+    return await this.options.searchIndex.search(request);
   }
 }
