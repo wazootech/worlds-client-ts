@@ -73,7 +73,7 @@ export async function executeSparql(
 
     queryEngine.query(request.query, {
       sources: [store],
-      baseIRI: request.baseIRI,
+      baseIRI: request.baseIri,
     }).then(async (queryType) => {
       clearTimer();
 

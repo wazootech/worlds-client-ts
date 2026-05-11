@@ -18,7 +18,7 @@ export interface SparqlRequest {
   query: string;
 
   /** Base IRI for the query execution. */
-  baseIRI?: string;
+  baseIri?: string;
 
   /** Query timeout in milliseconds (defaults to 30 seconds). */
   timeoutMs?: number;

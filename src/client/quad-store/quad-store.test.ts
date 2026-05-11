@@ -1,6 +1,6 @@
 import { assertEquals, assertRejects } from "@std/assert";
 import { DataFactory, Store } from "n3";
-import { executeExport, executeImport } from "./quad-store.ts";
+import { RdfjsQuadStore } from "./quad-store.ts";
 
 const { namedNode, quad, literal } = DataFactory;
 
@@ -16,11 +16,11 @@ const q2 = quad(
   literal("value2"),
 );
 
-Deno.test("executeImport - merge mode combines quads without deleting existing", async () => {
+Deno.test("RdfjsQuadStore.import - merge mode combines quads without deleting existing", async () => {
   const store = new Store();
   store.add(q1);
 
-  await executeImport(store, {
+  await new RdfjsQuadStore(store).import({
     mode: "merge",
     source: {
       kind: "quads",
@@ -33,11 +33,11 @@ Deno.test("executeImport - merge mode combines quads without deleting existing",
   assertEquals(store.has(q2), true);
 });
 
-Deno.test("executeImport - replace mode wipes existing data before importing", async () => {
+Deno.test("RdfjsQuadStore.import - replace mode wipes existing data before importing", async () => {
   const store = new Store();
   store.add(q1);
 
-  await executeImport(store, {
+  await new RdfjsQuadStore(store).import({
     mode: "replace",
     source: {
       kind: "quads",
@@ -50,13 +50,13 @@ Deno.test("executeImport - replace mode wipes existing data before importing", a
   assertEquals(store.has(q2), true);
 });
 
-Deno.test("executeImport - source: dataset handles DatasetCore objects", async () => {
+Deno.test("RdfjsQuadStore.import - source: dataset handles DatasetCore objects", async () => {
   const targetStore = new Store();
   const sourceDataset = new Store();
   sourceDataset.add(q1);
   sourceDataset.add(q2);
 
-  await executeImport(targetStore, {
+  await new RdfjsQuadStore(targetStore).import({
     source: {
       kind: "dataset",
       dataset: sourceDataset,
@@ -66,11 +66,11 @@ Deno.test("executeImport - source: dataset handles DatasetCore objects", async (
   assertEquals(targetStore.size, 2);
 });
 
-Deno.test("executeImport - source: serialized parses Turtle successfully", async () => {
+Deno.test("RdfjsQuadStore.import - source: serialized parses Turtle successfully", async () => {
   const store = new Store();
   const turtle = `<http://example.org/s3> <http://example.org/p3> "value" .`;
 
-  await executeImport(store, {
+  await new RdfjsQuadStore(store).import({
     source: {
       kind: "serialized",
       data: turtle,
@@ -81,20 +81,20 @@ Deno.test("executeImport - source: serialized parses Turtle successfully", async
   assertEquals(store.size, 1);
 });
 
-Deno.test("executeImport - source: serialized defaults to N-Quads", async () => {
+Deno.test("RdfjsQuadStore.import - source: serialized defaults to N-Quads", async () => {
   const store = new Store();
   const nQuads =
     `<http://example.org/s4> <http://example.org/p4> <http://example.org/o4> <http://example.org/g4> .`;
-  await executeImport(store, {
+  await new RdfjsQuadStore(store).import({
     source: { kind: "serialized", data: nQuads },
   });
   assertEquals(store.size, 1);
 });
 
-Deno.test("executeImport - replace mode combined with serialized data clears", async () => {
+Deno.test("RdfjsQuadStore.import - replace mode combined with serialized data clears", async () => {
   const store = new Store();
   store.add(q1);
-  await executeImport(store, {
+  await new RdfjsQuadStore(store).import({
     mode: "replace",
     source: {
       kind: "serialized",
@@ -106,11 +106,11 @@ Deno.test("executeImport - replace mode combined with serialized data clears", a
   assertEquals(store.has(q1), false);
 });
 
-Deno.test("executeImport - invalid serialization rejects properly", async () => {
+Deno.test("RdfjsQuadStore.import - invalid serialization rejects properly", async () => {
   const store = new Store();
 
   await assertRejects(async () => {
-    await executeImport(store, {
+    await new RdfjsQuadStore(store).import({
       source: {
         kind: "serialized",
         data: "GARBAGE SNOT@@$",
@@ -120,11 +120,11 @@ Deno.test("executeImport - invalid serialization rejects properly", async () => 
   });
 });
 
-Deno.test("executeImport - omitting mode defaults to merge", async () => {
+Deno.test("RdfjsQuadStore.import - omitting mode defaults to merge", async () => {
   const store = new Store();
   store.add(q1);
 
-  await executeImport(store, {
+  await new RdfjsQuadStore(store).import({
     source: {
       kind: "quads",
       quads: [q2],
@@ -134,11 +134,11 @@ Deno.test("executeImport - omitting mode defaults to merge", async () => {
   assertEquals(store.size, 2);
 });
 
-Deno.test("executeExport - returns all store quads directly", async () => {
+Deno.test("RdfjsQuadStore.export - returns all store quads directly", async () => {
   const store = new Store();
   store.add(q1);
 
-  const response = await executeExport(store, {
+  const response = await new RdfjsQuadStore(store).export({
     format: { kind: "quads" },
   });
 
@@ -146,11 +146,11 @@ Deno.test("executeExport - returns all store quads directly", async () => {
   assertEquals(response.quads.length, 1);
 });
 
-Deno.test("executeExport - returns serialized dump", async () => {
+Deno.test("RdfjsQuadStore.export - returns serialized dump", async () => {
   const store = new Store();
   store.add(q1);
 
-  const response = await executeExport(store, {
+  const response = await new RdfjsQuadStore(store).export({
     format: { kind: "serialized", contentType: "text/turtle" },
   });
 

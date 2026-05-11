@@ -17,11 +17,67 @@ export class RdfjsQuadStore implements QuadStoreInterface {
   constructor(private readonly store: rdfjs.Store) {}
 
   public async import(request: ImportRequest): Promise<ImportResponse> {
-    return await executeImport(this.store, request);
+    const mode = request.mode ?? "merge";
+    if (mode === "replace") {
+      this.store.removeMatches(null, null, null, null);
+    }
+
+    let stream: rdfjs.Stream<rdfjs.Quad>;
+    if (request.source.kind === "quads") {
+      stream = Readable.from(request.source.quads) as unknown as rdfjs.Stream<
+        rdfjs.Quad
+      >;
+    } else if (request.source.kind === "dataset") {
+      stream = Readable.from(request.source.dataset) as unknown as rdfjs.Stream<
+        rdfjs.Quad
+      >;
+    } else if (request.source.kind === "serialized") {
+      stream = parseQuads(request.source.data, request.source.contentType);
+    } else {
+      throw new Error("Unsupported import source kind");
+    }
+
+    return await new Promise<void>((resolve, reject) => {
+      const res = this.store.import(stream);
+      res.on("end", resolve);
+      res.on("error", reject);
+    });
   }
 
   public async export(request: ExportRequest): Promise<ExportResponse> {
-    return await executeExport(this.store, request);
+    const stream = this.store.match(null, null, null, null);
+    const quads: rdfjs.Quad[] = [];
+
+    await new Promise<void>((resolve, reject) => {
+      stream.on("data", (q: rdfjs.Quad) => quads.push(q));
+      stream.on("end", resolve);
+      stream.on("error", reject);
+    });
+
+    if (request.format.kind === "quads") {
+      return { kind: "quads", quads };
+    }
+
+    if (request.format.kind === "serialized") {
+      const contentType = request.format.contentType ?? "application/n-quads";
+      const { n3Format } = getFormat(contentType);
+
+      const writer = new Writer({ format: n3Format });
+      for (const q of quads) {
+        writer.addQuad(q);
+      }
+
+      const data = await new Promise<string>((resolve, reject) => {
+        writer.end((error: Error | null, result?: string) => {
+          if (error) reject(error);
+          else resolve(result ?? "");
+        });
+      });
+
+      return { kind: "serialized", data, contentType };
+    }
+
+    throw new Error("Invalid format requested");
   }
 }
 
@@ -65,80 +121,4 @@ function parseQuads(
   const parser = new Parser({ format: n3Format });
   const quads = parser.parse(data);
   return Readable.from(quads) as unknown as rdfjs.Stream<rdfjs.Quad>;
-}
-
-/**
- * executeImport applies an import request to a store.
- */
-export async function executeImport(
-  store: rdfjs.Store,
-  request: ImportRequest,
-): Promise<ImportResponse> {
-  const mode = request.mode ?? "merge";
-  if (mode === "replace") {
-    store.removeMatches(null, null, null, null);
-  }
-
-  let stream: rdfjs.Stream<rdfjs.Quad>;
-  if (request.source.kind === "quads") {
-    stream = Readable.from(request.source.quads) as unknown as rdfjs.Stream<
-      rdfjs.Quad
-    >;
-  } else if (request.source.kind === "dataset") {
-    stream = Readable.from(request.source.dataset) as unknown as rdfjs.Stream<
-      rdfjs.Quad
-    >;
-  } else if (request.source.kind === "serialized") {
-    stream = parseQuads(request.source.data, request.source.contentType);
-  } else {
-    throw new Error("Unsupported import source kind");
-  }
-
-  return await new Promise<void>((resolve, reject) => {
-    const res = store.import(stream);
-    res.on("end", resolve);
-    res.on("error", reject);
-  });
-}
-
-/**
- * executeExport extracts all quads from the store in requested shape.
- */
-export async function executeExport(
-  store: rdfjs.Store,
-  request: ExportRequest,
-): Promise<ExportResponse> {
-  const stream = store.match(null, null, null, null);
-  const quads: rdfjs.Quad[] = [];
-
-  await new Promise<void>((resolve, reject) => {
-    stream.on("data", (q: rdfjs.Quad) => quads.push(q));
-    stream.on("end", resolve);
-    stream.on("error", reject);
-  });
-
-  if (request.format.kind === "quads") {
-    return { kind: "quads", quads };
-  }
-
-  if (request.format.kind === "serialized") {
-    const contentType = request.format.contentType ?? "application/n-quads";
-    const { n3Format } = getFormat(contentType);
-
-    const writer = new Writer({ format: n3Format });
-    for (const q of quads) {
-      writer.addQuad(q);
-    }
-
-    const data = await new Promise<string>((resolve, reject) => {
-      writer.end((error: Error | null, result?: string) => {
-        if (error) reject(error);
-        else resolve(result ?? "");
-      });
-    });
-
-    return { kind: "serialized", data, contentType };
-  }
-
-  throw new Error("Invalid format requested");
 }

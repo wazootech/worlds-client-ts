@@ -1,8 +1,8 @@
 import { assertEquals } from "@std/assert";
 import { DataFactory, Store } from "n3";
-import { executeSearch } from "./search-index.ts";
+import { RdfjsSearchIndex } from "./search-index.ts";
 
-Deno.test("executeSearch - returns literal matching text locally", async () => {
+Deno.test("RdfjsSearchIndex.search - returns literal matching text locally", async () => {
   const store = new Store();
   store.addQuad(
     DataFactory.namedNode("http://example.com/entity1"),
@@ -15,7 +15,8 @@ Deno.test("executeSearch - returns literal matching text locally", async () => {
     DataFactory.literal("Boring non-matching payload"),
   );
 
-  const response = await executeSearch(store, {
+  const searchIndex = new RdfjsSearchIndex(store);
+  const response = await searchIndex.search({
     query: "Tacos",
   });
 
@@ -26,7 +27,7 @@ Deno.test("executeSearch - returns literal matching text locally", async () => {
   );
 });
 
-Deno.test("executeSearch - inclusion filters strictly limit results to allowed subjects", async () => {
+Deno.test("RdfjsSearchIndex.search - inclusion filters strictly limit results to allowed subjects", async () => {
   const store = new Store();
   const targetSubject = "http://example.com/target";
   store.addQuad(
@@ -40,7 +41,8 @@ Deno.test("executeSearch - inclusion filters strictly limit results to allowed s
     DataFactory.literal("Match me!"),
   );
 
-  const response = await executeSearch(store, {
+  const searchIndex = new RdfjsSearchIndex(store);
+  const response = await searchIndex.search({
     query: "match",
     include: { subjects: [targetSubject] },
   });
@@ -49,7 +51,7 @@ Deno.test("executeSearch - inclusion filters strictly limit results to allowed s
   assertEquals(response.results?.[0].subject, targetSubject);
 });
 
-Deno.test("executeSearch - exclusion filters correctly strip matching predicates", async () => {
+Deno.test("RdfjsSearchIndex.search - exclusion filters correctly strip matching predicates", async () => {
   const store = new Store();
   const excludePred = "http://example.com/hidden";
   store.addQuad(
@@ -58,7 +60,8 @@ Deno.test("executeSearch - exclusion filters correctly strip matching predicates
     DataFactory.literal("Secret text query"),
   );
 
-  const response = await executeSearch(store, {
+  const searchIndex = new RdfjsSearchIndex(store);
+  const response = await searchIndex.search({
     query: "secret",
     exclude: { predicates: [excludePred] },
   });

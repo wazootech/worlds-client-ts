@@ -9,6 +9,7 @@
     "#/": "./src/",
     "@comunica/query-sparql-rdfjs-lite": "npm:@comunica/query-sparql-rdfjs-lite@^5.2.2",
     "@rdfjs/types": "npm:@rdfjs/types@^2.0.1",
+    "@libsql/client": "npm:@libsql/client@^0.17.3",
     "@std/assert": "jsr:@std/assert@^1.0.19",
     "@std/encoding": "jsr:@std/encoding@^1.0.10",
     "@std/fs": "jsr:@std/fs@^1.0.23",
