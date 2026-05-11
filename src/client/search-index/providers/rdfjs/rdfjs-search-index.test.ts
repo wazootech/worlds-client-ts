@@ -22,7 +22,7 @@ Deno.test("RdfjsSearchIndex.search - returns literal matching text locally", asy
 
   assertEquals(response.results?.length, 1);
   assertEquals(
-    response.results?.[0].object,
+    response.results?.[0].text,
     "Found some delicious tacos for lunch",
   );
 });

@@ -23,7 +23,8 @@
     "./vendor/jsonld-context-parser"
   ],
   "exclude": [
-    "vendor/jsonld-context-parser/**"
+    "vendor/jsonld-context-parser/**",
+    ".prior-art"
   ],
   "tasks": {
     "example:hello-world": "deno -A ./examples/hello-world/main.ts",

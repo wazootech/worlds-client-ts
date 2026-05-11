@@ -61,7 +61,7 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
     const results: SearchResult[] = rs.rows.map((row) => ({
       subject: String(row["subject"]),
       predicate: String(row["predicate"]),
-      object: String(row["value"]),
+      text: String(row["value"]),
       score: Number(row["combined_rank"]),
     }));
 

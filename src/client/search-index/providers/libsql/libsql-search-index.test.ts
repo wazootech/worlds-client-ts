@@ -75,7 +75,7 @@ Deno.test("LibsqlSearchIndex - Tracer Bullet: performs basic hybrid search and m
   assertExists(first, "Expected at least one result.");
   assertEquals(first.subject, "urn:alice");
   assertEquals(first.predicate, "urn:name");
-  assertEquals(first.object, "Alice is the explorer");
+  assertEquals(first.text, "Alice is the explorer");
   assertEquals(typeof first.score, "number");
 });
 

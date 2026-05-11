@@ -41,12 +41,24 @@ export interface SearchResponse {
 }
 
 /**
- * A specific fuzzy match including source coordinates and relevance scoring.
+ * SearchResult is a hybrid keyword/vector hit against an RDF literal.
  */
 export interface SearchResult {
+  /** subject is the subject resource of the hit */
   subject: string;
+
+  /** predicate is the predicate resource of the hit */
   predicate: string;
-  object: string;
+
+  /** text is the literal object of the hit */
+  text: string;
+
+  /** title is the human-readable name for the subject, helpful for presentation. */
+  title?: string;
+
+  /**
+   * score is the combined rank of the hit (Reciprocal Rank Fusion).
+   */
   score: number;
 }
 

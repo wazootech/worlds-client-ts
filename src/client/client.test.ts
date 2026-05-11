@@ -71,5 +71,5 @@ Deno.test("Client.search delegates to searchIndex.search", async () => {
 
   const response = await client.search({ query: "integrate" });
   assertEquals(response.results?.length, 1);
-  assertEquals(response.results?.[0].object, "Integrate all systems.");
+  assertEquals(response.results?.[0].text, "Integrate all systems.");
 });

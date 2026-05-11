@@ -51,7 +51,7 @@ export class RdfjsSearchIndex implements SearchIndexInterface {
             results.push({
               subject: quad.subject.value,
               predicate: quad.predicate.value,
-              object: value,
+              text: value,
               score: 1.0,
             });
           }
