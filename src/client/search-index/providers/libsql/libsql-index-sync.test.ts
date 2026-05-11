@@ -10,11 +10,13 @@ import {
   makeLibsqlChunksIndex,
   makeLibsqlChunksTable,
   makeLibsqlChunksTriggers,
+  makeLibsqlQuadsTable,
 } from "./statements.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 
 async function setupSchema(client: ReturnType<typeof createClient>) {
+  await client.execute(makeLibsqlQuadsTable()); // <--- Demand Quads Table exist
   await client.execute(makeLibsqlChunksTable());
   await client.execute(makeLibsqlChunksQuadIdIndex());
   await client.execute(makeLibsqlChunksFtsTable());
@@ -35,7 +37,7 @@ class FakeEmbedder {
 const sharedSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000 });
 const sharedChunker = new QuadChunker({ splitter: sharedSplitter });
 
-Deno.test("LibsqlIndexSync - isolated writes and removals flush correctly", async () => {
+Deno.test("LibsqlIndexSync - isolated writes and removals flush correctly to BOTH chunks and quads", async () => {
   const client = createClient({ url: ":memory:" });
   await setupSchema(client);
 
@@ -57,9 +59,12 @@ Deno.test("LibsqlIndexSync - isolated writes and removals flush correctly", asyn
     deletions: [],
   });
 
-  // 2. Verify raw SQL count has exactly 1 row in chunk database
-  let rows = await client.execute("SELECT COUNT(*) as total FROM chunks");
-  assertEquals(rows.rows[0].total, 1, "Expected one chunk written to physical DB");
+  // 2. Verify both Tables updated
+  let chunkRows = await client.execute("SELECT COUNT(*) as total FROM chunks");
+  assertEquals(chunkRows.rows[0].total, 1, "Expected one chunk written to index");
+  
+  let quadRows = await client.execute("SELECT COUNT(*) as total FROM quads");
+  assertEquals(quadRows.rows[0].total, 1, "Expected exact master quad record replicated");
 
   // 3. Execute deletion
   await synchronizer.sync({
@@ -67,7 +72,10 @@ Deno.test("LibsqlIndexSync - isolated writes and removals flush correctly", asyn
     deletions: [testQuad],
   });
 
-  // 4. Verify cleared
-  rows = await client.execute("SELECT COUNT(*) as total FROM chunks");
-  assertEquals(rows.rows[0].total, 0, "Expected physical row cleanup");
+  // 4. Verify holistic cleared state
+  chunkRows = await client.execute("SELECT COUNT(*) as total FROM chunks");
+  assertEquals(chunkRows.rows[0].total, 0, "Index cleanup failed");
+  
+  quadRows = await client.execute("SELECT COUNT(*) as total FROM quads");
+  assertEquals(quadRows.rows[0].total, 0, "Master quad cleanup failed");
 });

@@ -1,6 +1,21 @@
 import type { SearchRequest } from "#/client/search-index/interface.ts";
 
 /**
+ * makeLibsqlQuadsTable defines the DDL for the master source-of-truth Quad Storage.
+ * It facilitates high-fidelity hydration of in-memory graph storage via serialized nquad strings.
+ */
+export function makeLibsqlQuadsTable(): string {
+  return `CREATE TABLE IF NOT EXISTS quads (
+    quad_id TEXT PRIMARY KEY,
+    subject TEXT NOT NULL,
+    predicate TEXT NOT NULL,
+    object TEXT NOT NULL,
+    graph TEXT NOT NULL,
+    nquad TEXT NOT NULL
+  )`;
+}
+
+/**
  * makeLibsqlChunksTable generates the DDL for backing relational store.
  */
 export function makeLibsqlChunksTable(): string {
@@ -86,6 +101,42 @@ export function buildDeleteByQuadIds(quadIds: string[]): { sql: string; args: st
   return {
     sql: `DELETE FROM chunks WHERE quad_id IN (${placeholders})`,
     args: quadIds,
+  };
+}
+
+/**
+ * buildDeleteQuadsByQuadIds sweeps the master facts storage by ID.
+ */
+export function buildDeleteQuadsByQuadIds(quadIds: string[]): { sql: string; args: string[] } {
+  const placeholders = quadIds.map(() => "?").join(", ");
+  return {
+    sql: `DELETE FROM quads WHERE quad_id IN (${placeholders})`,
+    args: quadIds,
+  };
+}
+
+/**
+ * buildInsertQuad generates query to store atomic raw fact safely for backup reconstruction.
+ */
+export function buildInsertQuad(options: {
+  quad_id: string;
+  subject: string;
+  predicate: string;
+  object: string;
+  graph: string;
+  nquad: string;
+}): { sql: string; args: string[] } {
+  return {
+    sql: `INSERT OR REPLACE INTO quads (quad_id, subject, predicate, object, graph, nquad)
+          VALUES (?, ?, ?, ?, ?, ?)`,
+    args: [
+      options.quad_id,
+      options.subject,
+      options.predicate,
+      options.object,
+      options.graph,
+      options.nquad,
+    ],
   };
 }
 
