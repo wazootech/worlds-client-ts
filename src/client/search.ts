@@ -1,6 +1,40 @@
 import type * as rdfjs from "@rdfjs/types";
 
 /**
+ * DefaultSearchService is the default search service implementation.
+ */
+export class DefaultSearchService implements SearchServiceInterface {
+  public constructor(
+    private readonly store: rdfjs.Store,
+  ) {}
+
+  public async search(request: SearchRequest): Promise<SearchResponse> {
+    return await executeSearch(this.store, request);
+  }
+}
+
+/**
+ * SearchServiceInterface provides an interface for executing searches against the store.
+ */
+export interface SearchServiceInterface {
+  search(request: SearchRequest): Promise<SearchResponse>;
+}
+
+/**
+ * SearchRequest defines the parameters for executing a keyword search.
+ */
+export interface SearchRequest {
+  /** The fuzzy text query evaluated against the graph's Literal objects. */
+  query: string;
+
+  /** Positive boundary conditions. If specified, results MUST match these criteria. */
+  include?: SearchFilters;
+
+  /** Negative boundary conditions. Results matching these criteria are automatically suppressed. */
+  exclude?: SearchFilters;
+}
+
+/**
  * SearchFilters provides standard scoping properties usable by both include and exclude vectors.
  */
 export interface SearchFilters {
@@ -18,20 +52,6 @@ export interface SearchFilters {
    * Use this to restrict keyword matching only to certain fields like `rdfs:comment`.
    */
   predicates?: Array<string>;
-}
-
-/**
- * SearchRequest defines the parameters for executing a keyword search.
- */
-export interface SearchRequest {
-  /** The fuzzy text query evaluated against the graph's Literal objects. */
-  query: string;
-
-  /** Positive boundary conditions. If specified, results MUST match these criteria. */
-  include?: SearchFilters;
-
-  /** Negative boundary conditions. Results matching these criteria are automatically suppressed. */
-  exclude?: SearchFilters;
 }
 
 /**
