@@ -9,19 +9,35 @@ import type {
   QuadStoreInterface,
 } from "./interface.ts";
 
+import type { Patch, PatchHandler } from "./patch.ts";
+
 /**
  * RdfjsQuadStore is the standard implementation of the QuadStoreInterface that uses
  * an underlying in-memory or compatible RDFJS Store.
+ *
+ * It optionally emits transaction-scoped Patch notifications to attached handlers upon successfully completed imports.
  */
 export class RdfjsQuadStore implements QuadStoreInterface {
-  constructor(private readonly store: rdfjs.Store) {}
+  constructor(
+    private readonly store: rdfjs.Store,
+    private readonly handlers: PatchHandler[] = [],
+  ) {}
 
   public async import(request: ImportRequest): Promise<ImportResponse> {
     const mode = request.mode ?? "merge";
+    const deletions: rdfjs.Quad[] = [];
+    const insertions: rdfjs.Quad[] = [];
+
+    // 1. Prepare replacement tracker if we are performing a total swap
     if (mode === "replace") {
+      const exportRes = await this.export({ format: { kind: "quads" } });
+      if (exportRes.kind === "quads") {
+        deletions.push(...exportRes.quads);
+      }
       this.store.removeMatches(null, null, null, null);
     }
 
+    // 2. Derive foundational stream from the ingestion source payloads
     let stream: rdfjs.Stream<rdfjs.Quad>;
     if (request.source.kind === "quads") {
       stream = Readable.from(request.source.quads) as unknown as rdfjs.Stream<
@@ -37,11 +53,23 @@ export class RdfjsQuadStore implements QuadStoreInterface {
       throw new Error("Unsupported import source kind");
     }
 
-    return await new Promise<void>((resolve, reject) => {
+    // 3. Tap the streaming runtime to accumulate insertion vector without copying buffers
+    stream.on("data", (q: rdfjs.Quad) => {
+      insertions.push(q);
+    });
+
+    // 4. Execute inner commit to store
+    await new Promise<void>((resolve, reject) => {
       const res = this.store.import(stream);
       res.on("end", resolve);
       res.on("error", reject);
     });
+
+    // 5. Synchronize external listeners seamlessly upon confirmed commit
+    if (this.handlers.length > 0 && (insertions.length > 0 || deletions.length > 0)) {
+      const patch: Patch = { insertions, deletions };
+      await Promise.all(this.handlers.map((h) => h.patch([patch])));
+    }
   }
 
   public async export(request: ExportRequest): Promise<ExportResponse> {
