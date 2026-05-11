@@ -1,53 +1,30 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
+import {
+  makeLibsqlChunksFtsTable,
+  makeLibsqlChunksIndex,
+  makeLibsqlChunksTable,
+  makeLibsqlChunksTrigger,
+} from "./utils.ts";
 
 // --- Helpers ---
 
 async function setupSchema(client: ReturnType<typeof createClient>) {
-  // 1. Create backing facts table
-  await client.execute(`
-    CREATE TABLE IF NOT EXISTS facts (
-      item_id TEXT NOT NULL,
-      property TEXT NOT NULL,
-      value TEXT NOT NULL,
-      vector F32_BLOB(3)
-    )
-  `);
-
-  // 2. Create FTS virtual table referencing facts
-  await client.execute(`
-    CREATE VIRTUAL TABLE IF NOT EXISTS facts_fts USING fts5(
-      value,
-      content='facts',
-      content_rowid='rowid'
-    )
-  `);
-
-  // 3. Add auto-sync triggers for FTS
-  await client.execute(`
-    CREATE TRIGGER IF NOT EXISTS facts_ai AFTER INSERT ON facts BEGIN
-      INSERT INTO facts_fts(rowid, value) VALUES (new.rowid, new.value);
-    END;
-  `);
-
-  // 4. Create LibSQL native vector index
-  await client.execute(`
-    CREATE INDEX IF NOT EXISTS idx_facts_vector ON facts (
-      libsql_vector_idx(vector, 'metric=cosine')
-    )
-  `);
+  // Use central utilities from utils.ts
+  await client.execute(makeLibsqlChunksTable());
+  await client.execute(makeLibsqlChunksFtsTable());
+  await client.execute(makeLibsqlChunksTrigger());
+  await client.execute(makeLibsqlChunksIndex());
 }
 
 class FakeEmbedder {
-  async embed(_text: string): Promise<Float32Array> {
-    // Static dummy vector [1.0, 0.0, 0.0]
-    return new Float32Array([1.0, 0.0, 0.0]);
+  embed(_text: string): Promise<Float32Array> {
+    // Fake matching vector dimensions of F32_BLOB(32) defined in utils, padded out
+    const data = new Array(32).fill(0);
+    data[0] = 1.0;
+    return Promise.resolve(new Float32Array(data));
   }
-}
-
-function float32ArrayToBlob(arr: Float32Array): Uint8Array {
-  return new Uint8Array(arr.buffer);
 }
 
 // --- Tests ---
@@ -56,29 +33,33 @@ Deno.test("LibsqlSearchIndex - Tracer Bullet: performs basic hybrid search and m
   const client = createClient({ url: ":memory:" });
   await setupSchema(client);
 
-  // Seed fixture data
-  // Use standard vector insertion format for LibSQL (F32_BLOB expects binary blob or vector32 string)
-  const aliceVec = new Float32Array([1.0, 0.0, 0.0]);
+  const paddedVec = new Array(32).fill(0);
+  paddedVec[0] = 1.0;
+  const vecStr = JSON.stringify(paddedVec);
+
   await client.execute({
     sql:
-      `INSERT INTO facts (item_id, property, value, vector) VALUES (?, ?, ?, vector32(?))`,
+      `INSERT INTO chunks (subject, predicate, value, vector) VALUES (?, ?, ?, vector32(?))`,
     args: [
       "urn:alice",
       "urn:name",
       "Alice is the explorer",
-      JSON.stringify(Array.from(aliceVec)),
+      vecStr,
     ],
   });
 
-  const bobVec = new Float32Array([0.0, 1.0, 0.0]);
+  const otherVec = [...paddedVec];
+  otherVec[1] = 1.0;
+  const otherVecStr = JSON.stringify(otherVec);
+
   await client.execute({
     sql:
-      `INSERT INTO facts (item_id, property, value, vector) VALUES (?, ?, ?, vector32(?))`,
+      `INSERT INTO chunks (subject, predicate, value, vector) VALUES (?, ?, ?, vector32(?))`,
     args: [
       "urn:bob",
       "urn:name",
       "Bob stays back",
-      JSON.stringify(Array.from(bobVec)),
+      otherVecStr,
     ],
   });
 
@@ -90,7 +71,6 @@ Deno.test("LibsqlSearchIndex - Tracer Bullet: performs basic hybrid search and m
   const response = await searchIndex.search({ query: "Alice" });
 
   assertExists(response.results);
-  // We expect Alice to be returned as the primary match
   const first = response.results[0];
   assertExists(first, "Expected at least one result.");
   assertEquals(first.subject, "urn:alice");
@@ -103,18 +83,18 @@ Deno.test("LibsqlSearchIndex - Scope Inclusion: limits matches only to included 
   const client = createClient({ url: ":memory:" });
   await setupSchema(client);
 
-  const vec = new Float32Array([1.0, 0.0, 0.0]);
-  const vecStr = JSON.stringify(Array.from(vec));
+  const data = new Array(32).fill(0);
+  data[0] = 1.0;
+  const vecStr = JSON.stringify(data);
 
-  // Load multiple records sharing same query content
   await client.execute({
     sql:
-      `INSERT INTO facts (item_id, property, value, vector) VALUES (?, ?, ?, vector32(?))`,
+      `INSERT INTO chunks (subject, predicate, value, vector) VALUES (?, ?, ?, vector32(?))`,
     args: ["urn:person:1", "urn:bio", "Loves coding and data", vecStr],
   });
   await client.execute({
     sql:
-      `INSERT INTO facts (item_id, property, value, vector) VALUES (?, ?, ?, vector32(?))`,
+      `INSERT INTO chunks (subject, predicate, value, vector) VALUES (?, ?, ?, vector32(?))`,
     args: ["urn:person:2", "urn:bio", "Loves coding and gardening", vecStr],
   });
 
@@ -123,7 +103,6 @@ Deno.test("LibsqlSearchIndex - Scope Inclusion: limits matches only to included 
     embeddingService: new FakeEmbedder(),
   });
 
-  // 1. Baseline search returns both
   const base = await searchIndex.search({ query: "coding" });
   assertEquals(
     base.results?.length,
@@ -131,7 +110,6 @@ Deno.test("LibsqlSearchIndex - Scope Inclusion: limits matches only to included 
     "Baseline should find both coding references",
   );
 
-  // 2. Bound by subject inclusion: only return person:2
   const filtered = await searchIndex.search({
     query: "coding",
     include: {
@@ -151,16 +129,18 @@ Deno.test("LibsqlSearchIndex - Scope Exclusion: suppresses explicitly excluded p
   const client = createClient({ url: ":memory:" });
   await setupSchema(client);
 
-  const vecStr = JSON.stringify(Array.from(new Float32Array([1, 0, 0])));
+  const data = new Array(32).fill(0);
+  data[0] = 1.0;
+  const vecStr = JSON.stringify(data);
 
   await client.execute({
     sql:
-      `INSERT INTO facts (item_id, property, value, vector) VALUES (?, ?, ?, vector32(?))`,
+      `INSERT INTO chunks (subject, predicate, value, vector) VALUES (?, ?, ?, vector32(?))`,
     args: ["urn:e1", "urn:allowed", "Match text", vecStr],
   });
   await client.execute({
     sql:
-      `INSERT INTO facts (item_id, property, value, vector) VALUES (?, ?, ?, vector32(?))`,
+      `INSERT INTO chunks (subject, predicate, value, vector) VALUES (?, ?, ?, vector32(?))`,
     args: ["urn:e1", "urn:forbidden", "Match text", vecStr],
   });
 
@@ -169,7 +149,6 @@ Deno.test("LibsqlSearchIndex - Scope Exclusion: suppresses explicitly excluded p
     embeddingService: new FakeEmbedder(),
   });
 
-  // Exclude forbidden predicate
   const response = await searchIndex.search({
     query: "Match",
     exclude: {
