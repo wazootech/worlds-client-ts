@@ -1,42 +1,79 @@
-import type { Client } from "@libsql/client";
-import { Parser, Store } from "n3";
+import type { Client, Row } from "@libsql/client";
+import { DataFactory, Store } from "n3";
+import type * as rdfjs from "@rdfjs/types";
+
+const { namedNode, literal, blankNode, defaultGraph, quad } = DataFactory;
 
 /**
- * hydrateStoreFromLibsql implements a naive, efficient bootstrap procedure that retrieves
- * the full historical master dataset from LibSQL and populates an active in-memory N3 store.
- * 
- * Returns the total count of successfully processed items.
+ * hydrateStoreFromLibsql reconstructs full in-memory state at lightning speeds by deserializing
+ * relational tuples directly into Graph nodes, avoiding costly string parsing compute overhead.
  */
 export async function hydrateStoreFromLibsql(
   client: Client,
   target: Store,
 ): Promise<number> {
-  // 1. Query every individual saved Fact serialization from stable tables.
-  // Optimization note: for massive datasets, this could migrate to pagination, 
-  // but for single-user desktop graphs, full fetch yields sub-100ms hydration.
-  const rs = await client.execute("SELECT nquad FROM quads");
+  const rs = await client.execute(`
+    SELECT s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type 
+    FROM quads
+  `);
 
   if (!rs.rows.length) return 0;
 
-  // 2. Construct a generic streaming Parser set to standard N-Quads.
-  const parser = new Parser({ format: "N-Quads" });
+  const batchQuads: rdfjs.Quad[] = [];
 
-  let importedCount = 0;
-
-  // 3. Line-by-line resolution to avoid huge string concats.
   for (const row of rs.rows) {
-    const nquadLine = String(row.nquad);
     try {
-      // Note: synchronous parsing is safe and fast for atomic single-line quads.
-      const parsedQuads = parser.parse(nquadLine);
-      if (parsedQuads.length > 0) {
-        target.addQuads(parsedQuads);
-        importedCount++;
-      }
-    } catch (_e) {
-      // Ignore individual corrupted lines, potentially adding logging layer here later.
+      const subject = reconstructSubject(row);
+      const predicate = namedNode(String(row.p));
+      const object = reconstructObject(row);
+      const graph = reconstructGraph(row);
+
+      batchQuads.push(quad(subject, predicate, object, graph));
+    } catch (_err) {
+      // Defensive catch ignoring corrupted record structures.
     }
   }
 
-  return importedCount;
+  if (batchQuads.length > 0) {
+    target.addQuads(batchQuads);
+  }
+
+  return batchQuads.length;
+}
+
+function reconstructSubject(row: Row): rdfjs.Quad_Subject {
+  const type = String(row.s_type);
+  const val = String(row.s);
+  if (type === "BlankNode") return blankNode(val);
+  return namedNode(val);
+}
+
+function reconstructObject(row: Row): rdfjs.Quad_Object {
+  const type = String(row.o_type);
+  const val = String(row.o);
+
+  if (type === "Literal") {
+    const dt = row.o_datatype ? String(row.o_datatype) : undefined;
+    const lang = row.o_lang ? String(row.o_lang) : undefined;
+
+    if (lang && lang.trim().length > 0) {
+      return literal(val, lang);
+    }
+    if (dt && dt !== "http://www.w3.org/2001/XMLSchema#string") {
+      return literal(val, namedNode(dt));
+    }
+    return literal(val);
+  }
+
+  if (type === "BlankNode") return blankNode(val);
+  return namedNode(val);
+}
+
+function reconstructGraph(row: Row): rdfjs.Quad_Graph {
+  const type = String(row.g_type);
+  const val = String(row.g);
+
+  if (type === "DefaultGraph") return defaultGraph();
+  if (type === "BlankNode") return blankNode(val);
+  return namedNode(val);
 }

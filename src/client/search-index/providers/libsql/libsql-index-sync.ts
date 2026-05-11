@@ -3,7 +3,6 @@ import type { Patch } from "#/client/quad-store/patch.ts";
 import type { QuadChunker } from "#/client/search-index/chunking/quad-chunker.ts";
 import { hashQuad } from "#/client/quad-store/hash.ts";
 import type * as rdfjs from "@rdfjs/types";
-import { Writer } from "n3";
 import {
   buildDeleteByQuadIds,
   buildDeleteQuadsByQuadIds,
@@ -57,26 +56,33 @@ export class LibsqlIndexSync {
         patch.deletions.map((q) => hashQuad(q)),
       );
       if (deletionQuadIds.length) {
-        // Remove from derived search indices
         statements.push(buildDeleteByQuadIds(deletionQuadIds));
-        // Remove from master fact table
         statements.push(buildDeleteQuadsByQuadIds(deletionQuadIds));
       }
     }
 
     // 2. Handle population and serialization of new additions
     if (patch.insertions?.length) {
-      // First, archive atomic raw facts in the master tables
+      // First, directly archive facts natively decomposing structures into relational columns
       for (const quad of patch.insertions) {
         const id = await hashQuad(quad);
+
+        // Conditional typing extractors for Literal specific properties
+        const isLit = quad.object.termType === "Literal";
+        const lit = isLit ? (quad.object as rdfjs.Literal) : null;
+
         statements.push(
           buildInsertQuad({
             quad_id: id,
-            subject: quad.subject.value,
-            predicate: quad.predicate.value,
-            object: quad.object.value,
-            graph: quad.graph.value,
-            nquad: serializeQuadToNQuad(quad),
+            s: quad.subject.value,
+            s_type: quad.subject.termType,
+            p: quad.predicate.value,
+            o: quad.object.value,
+            o_type: quad.object.termType,
+            o_datatype: lit?.datatype?.value,
+            o_lang: lit?.language,
+            g: quad.graph.value,
+            g_type: quad.graph.termType,
           }),
         );
       }
@@ -103,18 +109,4 @@ export class LibsqlIndexSync {
       await this.client.batch(statements, "write");
     }
   }
-}
-
-/**
- * serializeQuadToNQuad produces rigid, standard N-Quads serialization strings.
- */
-function serializeQuadToNQuad(quad: rdfjs.Quad): string {
-  const writer = new Writer({ format: "N-Quads" });
-  writer.addQuad(quad);
-  let result = "";
-  // Standard N3 writer executes end logic synchronously on buffered formats.
-  writer.end((_err, str) => {
-    result = str ?? "";
-  });
-  return result.trim();
 }

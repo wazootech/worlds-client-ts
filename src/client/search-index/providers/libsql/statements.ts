@@ -7,11 +7,15 @@ import type { SearchRequest } from "#/client/search-index/interface.ts";
 export function makeLibsqlQuadsTable(): string {
   return `CREATE TABLE IF NOT EXISTS quads (
     quad_id TEXT PRIMARY KEY,
-    subject TEXT NOT NULL,
-    predicate TEXT NOT NULL,
-    object TEXT NOT NULL,
-    graph TEXT NOT NULL,
-    nquad TEXT NOT NULL
+    s TEXT NOT NULL,
+    s_type TEXT NOT NULL,
+    p TEXT NOT NULL,
+    o TEXT NOT NULL,
+    o_type TEXT NOT NULL,
+    o_datatype TEXT,
+    o_lang TEXT,
+    g TEXT NOT NULL,
+    g_type TEXT NOT NULL
   )`;
 }
 
@@ -120,22 +124,30 @@ export function buildDeleteQuadsByQuadIds(quadIds: string[]): { sql: string; arg
  */
 export function buildInsertQuad(options: {
   quad_id: string;
-  subject: string;
-  predicate: string;
-  object: string;
-  graph: string;
-  nquad: string;
-}): { sql: string; args: string[] } {
+  s: string;
+  s_type: string;
+  p: string;
+  o: string;
+  o_type: string;
+  o_datatype?: string | null;
+  o_lang?: string | null;
+  g: string;
+  g_type: string;
+}): { sql: string; args: (string | null)[] } {
   return {
-    sql: `INSERT OR REPLACE INTO quads (quad_id, subject, predicate, object, graph, nquad)
-          VALUES (?, ?, ?, ?, ?, ?)`,
+    sql: `INSERT OR REPLACE INTO quads (quad_id, s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       options.quad_id,
-      options.subject,
-      options.predicate,
-      options.object,
-      options.graph,
-      options.nquad,
+      options.s,
+      options.s_type,
+      options.p,
+      options.o,
+      options.o_type,
+      options.o_datatype ?? null,
+      options.o_lang ?? null,
+      options.g,
+      options.g_type,
     ],
   };
 }

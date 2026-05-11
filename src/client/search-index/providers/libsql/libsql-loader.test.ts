@@ -8,28 +8,34 @@ Deno.test("Slice 4: Hydrator - recovers whole graph from stored serialized quad 
   const client = createClient({ url: ":memory:" });
   await client.execute(makeLibsqlQuadsTable());
 
-  // Manually seed the raw table with known N-Quad line formats
+  // Manually seed the raw table with granular component columns mimicking sync engine
   await client.execute({
-    sql: "INSERT INTO quads (quad_id, subject, predicate, object, graph, nquad) VALUES (?, ?, ?, ?, ?, ?)",
+    sql: `INSERT INTO quads (quad_id, s, s_type, p, o, o_type, g, g_type) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       "hash1",
       "urn:e1",
+      "NamedNode",
       "urn:p",
       "val1",
+      "Literal",
       "",
-      '<urn:e1> <urn:p> "val1" .',
+      "DefaultGraph",
     ],
   });
   
   await client.execute({
-    sql: "INSERT INTO quads (quad_id, subject, predicate, object, graph, nquad) VALUES (?, ?, ?, ?, ?, ?)",
+    sql: `INSERT INTO quads (quad_id, s, s_type, p, o, o_type, g, g_type) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       "hash2",
       "urn:e2",
+      "NamedNode",
       "urn:p",
       "val2",
+      "Literal",
       "",
-      '<urn:e2> <urn:p> "val2" .',
+      "DefaultGraph",
     ],
   });
 
