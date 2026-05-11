@@ -5,7 +5,7 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { QuadChunker } from "#/client/search-index/chunking/quad-chunker.ts";
 import {
-  makeLibsqlChunksFactIdIndex,
+  makeLibsqlChunksQuadIdIndex,
   makeLibsqlChunksFtsTable,
   makeLibsqlChunksIndex,
   makeLibsqlChunksTable,
@@ -18,7 +18,7 @@ const { quad, namedNode, literal } = DataFactory;
 
 async function setupSchema(client: ReturnType<typeof createClient>) {
   await client.execute(makeLibsqlChunksTable());
-  await client.execute(makeLibsqlChunksFactIdIndex());
+  await client.execute(makeLibsqlChunksQuadIdIndex());
   await client.execute(makeLibsqlChunksFtsTable());
   await client.execute(makeLibsqlChunksIndex());
   for (const triggerSql of makeLibsqlChunksTriggers()) {
@@ -50,7 +50,7 @@ Deno.test("LibsqlSearchIndex - Tracer Bullet: performs basic hybrid search and m
 
   await client.execute({
     sql:
-      `INSERT INTO chunks (fact_id, subject, predicate, value, vector) VALUES (?, ?, ?, ?, vector32(?))`,
+      `INSERT INTO chunks (quad_id, subject, predicate, value, vector) VALUES (?, ?, ?, ?, vector32(?))`,
     args: [
       "f1",
       "urn:alice",
@@ -66,7 +66,7 @@ Deno.test("LibsqlSearchIndex - Tracer Bullet: performs basic hybrid search and m
 
   await client.execute({
     sql:
-      `INSERT INTO chunks (fact_id, subject, predicate, value, vector) VALUES (?, ?, ?, ?, vector32(?))`,
+      `INSERT INTO chunks (quad_id, subject, predicate, value, vector) VALUES (?, ?, ?, ?, vector32(?))`,
     args: [
       "f2",
       "urn:bob",
@@ -103,12 +103,12 @@ Deno.test("LibsqlSearchIndex - Scope Inclusion: limits matches only to included 
 
   await client.execute({
     sql:
-      `INSERT INTO chunks (fact_id, subject, predicate, value, vector) VALUES (?, ?, ?, ?, vector32(?))`,
+      `INSERT INTO chunks (quad_id, subject, predicate, value, vector) VALUES (?, ?, ?, ?, vector32(?))`,
     args: ["f1", "urn:person:1", "urn:bio", "Loves coding and data", vecStr],
   });
   await client.execute({
     sql:
-      `INSERT INTO chunks (fact_id, subject, predicate, value, vector) VALUES (?, ?, ?, ?, vector32(?))`,
+      `INSERT INTO chunks (quad_id, subject, predicate, value, vector) VALUES (?, ?, ?, ?, vector32(?))`,
     args: ["f2", "urn:person:2", "urn:bio", "Loves coding and gardening", vecStr],
   });
 
@@ -150,12 +150,12 @@ Deno.test("LibsqlSearchIndex - Scope Exclusion: suppresses explicitly excluded p
 
   await client.execute({
     sql:
-      `INSERT INTO chunks (fact_id, subject, predicate, value, vector) VALUES (?, ?, ?, ?, vector32(?))`,
+      `INSERT INTO chunks (quad_id, subject, predicate, value, vector) VALUES (?, ?, ?, ?, vector32(?))`,
     args: ["f1", "urn:e1", "urn:allowed", "Match text", vecStr],
   });
   await client.execute({
     sql:
-      `INSERT INTO chunks (fact_id, subject, predicate, value, vector) VALUES (?, ?, ?, ?, vector32(?))`,
+      `INSERT INTO chunks (quad_id, subject, predicate, value, vector) VALUES (?, ?, ?, ?, vector32(?))`,
     args: ["f2", "urn:e1", "urn:forbidden", "Match text", vecStr],
   });
 

@@ -5,8 +5,8 @@ import { hashQuad } from "#/client/quad-store/hash.ts";
  * ChunkRowPayload is the standardized structure of data that will be inserted into the FTS table.
  */
 export interface ChunkRowPayload {
-  /** fact_id is the unique canonical identifier of the originating triple. */
-  fact_id: string;
+  /** quad_id is the unique canonical identifier of the originating triple. */
+  quad_id: string;
   subject: string;
   predicate: string;
   value: string;
@@ -60,7 +60,7 @@ export class QuadChunker {
     const texts = candidates.map((q) => q.object.value);
     const metadatas = await Promise.all(
       candidates.map(async (q) => ({
-        fact_id: await hashQuad(q),
+        quad_id: await hashQuad(q),
         subject: q.subject.value,
         predicate: q.predicate.value,
       }))
@@ -71,7 +71,7 @@ export class QuadChunker {
 
     // Map document partitions back to unified standard storage output.
     return docs.map((doc) => ({
-      fact_id: String(doc.metadata?.fact_id ?? ""),
+      quad_id: String(doc.metadata?.quad_id ?? ""),
       subject: String(doc.metadata?.subject ?? ""),
       predicate: String(doc.metadata?.predicate ?? ""),
       value: doc.pageContent,

@@ -9,7 +9,7 @@ import type { Patch, PatchHandler } from "#/client/quad-store/patch.ts";
 import type { QuadChunker } from "#/client/search-index/chunking/quad-chunker.ts";
 import { hashQuad } from "#/client/quad-store/hash.ts";
 import {
-  buildDeleteByFactIds,
+  buildDeleteByQuadIds,
   buildInsertChunk,
   buildSearchQuery,
 } from "./statements.ts";
@@ -66,13 +66,13 @@ export class LibsqlSearchIndex implements SearchIndexInterface, PatchHandler {
     const statements: InStatement[] = [];
 
     for (const batch of patches) {
-      // 1. Extract stable fact IDs from deletions and generate sweeping statements
+      // 1. Extract stable quad IDs from deletions and generate sweeping statements
       if (batch.deletions?.length) {
-        const deletionFactIds = await Promise.all(
+        const deletionQuadIds = await Promise.all(
           batch.deletions.map((q) => hashQuad(q)),
         );
-        if (deletionFactIds.length) {
-          statements.push(buildDeleteByFactIds(deletionFactIds));
+        if (deletionQuadIds.length) {
+          statements.push(buildDeleteByQuadIds(deletionQuadIds));
         }
       }
 
@@ -84,7 +84,7 @@ export class LibsqlSearchIndex implements SearchIndexInterface, PatchHandler {
           const vectorJson = JSON.stringify(Array.from(vector));
           statements.push(
             buildInsertChunk({
-              fact_id: payload.fact_id,
+              quad_id: payload.quad_id,
               subject: payload.subject,
               predicate: payload.predicate,
               value: payload.value,

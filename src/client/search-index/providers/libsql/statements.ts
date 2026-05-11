@@ -6,7 +6,7 @@ import type { SearchRequest } from "#/client/search-index/interface.ts";
 export function makeLibsqlChunksTable(): string {
   return `CREATE TABLE IF NOT EXISTS chunks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    fact_id TEXT NOT NULL,
+    quad_id TEXT NOT NULL,
     subject TEXT NOT NULL,
     predicate TEXT NOT NULL,
     value TEXT NOT NULL,
@@ -15,10 +15,10 @@ export function makeLibsqlChunksTable(): string {
 }
 
 /**
- * makeLibsqlChunksFactIdIndex creates an index to accelerate deletion by origin Fact ID.
+ * makeLibsqlChunksQuadIdIndex creates an index to accelerate deletion by origin Quad ID.
  */
-export function makeLibsqlChunksFactIdIndex(): string {
-  return `CREATE INDEX IF NOT EXISTS idx_chunks_fact_id ON chunks (fact_id)`;
+export function makeLibsqlChunksQuadIdIndex(): string {
+  return `CREATE INDEX IF NOT EXISTS idx_chunks_quad_id ON chunks (quad_id)`;
 }
 
 /**
@@ -59,17 +59,17 @@ export function makeLibsqlChunksTriggers(): string[] {
  * buildInsertChunk creates the query and arguments for inserting a chunk row.
  */
 export function buildInsertChunk(options: {
-  fact_id: string;
+  quad_id: string;
   subject: string;
   predicate: string;
   value: string;
   vectorJson: string;
 }): { sql: string; args: (string | number)[] } {
   return {
-    sql: `INSERT INTO chunks (fact_id, subject, predicate, value, vector)
+    sql: `INSERT INTO chunks (quad_id, subject, predicate, value, vector)
           VALUES (?, ?, ?, ?, vector32(?))`,
     args: [
-      options.fact_id,
+      options.quad_id,
       options.subject,
       options.predicate,
       options.value,
@@ -79,13 +79,13 @@ export function buildInsertChunk(options: {
 }
 
 /**
- * buildDeleteByFactIds creates the query to sweep away existing chunks belonging to stable Fact IDs.
+ * buildDeleteByQuadIds creates the query to sweep away existing chunks belonging to stable Quad IDs.
  */
-export function buildDeleteByFactIds(factIds: string[]): { sql: string; args: string[] } {
-  const placeholders = factIds.map(() => "?").join(", ");
+export function buildDeleteByQuadIds(quadIds: string[]): { sql: string; args: string[] } {
+  const placeholders = quadIds.map(() => "?").join(", ");
   return {
-    sql: `DELETE FROM chunks WHERE fact_id IN (${placeholders})`,
-    args: factIds,
+    sql: `DELETE FROM chunks WHERE quad_id IN (${placeholders})`,
+    args: quadIds,
   };
 }
 
