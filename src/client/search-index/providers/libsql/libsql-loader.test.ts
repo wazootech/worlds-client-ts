@@ -10,7 +10,7 @@ Deno.test("Slice 4: Hydrator - recovers whole graph from stored serialized quad 
 
   // Manually seed the raw table with granular component columns mimicking sync engine
   await client.execute({
-    sql: `INSERT INTO quads (quad_id, s, s_type, p, o, o_type, g, g_type) 
+    sql: `INSERT INTO quads (id, s, s_type, p, o, o_type, g, g_type) 
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       "hash1",
@@ -25,7 +25,7 @@ Deno.test("Slice 4: Hydrator - recovers whole graph from stored serialized quad 
   });
   
   await client.execute({
-    sql: `INSERT INTO quads (quad_id, s, s_type, p, o, o_type, g, g_type) 
+    sql: `INSERT INTO quads (id, s, s_type, p, o, o_type, g, g_type) 
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       "hash2",

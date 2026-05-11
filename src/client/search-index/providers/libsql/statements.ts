@@ -6,7 +6,7 @@ import type { SearchRequest } from "#/client/search-index/interface.ts";
  */
 export function makeLibsqlQuadsTable(): string {
   return `CREATE TABLE IF NOT EXISTS quads (
-    quad_id TEXT PRIMARY KEY,
+    id TEXT PRIMARY KEY,
     s TEXT NOT NULL,
     s_type TEXT NOT NULL,
     p TEXT NOT NULL,
@@ -114,7 +114,7 @@ export function buildDeleteByQuadIds(quadIds: string[]): { sql: string; args: st
 export function buildDeleteQuadsByQuadIds(quadIds: string[]): { sql: string; args: string[] } {
   const placeholders = quadIds.map(() => "?").join(", ");
   return {
-    sql: `DELETE FROM quads WHERE quad_id IN (${placeholders})`,
+    sql: `DELETE FROM quads WHERE id IN (${placeholders})`,
     args: quadIds,
   };
 }
@@ -135,7 +135,7 @@ export function buildInsertQuad(options: {
   g_type: string;
 }): { sql: string; args: (string | null)[] } {
   return {
-    sql: `INSERT OR REPLACE INTO quads (quad_id, s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type)
+    sql: `INSERT OR REPLACE INTO quads (id, s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       options.quad_id,
