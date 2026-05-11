@@ -6,11 +6,19 @@ import type { SearchRequest } from "#/client/search-index/interface.ts";
 export function makeLibsqlChunksTable(): string {
   return `CREATE TABLE IF NOT EXISTS chunks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fact_id TEXT NOT NULL,
     subject TEXT NOT NULL,
     predicate TEXT NOT NULL,
     value TEXT NOT NULL,
     vector F32_BLOB(32)
   )`;
+}
+
+/**
+ * makeLibsqlChunksFactIdIndex creates an index to accelerate deletion by origin Fact ID.
+ */
+export function makeLibsqlChunksFactIdIndex(): string {
+  return `CREATE INDEX IF NOT EXISTS idx_chunks_fact_id ON chunks (fact_id)`;
 }
 
 /**
@@ -34,12 +42,51 @@ export function makeLibsqlChunksIndex(): string {
 }
 
 /**
- * makeLibsqlChunksTrigger creates the synchronization trigger from chunks into chunks_fts.
+ * makeLibsqlChunksTriggers creates the synchronization triggers ensuring consistency with FTS.
  */
-export function makeLibsqlChunksTrigger(): string {
-  return `CREATE TRIGGER IF NOT EXISTS chunks_ai AFTER INSERT ON chunks BEGIN
-    INSERT INTO chunks_fts(rowid, value) VALUES (new.id, new.value);
-  END;`;
+export function makeLibsqlChunksTriggers(): string[] {
+  return [
+    `CREATE TRIGGER IF NOT EXISTS chunks_ai AFTER INSERT ON chunks BEGIN
+      INSERT INTO chunks_fts(rowid, value) VALUES (new.id, new.value);
+    END;`,
+    `CREATE TRIGGER IF NOT EXISTS chunks_ad AFTER DELETE ON chunks BEGIN
+      INSERT INTO chunks_fts(chunks_fts, rowid, value) VALUES('delete', old.id, old.value);
+    END;`,
+  ];
+}
+
+/**
+ * buildInsertChunk creates the query and arguments for inserting a chunk row.
+ */
+export function buildInsertChunk(options: {
+  fact_id: string;
+  subject: string;
+  predicate: string;
+  value: string;
+  vectorJson: string;
+}): { sql: string; args: (string | number)[] } {
+  return {
+    sql: `INSERT INTO chunks (fact_id, subject, predicate, value, vector)
+          VALUES (?, ?, ?, ?, vector32(?))`,
+    args: [
+      options.fact_id,
+      options.subject,
+      options.predicate,
+      options.value,
+      options.vectorJson,
+    ],
+  };
+}
+
+/**
+ * buildDeleteByFactIds creates the query to sweep away existing chunks belonging to stable Fact IDs.
+ */
+export function buildDeleteByFactIds(factIds: string[]): { sql: string; args: string[] } {
+  const placeholders = factIds.map(() => "?").join(", ");
+  return {
+    sql: `DELETE FROM chunks WHERE fact_id IN (${placeholders})`,
+    args: factIds,
+  };
 }
 
 /**

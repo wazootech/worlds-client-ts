@@ -1,9 +1,12 @@
 import type { Quad } from "@rdfjs/types";
+import { hashQuad } from "#/client/quad-store/hash.ts";
 
 /**
  * ChunkRowPayload is the standardized structure of data that will be inserted into the FTS table.
  */
 export interface ChunkRowPayload {
+  /** fact_id is the unique canonical identifier of the originating triple. */
+  fact_id: string;
   subject: string;
   predicate: string;
   value: string;
@@ -55,16 +58,20 @@ export class QuadChunker {
 
     // Prepare batched components and associated correlation vectors.
     const texts = candidates.map((q) => q.object.value);
-    const metadatas = candidates.map((q) => ({
-      subject: q.subject.value,
-      predicate: q.predicate.value,
-    }));
+    const metadatas = await Promise.all(
+      candidates.map(async (q) => ({
+        fact_id: await hashQuad(q),
+        subject: q.subject.value,
+        predicate: q.predicate.value,
+      }))
+    );
 
     // Execute collective chunking via engine injection.
     const docs = await this.options.splitter.createDocuments(texts, metadatas);
 
     // Map document partitions back to unified standard storage output.
     return docs.map((doc) => ({
+      fact_id: String(doc.metadata?.fact_id ?? ""),
       subject: String(doc.metadata?.subject ?? ""),
       predicate: String(doc.metadata?.predicate ?? ""),
       value: doc.pageContent,
