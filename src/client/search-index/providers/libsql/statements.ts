@@ -1,4 +1,4 @@
-import type { SearchRequest } from "../search-index/interface.ts";
+import type { SearchRequest } from "#/client/search-index/interface.ts";
 
 /**
  * makeLibsqlChunksTable generates the DDL for backing relational store.

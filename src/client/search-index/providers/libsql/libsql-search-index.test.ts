@@ -6,7 +6,7 @@ import {
   makeLibsqlChunksIndex,
   makeLibsqlChunksTable,
   makeLibsqlChunksTrigger,
-} from "./utils.ts";
+} from "./statements.ts";
 
 // --- Helpers ---
 

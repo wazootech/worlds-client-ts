@@ -5,7 +5,7 @@ import type {
   SearchResponse,
   SearchResult,
 } from "#/client/search-index/interface.ts";
-import { buildSearchQuery } from "./utils.ts";
+import { buildSearchQuery } from "./statements.ts";
 
 /**
  * EmbeddingService describes an external interface used to generate vectors from text.

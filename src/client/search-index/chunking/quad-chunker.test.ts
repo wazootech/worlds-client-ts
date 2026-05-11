@@ -1,11 +1,17 @@
 import { assertEquals } from "@std/assert";
 import { DataFactory } from "n3";
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { QuadChunker } from "./quad-chunker.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 
 Deno.test("QuadChunker - Behavior 1 (Tracer Bullet): ingests standard short literal quad", async () => {
-  const chunker = new QuadChunker();
+  const chunker = new QuadChunker({
+    splitter: new RecursiveCharacterTextSplitter({
+      chunkSize: 1000,
+      chunkOverlap: 200,
+    }),
+  });
 
   // Construct a test quad: <urn:bob> <urn:bio> "Bob is a dev"
   const testQuad = quad(
@@ -15,7 +21,7 @@ Deno.test("QuadChunker - Behavior 1 (Tracer Bullet): ingests standard short lite
   );
 
   // Execute chunking
-  const chunks = await chunker.chunk(testQuad);
+  const chunks = await chunker.chunk([testQuad]);
 
   // Verify single output mapping exactly
   assertEquals(
@@ -31,8 +37,10 @@ Deno.test("QuadChunker - Behavior 1 (Tracer Bullet): ingests standard short lite
 Deno.test("QuadChunker - Behavior 2: splits large literal text based on chunkSize threshold", async () => {
   // Force tiny chunk size to easily trigger splitting
   const chunker = new QuadChunker({
-    chunkSize: 10,
-    chunkOverlap: 0,
+    splitter: new RecursiveCharacterTextSplitter({
+      chunkSize: 10,
+      chunkOverlap: 0,
+    }),
   });
 
   // Total length ~23, should yield at least 2-3 chunks at max 10 chars each
@@ -42,7 +50,7 @@ Deno.test("QuadChunker - Behavior 2: splits large literal text based on chunkSiz
     literal("First line.\nSecond line."),
   );
 
-  const chunks = await chunker.chunk(testQuad);
+  const chunks = await chunker.chunk([testQuad]);
 
   // Should have generated multiple distinct items
   assertEquals(chunks.length > 1, true, "Should generate more than one chunk");
@@ -61,7 +69,12 @@ Deno.test("QuadChunker - Behavior 2: splits large literal text based on chunkSiz
 });
 
 Deno.test("QuadChunker - Behavior 3: ignores non-literal objects (NamedNode)", async () => {
-  const chunker = new QuadChunker();
+  const chunker = new QuadChunker({
+    splitter: new RecursiveCharacterTextSplitter({
+      chunkSize: 1000,
+      chunkOverlap: 200,
+    }),
+  });
 
   // Construct a non-literal triple linking two resources
   const linkQuad = quad(
@@ -70,8 +83,35 @@ Deno.test("QuadChunker - Behavior 3: ignores non-literal objects (NamedNode)", a
     namedNode("urn:bob"), // Non-literal object
   );
 
-  const chunks = await chunker.chunk(linkQuad);
+  const chunks = await chunker.chunk([linkQuad]);
 
   // Expected to discard since it's not indexable text
   assertEquals(chunks.length, 0, "Should produce 0 chunks for node links");
+});
+
+Deno.test("QuadChunker - Behavior 4: correctly partitions parallel batch ingestion of multiple quads", async () => {
+  const chunker = new QuadChunker({
+    splitter: new RecursiveCharacterTextSplitter({
+      chunkSize: 1000,
+      chunkOverlap: 0,
+    }),
+  });
+
+  const inputBatch = [
+    quad(namedNode("urn:q1"), namedNode("urn:p1"), literal("Doc One")),
+    quad(namedNode("urn:q2"), namedNode("urn:p2"), literal("Doc Two")),
+  ];
+
+  const results = await chunker.chunk(inputBatch);
+
+  // Should correlate back correctly
+  assertEquals(
+    results.length,
+    2,
+    "Should track and produce 2 distinct artifacts",
+  );
+  assertEquals(results[0].subject, "urn:q1");
+  assertEquals(results[0].value, "Doc One");
+  assertEquals(results[1].subject, "urn:q2");
+  assertEquals(results[1].value, "Doc Two");
 });

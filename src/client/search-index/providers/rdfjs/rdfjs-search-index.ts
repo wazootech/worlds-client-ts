@@ -4,7 +4,7 @@ import type {
   SearchRequest,
   SearchResponse,
   SearchResult,
-} from "./interface.ts";
+} from "#/client/search-index/interface.ts";
 
 /**
  * RdfjsSearchIndex is the implementation of SearchIndexInterface that uses an RDF/JS store.

@@ -1,6 +1,6 @@
 import { assertEquals } from "@std/assert";
 import { DataFactory, Store } from "n3";
-import { RdfjsSearchIndex } from "./search-index.ts";
+import { RdfjsSearchIndex } from "./rdfjs-search-index.ts";
 
 Deno.test("RdfjsSearchIndex.search - returns literal matching text locally", async () => {
   const store = new Store();
