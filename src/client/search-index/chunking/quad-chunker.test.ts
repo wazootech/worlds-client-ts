@@ -5,7 +5,7 @@ import { QuadChunker } from "./quad-chunker.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 
-Deno.test("QuadChunker - Behavior 1 (Tracer Bullet): ingests standard short literal quad", async () => {
+Deno.test("QuadChunker.chunk - ingests short literal quad", async () => {
   const chunker = new QuadChunker({
     splitter: new RecursiveCharacterTextSplitter({
       chunkSize: 1000,
@@ -34,7 +34,7 @@ Deno.test("QuadChunker - Behavior 1 (Tracer Bullet): ingests standard short lite
   assertEquals(chunks[0].value, "Bob is a dev");
 });
 
-Deno.test("QuadChunker - Behavior 2: splits large literal text based on chunkSize threshold", async () => {
+Deno.test("QuadChunker.chunk - splits large text across chunks", async () => {
   // Force tiny chunk size to easily trigger splitting
   const chunker = new QuadChunker({
     splitter: new RecursiveCharacterTextSplitter({
@@ -68,7 +68,7 @@ Deno.test("QuadChunker - Behavior 2: splits large literal text based on chunkSiz
   assertEquals(combined.includes("Second"), true);
 });
 
-Deno.test("QuadChunker - Behavior 3: ignores non-literal objects (NamedNode)", async () => {
+Deno.test("QuadChunker.chunk - ignores non-literal nodes", async () => {
   const chunker = new QuadChunker({
     splitter: new RecursiveCharacterTextSplitter({
       chunkSize: 1000,
@@ -89,7 +89,7 @@ Deno.test("QuadChunker - Behavior 3: ignores non-literal objects (NamedNode)", a
   assertEquals(chunks.length, 0, "Should produce 0 chunks for node links");
 });
 
-Deno.test("QuadChunker - Behavior 4: correctly partitions parallel batch ingestion of multiple quads", async () => {
+Deno.test("QuadChunker.chunk - handles parallel quad batches", async () => {
   const chunker = new QuadChunker({
     splitter: new RecursiveCharacterTextSplitter({
       chunkSize: 1000,
