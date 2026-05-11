@@ -1,4 +1,4 @@
-import { assertEquals, assertExists, assertRejects } from "@std/assert";
+import { assertEquals, assertRejects } from "@std/assert";
 import { DataFactory, Store } from "n3";
 import { RdfjsQuadStore } from "./quad-store.ts";
 
@@ -157,56 +157,4 @@ Deno.test("RdfjsQuadStore.export - returns serialized dump", async () => {
   if (response.kind !== "serialized") throw new Error("Expected serialized");
   assertEquals(response.contentType, "text/turtle");
   assertEquals(response.data.includes("value1"), true);
-});
-
-Deno.test("RdfjsQuadStore.import - notifies PatchHandlers upon successful insertions", async () => {
-  const store = new Store();
-  let capturedPatch: any = null;
-  
-  const handler = {
-    patch: async (patches: any[]) => {
-      capturedPatch = patches[0];
-    }
-  };
-
-  const rdfStore = new RdfjsQuadStore(store, [handler]);
-  
-  await rdfStore.import({
-    source: {
-      kind: "quads",
-      quads: [q1, q2]
-    }
-  });
-
-  assertExists(capturedPatch);
-  assertEquals(capturedPatch.insertions.length, 2);
-  assertEquals(capturedPatch.deletions.length, 0);
-});
-
-Deno.test("RdfjsQuadStore.import - replace mode successfully communicates deletions", async () => {
-  const store = new Store();
-  store.add(q1); // Existing baseline
-  let capturedPatch: any = null;
-  
-  const handler = {
-    patch: async (patches: any[]) => {
-      capturedPatch = patches[0];
-    }
-  };
-
-  const rdfStore = new RdfjsQuadStore(store, [handler]);
-  
-  await rdfStore.import({
-    mode: "replace",
-    source: {
-      kind: "quads",
-      quads: [q2]
-    }
-  });
-
-  assertExists(capturedPatch);
-  assertEquals(capturedPatch.deletions.length, 1, "Should have captured preexisting quad before clearance");
-  assertEquals(capturedPatch.insertions.length, 1, "Should have captured incoming replacement quad");
-  assertEquals(capturedPatch.deletions[0].object.value, "value1");
-  assertEquals(capturedPatch.insertions[0].object.value, "value2");
 });

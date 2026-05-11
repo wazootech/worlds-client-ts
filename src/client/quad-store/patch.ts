@@ -16,12 +16,6 @@ export interface Patch {
 }
 
 /**
- * PatchHandler processes asynchronous batches of patches.
- * Ideal for offloading to search indexes or external sync sinks.
+ * PatchListener describes a functional sink that accepts a batch of store changes asynchronously.
  */
-export interface PatchHandler {
-  /**
-   * patch processes a list of patches.
-   */
-  patch(patches: Patch[]): Promise<void>;
-}
+export type PatchListener = (patch: Patch) => Promise<void> | void;

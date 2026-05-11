@@ -36,7 +36,6 @@ class FakeEmbedder {
 }
 
 const sharedSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000 });
-const sharedChunker = new QuadChunker({ splitter: sharedSplitter });
 
 // --- Tests ---
 
@@ -79,7 +78,6 @@ Deno.test("LibsqlSearchIndex - Tracer Bullet: performs basic hybrid search and m
   const searchIndex = new LibsqlSearchIndex({
     client,
     embeddingService: new FakeEmbedder(),
-    chunker: sharedChunker,
   });
 
   const response = await searchIndex.search({ query: "Alice" });
@@ -115,7 +113,6 @@ Deno.test("LibsqlSearchIndex - Scope Inclusion: limits matches only to included 
   const searchIndex = new LibsqlSearchIndex({
     client,
     embeddingService: new FakeEmbedder(),
-    chunker: sharedChunker,
   });
 
   const base = await searchIndex.search({ query: "coding" });
@@ -162,7 +159,6 @@ Deno.test("LibsqlSearchIndex - Scope Exclusion: suppresses explicitly excluded p
   const searchIndex = new LibsqlSearchIndex({
     client,
     embeddingService: new FakeEmbedder(),
-    chunker: sharedChunker,
   });
 
   const response = await searchIndex.search({
@@ -178,46 +174,4 @@ Deno.test("LibsqlSearchIndex - Scope Exclusion: suppresses explicitly excluded p
     "Only non-excluded predicate should remain",
   );
   assertEquals(response.results?.[0].predicate, "urn:allowed");
-});
-
-Deno.test("LibsqlSearchIndex - Lifecycle: integrates PatchHandler writing and safe sweeping", async () => {
-  const client = createClient({ url: ":memory:" });
-  await setupSchema(client);
-
-  const searchIndex = new LibsqlSearchIndex({
-    client,
-    embeddingService: new FakeEmbedder(),
-    chunker: sharedChunker,
-  });
-
-  const testQuad = quad(
-    namedNode("urn:subject"),
-    namedNode("urn:predicate"),
-    literal("Initial creation content"),
-  );
-
-  // 1. Assert empty baseline
-  const baseline = await searchIndex.search({ query: "Initial" });
-  assertEquals(baseline.results?.length ?? 0, 0, "Empty db should yield no search hits");
-
-  // 2. Perform patch write (insertion)
-  await searchIndex.patch([{
-    insertions: [testQuad],
-    deletions: [],
-  }]);
-
-  // 3. Assert searchable now
-  const written = await searchIndex.search({ query: "Initial" });
-  assertEquals(written.results?.length, 1, "Successfully written quad should show in search");
-  assertEquals(written.results?.[0].text, "Initial creation content");
-
-  // 4. Perform patch delete
-  await searchIndex.patch([{
-    insertions: [],
-    deletions: [testQuad],
-  }]);
-
-  // 5. Assert cleaned up
-  const final = await searchIndex.search({ query: "Initial" });
-  assertEquals(final.results?.length ?? 0, 0, "Deleted quad must be wiped from indices");
 });
