@@ -69,6 +69,12 @@ export async function syncLibsql(
       throw new Error("failed to hash insertion quads", { cause });
     }
 
+    // Pre-emptive Cleaning: Ensure absolute relational idempotence by clearing existing records
+    // for incoming Quad IDs prior to re-insertion. This defends against cross-application
+    // collision and stale state pollution.
+    statements.push(buildDeleteByQuadIds(quadIds));
+    statements.push(buildDeleteQuadsByQuadIds(quadIds));
+
     // First, directly archive facts natively decomposing structures into relational columns
     for (let i = 0; i < patch.insertions.length; i++) {
       const quad = patch.insertions[i];

@@ -214,10 +214,13 @@ export function buildSearchQuery(
     ? `WHERE ${whereClauses.join(" AND ")}`
     : "";
 
-  // MODE A: Execute Hybrid RRF Search (Vector + FTS)
-  if (vectorJson) {
+  const hasVector = !!vectorJson;
+  const hasQuery = !!request.query && request.query.trim().length > 0;
+
+  // CASE 1: TOTAL HYBRID SEARCH (Mode A)
+  if (hasVector && hasQuery) {
     const args: (string | number)[] = [
-      vectorJson,
+      vectorJson!,
       limit,
       request.query,
       limit,
@@ -267,41 +270,86 @@ export function buildSearchQuery(
     return { sql, args };
   }
 
-  // MODE B: Fallback Degraded Keyword-Only Search (FTS Only)
-  const args: (string | number)[] = [
-    request.query,
-    limit,
-    ...filterArgs,
-    limit,
-  ];
+  // CASE 2: SEMANTIC / VECTOR ONLY SEARCH (Mode C)
+  if (hasVector) {
+    const args: (string | number)[] = [
+      vectorJson!,
+      limit,
+      ...filterArgs,
+      limit,
+    ];
 
-  const sql = `
-    WITH fts_matches AS (
-      SELECT
-        rowid,
-        row_number() OVER (ORDER BY rank) AS rank_number,
-        rank AS score
-      FROM
-        chunks_fts
-      WHERE
-        chunks_fts MATCH ?
-      LIMIT ?
-    ), final AS (
-      SELECT
-        chunks.subject,
-        chunks.predicate,
-        chunks.graph,
-        chunks.value,
-        COALESCE(1.0 / (60 + fts_matches.rank_number), 0.0) AS combined_rank
-      FROM
-        fts_matches
-        JOIN chunks ON chunks.id = fts_matches.rowid
-      ${whereFilter}
-      ORDER BY
-        combined_rank DESC
-      LIMIT ?
-    )
-    SELECT * FROM final;
-  `;
-  return { sql, args };
+    const sql = `
+      WITH vec_matches AS (
+        SELECT
+          id AS rowid,
+          row_number() OVER (PARTITION BY NULL) AS rank_number
+        FROM
+          vector_top_k('idx_chunks_vector', vector32(?), ?)
+      ), final AS (
+        SELECT
+          chunks.subject,
+          chunks.predicate,
+          chunks.graph,
+          chunks.value,
+          COALESCE(1.0 / (60 + vec_matches.rank_number), 0.0) AS combined_rank
+        FROM
+          vec_matches
+          JOIN chunks ON chunks.id = vec_matches.rowid
+        ${whereFilter}
+        ORDER BY
+          combined_rank DESC
+        LIMIT ?
+      )
+      SELECT * FROM final;
+    `;
+    return { sql, args };
+  }
+
+  // CASE 3: FTS / KEYWORD ONLY SEARCH (Mode B)
+  if (hasQuery) {
+    const args: (string | number)[] = [
+      request.query,
+      limit,
+      ...filterArgs,
+      limit,
+    ];
+
+    const sql = `
+      WITH fts_matches AS (
+        SELECT
+          rowid,
+          row_number() OVER (ORDER BY rank) AS rank_number,
+          rank AS score
+        FROM
+          chunks_fts
+        WHERE
+          chunks_fts MATCH ?
+        LIMIT ?
+      ), final AS (
+        SELECT
+          chunks.subject,
+          chunks.predicate,
+          chunks.graph,
+          chunks.value,
+          COALESCE(1.0 / (60 + fts_matches.rank_number), 0.0) AS combined_rank
+        FROM
+          fts_matches
+          JOIN chunks ON chunks.id = fts_matches.rowid
+        ${whereFilter}
+        ORDER BY
+          combined_rank DESC
+        LIMIT ?
+      )
+      SELECT * FROM final;
+    `;
+    return { sql, args };
+  }
+
+  // CASE 4: NO CRITERIA PROVIDED - Empty fallback
+  return {
+    sql:
+      "SELECT NULL as subject, NULL as predicate, NULL as graph, NULL as value, 0 as combined_rank WHERE 0 = 1",
+    args: [],
+  };
 }
