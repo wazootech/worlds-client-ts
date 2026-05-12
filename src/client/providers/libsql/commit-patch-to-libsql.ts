@@ -67,77 +67,110 @@ export async function commitPatchToLibsql(
       throw new Error("failed to hash insertion quads", { cause });
     }
 
-    // Pre-emptive Cleaning: Ensure absolute relational idempotence by clearing existing records
-    // for incoming Quad IDs prior to re-insertion. This defends against cross-application
-    // collision and stale state pollution.
-    statements.push(LibsqlQueryBuilder.buildDeleteByQuadIds(quadIds));
-    statements.push(LibsqlQueryBuilder.buildDeleteQuadsByQuadIds(quadIds));
-
-    // First, directly archive facts natively decomposing structures into relational columns
-    for (let i = 0; i < patch.insertions.length; i++) {
-      const quad = patch.insertions[i];
-      const id = quadIds[i];
-
-      // Conditional typing extractors for Literal specific properties
-      const isLiteral = quad.object.termType === "Literal";
-      const literal = isLiteral ? (quad.object as rdfjs.Literal) : null;
-
-      statements.push(
-        LibsqlQueryBuilder.buildInsertQuad({
-          quad_id: id,
-          s: quad.subject.value,
-          s_type: quad.subject.termType,
-          p: quad.predicate.value,
-          o: quad.object.value,
-          o_type: quad.object.termType,
-          o_datatype: literal?.datatype?.value,
-          o_lang: literal?.language,
-          g: quad.graph.value,
-          g_type: quad.graph.termType,
-        }),
-      );
-    }
-
-    // Second, transform literals into chunked, vectorized artifacts for searching
-    let chunks: ChunkRowPayload[];
+    // ⚡ Performant Cache Guard: Check which incoming Quad IDs are ALREADY resident in SQLite
+    const existingIds = new Set<string>();
     try {
-      // Consume functional chunker directly
-      chunks = await chunkQuads(patch.insertions, textSplitter, quadIds);
+      // Defensively chunk lookup queries to respect typical SQLite bound parameter limits
+      const lookupChunkSize = 900;
+      for (let i = 0; i < quadIds.length; i += lookupChunkSize) {
+        const batchIds = quadIds.slice(i, i + lookupChunkSize);
+        const query = LibsqlQueryBuilder.buildSelectExistingQuadIds(batchIds);
+        const resultSet = await client.execute(query);
+        for (const row of resultSet.rows) {
+          if (row.id) {
+            existingIds.add(String(row.id));
+          }
+        }
+      }
     } catch (cause) {
-      throw new Error("failed to chunk insertions", { cause });
+      throw new Error("failed to query existing cache state", { cause });
     }
-    if (chunks.length > 0) {
-      // Performance Optimization First: Strictly deduplicate identical texts to suppress redundant LLM API calls!
-      const uniqueTexts = Array.from(new Set(chunks.map((c) => c.value)));
 
-      let uniqueVectors: Array<Float32Array | number[]>;
-      try {
-        uniqueVectors = await embeddingService.embed(uniqueTexts);
-      } catch (cause) {
-        throw new Error("failed to embed chunk batch", { cause });
+    // Content-Addressed Deduplication: Process ONLY truly novel facts that require computation
+    const novelInsertions: rdfjs.Quad[] = [];
+    const novelQuadIds: string[] = [];
+    for (let i = 0; i < patch.insertions.length; i++) {
+      const id = quadIds[i];
+      if (!existingIds.has(id)) {
+        novelInsertions.push(patch.insertions[i]);
+        novelQuadIds.push(id);
       }
+    }
 
-      // Synthesize lookup cache for distribution back to individual chunks
-      const vectorLookupMap = new Map<string, Float32Array | number[]>();
-      for (let i = 0; i < uniqueTexts.length; i++) {
-        vectorLookupMap.set(uniqueTexts[i], uniqueVectors[i]);
-      }
+    if (novelQuadIds.length > 0) {
+      // Ensure absolute relational clean slate for the novel items
+      statements.push(LibsqlQueryBuilder.buildDeleteByQuadIds(novelQuadIds));
+      statements.push(
+        LibsqlQueryBuilder.buildDeleteQuadsByQuadIds(novelQuadIds),
+      );
 
-      for (const payload of chunks) {
-        const vector = vectorLookupMap.get(payload.value);
-        if (!vector) continue; // Defensive guarantee
-        const vectorJson = JSON.stringify(Array.from(vector));
+      // First, directly archive facts natively decomposing structures into relational columns
+      for (let i = 0; i < novelInsertions.length; i++) {
+        const quad = novelInsertions[i];
+        const id = novelQuadIds[i];
+
+        // Conditional typing extractors for Literal specific properties
+        const isLiteral = quad.object.termType === "Literal";
+        const literal = isLiteral ? (quad.object as rdfjs.Literal) : null;
 
         statements.push(
-          LibsqlQueryBuilder.buildInsertChunk({
-            quad_id: payload.quad_id,
-            subject: payload.subject,
-            predicate: payload.predicate,
-            graph: payload.graph,
-            value: payload.value,
-            vectorJson,
+          LibsqlQueryBuilder.buildInsertQuad({
+            quad_id: id,
+            s: quad.subject.value,
+            s_type: quad.subject.termType,
+            p: quad.predicate.value,
+            o: quad.object.value,
+            o_type: quad.object.termType,
+            o_datatype: literal?.datatype?.value,
+            o_lang: literal?.language,
+            g: quad.graph.value,
+            g_type: quad.graph.termType,
           }),
         );
+      }
+
+      // Second, transform literals into chunked, vectorized artifacts for searching
+      let chunks: ChunkRowPayload[];
+      try {
+        // Consume functional chunker directly
+        chunks = await chunkQuads(novelInsertions, textSplitter, novelQuadIds);
+      } catch (cause) {
+        throw new Error("failed to chunk insertions", { cause });
+      }
+
+      if (chunks.length > 0) {
+        // Performance Optimization: Strictly deduplicate identical texts across the novel batch
+        const uniqueTexts = Array.from(new Set(chunks.map((c) => c.value)));
+
+        let uniqueVectors: Array<Float32Array | number[]>;
+        try {
+          uniqueVectors = await embeddingService.embed(uniqueTexts);
+        } catch (cause) {
+          throw new Error("failed to embed chunk batch", { cause });
+        }
+
+        // Synthesize lookup cache for distribution back to individual chunks
+        const vectorLookupMap = new Map<string, Float32Array | number[]>();
+        for (let i = 0; i < uniqueTexts.length; i++) {
+          vectorLookupMap.set(uniqueTexts[i], uniqueVectors[i]);
+        }
+
+        for (const payload of chunks) {
+          const vector = vectorLookupMap.get(payload.value);
+          if (!vector) continue; // Defensive guarantee
+          const vectorJson = JSON.stringify(Array.from(vector));
+
+          statements.push(
+            LibsqlQueryBuilder.buildInsertChunk({
+              quad_id: payload.quad_id,
+              subject: payload.subject,
+              predicate: payload.predicate,
+              graph: payload.graph,
+              value: payload.value,
+              vectorJson,
+            }),
+          );
+        }
       }
     }
   }

@@ -132,6 +132,19 @@ export const LibsqlQueryBuilder = {
   },
 
   /**
+   * buildSelectExistingQuadIds constructs a query to retrieve pre-existing Quad IDs to drive content-addressed deduplication.
+   */
+  buildSelectExistingQuadIds(
+    quadIds: string[],
+  ): { sql: string; args: string[] } {
+    const placeholders = quadIds.map(() => "?").join(", ");
+    return {
+      sql: `SELECT id FROM quads WHERE id IN (${placeholders})`,
+      args: quadIds,
+    };
+  },
+
+  /**
    * buildInsertQuad generates query to store atomic raw fact safely for backup reconstruction.
    */
   buildInsertQuad(options: {
