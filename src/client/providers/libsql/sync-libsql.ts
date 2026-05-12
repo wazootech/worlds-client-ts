@@ -1,5 +1,5 @@
 import type { Client, InStatement } from "@libsql/client";
-import type { Patch } from "#/client/quad-store/patch-queue-interface.ts";
+import type { Patch } from "#/client/quad-store/patch.ts";
 import type {
   ChunkRowPayload,
   TextSplitterInterface,

@@ -4,7 +4,7 @@ import { Store } from "n3";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
 import type { ClientOptions } from "#/client/client.ts";
-import type { Patch } from "#/client/quad-store/patch-queue-interface.ts";
+import type { Patch } from "#/client/quad-store/patch.ts";
 import type { TextSplitterInterface } from "#/client/search-index/quad-chunker/chunk-quads.ts";
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
@@ -85,7 +85,7 @@ export async function provideLibsql(
   }
 
   // 3. Instrument memory layer for transparent transaction accumulation.
-  const { store, queue } = createProxiedStore(initialStore);
+  const { store, flush } = createProxiedStore(initialStore);
 
   // 4. Configure specialized support utilities.
   const textSplitter = options.textSplitter ??
@@ -101,7 +101,7 @@ export async function provideLibsql(
    * replication pipeline processing.
    */
   const commitChanges = async () => {
-    const patches = queue.flush();
+    const patches = flush();
     if (patches.length === 0) return;
 
     const merged: Patch = {

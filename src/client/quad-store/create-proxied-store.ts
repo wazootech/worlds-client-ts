@@ -1,7 +1,6 @@
 import type { Store } from "n3";
 import type * as rdfjs from "@rdfjs/types";
-import type { PatchQueueInterface } from "./patch-queue-interface.ts";
-import { PatchQueue } from "./patch-queue.ts";
+import type { Patch } from "./patch.ts";
 
 /**
  * createProxiedStore installs a non-invasive JavaScript Proxy wrapper around a concrete
@@ -13,9 +12,9 @@ import { PatchQueue } from "./patch-queue.ts";
  */
 export function createProxiedStore(target: Store): {
   store: Store;
-  queue: PatchQueueInterface;
+  flush: () => Patch[];
 } {
-  const queue = new PatchQueue();
+  let patches: Patch[] = [];
 
   const proxiedStore = new Proxy(target, {
     get(base, prop, receiver) {
@@ -36,7 +35,7 @@ export function createProxiedStore(target: Store): {
           }
           // deno-lint-ignore no-explicit-any
           const result = (base as any)[prop].apply(base, [quad]);
-          queue.push({ insertions: [quad], deletions: [] });
+          patches.push({ insertions: [quad], deletions: [] });
           return result;
         };
       }
@@ -47,7 +46,7 @@ export function createProxiedStore(target: Store): {
           const novelQuads = quads.filter((q) => !base.has(q));
           const result = base.addQuads(quads);
           if (novelQuads.length > 0) {
-            queue.push({ insertions: novelQuads, deletions: [] });
+            patches.push({ insertions: novelQuads, deletions: [] });
           }
           return result;
         };
@@ -63,7 +62,7 @@ export function createProxiedStore(target: Store): {
           }
           // deno-lint-ignore no-explicit-any
           const result = (base as any)[prop].apply(base, [quad]);
-          queue.push({ insertions: [], deletions: [quad] });
+          patches.push({ insertions: [], deletions: [quad] });
           return result;
         };
       }
@@ -74,7 +73,7 @@ export function createProxiedStore(target: Store): {
           // deno-lint-ignore no-explicit-any
           const result = (base as any)[prop].apply(base, [quads]);
           if (actualDeletions.length > 0) {
-            queue.push({ insertions: [], deletions: actualDeletions });
+            patches.push({ insertions: [], deletions: actualDeletions });
           }
           return result;
         };
@@ -87,7 +86,7 @@ export function createProxiedStore(target: Store): {
           stream.on("data", (quad: rdfjs.Quad) => {
             // Check existing storage prior to insertion processing
             if (!base.has(quad)) {
-              queue.push({ insertions: [quad], deletions: [] });
+              patches.push({ insertions: [quad], deletions: [] });
             }
           });
 
@@ -142,7 +141,7 @@ export function createProxiedStore(target: Store): {
             // deno-lint-ignore no-explicit-any
             (removalStream as any).on("end", () => {
               if (toDelete.length) {
-                queue.push({ insertions: [], deletions: toDelete });
+                patches.push({ insertions: [], deletions: toDelete });
               }
             });
             return removalStream;
@@ -167,6 +166,10 @@ export function createProxiedStore(target: Store): {
 
   return {
     store: proxiedStore,
-    queue,
+    flush: () => {
+      const current = patches;
+      patches = [];
+      return current;
+    },
   };
 }
