@@ -10,13 +10,23 @@ import { buildSearchQuery } from "./statements.ts";
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
 /**
+ * Options needed to construct the LibSQL search engine.
+ */
+export interface LibsqlSearchIndexOptions {
+  /** Initialized @libsql/client instance pointing to target database. */
+  client: Client;
+  /** Capability for projecting textual search input into vector space. */
+  embeddingService: EmbeddingService;
+  /** Optional page sizing constraints, defaults to 100. */
+  limit?: number;
+}
+
+/**
  * LibsqlSearchIndex implements only the query pathway, performing sub-millisecond hybrid search.
  */
 export class LibsqlSearchIndex implements SearchIndexInterface {
   public constructor(
-    private readonly client: Client,
-    private readonly embeddingService: EmbeddingService,
-    private readonly limit: number = 100,
+    private readonly options: LibsqlSearchIndexOptions,
   ) {}
 
   /**
@@ -26,7 +36,7 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
     let vectorJson: string | undefined;
 
     try {
-      const vector = await this.embeddingService.embed(request.query);
+      const vector = await this.options.embeddingService.embed(request.query);
       vectorJson = JSON.stringify(Array.from(vector));
     } catch (error) {
       // Gracefully degrade to keyword-only search if the embedding provider fails.
@@ -39,10 +49,10 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
 
     const { sql, args } = buildSearchQuery(request, {
       vectorJson,
-      limit: this.limit,
+      limit: this.options.limit ?? 100,
     });
 
-    const resultSet = await this.client.execute({ sql, args });
+    const resultSet = await this.options.client.execute({ sql, args });
 
     const results: SearchResult[] = resultSet.rows.map((row) => ({
       subject: String(row["subject"]),

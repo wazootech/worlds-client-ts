@@ -62,10 +62,10 @@ Deno.test("LibsqlSearchIndex - Tracer Bullet: performs basic hybrid search and m
     ],
   });
 
-  const searchIndex = new LibsqlSearchIndex(
+  const searchIndex = new LibsqlSearchIndex({
     client,
-    new FakeEmbeddingService(),
-  );
+    embeddingService: new FakeEmbeddingService(),
+  });
 
   const response = await searchIndex.search({ query: "Alice" });
 
@@ -111,10 +111,10 @@ Deno.test("LibsqlSearchIndex - Scope Inclusion: limits matches only to included 
     ],
   });
 
-  const searchIndex = new LibsqlSearchIndex(
+  const searchIndex = new LibsqlSearchIndex({
     client,
-    new FakeEmbeddingService(),
-  );
+    embeddingService: new FakeEmbeddingService(),
+  });
 
   const base = await searchIndex.search({ query: "coding" });
   assertEquals(
@@ -157,10 +157,10 @@ Deno.test("LibsqlSearchIndex - Scope Exclusion: suppresses explicitly excluded p
     args: ["f2", "urn:e1", "urn:forbidden", "urn:g", "Match text", vecStr],
   });
 
-  const searchIndex = new LibsqlSearchIndex(
+  const searchIndex = new LibsqlSearchIndex({
     client,
-    new FakeEmbeddingService(),
-  );
+    embeddingService: new FakeEmbeddingService(),
+  });
 
   const response = await searchIndex.search({
     query: "Match",

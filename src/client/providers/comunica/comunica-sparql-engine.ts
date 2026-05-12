@@ -11,19 +11,33 @@ import type {
 } from "#/client/sparql-engine/sparql-engine-interface.ts";
 
 /**
+ * ComunicaSparqlEngineOptions are the options for ComunicaSparqlEngine.
+ */
+export interface ComunicaSparqlEngineOptions {
+  /**
+   * store is the RDFJS store to execute the query on.
+   */
+  store: rdfjs.Store;
+
+  /**
+   * queryEngine is the Comunica query engine to use.
+   */
+  queryEngine: QueryEngine;
+}
+
+/**
  * ComunicaSparqlEngine is the standard implementation of SparqlEngineInterface
  * that uses the Comunica engine over a local RDFJS store.
  */
 export class ComunicaSparqlEngine implements SparqlEngineInterface {
   public constructor(
-    private readonly queryEngine: QueryEngine,
-    private readonly store: rdfjs.Store,
+    private readonly options: ComunicaSparqlEngineOptions,
   ) {}
 
   public async execute(request: SparqlRequest): Promise<SparqlResponse> {
     return await executeSparql(
-      this.queryEngine,
-      this.store,
+      this.options.queryEngine,
+      this.options.store,
       request,
     );
   }

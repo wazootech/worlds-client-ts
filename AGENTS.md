@@ -31,6 +31,20 @@ mathematical brevity.
   - ❌ **Bad:** `/** The underlying database connection. */`
   - ✅ **Corrected:** `/** client is the underlying database connection. */`
 
+- **Unified constructor parameter properties:** For classes with >1 dependency,
+  collect all configuration and dependency inputs into a single strongly typed
+  `Options` object argument. Store the ENTIRE options object using a single
+  TypeScript `private readonly options` parameter property in the constructor.
+  - ❌ **Avoid:** Splitting dependencies into multiple positional constructor
+    arguments or manually assigning options properties to top-level class fields
+    inside the constructor body.
+  - ✅ **Prefer:**
+    ```typescript
+    public constructor(
+      private readonly options: LibsqlSearchIndexOptions,
+    ) {}
+    ```
+
 ## State resilience and dual-layer safety
 
 When interacting with replication synchronizers or persistent storage
