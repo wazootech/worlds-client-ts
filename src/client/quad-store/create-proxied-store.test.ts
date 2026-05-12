@@ -1,14 +1,14 @@
 import { assertEquals } from "@std/assert";
 import { DataFactory, Store } from "n3";
-import { createIndexedStore } from "./create-indexed-store.ts";
+import { createProxiedStore } from "./create-proxied-store.ts";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { executeSparql } from "#/client/providers/comunica/mod.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 
-Deno.test("Slice 1: createIndexedStore proxy captures raw addQuad mutation", () => {
+Deno.test("Slice 1: createProxiedStore proxy captures raw addQuad mutation", () => {
   const baseStore = new Store();
-  const { store, queue } = createIndexedStore(baseStore);
+  const { store, queue } = createProxiedStore(baseStore);
 
   const testQuad = quad(
     namedNode("urn:sub"),
@@ -37,12 +37,12 @@ Deno.test("Slice 1: createIndexedStore proxy captures raw addQuad mutation", () 
   );
 });
 
-Deno.test("Slice 1: createIndexedStore proxy captures raw removeQuad mutation", () => {
+Deno.test("Slice 1: createProxiedStore proxy captures raw removeQuad mutation", () => {
   const baseStore = new Store();
   const testQuad = quad(namedNode("u:s"), namedNode("u:p"), literal("v"));
   baseStore.addQuad(testQuad);
 
-  const { store, queue } = createIndexedStore(baseStore);
+  const { store, queue } = createProxiedStore(baseStore);
 
   // Perform remove through proxy
   store.removeQuad(testQuad);
@@ -56,14 +56,14 @@ Deno.test("Slice 1: createIndexedStore proxy captures raw removeQuad mutation", 
   );
 });
 
-Deno.test("Slice 1: createIndexedStore proxy captures removeMatches", async () => {
+Deno.test("Slice 1: createProxiedStore proxy captures removeMatches", async () => {
   const baseStore = new Store();
   const q1 = quad(namedNode("u:s1"), namedNode("u:p"), literal("v1"));
   const q2 = quad(namedNode("u:s2"), namedNode("u:p"), literal("v2"));
   baseStore.addQuad(q1);
   baseStore.addQuad(q2);
 
-  const { store, queue } = createIndexedStore(baseStore);
+  const { store, queue } = createProxiedStore(baseStore);
 
   // removeMatches returns a stream — consume it to ensure queue is populated
   const removalStream = store.removeMatches(null, namedNode("u:p"), null, null);
@@ -90,7 +90,7 @@ Deno.test("Slice 1: createIndexedStore proxy captures removeMatches", async () =
 
 Deno.test("Slice 2: bridge automatically transparently captures implicit Comunica SPARQL updates", async () => {
   const baseStore = new Store();
-  const { store, queue } = createIndexedStore(baseStore);
+  const { store, queue } = createProxiedStore(baseStore);
   const engine = new QueryEngine();
 
   // Fire a live SPARQL Update into the proxied store

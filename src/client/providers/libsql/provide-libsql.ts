@@ -8,7 +8,7 @@ import type { Patch } from "#/client/quad-store/patch-queue-interface.ts";
 import type { TextSplitterInterface } from "#/client/search-index/quad-chunker/chunk-quads.ts";
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
-import { createIndexedStore } from "#/client/quad-store/create-indexed-store.ts";
+import { createProxiedStore } from "#/client/quad-store/create-proxied-store.ts";
 import { RdfjsQuadStore } from "#/client/quad-store/rdfjs-quad-store.ts";
 import { ComunicaSparqlEngine } from "#/client/providers/comunica/comunica-sparql-engine.ts";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
@@ -85,7 +85,7 @@ export async function provideLibsql(
   }
 
   // 3. Instrument memory layer for transparent transaction accumulation.
-  const { store, queue } = createIndexedStore(initialStore);
+  const { store, queue } = createProxiedStore(initialStore);
 
   // 4. Configure specialized support utilities.
   const textSplitter = options.textSplitter ??

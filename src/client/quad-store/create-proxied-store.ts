@@ -4,14 +4,14 @@ import type { PatchQueueInterface } from "./patch-queue-interface.ts";
 import { PatchQueue } from "./patch-queue.ts";
 
 /**
- * createIndexedStore installs a non-invasive JavaScript Proxy wrapper around a concrete
+ * createProxiedStore installs a non-invasive JavaScript Proxy wrapper around a concrete
  * N3 Store. It transparently captures memory modifications (adds, removes, imports)
  * and stages them for background synchronization.
  *
  * IMPORTANT: It enforces strict idempotency guards, ensuring that ONLY actual factual delta
  * mutations are captured. Redundant operations that do not change graph state are ignored.
  */
-export function createIndexedStore(target: Store): {
+export function createProxiedStore(target: Store): {
   store: Store;
   queue: PatchQueueInterface;
 } {
