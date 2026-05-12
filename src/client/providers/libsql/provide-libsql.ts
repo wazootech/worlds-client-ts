@@ -9,7 +9,7 @@ import type { TextSplitterInterface } from "#/client/search-index/quad-chunker/c
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
 import { createProxiedStore } from "#/client/quad-store/create-proxied-store.ts";
-import { RdfjsQuadStore } from "#/client/quad-store/rdfjs-quad-store.ts";
+import { RdfjsQuadStore } from "#/client/providers/rdfjs/rdfjs-quad-store.ts";
 import { ComunicaSparqlEngine } from "#/client/providers/comunica/comunica-sparql-engine.ts";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { syncLibsql } from "./sync-libsql.ts";

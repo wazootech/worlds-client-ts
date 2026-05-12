@@ -7,7 +7,7 @@ import type {
   ImportRequest,
   ImportResponse,
   QuadStoreInterface,
-} from "./quad-store-interface.ts";
+} from "#/client/quad-store/quad-store-interface.ts";
 
 /**
  * RdfjsQuadStore is the standard implementation of the QuadStoreInterface that uses

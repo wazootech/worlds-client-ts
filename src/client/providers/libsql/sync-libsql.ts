@@ -21,10 +21,10 @@ import type { EmbeddingService } from "#/client/search-index/embedding-service/m
 export interface SyncLibsqlOptions {
   /** client is the underlying database connection. */
   client: Client;
-  
+
   /** embeddingService is an optional projection capability for text literals, needed only if chunking requires new vector math. */
   embeddingService: EmbeddingService;
-  
+
   /** textSplitter is the splitting facility consumed when breaking large strings into search metadata. */
   textSplitter: TextSplitterInterface;
 }
