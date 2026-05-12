@@ -44,6 +44,30 @@ Deno.test("Slice 1: createIndexedStore proxy captures raw removeQuad mutation", 
   assertEquals(pending[0].deletions.length, 1, "Expected deletion to be tracked in buffer");
 });
 
+Deno.test("Slice 1: createIndexedStore proxy captures removeMatches", async () => {
+  const baseStore = new Store();
+  const q1 = quad(namedNode("u:s1"), namedNode("u:p"), literal("v1"));
+  const q2 = quad(namedNode("u:s2"), namedNode("u:p"), literal("v2"));
+  baseStore.addQuad(q1);
+  baseStore.addQuad(q2);
+
+  const { store, queue } = createIndexedStore(baseStore);
+
+  // removeMatches returns a stream — consume it to ensure queue is populated
+  const removalStream = store.removeMatches(null, namedNode("u:p"), null, null);
+  await new Promise<void>((resolve) => {
+    // deno-lint-ignore no-explicit-any
+    (removalStream as any).on("end", resolve);
+    // deno-lint-ignore no-explicit-any
+    (removalStream as any).on("error", resolve);
+  });
+
+  const pending = queue.flush();
+  assertEquals(pending.length, 1, "Expected exactly one patch");
+  assertEquals(pending[0].deletions.length, 2, "Expected both quads captured as deletions");
+  assertEquals(baseStore.size, 0, "Base store should be empty after removeMatches");
+});
+
 Deno.test("Slice 2: bridge automatically transparently captures implicit Comunica SPARQL updates", async () => {
   const baseStore = new Store();
   const { store, queue } = createIndexedStore(baseStore);

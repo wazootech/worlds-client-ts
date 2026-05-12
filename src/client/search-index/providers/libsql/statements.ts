@@ -154,6 +154,12 @@ export function buildInsertQuad(options: {
 
 /**
  * buildSearchQuery assembles the optimized hybrid search query leveraging RRF logic.
+ *
+ * The hybrid scoring uses Reciprocal Rank Fusion (RRF) to combine vector and FTS
+ * rankings. The rank offset of 60 is a standard RRF smoothing constant that
+ * prevents zero-division and moderates the influence of high rankings.
+ * The libsql `vector_top_k` table function performs ANN vector search via
+ * the cosine similarity index on the `idx_chunks_vector` index.
  */
 export function buildSearchQuery(
   request: SearchRequest,

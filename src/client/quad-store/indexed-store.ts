@@ -90,8 +90,58 @@ export function createIndexedStore(target: Store): {
         };
       }
 
-      // 4. Fallback: bind other functions (like match, removeMatches) back to parent
+      // 4. Capture removeMatches (used by replace-mode imports)
+      if (prop === "removeMatches") {
+        return (
+          subject?: rdfjs.Term | null,
+          predicate?: rdfjs.Term | null,
+          object?: rdfjs.Term | null,
+          graph?: rdfjs.Term | null,
+        ): rdfjs.Stream<rdfjs.Quad> => {
+          const toDelete: rdfjs.Quad[] = [];
+          // Save original match and replace with intercepting wrapper
+          const origMatch = (base as any).match;
+          // deno-lint-ignore no-explicit-any
+          (base as any).match = function (
+            s?: rdfjs.Term | null,
+            p?: rdfjs.Term | null,
+            o?: rdfjs.Term | null,
+            g?: rdfjs.Term | null,
+          ) {
+            const stream = (origMatch as any).call(this, s, p, o, g);
+            // deno-lint-ignore no-explicit-any
+            (stream as any).on("data", (q: rdfjs.Quad) => toDelete.push(q));
+            return stream;
+          };
+          try {
+            // Get the removal stream from the base store (base.match is now our wrapper)
+            // deno-lint-ignore no-explicit-any
+            const removalStream = (base as any).removeMatches.call(base, subject, predicate, object, graph);
+            // Also listen to the removal stream itself
+            // deno-lint-ignore no-explicit-any
+            (removalStream as any).on("data", (q: rdfjs.Quad) => toDelete.push(q));
+            // Queue deletions once the removal stream finishes
+            // deno-lint-ignore no-explicit-any
+            (removalStream as any).on("end", () => {
+              if (toDelete.length) queue.push({ insertions: [], deletions: toDelete });
+            });
+            return removalStream;
+          } finally {
+            // Always restore original match
+            // deno-lint-ignore no-explicit-any
+            (base as any).match = origMatch;
+          }
+        };
+      }
+
+      // 5. Fallback: bind other functions back to parent
       return value.bind(base);
+    },
+    has(base, prop) {
+      // Intercept the has trap so Comunica's internal quad-existence checks
+      // (e.g. during delete-if-absent logic) route through the proxy correctly.
+      if (prop === "removeMatches") return true;
+      return Reflect.has(base, prop);
     },
   }) as Store;
 

@@ -48,23 +48,44 @@ export class QuadChunker {
   /**
    * chunk accepts a collection of RDF Quads, filters literal payload candidates,
    * and returns an aggregated list of standardized storage payloads preserving parent metadata context.
+   * Pass preComputedIds for quad IDs already computed via hashQuad to avoid redundant hashing.
    */
-  public async chunk(quads: Quad[]): Promise<ChunkRowPayload[]> {
+  public async chunk(
+    quads: Quad[],
+    preComputedIds?: string[],
+  ): Promise<ChunkRowPayload[]> {
     // Filter valid candidates from the stream.
     const candidates = quads.filter((q) => q.object.termType === "Literal");
     if (candidates.length === 0) {
       return [];
     }
 
+    // Build id map from preComputedIds (parallel to quads) or compute on demand
+    let idByQuad: Map<Quad, string>;
+    if (preComputedIds) {
+      idByQuad = new Map();
+      for (let i = 0; i < quads.length; i++) {
+        idByQuad.set(quads[i], preComputedIds[i]);
+      }
+    } else {
+      idByQuad = new Map();
+      const hashPromises = candidates.map(async (q) => ({
+        quad: q,
+        id: await hashQuad(q),
+      }));
+      const resolved = await Promise.all(hashPromises);
+      for (const { quad, id } of resolved) {
+        idByQuad.set(quad, id);
+      }
+    }
+
     // Prepare batched components and associated correlation vectors.
     const texts = candidates.map((q) => q.object.value);
-    const metadatas = await Promise.all(
-      candidates.map(async (q) => ({
-        quad_id: await hashQuad(q),
-        subject: q.subject.value,
-        predicate: q.predicate.value,
-      }))
-    );
+    const metadatas = candidates.map((q) => ({
+      quad_id: idByQuad.get(q)!,
+      subject: q.subject.value,
+      predicate: q.predicate.value,
+    }));
 
     // Execute collective chunking via engine injection.
     const docs = await this.options.splitter.createDocuments(texts, metadatas);

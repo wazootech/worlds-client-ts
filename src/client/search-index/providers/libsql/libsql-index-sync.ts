@@ -63,9 +63,15 @@ export class LibsqlIndexSync {
 
     // 2. Handle population and serialization of new additions
     if (patch.insertions?.length) {
+      // Batch-hash all quads upfront to avoid redundant canonization
+      const quadIds = await Promise.all(
+        patch.insertions.map((q) => hashQuad(q)),
+      );
+
       // First, directly archive facts natively decomposing structures into relational columns
-      for (const quad of patch.insertions) {
-        const id = await hashQuad(quad);
+      for (let i = 0; i < patch.insertions.length; i++) {
+        const quad = patch.insertions[i];
+        const id = quadIds[i];
 
         // Conditional typing extractors for Literal specific properties
         const isLit = quad.object.termType === "Literal";
@@ -88,7 +94,7 @@ export class LibsqlIndexSync {
       }
 
       // Second, transform literals into chunked, vectorized artifacts for searching
-      const chunks = await this.chunker.chunk(patch.insertions);
+      const chunks = await this.chunker.chunk(patch.insertions, quadIds);
       for (const payload of chunks) {
         const vector = await this.embeddingService.embed(payload.value);
         const vectorJson = JSON.stringify(Array.from(vector));
