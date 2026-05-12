@@ -30,6 +30,7 @@ export interface SparqlRequest {
 export type SparqlResponse =
   | { kind: "select"; data: SparqlSelectResults }
   | { kind: "ask"; data: SparqlAskResults }
+  // TODO: Implement "construct" result type to support CONSTRUCT/DESCRIBE queries (which return rdfjs.Quad[]).
   | { kind: "void" };
 
 /**

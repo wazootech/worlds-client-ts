@@ -96,6 +96,7 @@ export async function executeSparql(
             );
             return resolve({ kind: "ask", data: results });
           }
+          // TODO: Implement "quads" case to drain result stream and resolve as { kind: "construct", data: rdfjs.Quad[] }
           default:
             return reject(
               new Error(
