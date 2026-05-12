@@ -4,7 +4,7 @@ import type {
   SearchRequest,
   SearchResponse,
   SearchResult,
-} from "#/client/search-index/interface.ts";
+} from "#/client/search-index/search-index-interface.ts";
 import { buildSearchQuery } from "./statements.ts";
 
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";

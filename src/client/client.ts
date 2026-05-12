@@ -1,4 +1,4 @@
-import type { ClientInterface } from "./interface.ts";
+import type { ClientInterface } from "./client-interface.ts";
 import type {
   ExportRequest,
   ExportResponse,

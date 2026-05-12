@@ -1,4 +1,4 @@
-import type { EmbeddingService } from "./interface.ts";
+import type { EmbeddingService } from "./embedding-service.ts";
 
 /**
  * FakeEmbeddingService implements a reliable dummy projection model usable

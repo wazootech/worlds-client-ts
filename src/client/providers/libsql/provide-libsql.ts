@@ -4,7 +4,7 @@ import { Store } from "n3";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
 import type { ClientOptions } from "#/client/client.ts";
-import type { Patch } from "#/client/quad-store/patch.ts";
+import type { Patch } from "#/client/quad-store/patch-queue-interface.ts";
 import type { TextSplitterInterface } from "#/client/search-index/quad-chunker/chunk-quads.ts";
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 

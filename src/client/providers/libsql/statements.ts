@@ -1,4 +1,4 @@
-import type { SearchRequest } from "#/client/search-index/interface.ts";
+import type { SearchRequest } from "#/client/search-index/search-index-interface.ts";
 
 /**
  * makeLibsqlQuadsTable defines the DDL for the master source-of-truth Quad Storage.
