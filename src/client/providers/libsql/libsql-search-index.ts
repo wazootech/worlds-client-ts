@@ -39,8 +39,19 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
    * search executes a keyword and vector hybrid query against the current index.
    */
   public async search(request: SearchRequest): Promise<SearchResponse> {
-    const vector = await this.embeddingService.embed(request.query);
-    const vectorJson = JSON.stringify(Array.from(vector));
+    let vectorJson: string | undefined;
+
+    try {
+      const vector = await this.embeddingService.embed(request.query);
+      vectorJson = JSON.stringify(Array.from(vector));
+    } catch (error) {
+      // Gracefully degrade to keyword-only search if the embedding provider fails.
+      console.warn(
+        `[Search Warning] Embedding service failure. Degrading to keyword-only search fallback. Reason: ${
+          (error as Error).message
+        }`,
+      );
+    }
 
     const { sql, args } = buildSearchQuery(request, {
       vectorJson,

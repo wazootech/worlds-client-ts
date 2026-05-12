@@ -171,72 +171,112 @@ export function buildInsertQuad(options: {
  */
 export function buildSearchQuery(
   request: SearchRequest,
-  options: { vectorJson: string; limit: number },
+  options: { vectorJson?: string; limit: number },
 ): { sql: string; args: (string | number)[] } {
   const { vectorJson, limit } = options;
 
-  // Build standard baseline arguments for hybrid fetch
-  const args: (string | number)[] = [
-    vectorJson,
-    limit,
-    request.query,
-    limit,
-  ];
-
-  // Construct filtering where conditions based on constraints
+  // Construct dynamic filtering where conditions based on user constraints
   const whereClauses: string[] = [];
+  const filterArgs: (string | number)[] = [];
 
-  // Exclusion rules
   if (request.exclude?.subjects?.length) {
     const placeholders = request.exclude.subjects.map(() => "?").join(", ");
     whereClauses.push(`chunks.subject NOT IN (${placeholders})`);
-    args.push(...request.exclude.subjects);
+    filterArgs.push(...request.exclude.subjects);
   }
   if (request.exclude?.predicates?.length) {
     const placeholders = request.exclude.predicates.map(() => "?").join(", ");
     whereClauses.push(`chunks.predicate NOT IN (${placeholders})`);
-    args.push(...request.exclude.predicates);
+    filterArgs.push(...request.exclude.predicates);
   }
   if (request.exclude?.graphs?.length) {
     const placeholders = request.exclude.graphs.map(() => "?").join(", ");
     whereClauses.push(`chunks.graph NOT IN (${placeholders})`);
-    args.push(...request.exclude.graphs);
+    filterArgs.push(...request.exclude.graphs);
   }
-
-  // Inclusion rules
   if (request.include?.subjects?.length) {
     const placeholders = request.include.subjects.map(() => "?").join(", ");
     whereClauses.push(`chunks.subject IN (${placeholders})`);
-    args.push(...request.include.subjects);
+    filterArgs.push(...request.include.subjects);
   }
   if (request.include?.predicates?.length) {
     const placeholders = request.include.predicates.map(() => "?").join(", ");
     whereClauses.push(`chunks.predicate IN (${placeholders})`);
-    args.push(...request.include.predicates);
+    filterArgs.push(...request.include.predicates);
   }
   if (request.include?.graphs?.length) {
     const placeholders = request.include.graphs.map(() => "?").join(", ");
     whereClauses.push(`chunks.graph IN (${placeholders})`);
-    args.push(...request.include.graphs);
+    filterArgs.push(...request.include.graphs);
   }
 
   const whereFilter = whereClauses.length > 0
     ? `WHERE ${whereClauses.join(" AND ")}`
     : "";
 
-  // Add internal LIMIT parameter for the final output
-  args.push(limit);
+  // MODE A: Execute Hybrid RRF Search (Vector + FTS)
+  if (vectorJson) {
+    const args: (string | number)[] = [
+      vectorJson,
+      limit,
+      request.query,
+      limit,
+      ...filterArgs,
+      limit,
+    ];
 
-  // Compose query adhering to prior art spec adapted for chunks table
+    const sql = `
+      WITH vec_matches AS (
+        SELECT
+          id AS rowid,
+          row_number() OVER (PARTITION BY NULL) AS rank_number
+        FROM
+          vector_top_k('idx_chunks_vector', vector32(?), ?)
+      ),
+      fts_matches AS (
+        SELECT
+          rowid,
+          row_number() OVER (ORDER BY rank) AS rank_number,
+          rank AS score
+        FROM
+          chunks_fts
+        WHERE
+          chunks_fts MATCH ?
+        LIMIT ?
+      ), final AS (
+        SELECT
+          chunks.subject,
+          chunks.predicate,
+          chunks.graph,
+          chunks.value,
+          (
+            COALESCE(1.0 / (60 + fts_matches.rank_number), 0.0) * 1.0 + 
+            COALESCE(1.0 / (60 + vec_matches.rank_number), 0.0) * 1.0
+          ) AS combined_rank
+        FROM
+          fts_matches
+          FULL OUTER JOIN vec_matches ON vec_matches.rowid = fts_matches.rowid
+          JOIN chunks ON chunks.id = COALESCE(fts_matches.rowid, vec_matches.rowid)
+        ${whereFilter}
+        ORDER BY
+          combined_rank DESC
+        LIMIT ?
+      )
+      SELECT * FROM final;
+    `;
+    return { sql, args };
+  }
+
+  // MODE B: Fallback Degraded Keyword-Only Search (FTS Only)
+  const args: (string | number)[] = [
+    request.query,
+    limit,
+    ...filterArgs,
+    limit,
+  ];
+
   const sql = `
-    WITH vec_matches AS (
-      SELECT
-        id AS rowid,
-        row_number() OVER (PARTITION BY NULL) AS rank_number
-      FROM
-        vector_top_k('idx_chunks_vector', vector32(?), ?)
-    ),
-    fts_matches AS (
+    WITH fts_matches AS (
       SELECT
         rowid,
         row_number() OVER (ORDER BY rank) AS rank_number,
@@ -252,14 +292,10 @@ export function buildSearchQuery(
         chunks.predicate,
         chunks.graph,
         chunks.value,
-        (
-          COALESCE(1.0 / (60 + fts_matches.rank_number), 0.0) * 1.0 + 
-          COALESCE(1.0 / (60 + vec_matches.rank_number), 0.0) * 1.0
-        ) AS combined_rank
+        COALESCE(1.0 / (60 + fts_matches.rank_number), 0.0) AS combined_rank
       FROM
         fts_matches
-        FULL OUTER JOIN vec_matches ON vec_matches.rowid = fts_matches.rowid
-        JOIN chunks ON chunks.id = COALESCE(fts_matches.rowid, vec_matches.rowid)
+        JOIN chunks ON chunks.id = fts_matches.rowid
       ${whereFilter}
       ORDER BY
         combined_rank DESC
@@ -267,6 +303,5 @@ export function buildSearchQuery(
     )
     SELECT * FROM final;
   `;
-
   return { sql, args };
 }
