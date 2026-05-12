@@ -2,22 +2,16 @@ import { assertEquals, assertExists } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { FakeEmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
-import {
-  makeLibsqlChunksFtsTable,
-  makeLibsqlChunksIndex,
-  makeLibsqlChunksQuadIdIndex,
-  makeLibsqlChunksTable,
-  makeLibsqlChunksTriggers,
-} from "./statements.ts";
+import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 
 // --- Helpers ---
 
 async function setupSchema(client: ReturnType<typeof createClient>) {
-  await client.execute(makeLibsqlChunksTable());
-  await client.execute(makeLibsqlChunksQuadIdIndex());
-  await client.execute(makeLibsqlChunksFtsTable());
-  await client.execute(makeLibsqlChunksIndex());
-  for (const triggerSql of makeLibsqlChunksTriggers()) {
+  await client.execute(LibsqlQueryBuilder.buildLibsqlChunksTable());
+  await client.execute(LibsqlQueryBuilder.buildLibsqlChunksQuadIdIndex());
+  await client.execute(LibsqlQueryBuilder.buildLibsqlChunksFtsTable());
+  await client.execute(LibsqlQueryBuilder.buildLibsqlChunksIndex());
+  for (const triggerSql of LibsqlQueryBuilder.buildLibsqlChunksTriggers()) {
     await client.execute(triggerSql);
   }
 }

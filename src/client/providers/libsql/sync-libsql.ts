@@ -7,12 +7,7 @@ import type {
 import { chunkQuads } from "#/client/search-index/quad-chunker/chunk-quads.ts";
 import { hashQuad } from "#/client/quad-store/hash-quad.ts";
 import type * as rdfjs from "@rdfjs/types";
-import {
-  buildDeleteByQuadIds,
-  buildDeleteQuadsByQuadIds,
-  buildInsertChunk,
-  buildInsertQuad,
-} from "./statements.ts";
+import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
 /**
@@ -54,8 +49,10 @@ export async function syncLibsql(
       throw new Error("failed to hash deletion quads", { cause });
     }
     if (deletionQuadIds.length) {
-      statements.push(buildDeleteByQuadIds(deletionQuadIds));
-      statements.push(buildDeleteQuadsByQuadIds(deletionQuadIds));
+      statements.push(LibsqlQueryBuilder.buildDeleteByQuadIds(deletionQuadIds));
+      statements.push(
+        LibsqlQueryBuilder.buildDeleteQuadsByQuadIds(deletionQuadIds),
+      );
     }
   }
 
@@ -74,8 +71,8 @@ export async function syncLibsql(
     // Pre-emptive Cleaning: Ensure absolute relational idempotence by clearing existing records
     // for incoming Quad IDs prior to re-insertion. This defends against cross-application
     // collision and stale state pollution.
-    statements.push(buildDeleteByQuadIds(quadIds));
-    statements.push(buildDeleteQuadsByQuadIds(quadIds));
+    statements.push(LibsqlQueryBuilder.buildDeleteByQuadIds(quadIds));
+    statements.push(LibsqlQueryBuilder.buildDeleteQuadsByQuadIds(quadIds));
 
     // First, directly archive facts natively decomposing structures into relational columns
     for (let i = 0; i < patch.insertions.length; i++) {
@@ -87,7 +84,7 @@ export async function syncLibsql(
       const literal = isLiteral ? (quad.object as rdfjs.Literal) : null;
 
       statements.push(
-        buildInsertQuad({
+        LibsqlQueryBuilder.buildInsertQuad({
           quad_id: id,
           s: quad.subject.value,
           s_type: quad.subject.termType,
@@ -122,7 +119,7 @@ export async function syncLibsql(
       }
       const vectorJson = JSON.stringify(Array.from(vector));
       statements.push(
-        buildInsertChunk({
+        LibsqlQueryBuilder.buildInsertChunk({
           quad_id: payload.quad_id,
           subject: payload.subject,
           predicate: payload.predicate,

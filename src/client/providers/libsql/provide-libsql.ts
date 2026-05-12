@@ -15,14 +15,7 @@ import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { syncLibsql } from "./sync-libsql.ts";
 import { hydrateStoreFromLibsql } from "./hydrate-store-from-libsql.ts";
 
-import {
-  makeLibsqlChunksFtsTable,
-  makeLibsqlChunksIndex,
-  makeLibsqlChunksQuadIdIndex,
-  makeLibsqlChunksTable,
-  makeLibsqlChunksTriggers,
-  makeLibsqlQuadsTable,
-} from "./statements.ts";
+import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 
 const queryEngine = new QueryEngine();
 
@@ -53,12 +46,12 @@ export interface LibsqlOptions {
  * initializeSchema synchronously checks and creates the full set of persistent tables needed.
  */
 async function initializeSchema(db: LibsqlClient): Promise<void> {
-  await db.execute(makeLibsqlQuadsTable());
-  await db.execute(makeLibsqlChunksTable());
-  await db.execute(makeLibsqlChunksQuadIdIndex());
-  await db.execute(makeLibsqlChunksFtsTable());
-  await db.execute(makeLibsqlChunksIndex());
-  for (const sql of makeLibsqlChunksTriggers()) {
+  await db.execute(LibsqlQueryBuilder.buildLibsqlQuadsTable());
+  await db.execute(LibsqlQueryBuilder.buildLibsqlChunksTable());
+  await db.execute(LibsqlQueryBuilder.buildLibsqlChunksQuadIdIndex());
+  await db.execute(LibsqlQueryBuilder.buildLibsqlChunksFtsTable());
+  await db.execute(LibsqlQueryBuilder.buildLibsqlChunksIndex());
+  for (const sql of LibsqlQueryBuilder.buildLibsqlChunksTriggers()) {
     await db.execute(sql);
   }
 }
