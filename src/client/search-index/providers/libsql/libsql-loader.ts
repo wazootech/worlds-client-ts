@@ -1,5 +1,5 @@
 import type { Client, Row } from "@libsql/client";
-import { DataFactory, Store } from "n3";
+import { DataFactory, type Store } from "n3";
 import type * as rdfjs from "@rdfjs/types";
 
 const { namedNode, literal, blankNode, defaultGraph, quad } = DataFactory;
@@ -30,7 +30,10 @@ export async function hydrateStoreFromLibsql(
 
       batchQuads.push(quad(subject, predicate, object, graph));
     } catch (err) {
-      console.warn(`hydrateStoreFromLibsql: skipping corrupt row s="${row.s}"`, err);
+      console.warn(
+        `hydrateStoreFromLibsql: skipping corrupt row s="${row.s}"`,
+        err,
+      );
     }
   }
 

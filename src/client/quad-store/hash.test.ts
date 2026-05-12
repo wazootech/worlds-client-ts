@@ -47,7 +47,7 @@ Deno.test("hashQuad is valid URL-safe base64", async () => {
     literal("hello"),
   );
   const hash = await hashQuad(q1);
-  
+
   // Verify no slashes or plus signs that are illegal in base64url
   assertEquals(hash.includes("/"), false);
   assertEquals(hash.includes("+"), false);

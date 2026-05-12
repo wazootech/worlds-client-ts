@@ -148,7 +148,11 @@ Deno.test("RdfjsQuadStore.import - handles BlankNode subjects", async () => {
 Deno.test("RdfjsQuadStore.import - handles BlankNode objects", async () => {
   const store = new Store();
   const bObject = blankNode("b2");
-  const q = quad(namedNode("http://example.org/s"), namedNode("http://example.org/p"), bObject);
+  const q = quad(
+    namedNode("http://example.org/s"),
+    namedNode("http://example.org/p"),
+    bObject,
+  );
   await new RdfjsQuadStore(store).import({
     source: { kind: "quads", quads: [q] },
   });

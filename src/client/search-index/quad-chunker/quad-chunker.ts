@@ -9,6 +9,7 @@ export interface ChunkRowPayload {
   quad_id: string;
   subject: string;
   predicate: string;
+  graph: string;
   value: string;
 }
 
@@ -85,6 +86,7 @@ export class QuadChunker {
       quad_id: idByQuad.get(q)!,
       subject: q.subject.value,
       predicate: q.predicate.value,
+      graph: q.graph.value,
     }));
 
     // Execute collective chunking via engine injection.
@@ -95,6 +97,7 @@ export class QuadChunker {
       quad_id: String(doc.metadata?.quad_id ?? ""),
       subject: String(doc.metadata?.subject ?? ""),
       predicate: String(doc.metadata?.predicate ?? ""),
+      graph: String(doc.metadata?.graph ?? ""),
       value: doc.pageContent,
     }));
   }

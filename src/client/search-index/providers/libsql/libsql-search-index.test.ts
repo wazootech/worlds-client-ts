@@ -1,18 +1,14 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { createClient } from "@libsql/client";
-import { DataFactory } from "n3";
-import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
-import { QuadChunker } from "#/client/search-index/chunking/quad-chunker.ts";
+import { FakeEmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 import {
-  makeLibsqlChunksQuadIdIndex,
   makeLibsqlChunksFtsTable,
   makeLibsqlChunksIndex,
+  makeLibsqlChunksQuadIdIndex,
   makeLibsqlChunksTable,
   makeLibsqlChunksTriggers,
 } from "./statements.ts";
-
-const { quad, namedNode, literal } = DataFactory;
 
 // --- Helpers ---
 
@@ -26,17 +22,6 @@ async function setupSchema(client: ReturnType<typeof createClient>) {
   }
 }
 
-class FakeEmbedder {
-  embed(_text: string): Promise<Float32Array> {
-    // Fake matching vector dimensions of F32_BLOB(32) defined in utils, padded out
-    const data = new Array(32).fill(0);
-    data[0] = 1.0;
-    return Promise.resolve(new Float32Array(data));
-  }
-}
-
-const sharedSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000 });
-
 // --- Tests ---
 
 Deno.test("LibsqlSearchIndex - Tracer Bullet: performs basic hybrid search and maps results", async () => {
@@ -49,11 +34,12 @@ Deno.test("LibsqlSearchIndex - Tracer Bullet: performs basic hybrid search and m
 
   await client.execute({
     sql:
-      `INSERT INTO chunks (quad_id, subject, predicate, value, vector) VALUES (?, ?, ?, ?, vector32(?))`,
+      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, vector32(?))`,
     args: [
       "f1",
       "urn:alice",
       "urn:name",
+      "urn:graph",
       "Alice is the explorer",
       vecStr,
     ],
@@ -65,11 +51,12 @@ Deno.test("LibsqlSearchIndex - Tracer Bullet: performs basic hybrid search and m
 
   await client.execute({
     sql:
-      `INSERT INTO chunks (quad_id, subject, predicate, value, vector) VALUES (?, ?, ?, ?, vector32(?))`,
+      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, vector32(?))`,
     args: [
       "f2",
       "urn:bob",
       "urn:name",
+      "urn:graph",
       "Bob stays back",
       otherVecStr,
     ],
@@ -77,7 +64,7 @@ Deno.test("LibsqlSearchIndex - Tracer Bullet: performs basic hybrid search and m
 
   const searchIndex = new LibsqlSearchIndex({
     client,
-    embeddingService: new FakeEmbedder(),
+    embeddingService: new FakeEmbeddingService(),
   });
 
   const response = await searchIndex.search({ query: "Alice" });
@@ -101,18 +88,32 @@ Deno.test("LibsqlSearchIndex - Scope Inclusion: limits matches only to included 
 
   await client.execute({
     sql:
-      `INSERT INTO chunks (quad_id, subject, predicate, value, vector) VALUES (?, ?, ?, ?, vector32(?))`,
-    args: ["f1", "urn:person:1", "urn:bio", "Loves coding and data", vecStr],
+      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, vector32(?))`,
+    args: [
+      "f1",
+      "urn:person:1",
+      "urn:bio",
+      "urn:g1",
+      "Loves coding and data",
+      vecStr,
+    ],
   });
   await client.execute({
     sql:
-      `INSERT INTO chunks (quad_id, subject, predicate, value, vector) VALUES (?, ?, ?, ?, vector32(?))`,
-    args: ["f2", "urn:person:2", "urn:bio", "Loves coding and gardening", vecStr],
+      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, vector32(?))`,
+    args: [
+      "f2",
+      "urn:person:2",
+      "urn:bio",
+      "urn:g1",
+      "Loves coding and gardening",
+      vecStr,
+    ],
   });
 
   const searchIndex = new LibsqlSearchIndex({
     client,
-    embeddingService: new FakeEmbedder(),
+    embeddingService: new FakeEmbeddingService(),
   });
 
   const base = await searchIndex.search({ query: "coding" });
@@ -147,18 +148,18 @@ Deno.test("LibsqlSearchIndex - Scope Exclusion: suppresses explicitly excluded p
 
   await client.execute({
     sql:
-      `INSERT INTO chunks (quad_id, subject, predicate, value, vector) VALUES (?, ?, ?, ?, vector32(?))`,
-    args: ["f1", "urn:e1", "urn:allowed", "Match text", vecStr],
+      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, vector32(?))`,
+    args: ["f1", "urn:e1", "urn:allowed", "urn:g", "Match text", vecStr],
   });
   await client.execute({
     sql:
-      `INSERT INTO chunks (quad_id, subject, predicate, value, vector) VALUES (?, ?, ?, ?, vector32(?))`,
-    args: ["f2", "urn:e1", "urn:forbidden", "Match text", vecStr],
+      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, vector32(?))`,
+    args: ["f2", "urn:e1", "urn:forbidden", "urn:g", "Match text", vecStr],
   });
 
   const searchIndex = new LibsqlSearchIndex({
     client,
-    embeddingService: new FakeEmbedder(),
+    embeddingService: new FakeEmbeddingService(),
   });
 
   const response = await searchIndex.search({

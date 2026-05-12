@@ -33,16 +33,25 @@ export class RdfjsSearchIndex implements SearchIndexInterface {
     const excludePreds = request.exclude?.predicates
       ? new Set(request.exclude.predicates)
       : null;
+    const excludeGraphs = request.exclude?.graphs
+      ? new Set(request.exclude.graphs)
+      : null;
+
+    const includeGraphs = request.include?.graphs
+      ? new Set(request.include.graphs)
+      : null;
 
     await new Promise<void>((resolve, reject) => {
       stream.on("data", (quad: rdfjs.Quad) => {
         // 1. Primary Filter: Exclusions ALWAYS trump
         if (excludeSubjects?.has(quad.subject.value)) return;
         if (excludePreds?.has(quad.predicate.value)) return;
+        if (excludeGraphs?.has(quad.graph.value)) return;
 
         // 2. Scope Filter: Inclusions strictly limit visibility
         if (includeSubjects && !includeSubjects.has(quad.subject.value)) return;
         if (includePreds && !includePreds.has(quad.predicate.value)) return;
+        if (includeGraphs && !includeGraphs.has(quad.graph.value)) return;
 
         // 3. Text Filter: Match literal string objects
         if (quad.object.termType === "Literal") {
@@ -51,6 +60,7 @@ export class RdfjsSearchIndex implements SearchIndexInterface {
             results.push({
               subject: quad.subject.value,
               predicate: quad.predicate.value,
+              graph: quad.graph.value,
               text: value,
               score: 1.0,
             });

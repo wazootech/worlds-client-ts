@@ -6,7 +6,7 @@ import { executeSparql } from "../sparql-engine/sparql-engine.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 
-Deno.test("Slice 1: createIndexedStore proxy captures raw addQuad mutation", async () => {
+Deno.test("Slice 1: createIndexedStore proxy captures raw addQuad mutation", () => {
   const baseStore = new Store();
   const { store, queue } = createIndexedStore(baseStore);
 
@@ -21,27 +21,39 @@ Deno.test("Slice 1: createIndexedStore proxy captures raw addQuad mutation", asy
 
   // Verify the hook automatically caught the action and loaded our queue!
   const pending = queue.flush();
-  assertEquals(pending.length, 1, "Expected exactly one patch transaction recorded");
+  assertEquals(
+    pending.length,
+    1,
+    "Expected exactly one patch transaction recorded",
+  );
   assertEquals(pending[0].insertions.length, 1);
   assertEquals(pending[0].insertions[0].object.value, "Capturable value");
-  
+
   // Ensure actual data made it to physical N3 storage too
-  assertEquals(baseStore.size, 1, "Proxy failed to delegate to inner store memory");
+  assertEquals(
+    baseStore.size,
+    1,
+    "Proxy failed to delegate to inner store memory",
+  );
 });
 
-Deno.test("Slice 1: createIndexedStore proxy captures raw removeQuad mutation", async () => {
+Deno.test("Slice 1: createIndexedStore proxy captures raw removeQuad mutation", () => {
   const baseStore = new Store();
   const testQuad = quad(namedNode("u:s"), namedNode("u:p"), literal("v"));
   baseStore.addQuad(testQuad);
 
   const { store, queue } = createIndexedStore(baseStore);
-  
+
   // Perform remove through proxy
   store.removeQuad(testQuad);
-  
+
   const pending = queue.flush();
   assertEquals(pending.length, 1);
-  assertEquals(pending[0].deletions.length, 1, "Expected deletion to be tracked in buffer");
+  assertEquals(
+    pending[0].deletions.length,
+    1,
+    "Expected deletion to be tracked in buffer",
+  );
 });
 
 Deno.test("Slice 1: createIndexedStore proxy captures removeMatches", async () => {
@@ -64,8 +76,16 @@ Deno.test("Slice 1: createIndexedStore proxy captures removeMatches", async () =
 
   const pending = queue.flush();
   assertEquals(pending.length, 1, "Expected exactly one patch");
-  assertEquals(pending[0].deletions.length, 2, "Expected both quads captured as deletions");
-  assertEquals(baseStore.size, 0, "Base store should be empty after removeMatches");
+  assertEquals(
+    pending[0].deletions.length,
+    2,
+    "Expected both quads captured as deletions",
+  );
+  assertEquals(
+    baseStore.size,
+    0,
+    "Base store should be empty after removeMatches",
+  );
 });
 
 Deno.test("Slice 2: bridge automatically transparently captures implicit Comunica SPARQL updates", async () => {
@@ -83,13 +103,20 @@ Deno.test("Slice 2: bridge automatically transparently captures implicit Comunic
   // Verify the chain worked!
   // Comunica -> Proxy Hook -> PatchQueue!
   const pending = queue.flush();
-  
+
   // It could trigger either multiple small patches or one big one depending on Comunica internals.
   // We check that SOME insertions made it.
-  const totalInsertions = pending.reduce((acc, patch) => acc + patch.insertions.length, 0);
-  
-  assertEquals(totalInsertions > 0, true, "Comunica updates failed to activate the Proxy hook!");
-  
+  const totalInsertions = pending.reduce(
+    (acc, patch) => acc + patch.insertions.length,
+    0,
+  );
+
+  assertEquals(
+    totalInsertions > 0,
+    true,
+    "Comunica updates failed to activate the Proxy hook!",
+  );
+
   // Also explicitly check memory presence
   assertEquals(baseStore.size, 1, "Memory failed to write");
 });

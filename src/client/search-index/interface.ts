@@ -30,6 +30,11 @@ export interface SearchFilters {
    * Use this to restrict keyword matching only to certain fields like `rdfs:comment`.
    */
   predicates?: Array<string>;
+
+  /**
+   * Limit search scope to specific Named Graphs.
+   */
+  graphs?: Array<string>;
 }
 
 /**
@@ -50,11 +55,11 @@ export interface SearchResult {
   /** predicate is the predicate resource of the hit */
   predicate: string;
 
+  /** graph is the specific graph context that housed this statement */
+  graph: string;
+
   /** text is the literal object of the hit */
   text: string;
-
-  /** title is the human-readable name for the subject, helpful for presentation. */
-  title?: string;
 
   /**
    * score is the combined rank of the hit (Reciprocal Rank Fusion).

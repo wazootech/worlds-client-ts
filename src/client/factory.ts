@@ -1,5 +1,5 @@
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
-import { Store } from "n3";
+import type { Store } from "n3";
 
 import { Client, type ClientOptions } from "./client.ts";
 import type { ClientInterface } from "./interface.ts";
@@ -8,14 +8,8 @@ import { RdfjsQuadStore } from "./quad-store/quad-store.ts";
 import { ComunicaSparqlEngine } from "./sparql-engine/sparql-engine.ts";
 import type { SearchIndexInterface } from "./search-index/mod.ts";
 import type { Patch } from "./quad-store/patch.ts";
-import type {
-  ImportRequest,
-  ImportResponse,
-} from "./quad-store/mod.ts";
-import type {
-  SparqlRequest,
-  SparqlResponse,
-} from "./sparql-engine/mod.ts";
+import type { ImportRequest, ImportResponse } from "./quad-store/mod.ts";
+import type { SparqlRequest, SparqlResponse } from "./sparql-engine/mod.ts";
 
 const queryEngine = new QueryEngine();
 
@@ -52,43 +46,36 @@ export class SynchronizedClient extends Client {
  * Configuration bundle for generating a reactive engine deployment.
  */
 export interface BaseClientOptions {
-  /** 
+  /**
+   * The transient in-memory repository where graph operations execute.
+   */
+  store: Store;
+  /**
    * Primary semantic lookups engine powering natural language searches.
    */
   searchIndex: SearchIndexInterface;
-  /** 
+  /**
    * Inversion hook dispatching mutation sets to external durable storage agents.
    */
   sync?: (patch: Patch) => Promise<unknown>;
-  /** 
-   * Optional initializer reconstructing initial graph contents before activation.
-   */
-  hydrate?: (store: Store) => Promise<unknown>;
 }
 
 /**
- * createBaseClient synthesizes the generalized orchestration machinery required to power
+ * createClient synthesizes the generalized orchestration machinery required to power
  * any transactional reactive World environment. It intercepts memory mutations, cascades
  * commitment lifecycle events, and instantiates the semantic execution graph.
  */
-export async function createBaseClient(
+export function createClient(
   options: BaseClientOptions,
-): Promise<ClientInterface> {
-  const rawStore = new Store();
-
-  // Allow provider to pre-load graph dependencies.
-  if (options.hydrate) {
-    await options.hydrate(rawStore);
-  }
-
+): ClientInterface {
   // Construct active monitoring bridge.
-  const { store, queue } = createIndexedStore(rawStore);
+  const { store, queue } = createIndexedStore(options.store);
 
   // Centralized coordinator aggregating diff streams for upstream emission.
   const commitChanges = async () => {
     const patches = queue.flush();
     if (patches.length === 0) return;
-    
+
     if (options.sync) {
       const merged: Patch = {
         insertions: patches.flatMap((p) => p.insertions),
@@ -106,11 +93,9 @@ export async function createBaseClient(
   });
 
   // Assemble final high-order active composition.
-  const baseOptions: ClientOptions = {
+  return new SynchronizedClient({
     quadStore,
     sparqlEngine,
     searchIndex: options.searchIndex,
-  };
-
-  return new SynchronizedClient(baseOptions, commitChanges);
+  }, commitChanges);
 }

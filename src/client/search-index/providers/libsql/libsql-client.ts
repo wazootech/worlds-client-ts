@@ -1,13 +1,14 @@
 import type { Client as LibsqlClient } from "@libsql/client";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+import { Store } from "n3";
 
-import { createBaseClient } from "#/client/factory.ts";
+import { createClient as baseCreateClient } from "#/client/factory.ts";
 import type { ClientInterface } from "#/client/interface.ts";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { LibsqlSynchronizer } from "./libsql-synchronizer.ts";
-import { QuadChunker } from "#/client/search-index/chunking/quad-chunker.ts";
+import { QuadChunker } from "#/client/search-index/quad-chunker/quad-chunker.ts";
 import { hydrateStoreFromLibsql } from "./libsql-loader.ts";
-import type { EmbeddingService } from "./libsql-search-index.ts";
+import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
 import {
   makeLibsqlChunksFtsTable,
@@ -28,6 +29,8 @@ export interface CreateClientOptions {
   embeddingService: EmbeddingService;
   /** Optional pre-baked chunker, defaults internally if omitted. */
   chunker?: QuadChunker;
+  /** Optional pre-warmed store. If omitted, a fresh one is instantiated and hydrated. */
+  store?: Store;
 }
 
 /**
@@ -56,6 +59,12 @@ export async function createClient(
   // Prepare logical SQL schema context.
   await initializeSchema(db);
 
+  // Re-use pre-warmed store if provided, otherwise synthesize and populate new context.
+  const rawStore = options.store ?? new Store();
+  if (!options.store) {
+    await hydrateStoreFromLibsql(db, rawStore);
+  }
+
   // Setup specific IO strategies required by the Synchronizer.
   const chunker = options.chunker ??
     new QuadChunker({
@@ -74,9 +83,9 @@ export async function createClient(
   });
 
   // Delegate to generalized core for memory store composition and bridge instantiation.
-  return createBaseClient({
+  return baseCreateClient({
+    store: rawStore,
     searchIndex,
-    hydrate: (rawStore) => hydrateStoreFromLibsql(db, rawStore),
     sync: (patch) => synchronizer.sync(patch),
   });
 }

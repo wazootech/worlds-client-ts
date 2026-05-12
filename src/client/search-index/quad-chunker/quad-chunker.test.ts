@@ -31,6 +31,7 @@ Deno.test("QuadChunker.chunk - ingests short literal quad", async () => {
   );
   assertEquals(chunks[0].subject, "urn:bob");
   assertEquals(chunks[0].predicate, "urn:bio");
+  assertEquals(chunks[0].graph, ""); // default graph value in N3
   assertEquals(chunks[0].value, "Bob is a dev");
 });
 

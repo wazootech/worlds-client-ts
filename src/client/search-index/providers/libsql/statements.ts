@@ -28,6 +28,7 @@ export function makeLibsqlChunksTable(): string {
     quad_id TEXT NOT NULL,
     subject TEXT NOT NULL,
     predicate TEXT NOT NULL,
+    graph TEXT NOT NULL,
     value TEXT NOT NULL,
     vector F32_BLOB(32)
   )`;
@@ -81,16 +82,18 @@ export function buildInsertChunk(options: {
   quad_id: string;
   subject: string;
   predicate: string;
+  graph: string;
   value: string;
   vectorJson: string;
 }): { sql: string; args: (string | number)[] } {
   return {
-    sql: `INSERT INTO chunks (quad_id, subject, predicate, value, vector)
-          VALUES (?, ?, ?, ?, vector32(?))`,
+    sql: `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector)
+          VALUES (?, ?, ?, ?, ?, vector32(?))`,
     args: [
       options.quad_id,
       options.subject,
       options.predicate,
+      options.graph,
       options.value,
       options.vectorJson,
     ],
@@ -100,7 +103,9 @@ export function buildInsertChunk(options: {
 /**
  * buildDeleteByQuadIds creates the query to sweep away existing chunks belonging to stable Quad IDs.
  */
-export function buildDeleteByQuadIds(quadIds: string[]): { sql: string; args: string[] } {
+export function buildDeleteByQuadIds(
+  quadIds: string[],
+): { sql: string; args: string[] } {
   const placeholders = quadIds.map(() => "?").join(", ");
   return {
     sql: `DELETE FROM chunks WHERE quad_id IN (${placeholders})`,
@@ -111,7 +116,9 @@ export function buildDeleteByQuadIds(quadIds: string[]): { sql: string; args: st
 /**
  * buildDeleteQuadsByQuadIds sweeps the master facts storage by ID.
  */
-export function buildDeleteQuadsByQuadIds(quadIds: string[]): { sql: string; args: string[] } {
+export function buildDeleteQuadsByQuadIds(
+  quadIds: string[],
+): { sql: string; args: string[] } {
   const placeholders = quadIds.map(() => "?").join(", ");
   return {
     sql: `DELETE FROM quads WHERE id IN (${placeholders})`,
@@ -135,7 +142,8 @@ export function buildInsertQuad(options: {
   g_type: string;
 }): { sql: string; args: (string | null)[] } {
   return {
-    sql: `INSERT OR REPLACE INTO quads (id, s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type)
+    sql:
+      `INSERT OR REPLACE INTO quads (id, s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       options.quad_id,
@@ -189,6 +197,11 @@ export function buildSearchQuery(
     whereClauses.push(`chunks.predicate NOT IN (${placeholders})`);
     args.push(...request.exclude.predicates);
   }
+  if (request.exclude?.graphs?.length) {
+    const placeholders = request.exclude.graphs.map(() => "?").join(", ");
+    whereClauses.push(`chunks.graph NOT IN (${placeholders})`);
+    args.push(...request.exclude.graphs);
+  }
 
   // Inclusion rules
   if (request.include?.subjects?.length) {
@@ -200,6 +213,11 @@ export function buildSearchQuery(
     const placeholders = request.include.predicates.map(() => "?").join(", ");
     whereClauses.push(`chunks.predicate IN (${placeholders})`);
     args.push(...request.include.predicates);
+  }
+  if (request.include?.graphs?.length) {
+    const placeholders = request.include.graphs.map(() => "?").join(", ");
+    whereClauses.push(`chunks.graph IN (${placeholders})`);
+    args.push(...request.include.graphs);
   }
 
   const whereFilter = whereClauses.length > 0
@@ -232,6 +250,7 @@ export function buildSearchQuery(
       SELECT
         chunks.subject,
         chunks.predicate,
+        chunks.graph,
         chunks.value,
         (
           COALESCE(1.0 / (60 + fts_matches.rank_number), 0.0) * 1.0 + 

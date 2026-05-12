@@ -1,6 +1,9 @@
 import type { Client, InStatement } from "@libsql/client";
 import type { Patch } from "#/client/quad-store/patch.ts";
-import type { ChunkRowPayload, QuadChunker } from "#/client/search-index/chunking/quad-chunker.ts";
+import type {
+  ChunkRowPayload,
+  QuadChunker,
+} from "#/client/search-index/quad-chunker/quad-chunker.ts";
 import { hashQuad } from "#/client/quad-store/hash.ts";
 import type * as rdfjs from "@rdfjs/types";
 import {
@@ -9,13 +12,7 @@ import {
   buildInsertChunk,
   buildInsertQuad,
 } from "./statements.ts";
-
-/**
- * EmbeddingService describes an external interface used to generate vectors from text.
- */
-export interface EmbeddingService {
-  embed(text: string): Promise<Float32Array | number[]>;
-}
+import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
 /**
  * Configuration required by the Synchronizer to update the index.
@@ -115,7 +112,10 @@ export class LibsqlSynchronizer {
         try {
           vector = await this.embeddingService.embed(payload.value);
         } catch (cause) {
-          throw new Error(`failed to embed chunk quad_id="${payload.quad_id}"`, { cause });
+          throw new Error(
+            `failed to embed chunk quad_id="${payload.quad_id}"`,
+            { cause },
+          );
         }
         const vectorJson = JSON.stringify(Array.from(vector));
         statements.push(
@@ -123,6 +123,7 @@ export class LibsqlSynchronizer {
             quad_id: payload.quad_id,
             subject: payload.subject,
             predicate: payload.predicate,
+            graph: payload.graph,
             value: payload.value,
             vectorJson,
           }),

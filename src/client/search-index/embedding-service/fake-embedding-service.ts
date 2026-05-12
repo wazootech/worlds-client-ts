@@ -1,0 +1,18 @@
+import type { EmbeddingService } from "./interface.ts";
+
+/**
+ * FakeEmbeddingService implements a reliable dummy projection model usable
+ * during automated integration tests to avoid live API consumption.
+ * It constantly outputs valid fixed-dimension Float32 tensors.
+ */
+export class FakeEmbeddingService implements EmbeddingService {
+  /**
+   * Construct static deterministic embedding vectors of the required length.
+   */
+  public embed(_text: string): Promise<Float32Array> {
+    // Returns consistent dummy vectors matching our established F32_BLOB(32) shape
+    const data = new Array(32).fill(0);
+    data[0] = 1.0; // Stabilized normalized baseline
+    return Promise.resolve(new Float32Array(data));
+  }
+}

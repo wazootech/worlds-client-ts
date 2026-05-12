@@ -83,7 +83,7 @@ export function createIndexedStore(target: Store): {
           stream.on("data", (quad: rdfjs.Quad) => {
             queue.push({ insertions: [quad], deletions: [] });
           });
-          
+
           // Delegate stream into raw store engine
           // deno-lint-ignore no-explicit-any
           return base.import(stream as any);
@@ -100,6 +100,7 @@ export function createIndexedStore(target: Store): {
         ): rdfjs.Stream<rdfjs.Quad> => {
           const toDelete: rdfjs.Quad[] = [];
           // Save original match and replace with intercepting wrapper
+          // deno-lint-ignore no-explicit-any
           const origMatch = (base as any).match;
           // deno-lint-ignore no-explicit-any
           (base as any).match = function (
@@ -108,6 +109,7 @@ export function createIndexedStore(target: Store): {
             o?: rdfjs.Term | null,
             g?: rdfjs.Term | null,
           ) {
+            // deno-lint-ignore no-explicit-any
             const stream = (origMatch as any).call(this, s, p, o, g);
             // deno-lint-ignore no-explicit-any
             (stream as any).on("data", (q: rdfjs.Quad) => toDelete.push(q));
@@ -116,14 +118,25 @@ export function createIndexedStore(target: Store): {
           try {
             // Get the removal stream from the base store (base.match is now our wrapper)
             // deno-lint-ignore no-explicit-any
-            const removalStream = (base as any).removeMatches.call(base, subject, predicate, object, graph);
+            const removalStream = (base as any).removeMatches.call(
+              base,
+              subject,
+              predicate,
+              object,
+              graph,
+            );
             // Also listen to the removal stream itself
             // deno-lint-ignore no-explicit-any
-            (removalStream as any).on("data", (q: rdfjs.Quad) => toDelete.push(q));
+            (removalStream as any).on(
+              "data",
+              (q: rdfjs.Quad) => toDelete.push(q),
+            );
             // Queue deletions once the removal stream finishes
             // deno-lint-ignore no-explicit-any
             (removalStream as any).on("end", () => {
-              if (toDelete.length) queue.push({ insertions: [], deletions: toDelete });
+              if (toDelete.length) {
+                queue.push({ insertions: [], deletions: toDelete });
+              }
             });
             return removalStream;
           } finally {

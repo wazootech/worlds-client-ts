@@ -7,15 +7,7 @@ import type {
 } from "#/client/search-index/interface.ts";
 import { buildSearchQuery } from "./statements.ts";
 
-/**
- * EmbeddingService describes an external interface used to generate vectors from text.
- */
-export interface EmbeddingService {
-  /**
-   * Converts textual query into high-dimensional vector representation suitable for index comparison.
-   */
-  embed(text: string): Promise<Float32Array | number[]>;
-}
+import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
 /**
  * Options needed to construct the LibSQL search engine.
@@ -60,6 +52,7 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
     const results: SearchResult[] = rs.rows.map((row) => ({
       subject: String(row["subject"]),
       predicate: String(row["predicate"]),
+      graph: String(row["graph"]),
       text: String(row["value"]),
       score: Number(row["combined_rank"]),
     }));

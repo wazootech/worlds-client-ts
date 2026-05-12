@@ -3,11 +3,12 @@ import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { LibsqlSynchronizer } from "./libsql-synchronizer.ts";
-import { QuadChunker } from "#/client/search-index/chunking/quad-chunker.ts";
+import { FakeEmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
+import { QuadChunker } from "#/client/search-index/quad-chunker/quad-chunker.ts";
 import {
-  makeLibsqlChunksQuadIdIndex,
   makeLibsqlChunksFtsTable,
   makeLibsqlChunksIndex,
+  makeLibsqlChunksQuadIdIndex,
   makeLibsqlChunksTable,
   makeLibsqlChunksTriggers,
   makeLibsqlQuadsTable,
@@ -26,14 +27,6 @@ async function setupSchema(client: ReturnType<typeof createClient>) {
   }
 }
 
-class FakeEmbedder {
-  embed(_text: string): Promise<Float32Array> {
-    const data = new Array(32).fill(0);
-    data[0] = 1.0;
-    return Promise.resolve(new Float32Array(data));
-  }
-}
-
 const sharedSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000 });
 const sharedChunker = new QuadChunker({ splitter: sharedSplitter });
 
@@ -43,7 +36,7 @@ Deno.test("LibsqlSynchronizer - isolated writes and removals flush correctly to 
 
   const synchronizer = new LibsqlSynchronizer({
     client,
-    embeddingService: new FakeEmbedder(),
+    embeddingService: new FakeEmbeddingService(),
     chunker: sharedChunker,
   });
 
@@ -61,10 +54,18 @@ Deno.test("LibsqlSynchronizer - isolated writes and removals flush correctly to 
 
   // 2. Verify both Tables updated
   let chunkRows = await client.execute("SELECT COUNT(*) as total FROM chunks");
-  assertEquals(chunkRows.rows[0].total, 1, "Expected one chunk written to index");
-  
+  assertEquals(
+    chunkRows.rows[0].total,
+    1,
+    "Expected one chunk written to index",
+  );
+
   let quadRows = await client.execute("SELECT COUNT(*) as total FROM quads");
-  assertEquals(quadRows.rows[0].total, 1, "Expected exact master quad record replicated");
+  assertEquals(
+    quadRows.rows[0].total,
+    1,
+    "Expected exact master quad record replicated",
+  );
 
   // 3. Execute deletion
   await synchronizer.sync({
@@ -75,7 +76,7 @@ Deno.test("LibsqlSynchronizer - isolated writes and removals flush correctly to 
   // 4. Verify holistic cleared state
   chunkRows = await client.execute("SELECT COUNT(*) as total FROM chunks");
   assertEquals(chunkRows.rows[0].total, 0, "Index cleanup failed");
-  
+
   quadRows = await client.execute("SELECT COUNT(*) as total FROM quads");
   assertEquals(quadRows.rows[0].total, 0, "Master quad cleanup failed");
 });
