@@ -7,7 +7,7 @@ import type {
 import { chunkQuads } from "#/client/search-index/quad-chunker/chunk-quads.ts";
 import { hashQuad } from "#/client/quad-store/hash-quad.ts";
 import type * as rdfjs from "@rdfjs/types";
-import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import { libsqlQueryBuilder } from "./libsql-query-builder.ts";
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
 /**
@@ -119,8 +119,8 @@ async function computeQuadIds(quads: rdfjs.Quad[]): Promise<string[]> {
  */
 function buildDeletionStatements(quadIds: string[]): InStatement[] {
   return [
-    LibsqlQueryBuilder.buildDeleteByQuadIds(quadIds),
-    LibsqlQueryBuilder.buildDeleteQuadsByQuadIds(quadIds),
+    libsqlQueryBuilder.buildDeleteByQuadIds(quadIds),
+    libsqlQueryBuilder.buildDeleteQuadsByQuadIds(quadIds),
   ];
 }
 
@@ -132,25 +132,26 @@ async function queryCachePresence(
   quadIds: string[],
   maxLookupChunkSize?: number,
 ): Promise<Set<string>> {
-  const existingIds = new Set<string>();
+  const cachedIds = new Set<string>();
   try {
     // Defensively chunk lookup queries to respect SQLite's default cap of 999 bound variables (SQLITE_MAX_VARIABLE_NUMBER).
     // Defaulting to 800 provides nearly 100% of batch performance gains while preserving ~200 variable slots for supplemental criteria.
     const lookupChunkSize = maxLookupChunkSize ?? 800;
     for (let i = 0; i < quadIds.length; i += lookupChunkSize) {
       const batchIds = quadIds.slice(i, i + lookupChunkSize);
-      const query = LibsqlQueryBuilder.buildSelectExistingQuadIds(batchIds);
+      const query = libsqlQueryBuilder.buildSelectExistingQuadIds(batchIds);
       const resultSet = await client.execute(query);
       for (const row of resultSet.rows) {
         if (row.id) {
-          existingIds.add(String(row.id));
+          cachedIds.add(String(row.id));
         }
       }
     }
   } catch (cause) {
     throw new Error("failed to query existing cache state", { cause });
   }
-  return existingIds;
+
+  return cachedIds;
 }
 
 /**
@@ -170,7 +171,7 @@ function buildRelationalStatements(
     const literal = isLiteral ? (quad.object as rdfjs.Literal) : null;
 
     statements.push(
-      LibsqlQueryBuilder.buildInsertQuad({
+      libsqlQueryBuilder.buildInsertQuad({
         quad_id: id,
         s: quad.subject.value,
         s_type: quad.subject.termType,
@@ -231,7 +232,7 @@ async function buildVectorChunkStatements(
     const vectorJson = JSON.stringify(Array.from(vector));
 
     statements.push(
-      LibsqlQueryBuilder.buildInsertChunk({
+      libsqlQueryBuilder.buildInsertChunk({
         quad_id: payload.quad_id,
         subject: payload.subject,
         predicate: payload.predicate,

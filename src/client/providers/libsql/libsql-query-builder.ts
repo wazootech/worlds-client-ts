@@ -1,9 +1,9 @@
 import type { SearchRequest } from "#/client/search-index/search-index-interface.ts";
 
 /**
- * LibsqlQueryBuilder provides unified pure functions to dynamically construct both DDL schema definitions and active parameterized DML queries.
+ * libsqlQueryBuilder provides unified pure functions to dynamically construct both DDL schema definitions and active parameterized DML queries.
  */
-export const LibsqlQueryBuilder = {
+export const libsqlQueryBuilder = {
   /**
    * buildLibsqlQuadsTable defines the DDL for the master source-of-truth Quad Storage.
    * It facilitates high-fidelity hydration of in-memory graph storage via serialized nquad strings.
@@ -111,7 +111,7 @@ export const LibsqlQueryBuilder = {
   buildDeleteByQuadIds(
     quadIds: string[],
   ): { sql: string; args: string[] } {
-    const placeholders = quadIds.map(() => "?").join(", ");
+    const placeholders = generatePlaceholders(quadIds.length);
     return {
       sql: `DELETE FROM chunks WHERE quad_id IN (${placeholders})`,
       args: quadIds,
@@ -124,7 +124,7 @@ export const LibsqlQueryBuilder = {
   buildDeleteQuadsByQuadIds(
     quadIds: string[],
   ): { sql: string; args: string[] } {
-    const placeholders = quadIds.map(() => "?").join(", ");
+    const placeholders = generatePlaceholders(quadIds.length);
     return {
       sql: `DELETE FROM quads WHERE id IN (${placeholders})`,
       args: quadIds,
@@ -137,7 +137,7 @@ export const LibsqlQueryBuilder = {
   buildSelectExistingQuadIds(
     quadIds: string[],
   ): { sql: string; args: string[] } {
-    const placeholders = quadIds.map(() => "?").join(", ");
+    const placeholders = generatePlaceholders(quadIds.length);
     return {
       sql: `SELECT id FROM quads WHERE id IN (${placeholders})`,
       args: quadIds,
@@ -197,35 +197,47 @@ export const LibsqlQueryBuilder = {
     const whereClauses: string[] = [];
     const filterArgs: (string | number)[] = [];
 
-    if (request.exclude?.subjects?.length) {
-      const placeholders = request.exclude.subjects.map(() => "?").join(", ");
-      whereClauses.push(`chunks.subject NOT IN (${placeholders})`);
-      filterArgs.push(...request.exclude.subjects);
-    }
-    if (request.exclude?.predicates?.length) {
-      const placeholders = request.exclude.predicates.map(() => "?").join(", ");
-      whereClauses.push(`chunks.predicate NOT IN (${placeholders})`);
-      filterArgs.push(...request.exclude.predicates);
-    }
-    if (request.exclude?.graphs?.length) {
-      const placeholders = request.exclude.graphs.map(() => "?").join(", ");
-      whereClauses.push(`chunks.graph NOT IN (${placeholders})`);
-      filterArgs.push(...request.exclude.graphs);
-    }
-    if (request.include?.subjects?.length) {
-      const placeholders = request.include.subjects.map(() => "?").join(", ");
-      whereClauses.push(`chunks.subject IN (${placeholders})`);
-      filterArgs.push(...request.include.subjects);
-    }
-    if (request.include?.predicates?.length) {
-      const placeholders = request.include.predicates.map(() => "?").join(", ");
-      whereClauses.push(`chunks.predicate IN (${placeholders})`);
-      filterArgs.push(...request.include.predicates);
-    }
-    if (request.include?.graphs?.length) {
-      const placeholders = request.include.graphs.map(() => "?").join(", ");
-      whereClauses.push(`chunks.graph IN (${placeholders})`);
-      filterArgs.push(...request.include.graphs);
+    // Map boundary conditions onto declarative relational data structures
+    const filterConfigurations = [
+      {
+        values: request.exclude?.subjects,
+        column: "chunks.subject",
+        operator: "NOT IN",
+      },
+      {
+        values: request.exclude?.predicates,
+        column: "chunks.predicate",
+        operator: "NOT IN",
+      },
+      {
+        values: request.exclude?.graphs,
+        column: "chunks.graph",
+        operator: "NOT IN",
+      },
+      {
+        values: request.include?.subjects,
+        column: "chunks.subject",
+        operator: "IN",
+      },
+      {
+        values: request.include?.predicates,
+        column: "chunks.predicate",
+        operator: "IN",
+      },
+      {
+        values: request.include?.graphs,
+        column: "chunks.graph",
+        operator: "IN",
+      },
+    ] as const;
+
+    // Consolidate multi-dimensional scoping constraints declaratively
+    for (const { values, column, operator } of filterConfigurations) {
+      if (values?.length) {
+        const placeholders = generatePlaceholders(values.length);
+        whereClauses.push(`${column} ${operator} (${placeholders})`);
+        filterArgs.push(...values);
+      }
     }
 
     const whereFilter = whereClauses.length > 0
@@ -372,3 +384,14 @@ export const LibsqlQueryBuilder = {
     };
   },
 } as const;
+
+// ==========================================
+// PRIVATE RELATIONAL GENERATION HELPERS
+// ==========================================
+
+/**
+ * generatePlaceholders generates a comma-delimited set of parameterized SQLite bound variables.
+ */
+function generatePlaceholders(count: number): string {
+  return Array(count).fill("?").join(", ");
+}

@@ -4,17 +4,17 @@ import { DataFactory } from "n3";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import { FakeEmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
-import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import { libsqlQueryBuilder } from "./libsql-query-builder.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 
 async function setupSchema(client: ReturnType<typeof createClient>) {
-  await client.execute(LibsqlQueryBuilder.buildLibsqlQuadsTable()); // <--- Demand Quads Table exist
-  await client.execute(LibsqlQueryBuilder.buildLibsqlChunksTable());
-  await client.execute(LibsqlQueryBuilder.buildLibsqlChunksQuadIdIndex());
-  await client.execute(LibsqlQueryBuilder.buildLibsqlChunksFtsTable());
-  await client.execute(LibsqlQueryBuilder.buildLibsqlChunksIndex());
-  for (const triggerSql of LibsqlQueryBuilder.buildLibsqlChunksTriggers()) {
+  await client.execute(libsqlQueryBuilder.buildLibsqlQuadsTable()); // <--- Demand Quads Table exist
+  await client.execute(libsqlQueryBuilder.buildLibsqlChunksTable());
+  await client.execute(libsqlQueryBuilder.buildLibsqlChunksQuadIdIndex());
+  await client.execute(libsqlQueryBuilder.buildLibsqlChunksFtsTable());
+  await client.execute(libsqlQueryBuilder.buildLibsqlChunksIndex());
+  for (const triggerSql of libsqlQueryBuilder.buildLibsqlChunksTriggers()) {
     await client.execute(triggerSql);
   }
 }

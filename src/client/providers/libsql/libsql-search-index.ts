@@ -5,7 +5,7 @@ import type {
   SearchResponse,
   SearchResult,
 } from "#/client/search-index/search-index-interface.ts";
-import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import { libsqlQueryBuilder } from "./libsql-query-builder.ts";
 
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
@@ -49,7 +49,7 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
       );
     }
 
-    const { sql, args } = LibsqlQueryBuilder.buildSearchQuery(request, {
+    const { sql, args } = libsqlQueryBuilder.buildSearchQuery(request, {
       vectorJson,
       limit: this.options.limit ?? 100,
     });
