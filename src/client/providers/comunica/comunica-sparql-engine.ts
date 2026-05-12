@@ -8,7 +8,7 @@ import type {
   SparqlResponse,
   SparqlSelectResults,
   SparqlValue,
-} from "./interface.ts";
+} from "#/client/sparql-engine/interface.ts";
 
 /**
  * ComunicaSparqlEngineOptions are the options for ComunicaSparqlEngine.

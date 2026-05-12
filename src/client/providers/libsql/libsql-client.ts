@@ -2,12 +2,12 @@ import type { Client as LibsqlClient } from "@libsql/client";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { Store } from "n3";
 
-import { createClient as baseCreateClient } from "#/client/factory.ts";
+import { createClient as createBaseClient } from "#/client/factory.ts";
 import type { ClientInterface } from "#/client/interface.ts";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
-import { LibsqlSynchronizer } from "./libsql-synchronizer.ts";
-import { QuadChunker } from "#/client/search-index/quad-chunker/quad-chunker.ts";
-import { hydrateStoreFromLibsql } from "./libsql-loader.ts";
+import { syncLibsql } from "./libsql-quad-synchronizer.ts";
+import type { TextSplitterInterface } from "#/client/search-index/quad-chunker/quad-chunker.ts";
+import { hydrateStoreFromLibsql } from "./libsql-quad-hydrator.ts";
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
 import {
@@ -27,10 +27,15 @@ export interface CreateClientOptions {
   db: LibsqlClient;
   /** Service projected for transforming text literals into comparison vectors. */
   embeddingService: EmbeddingService;
-  /** Optional pre-baked chunker, defaults internally if omitted. */
-  chunker?: QuadChunker;
+  /** Optional custom text splitting facility, defaults to sensible character-based splitting. */
+  textSplitter?: TextSplitterInterface;
   /** Optional pre-warmed store. If omitted, a fresh one is instantiated and hydrated. */
   store?: Store;
+  /**
+   * @todo FUTURE ENHANCEMENT: Introduce `hydrationFilters?: { graphs?: string[] }`
+   * to enable targeted scoped hydration. Essential for serverless cold-start optimization
+   * limiting memory ingest to explicitly required tenant domains.
+   */
 }
 
 /**
@@ -62,20 +67,15 @@ export async function createClient(
   // Re-use pre-warmed store if provided, otherwise synthesize and populate new context.
   const rawStore = options.store ?? new Store();
   if (!options.store) {
+    // TODO PERFORMANCE: Currently executes full eager hydration (O(N) universe load).
+    // For extreme serverless environments, consider implementing a virtual Comunica actor
+    // proxying SPARQL DIRECTLY into SQLite WHERE conditions to eliminate runtime parsing latency.
     await hydrateStoreFromLibsql(db, rawStore);
   }
 
-  // Setup specific IO strategies required by the Synchronizer.
-  const chunker = options.chunker ??
-    new QuadChunker({
-      splitter: new RecursiveCharacterTextSplitter({ chunkSize: 1000 }),
-    });
-
-  const synchronizer = new LibsqlSynchronizer({
-    client: db,
-    embeddingService,
-    chunker,
-  });
+  // Setup specific semantic splitting strategies defaults
+  const splitter = options.textSplitter ??
+    new RecursiveCharacterTextSplitter({ chunkSize: 1000 });
 
   const searchIndex = new LibsqlSearchIndex({
     client: db,
@@ -83,9 +83,14 @@ export async function createClient(
   });
 
   // Delegate to generalized core for memory store composition and bridge instantiation.
-  return baseCreateClient({
+  return createBaseClient({
     store: rawStore,
     searchIndex,
-    sync: (patch) => synchronizer.sync(patch),
+    sync: (patch) =>
+      syncLibsql(patch, {
+        client: db,
+        embeddingService,
+        textSplitter: splitter,
+      }),
   });
 }

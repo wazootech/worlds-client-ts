@@ -5,7 +5,7 @@ import { Client, type ClientOptions } from "./client.ts";
 import type { ClientInterface } from "./interface.ts";
 import { createIndexedStore } from "./quad-store/indexed-store.ts";
 import { RdfjsQuadStore } from "./quad-store/quad-store.ts";
-import { ComunicaSparqlEngine } from "./sparql-engine/sparql-engine.ts";
+import { ComunicaSparqlEngine } from "#/client/providers/comunica/mod.ts";
 import type { SearchIndexInterface } from "./search-index/mod.ts";
 import type { Patch } from "./quad-store/patch.ts";
 import type { ImportRequest, ImportResponse } from "./quad-store/mod.ts";

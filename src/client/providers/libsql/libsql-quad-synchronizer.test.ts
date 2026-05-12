@@ -2,9 +2,8 @@ import { assertEquals } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { LibsqlSynchronizer } from "./libsql-synchronizer.ts";
+import { syncLibsql } from "./libsql-quad-synchronizer.ts";
 import { FakeEmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
-import { QuadChunker } from "#/client/search-index/quad-chunker/quad-chunker.ts";
 import {
   makeLibsqlChunksFtsTable,
   makeLibsqlChunksIndex,
@@ -28,17 +27,16 @@ async function setupSchema(client: ReturnType<typeof createClient>) {
 }
 
 const sharedSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000 });
-const sharedChunker = new QuadChunker({ splitter: sharedSplitter });
 
 Deno.test("LibsqlSynchronizer - isolated writes and removals flush correctly to BOTH chunks and quads", async () => {
   const client = createClient({ url: ":memory:" });
   await setupSchema(client);
 
-  const synchronizer = new LibsqlSynchronizer({
+  const options = {
     client,
     embeddingService: new FakeEmbeddingService(),
-    chunker: sharedChunker,
-  });
+    textSplitter: sharedSplitter,
+  };
 
   const testQuad = quad(
     namedNode("urn:subject"),
@@ -47,10 +45,10 @@ Deno.test("LibsqlSynchronizer - isolated writes and removals flush correctly to 
   );
 
   // 1. Commit insertion
-  await synchronizer.sync({
+  await syncLibsql({
     insertions: [testQuad],
     deletions: [],
-  });
+  }, options);
 
   // 2. Verify both Tables updated
   let chunkRows = await client.execute("SELECT COUNT(*) as total FROM chunks");
@@ -68,10 +66,10 @@ Deno.test("LibsqlSynchronizer - isolated writes and removals flush correctly to 
   );
 
   // 3. Execute deletion
-  await synchronizer.sync({
+  await syncLibsql({
     insertions: [],
     deletions: [testQuad],
-  });
+  }, options);
 
   // 4. Verify holistic cleared state
   chunkRows = await client.execute("SELECT COUNT(*) as total FROM chunks");

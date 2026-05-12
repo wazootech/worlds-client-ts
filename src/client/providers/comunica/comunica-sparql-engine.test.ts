@@ -4,7 +4,7 @@ import { DataFactory, Parser, Store } from "n3";
 import { canonize } from "rdf-canonize";
 import { encodeBase64Url } from "@std/encoding/base64url";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
-import { executeSparql } from "./sparql-engine.ts";
+import { executeSparql } from "./comunica-sparql-engine.ts";
 
 const queryEngine = new QueryEngine();
 
