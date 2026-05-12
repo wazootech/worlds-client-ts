@@ -35,7 +35,7 @@ export interface LibsqlOptions {
   /** store is an optional starting store, useful for serverless environments where the store is already initialized. */
   store?: Store;
 
-  /** maxLookupChunkSize specifies the maximum number of host parameters allowed in cache query IN clauses before split-chunking. Defaults to 900. */
+  /** maxLookupChunkSize specifies the maximum number of host parameters allowed in cache query IN clauses before split-chunking. Defaults to a conservative 800 (safely below historical SQLite 999 SQLITE_MAX_VARIABLE_NUMBER variable caps with generous headroom). */
   maxLookupChunkSize?: number;
 
   /**
