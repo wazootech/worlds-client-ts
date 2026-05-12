@@ -1,11 +1,12 @@
 import type { Store } from "n3";
 import type * as rdfjs from "@rdfjs/types";
+import type { PatchQueueInterface } from "./interface.ts";
 import type { Patch } from "./patch.ts";
 
 /**
  * PatchQueue provides simple, atomic buffered storage for pending transaction diffs.
  */
-export class PatchQueue {
+export class PatchQueue implements PatchQueueInterface {
   private patches: Patch[] = [];
 
   public push(patch: Patch): void {
@@ -29,7 +30,7 @@ export class PatchQueue {
  */
 export function createIndexedStore(target: Store): {
   store: Store;
-  queue: PatchQueue;
+  queue: PatchQueueInterface;
 } {
   const queue = new PatchQueue();
 
