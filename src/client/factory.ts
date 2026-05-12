@@ -122,9 +122,12 @@ export async function createClient(
   // Inner trigger flushing the collection of mutations to disk
   const flushPending = async () => {
     const patches = queue.flush();
-    for (const patch of patches) {
-      await synchronizer.sync(patch);
-    }
+    if (patches.length === 0) return;
+    const merged = {
+      insertions: patches.flatMap((p) => p.insertions),
+      deletions: patches.flatMap((p) => p.deletions),
+    };
+    await synchronizer.sync(merged);
   };
 
   // 5. Construct services sharing the Proxied observer store
