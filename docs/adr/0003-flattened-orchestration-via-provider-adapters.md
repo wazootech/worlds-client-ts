@@ -6,11 +6,9 @@ Accepted
 
 ## Context
 
-In the pursuit of a robust generalized API, the system previously attempted to
-orchestrate synchronization through high-level wrappers (e.g.,
-`SynchronizedClient`). While conceptually modular, this strategy distributed
-operational context across too many layers, generating recursive object hazard
-footprints and mandating verbose manual wiring.
+In the pursuit of a robust generalized API, distributing operational context
+across separate high-level orchestration layers generated complex recursive
+object footprints and mandated verbose manual wiring.
 
 To fully achieve the vision established in ADR 0002—where operational boundary
 and persistence injection are strictly decoupled—we must finalize our
