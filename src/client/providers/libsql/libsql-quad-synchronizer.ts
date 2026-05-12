@@ -81,8 +81,8 @@ export async function syncLibsql(
       const id = quadIds[i];
 
       // Conditional typing extractors for Literal specific properties
-      const isLit = quad.object.termType === "Literal";
-      const lit = isLit ? (quad.object as rdfjs.Literal) : null;
+      const isLiteral = quad.object.termType === "Literal";
+      const literal = isLiteral ? (quad.object as rdfjs.Literal) : null;
 
       statements.push(
         buildInsertQuad({
@@ -92,8 +92,8 @@ export async function syncLibsql(
           p: quad.predicate.value,
           o: quad.object.value,
           o_type: quad.object.termType,
-          o_datatype: lit?.datatype?.value,
-          o_lang: lit?.language,
+          o_datatype: literal?.datatype?.value,
+          o_lang: literal?.language,
           g: quad.graph.value,
           g_type: quad.graph.termType,
         }),

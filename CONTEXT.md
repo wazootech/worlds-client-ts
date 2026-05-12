@@ -28,3 +28,16 @@ storage providers.
 The primary unified orchestration layer fusing a synchronized Graph Store, a
 SPARQL engine, and fuzzy search indexes into a cohesive, ACID-compliant runtime
 facade.
+
+### Idempotency Guard
+
+An optimized interceptor layer evaluating existing Graph Store state prior to
+emitting mutation signals. It secures compute efficiency by suppressing
+redundant external API interactions and precluding database duplication.
+
+### Hybrid Search
+
+A robust retrieval facility supporting native fusion of Vector Semantic
+similarity and Keyword Full-Text Search. It provides automatic graceful
+degradation to sustain query availability during intermittent upstream API
+outages.
