@@ -1,6 +1,6 @@
 import type { Store } from "n3";
 import type * as rdfjs from "@rdfjs/types";
-import type { PatchQueueInterface } from "./interface.ts";
+import type { PatchQueueInterface } from "./patch-queue-interface.ts";
 import type { Patch } from "./patch.ts";
 
 /**

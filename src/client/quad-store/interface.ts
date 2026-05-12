@@ -1,7 +1,5 @@
 import type * as rdfjs from "@rdfjs/types";
 
-import type { Patch } from "./patch.ts";
-
 /**
  * ImportMode is the type of import to perform.
  */
@@ -61,15 +59,4 @@ export interface QuadStoreInterface {
    * @param request The desired format specifications.
    */
   export(request: ExportRequest): Promise<ExportResponse>;
-}
-
-/**
- * PatchQueueInterface defines the buffering interface for cumulative transaction patches.
- */
-export interface PatchQueueInterface {
-  /** push stages a delta transaction to the active monitoring queue. */
-  push(patch: Patch): void;
-
-  /** flush purges the cumulative staging cache and returns its current contents. */
-  flush(): Patch[];
 }
