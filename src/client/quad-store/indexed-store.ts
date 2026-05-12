@@ -23,6 +23,9 @@ export class PatchQueue {
  * createIndexedStore installs a non-invasive JavaScript Proxy wrapper around a concrete
  * N3 Store. It transparently captures memory modifications (adds, removes, imports)
  * and stages them for background synchronization.
+ *
+ * IMPORTANT: It enforces strict idempotency guards, ensuring that ONLY actual factual delta
+ * mutations are captured. Redundant operations that do not change graph state are ignored.
  */
 export function createIndexedStore(target: Store): {
   store: Store;
@@ -42,6 +45,11 @@ export function createIndexedStore(target: Store): {
       // 1. Capture specific Quad insertion hooks
       if (prop === "addQuad" || prop === "add") {
         return (quad: rdfjs.Quad) => {
+          // Skip operation if the statement is already fully resident
+          if (base.has(quad)) {
+            // deno-lint-ignore no-explicit-any
+            return (base as any)[prop].apply(base, [quad]);
+          }
           // deno-lint-ignore no-explicit-any
           const result = (base as any)[prop].apply(base, [quad]);
           queue.push({ insertions: [quad], deletions: [] });
@@ -51,8 +59,12 @@ export function createIndexedStore(target: Store): {
 
       if (prop === "addQuads") {
         return (quads: rdfjs.Quad[]) => {
+          // Filter only those which actually introduce new information
+          const novelQuads = quads.filter((q) => !base.has(q));
           const result = base.addQuads(quads);
-          queue.push({ insertions: quads, deletions: [] });
+          if (novelQuads.length > 0) {
+            queue.push({ insertions: novelQuads, deletions: [] });
+          }
           return result;
         };
       }
@@ -60,6 +72,11 @@ export function createIndexedStore(target: Store): {
       // 2. Capture specific Quad removal hooks
       if (prop === "removeQuad" || prop === "remove") {
         return (quad: rdfjs.Quad) => {
+          // Skip if deletion is already true
+          if (!base.has(quad)) {
+            // deno-lint-ignore no-explicit-any
+            return (base as any)[prop].apply(base, [quad]);
+          }
           // deno-lint-ignore no-explicit-any
           const result = (base as any)[prop].apply(base, [quad]);
           queue.push({ insertions: [], deletions: [quad] });
@@ -69,9 +86,12 @@ export function createIndexedStore(target: Store): {
 
       if (prop === "removeQuads") {
         return (quads: rdfjs.Quad[]) => {
+          const actualDeletions = quads.filter((q) => base.has(q));
           // deno-lint-ignore no-explicit-any
           const result = (base as any)[prop].apply(base, [quads]);
-          queue.push({ insertions: [], deletions: quads });
+          if (actualDeletions.length > 0) {
+            queue.push({ insertions: [], deletions: actualDeletions });
+          }
           return result;
         };
       }
@@ -81,7 +101,10 @@ export function createIndexedStore(target: Store): {
         return (stream: rdfjs.Stream<rdfjs.Quad>) => {
           // Attach passive tap observer to inbound data flow
           stream.on("data", (quad: rdfjs.Quad) => {
-            queue.push({ insertions: [quad], deletions: [] });
+            // Check existing storage prior to insertion processing
+            if (!base.has(quad)) {
+              queue.push({ insertions: [quad], deletions: [] });
+            }
           });
 
           // Delegate stream into raw store engine
