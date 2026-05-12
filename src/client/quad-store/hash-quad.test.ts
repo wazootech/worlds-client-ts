@@ -1,6 +1,6 @@
 import { assertEquals, assertNotEquals } from "@std/assert";
 import { DataFactory } from "n3";
-import { hashQuad } from "./hash.ts";
+import { hashQuad } from "./hash-quad.ts";
 
 const { namedNode, quad, literal } = DataFactory;
 

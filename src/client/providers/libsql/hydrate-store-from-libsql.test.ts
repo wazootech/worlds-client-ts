@@ -2,7 +2,7 @@ import { assertEquals } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { Store } from "n3";
 import { makeLibsqlQuadsTable } from "./statements.ts";
-import { hydrateStoreFromLibsql } from "./libsql-quad-hydrator.ts";
+import { hydrateStoreFromLibsql } from "./hydrate-store-from-libsql.ts";
 
 Deno.test("Slice 4: Hydrator - recovers whole graph from stored serialized quad lines", async () => {
   const client = createClient({ url: ":memory:" });

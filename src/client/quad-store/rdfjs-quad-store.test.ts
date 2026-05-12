@@ -1,6 +1,6 @@
 import { assertEquals, assertRejects } from "@std/assert";
 import { DataFactory, Store } from "n3";
-import { RdfjsQuadStore } from "./quad-store.ts";
+import { RdfjsQuadStore } from "./rdfjs-quad-store.ts";
 
 const { namedNode, blankNode, quad, literal } = DataFactory;
 

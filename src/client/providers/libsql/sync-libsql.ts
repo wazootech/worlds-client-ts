@@ -3,9 +3,9 @@ import type { Patch } from "#/client/quad-store/patch.ts";
 import type {
   ChunkRowPayload,
   TextSplitterInterface,
-} from "#/client/search-index/quad-chunker/quad-chunker.ts";
-import { chunkQuads } from "#/client/search-index/quad-chunker/quad-chunker.ts";
-import { hashQuad } from "#/client/quad-store/hash.ts";
+} from "#/client/search-index/quad-chunker/chunk-quads.ts";
+import { chunkQuads } from "#/client/search-index/quad-chunker/chunk-quads.ts";
+import { hashQuad } from "#/client/quad-store/hash-quad.ts";
 import type * as rdfjs from "@rdfjs/types";
 import {
   buildDeleteByQuadIds,

@@ -2,7 +2,7 @@ import { assertEquals } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { syncLibsql } from "./libsql-quad-synchronizer.ts";
+import { syncLibsql } from "./sync-libsql.ts";
 import { FakeEmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 import {
   makeLibsqlChunksFtsTable,

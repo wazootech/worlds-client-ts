@@ -2,7 +2,7 @@ import { assertEquals, assertExists } from "@std/assert";
 import { createClient as createLibsqlClient } from "@libsql/client";
 import { DataFactory } from "n3";
 import { Client } from "#/client/client.ts";
-import { provideLibsql } from "./libsql-provider.ts";
+import { provideLibsql } from "./provide-libsql.ts";
 import { FakeEmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
 const { quad, namedNode, literal } = DataFactory;

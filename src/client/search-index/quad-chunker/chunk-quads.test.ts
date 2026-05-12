@@ -1,7 +1,7 @@
 import { assertEquals } from "@std/assert";
 import { DataFactory } from "n3";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { chunkQuads } from "./quad-chunker.ts";
+import { chunkQuads } from "./chunk-quads.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 

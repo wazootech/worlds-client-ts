@@ -1,1 +1,1 @@
-export * from "./quad-chunker.ts";
+export * from "./chunk-quads.ts";

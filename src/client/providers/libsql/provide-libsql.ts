@@ -5,15 +5,15 @@ import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
 import type { ClientOptions } from "#/client/client.ts";
 import type { Patch } from "#/client/quad-store/patch.ts";
-import type { TextSplitterInterface } from "#/client/search-index/quad-chunker/quad-chunker.ts";
+import type { TextSplitterInterface } from "#/client/search-index/quad-chunker/chunk-quads.ts";
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
-import { createIndexedStore } from "#/client/quad-store/indexed-store.ts";
-import { RdfjsQuadStore } from "#/client/quad-store/quad-store.ts";
+import { createIndexedStore } from "#/client/quad-store/create-indexed-store.ts";
+import { RdfjsQuadStore } from "#/client/quad-store/rdfjs-quad-store.ts";
 import { ComunicaSparqlEngine } from "#/client/providers/comunica/comunica-sparql-engine.ts";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
-import { syncLibsql } from "./libsql-quad-synchronizer.ts";
-import { hydrateStoreFromLibsql } from "./libsql-quad-hydrator.ts";
+import { syncLibsql } from "./sync-libsql.ts";
+import { hydrateStoreFromLibsql } from "./hydrate-store-from-libsql.ts";
 
 import {
   makeLibsqlChunksFtsTable,
