@@ -5,10 +5,10 @@
  */
 export interface EmbeddingService {
   /**
-   * project performs external or local transformation of textual input.
+   * embed performs external or local transformation of textual input sequences in batch.
    *
-   * @param text Clean input sequence targeted for vectorizing.
-   * @returns Vector space projection array (Float32 sequence preferred).
+   * @param texts Array of clean input sequences targeted for vectorizing.
+   * @returns Vector space projection arrays matching the input array index positioning.
    */
-  embed(text: string): Promise<Float32Array | number[]>;
+  embed(texts: string[]): Promise<Array<Float32Array | number[]>>;
 }

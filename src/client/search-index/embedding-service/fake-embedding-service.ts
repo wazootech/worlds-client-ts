@@ -9,10 +9,14 @@ export class FakeEmbeddingService implements EmbeddingService {
   /**
    * Construct static deterministic embedding vectors of the required length.
    */
-  public embed(_text: string): Promise<Float32Array> {
+  public embed(texts: string[]): Promise<Array<Float32Array>> {
     // Returns consistent dummy vectors matching our established F32_BLOB(32) shape
-    const data = new Array(32).fill(0);
-    data[0] = 1.0; // Stabilized normalized baseline
-    return Promise.resolve(new Float32Array(data));
+    return Promise.resolve(
+      texts.map(() => {
+        const data = new Array(32).fill(0);
+        data[0] = 1.0; // Stabilized normalized baseline
+        return new Float32Array(data);
+      }),
+    );
   }
 }

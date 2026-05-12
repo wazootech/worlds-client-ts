@@ -36,7 +36,9 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
     let vectorJson: string | undefined;
 
     try {
-      const vector = await this.options.embeddingService.embed(request.query);
+      const [vector] = await this.options.embeddingService.embed([
+        request.query,
+      ]);
       vectorJson = JSON.stringify(Array.from(vector));
     } catch (error) {
       // Gracefully degrade to keyword-only search if the embedding provider fails.

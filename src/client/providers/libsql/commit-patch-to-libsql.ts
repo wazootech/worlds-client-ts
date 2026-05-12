@@ -106,27 +106,32 @@ export async function commitPatchToLibsql(
     } catch (cause) {
       throw new Error("failed to chunk insertions", { cause });
     }
-    for (const payload of chunks) {
-      let vector: Float32Array | number[];
+    if (chunks.length > 0) {
+      // Supercharged Batch Optimization: Fetch all embeddings in exactly one unified request!
+      let vectors: Array<Float32Array | number[]>;
       try {
-        vector = await embeddingService.embed(payload.value);
+        const texts = chunks.map((c) => c.value);
+        vectors = await embeddingService.embed(texts);
       } catch (cause) {
-        throw new Error(
-          `failed to embed chunk quad_id="${payload.quad_id}"`,
-          { cause },
+        throw new Error("failed to embed chunk batch", { cause });
+      }
+
+      for (let i = 0; i < chunks.length; i++) {
+        const payload = chunks[i];
+        const vector = vectors[i];
+        const vectorJson = JSON.stringify(Array.from(vector));
+
+        statements.push(
+          LibsqlQueryBuilder.buildInsertChunk({
+            quad_id: payload.quad_id,
+            subject: payload.subject,
+            predicate: payload.predicate,
+            graph: payload.graph,
+            value: payload.value,
+            vectorJson,
+          }),
         );
       }
-      const vectorJson = JSON.stringify(Array.from(vector));
-      statements.push(
-        LibsqlQueryBuilder.buildInsertChunk({
-          quad_id: payload.quad_id,
-          subject: payload.subject,
-          predicate: payload.predicate,
-          graph: payload.graph,
-          value: payload.value,
-          vectorJson,
-        }),
-      );
     }
   }
 
