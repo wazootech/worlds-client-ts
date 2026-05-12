@@ -10,14 +10,14 @@ import { buildSearchQuery } from "./statements.ts";
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
 /**
- * Options needed to construct the LibSQL search engine.
+ * LibsqlSearchIndexOptions defines the structured configuration and dependency parameters needed to construct the LibSQL search engine.
  */
 export interface LibsqlSearchIndexOptions {
-  /** Initialized @libsql/client instance pointing to target database. */
+  /** client is the initialized @libsql/client instance pointing to the target database. */
   client: Client;
-  /** Capability for projecting textual search input into vector space. */
+  /** embeddingService provides the capability for projecting textual search inputs into dense vector space. */
   embeddingService: EmbeddingService;
-  /** Optional page sizing constraints, defaults to 100. */
+  /** limit establishes optional page sizing constraints for search result sets, defaulting to 100. */
   limit?: number;
 }
 
