@@ -25,8 +25,6 @@ entirely to provider-specific adapters.
 
 - The generalized `Client` collapses back into a purely agnostic container
   consumed by `ClientOptions`.
-- Generalized wrapper factories (`createClient`, `SynchronizedClient`) are
-  deprecated and deleted.
 - Providers deliver fully composed, pre-instrumented `ClientOptions` objects
   (e.g., `await provideLibsql(...)`) ready for direct constructor injection.
 - Synchronization lifecycles (transaction queuing and committing) are
