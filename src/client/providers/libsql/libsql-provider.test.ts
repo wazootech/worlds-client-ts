@@ -1,7 +1,8 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { createClient as createLibsqlClient } from "@libsql/client";
 import { DataFactory } from "n3";
-import { createClient } from "./libsql-client.ts";
+import { Client } from "#/client/client.ts";
+import { provideLibsql } from "./libsql-provider.ts";
 import { FakeEmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
 const { quad, namedNode, literal } = DataFactory;
@@ -11,7 +12,9 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
   const db = createLibsqlClient({ url: ":memory:" });
   const embeddingService = new FakeEmbeddingService();
 
-  const client = await createClient({ db, embeddingService });
+  const client = new Client(
+    await provideLibsql({ client: db, embeddingService }),
+  );
 
   await t.step(
     "Scenario 1: client.import delivers immediate index observability",
@@ -86,7 +89,9 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
     async () => {
       // Destroy active memory references and simulate a software crash/reboot.
       // Create a fresh client reusing the SAME physical :memory: database.
-      const refreshedClient = await createClient({ db, embeddingService });
+      const refreshedClient = new Client(
+        await provideLibsql({ client: db, embeddingService }),
+      );
 
       // Perform a search directly on the new client.
       // Expected: Hydrator recovered facts from 'quads' table -> re-rendered memory -> enabled lookups!

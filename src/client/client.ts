@@ -18,7 +18,7 @@ import type {
 } from "./search-index/mod.ts";
 
 /**
- * ClientOptions are the options for the Client.
+ * ClientOptions details the aggregate internal subsystems powering active execution.
  */
 export interface ClientOptions {
   /**
@@ -43,7 +43,7 @@ export interface ClientOptions {
  * declarative querying, and fuzzy searching.
  */
 export class Client implements ClientInterface {
-  public constructor(private readonly options: ClientOptions) {}
+  public constructor(protected readonly options: ClientOptions) {}
 
   public async import(request: ImportRequest): Promise<ImportResponse> {
     return await this.options.quadStore.import(request);
