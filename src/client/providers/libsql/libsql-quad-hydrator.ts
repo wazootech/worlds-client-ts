@@ -12,16 +12,15 @@ export async function hydrateStoreFromLibsql(
   client: Client,
   target: Store,
 ): Promise<number> {
-  const rs = await client.execute(`
+  const resultSet = await client.execute(`
     SELECT s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type 
     FROM quads
   `);
 
-  if (!rs.rows.length) return 0;
+  if (!resultSet.rows.length) return 0;
 
   const batchQuads: rdfjs.Quad[] = [];
-
-  for (const row of rs.rows) {
+  for (const row of resultSet.rows) {
     try {
       const subject = reconstructSubject(row);
       const predicate = namedNode(String(row.p));

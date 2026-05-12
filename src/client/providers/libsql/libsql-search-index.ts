@@ -58,9 +58,9 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
       limit: this.limit,
     });
 
-    const rs = await this.client.execute({ sql, args });
+    const resultSet = await this.client.execute({ sql, args });
 
-    const results: SearchResult[] = rs.rows.map((row) => ({
+    const results: SearchResult[] = resultSet.rows.map((row) => ({
       subject: String(row["subject"]),
       predicate: String(row["predicate"]),
       graph: String(row["graph"]),
