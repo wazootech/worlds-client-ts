@@ -10,30 +10,14 @@ import { buildSearchQuery } from "./statements.ts";
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
 /**
- * Options needed to construct the LibSQL search engine.
- */
-export interface LibsqlSearchIndexOptions {
-  /** Initialized @libsql/client instance pointing to target database. */
-  client: Client;
-  /** Capability for projecting textual search input into vector space. */
-  embeddingService: EmbeddingService;
-  /** Optional page sizing constraints, defaults to 100. */
-  limit?: number;
-}
-
-/**
  * LibsqlSearchIndex implements only the query pathway, performing sub-millisecond hybrid search.
  */
 export class LibsqlSearchIndex implements SearchIndexInterface {
-  private readonly client: Client;
-  private readonly embeddingService: EmbeddingService;
-  private readonly limit: number;
-
-  constructor(options: LibsqlSearchIndexOptions) {
-    this.client = options.client;
-    this.embeddingService = options.embeddingService;
-    this.limit = options.limit ?? 100;
-  }
+  public constructor(
+    private readonly client: Client,
+    private readonly embeddingService: EmbeddingService,
+    private readonly limit: number = 100,
+  ) {}
 
   /**
    * search executes a keyword and vector hybrid query against the current index.

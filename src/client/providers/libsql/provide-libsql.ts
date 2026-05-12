@@ -91,10 +91,10 @@ export async function provideLibsql(
   const textSplitter = options.textSplitter ??
     new RecursiveCharacterTextSplitter({ chunkSize: 1000 });
 
-  const searchIndex = new LibsqlSearchIndex({
-    client: options.client,
-    embeddingService: options.embeddingService,
-  });
+  const searchIndex = new LibsqlSearchIndex(
+    options.client,
+    options.embeddingService,
+  );
 
   /**
    * commitChanges unifies monitoring queue draining with standard LibSQL
@@ -119,10 +119,10 @@ export async function provideLibsql(
 
   // 5. Synthesize foundational base component drivers.
   const quadStore = new RdfjsQuadStore(store);
-  const sparqlEngine = new ComunicaSparqlEngine({
-    store,
+  const sparqlEngine = new ComunicaSparqlEngine(
     queryEngine,
-  });
+    store,
+  );
 
   // 7. Deliver aggregated composite ready for standard instantiation.
   return {

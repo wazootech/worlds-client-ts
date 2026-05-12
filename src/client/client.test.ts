@@ -10,7 +10,7 @@ const queryEngine = new QueryEngine();
 function createTestClient(store: Store): Client {
   return new Client({
     quadStore: new RdfjsQuadStore(store),
-    sparqlEngine: new ComunicaSparqlEngine({ queryEngine, store }),
+    sparqlEngine: new ComunicaSparqlEngine(queryEngine, store),
     searchIndex: new RdfjsSearchIndex(store),
   });
 }
