@@ -31,6 +31,33 @@ import {
   makeLibsqlQuadsTable,
 } from "./search-index/providers/libsql/statements.ts";
 
+const clientCache = new WeakMap<LibsqlClient, ClientInterface>();
+
+class AutoSyncClient extends Client {
+  constructor(
+    opts: ClientOptions,
+    private flushPending: () => Promise<void>,
+  ) {
+    super(opts);
+  }
+
+  public override async import(
+    request: ImportRequest,
+  ): Promise<ImportResponse> {
+    const res = await super.import(request);
+    await this.flushPending();
+    return res;
+  }
+
+  public override async sparql(
+    request: SparqlRequest,
+  ): Promise<SparqlResponse> {
+    const res = await super.sparql(request);
+    await this.flushPending();
+    return res;
+  }
+}
+
 /**
  * Configuration bundle for bootstrapping the integrated environment.
  */
@@ -66,6 +93,9 @@ export async function createClient(
   options: CreateClientOptions,
 ): Promise<ClientInterface> {
   const { db, embeddingService } = options;
+
+  const cached = clientCache.get(db);
+  if (cached) return cached;
 
   // 1. Guarantee logical SQL schema existence
   await initializeSchema(db);
@@ -115,27 +145,7 @@ export async function createClient(
     searchIndex,
   };
 
-  class AutoSyncClient extends Client {
-    constructor(opts: ClientOptions) {
-      super(opts);
-    }
-
-    public override async import(
-      request: ImportRequest,
-    ): Promise<ImportResponse> {
-      const res = await super.import(request);
-      await flushPending();
-      return res;
-    }
-
-    public override async sparql(
-      request: SparqlRequest,
-    ): Promise<SparqlResponse> {
-      const res = await super.sparql(request);
-      await flushPending();
-      return res;
-    }
-  }
-
-  return new AutoSyncClient(baseOptions);
+  const client = new AutoSyncClient(baseOptions, flushPending);
+  clientCache.set(db, client);
+  return client;
 }

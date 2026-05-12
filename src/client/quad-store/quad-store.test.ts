@@ -2,7 +2,7 @@ import { assertEquals, assertRejects } from "@std/assert";
 import { DataFactory, Store } from "n3";
 import { RdfjsQuadStore } from "./quad-store.ts";
 
-const { namedNode, quad, literal } = DataFactory;
+const { namedNode, blankNode, quad, literal } = DataFactory;
 
 // Test quads
 const q1 = quad(
@@ -132,6 +132,60 @@ Deno.test("RdfjsQuadStore.import - omitting mode defaults to merge", async () =>
   });
 
   assertEquals(store.size, 2);
+});
+
+Deno.test("RdfjsQuadStore.import - handles BlankNode subjects", async () => {
+  const store = new Store();
+  const bSubject = blankNode("b1");
+  const q = quad(bSubject, namedNode("http://example.org/p"), literal("v"));
+  await new RdfjsQuadStore(store).import({
+    source: { kind: "quads", quads: [q] },
+  });
+  assertEquals(store.size, 1);
+  assertEquals(store.has(q), true);
+});
+
+Deno.test("RdfjsQuadStore.import - handles BlankNode objects", async () => {
+  const store = new Store();
+  const bObject = blankNode("b2");
+  const q = quad(namedNode("http://example.org/s"), namedNode("http://example.org/p"), bObject);
+  await new RdfjsQuadStore(store).import({
+    source: { kind: "quads", quads: [q] },
+  });
+  assertEquals(store.size, 1);
+  assertEquals(store.has(q), true);
+});
+
+Deno.test("RdfjsQuadStore.import - handles NamedNode graph context", async () => {
+  const store = new Store();
+  const graph = namedNode("http://example.org/g");
+  const q = quad(
+    namedNode("http://example.org/s"),
+    namedNode("http://example.org/p"),
+    literal("v"),
+    graph,
+  );
+  await new RdfjsQuadStore(store).import({
+    source: { kind: "quads", quads: [q] },
+  });
+  assertEquals(store.size, 1);
+  assertEquals(store.has(q), true);
+});
+
+Deno.test("RdfjsQuadStore.import - handles BlankNode graph context", async () => {
+  const store = new Store();
+  const graph = blankNode("g1");
+  const q = quad(
+    namedNode("http://example.org/s"),
+    namedNode("http://example.org/p"),
+    literal("v"),
+    graph,
+  );
+  await new RdfjsQuadStore(store).import({
+    source: { kind: "quads", quads: [q] },
+  });
+  assertEquals(store.size, 1);
+  assertEquals(store.has(q), true);
 });
 
 Deno.test("RdfjsQuadStore.export - returns all store quads directly", async () => {

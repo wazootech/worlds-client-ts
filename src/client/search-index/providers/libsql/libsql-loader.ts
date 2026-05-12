@@ -29,8 +29,8 @@ export async function hydrateStoreFromLibsql(
       const graph = reconstructGraph(row);
 
       batchQuads.push(quad(subject, predicate, object, graph));
-    } catch (_err) {
-      // Defensive catch ignoring corrupted record structures.
+    } catch (err) {
+      console.warn(`hydrateStoreFromLibsql: skipping corrupt row s="${row.s}"`, err);
     }
   }
 

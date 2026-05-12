@@ -1,6 +1,6 @@
 import type { Client, InStatement } from "@libsql/client";
 import type { Patch } from "#/client/quad-store/patch.ts";
-import type { QuadChunker } from "#/client/search-index/chunking/quad-chunker.ts";
+import type { ChunkRowPayload, QuadChunker } from "#/client/search-index/chunking/quad-chunker.ts";
 import { hashQuad } from "#/client/quad-store/hash.ts";
 import type * as rdfjs from "@rdfjs/types";
 import {
@@ -52,9 +52,14 @@ export class LibsqlIndexSync {
 
     // 1. Handle sweeping cleanup across BOTH logical storage bounds
     if (patch.deletions?.length) {
-      const deletionQuadIds = await Promise.all(
-        patch.deletions.map((q) => hashQuad(q)),
-      );
+      let deletionQuadIds: string[];
+      try {
+        deletionQuadIds = await Promise.all(
+          patch.deletions.map((q) => hashQuad(q)),
+        );
+      } catch (cause) {
+        throw new Error("failed to hash deletion quads", { cause });
+      }
       if (deletionQuadIds.length) {
         statements.push(buildDeleteByQuadIds(deletionQuadIds));
         statements.push(buildDeleteQuadsByQuadIds(deletionQuadIds));
@@ -64,9 +69,14 @@ export class LibsqlIndexSync {
     // 2. Handle population and serialization of new additions
     if (patch.insertions?.length) {
       // Batch-hash all quads upfront to avoid redundant canonization
-      const quadIds = await Promise.all(
-        patch.insertions.map((q) => hashQuad(q)),
-      );
+      let quadIds: string[];
+      try {
+        quadIds = await Promise.all(
+          patch.insertions.map((q) => hashQuad(q)),
+        );
+      } catch (cause) {
+        throw new Error("failed to hash insertion quads", { cause });
+      }
 
       // First, directly archive facts natively decomposing structures into relational columns
       for (let i = 0; i < patch.insertions.length; i++) {
@@ -94,9 +104,19 @@ export class LibsqlIndexSync {
       }
 
       // Second, transform literals into chunked, vectorized artifacts for searching
-      const chunks = await this.chunker.chunk(patch.insertions, quadIds);
+      let chunks: ChunkRowPayload[];
+      try {
+        chunks = await this.chunker.chunk(patch.insertions, quadIds);
+      } catch (cause) {
+        throw new Error("failed to chunk insertions", { cause });
+      }
       for (const payload of chunks) {
-        const vector = await this.embeddingService.embed(payload.value);
+        let vector: Float32Array | number[];
+        try {
+          vector = await this.embeddingService.embed(payload.value);
+        } catch (cause) {
+          throw new Error(`failed to embed chunk quad_id="${payload.quad_id}"`, { cause });
+        }
         const vectorJson = JSON.stringify(Array.from(vector));
         statements.push(
           buildInsertChunk({
@@ -112,7 +132,11 @@ export class LibsqlIndexSync {
 
     // Execute flush in a single ACID compliant optimized transaction batch
     if (statements.length > 0) {
-      await this.client.batch(statements, "write");
+      try {
+        await this.client.batch(statements, "write");
+      } catch (cause) {
+        throw new Error("failed to execute sync batch", { cause });
+      }
     }
   }
 }
