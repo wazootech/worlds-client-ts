@@ -8,7 +8,7 @@ import type { Patch } from "#/client/quad-store/patch.ts";
 import type { TextSplitterInterface } from "#/client/search-index/quad-chunker/chunk-quads.ts";
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
-import { proxyStore } from "#/client/quad-store/proxied-store.ts";
+import { proxyStore } from "#/client/providers/rdfjs/n3/proxy-store.ts";
 import { RdfjsQuadStore } from "#/client/providers/rdfjs/rdfjs-quad-store.ts";
 import { ComunicaSparqlEngine } from "#/client/providers/comunica/comunica-sparql-engine.ts";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";

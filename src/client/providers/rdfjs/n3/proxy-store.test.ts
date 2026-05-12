@@ -1,6 +1,6 @@
 import { assertEquals } from "@std/assert";
 import { DataFactory, Store } from "n3";
-import { proxyStore } from "./proxied-store.ts";
+import { proxyStore } from "./proxy-store.ts";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { executeSparql } from "#/client/providers/comunica/mod.ts";
 
