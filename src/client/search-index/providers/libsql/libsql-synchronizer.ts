@@ -20,7 +20,7 @@ export interface EmbeddingService {
 /**
  * Configuration required by the Synchronizer to update the index.
  */
-export interface LibsqlIndexSyncOptions {
+export interface LibsqlSynchronizerOptions {
   /** The underlying database connection. */
   client: Client;
   /** The utility splitting big literal strings into vectors. */
@@ -30,15 +30,15 @@ export interface LibsqlIndexSyncOptions {
 }
 
 /**
- * LibsqlIndexSync manages global consistency between LibSQL persistent layers.
+ * LibsqlSynchronizer manages global consistency between LibSQL persistent layers.
  * It simultaneously tracks the atomic master Fact records (quads) and derived Search indices (chunks).
  */
-export class LibsqlIndexSync {
+export class LibsqlSynchronizer {
   private readonly client: Client;
   private readonly chunker: QuadChunker;
   private readonly embeddingService: EmbeddingService;
 
-  constructor(options: LibsqlIndexSyncOptions) {
+  constructor(options: LibsqlSynchronizerOptions) {
     this.client = options.client;
     this.chunker = options.chunker;
     this.embeddingService = options.embeddingService;

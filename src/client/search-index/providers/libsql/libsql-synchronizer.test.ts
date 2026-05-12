@@ -2,7 +2,7 @@ import { assertEquals } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { LibsqlIndexSync } from "./libsql-index-sync.ts";
+import { LibsqlSynchronizer } from "./libsql-synchronizer.ts";
 import { QuadChunker } from "#/client/search-index/chunking/quad-chunker.ts";
 import {
   makeLibsqlChunksQuadIdIndex,
@@ -37,11 +37,11 @@ class FakeEmbedder {
 const sharedSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000 });
 const sharedChunker = new QuadChunker({ splitter: sharedSplitter });
 
-Deno.test("LibsqlIndexSync - isolated writes and removals flush correctly to BOTH chunks and quads", async () => {
+Deno.test("LibsqlSynchronizer - isolated writes and removals flush correctly to BOTH chunks and quads", async () => {
   const client = createClient({ url: ":memory:" });
   await setupSchema(client);
 
-  const synchronizer = new LibsqlIndexSync({
+  const synchronizer = new LibsqlSynchronizer({
     client,
     embeddingService: new FakeEmbedder(),
     chunker: sharedChunker,

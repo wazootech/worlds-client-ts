@@ -1,6 +1,6 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { createClient as createLibsqlClient } from "@libsql/client";
-import { createClient } from "./factory.ts";
+import { createClient } from "./search-index/providers/libsql/libsql-client.ts";
 import { DataFactory } from "n3";
 
 const { quad, namedNode, literal } = DataFactory;
