@@ -23,6 +23,14 @@ mathematical brevity.
 - **Deterministic prefixes:** Use active verb modifiers when establishing
   asynchronous action boundaries (e.g., `fetchData`, `persistState`).
 
+- **Explicit JSDoc semantics:** JSDoc comments for all structural symbols
+  (functions, interfaces, properties, methods) MUST begin directly with the
+  symbol's exact name and form a complete, descriptive sentence.
+  - ✅ **Good:**
+    `/** SyncLibsqlOptions provides configurations for executing updates against LibSQL durable stores. */`
+  - ❌ **Bad:** `/** The underlying database connection. */`
+  - ✅ **Corrected:** `/** client is the underlying database connection. */`
+
 ## State resilience and dual-layer safety
 
 When interacting with replication synchronizers or persistent storage
