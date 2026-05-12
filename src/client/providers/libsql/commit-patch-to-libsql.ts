@@ -22,6 +22,9 @@ export interface CommitPatchToLibsqlOptions {
 
   /** textSplitter is the splitting facility consumed when breaking large strings into search metadata. */
   textSplitter: TextSplitterInterface;
+
+  /** maxLookupChunkSize specifies the batch size threshold used to chunk long IN queries, preventing parameter overflow crashes. Defaults to 900. */
+  maxLookupChunkSize?: number;
 }
 
 /**
@@ -35,7 +38,8 @@ export async function commitPatchToLibsql(
   options: CommitPatchToLibsqlOptions,
 ): Promise<void> {
   const statements: InStatement[] = [];
-  const { client, embeddingService, textSplitter } = options;
+  const { client, embeddingService, textSplitter, maxLookupChunkSize } =
+    options;
 
   // 1. Handle sweeping cleanup across BOTH logical storage bounds
   if (patch.deletions?.length) {
@@ -70,8 +74,8 @@ export async function commitPatchToLibsql(
     // ⚡ Performant Cache Guard: Check which incoming Quad IDs are ALREADY resident in SQLite
     const existingIds = new Set<string>();
     try {
-      // Defensively chunk lookup queries to respect typical SQLite bound parameter limits
-      const lookupChunkSize = 900;
+      // Defensively chunk lookup queries to respect configured or default SQLite bound parameter limits
+      const lookupChunkSize = maxLookupChunkSize ?? 900;
       for (let i = 0; i < quadIds.length; i += lookupChunkSize) {
         const batchIds = quadIds.slice(i, i + lookupChunkSize);
         const query = LibsqlQueryBuilder.buildSelectExistingQuadIds(batchIds);

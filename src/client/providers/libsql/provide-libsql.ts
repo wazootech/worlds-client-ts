@@ -35,6 +35,9 @@ export interface LibsqlOptions {
   /** store is an optional starting store, useful for serverless environments where the store is already initialized. */
   store?: Store;
 
+  /** maxLookupChunkSize specifies the maximum number of host parameters allowed in cache query IN clauses before split-chunking. Defaults to 900. */
+  maxLookupChunkSize?: number;
+
   /**
    * @todo FUTURE ENHANCEMENT: Introduce `hydrationFilters?: { graphs?: string[] }`
    * to enable targeted scoped hydration. Essential for serverless cold-start optimization
@@ -107,6 +110,7 @@ export async function provideLibsql(
       client: options.client,
       embeddingService: options.embeddingService,
       textSplitter: textSplitter,
+      maxLookupChunkSize: options.maxLookupChunkSize,
     });
   };
 
