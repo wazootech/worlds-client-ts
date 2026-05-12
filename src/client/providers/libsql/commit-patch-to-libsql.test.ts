@@ -2,7 +2,7 @@ import { assertEquals } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { syncLibsql } from "./sync-libsql.ts";
+import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import { FakeEmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 
@@ -21,7 +21,7 @@ async function setupSchema(client: ReturnType<typeof createClient>) {
 
 const sharedSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000 });
 
-Deno.test("LibsqlSynchronizer - isolated writes and removals flush correctly to BOTH chunks and quads", async () => {
+Deno.test("commitPatchToLibsql - isolated writes and removals flush correctly to BOTH chunks and quads", async () => {
   const client = createClient({ url: ":memory:" });
   await setupSchema(client);
 
@@ -38,7 +38,7 @@ Deno.test("LibsqlSynchronizer - isolated writes and removals flush correctly to 
   );
 
   // 1. Commit insertion
-  await syncLibsql({
+  await commitPatchToLibsql({
     insertions: [testQuad],
     deletions: [],
   }, options);
@@ -59,7 +59,7 @@ Deno.test("LibsqlSynchronizer - isolated writes and removals flush correctly to 
   );
 
   // 3. Execute deletion
-  await syncLibsql({
+  await commitPatchToLibsql({
     insertions: [],
     deletions: [testQuad],
   }, options);

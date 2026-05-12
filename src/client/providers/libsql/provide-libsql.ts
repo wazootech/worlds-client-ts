@@ -12,7 +12,7 @@ import { createProxiedStore } from "#/client/quad-store/create-proxied-store.ts"
 import { RdfjsQuadStore } from "#/client/providers/rdfjs/rdfjs-quad-store.ts";
 import { ComunicaSparqlEngine } from "#/client/providers/comunica/comunica-sparql-engine.ts";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
-import { syncLibsql } from "./sync-libsql.ts";
+import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import { hydrateStoreFromLibsql } from "./hydrate-store-from-libsql.ts";
 
 import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
@@ -103,7 +103,7 @@ export async function provideLibsql(
     };
 
     // Execute internal standard replication.
-    await syncLibsql(merged, {
+    await commitPatchToLibsql(merged, {
       client: options.client,
       embeddingService: options.embeddingService,
       textSplitter: textSplitter,

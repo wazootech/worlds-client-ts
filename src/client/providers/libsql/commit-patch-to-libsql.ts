@@ -11,9 +11,9 @@ import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
 /**
- * SyncLibsqlOptions provides configurations for executing updates against LibSQL durable stores.
+ * CommitPatchToLibsqlOptions provides configurations for executing updates against LibSQL durable stores.
  */
-export interface SyncLibsqlOptions {
+export interface CommitPatchToLibsqlOptions {
   /** client is the underlying database connection. */
   client: Client;
 
@@ -25,15 +25,14 @@ export interface SyncLibsqlOptions {
 }
 
 /**
- * syncLibsql atomically commits an arbitrary delta of additions and removals
- * across all logical SQL indices (quads and chunks).
+ * commitPatchToLibsql atomically commits an arbitrary delta of additions and removals across all logical SQL indices (quads and chunks).
  *
  * @param patch The set of proposed additions/removals extracted from the client store.
  * @param options Required durable handlers, search services and configurations.
  */
-export async function syncLibsql(
+export async function commitPatchToLibsql(
   patch: Patch,
-  options: SyncLibsqlOptions,
+  options: CommitPatchToLibsqlOptions,
 ): Promise<void> {
   const statements: InStatement[] = [];
   const { client, embeddingService, textSplitter } = options;
