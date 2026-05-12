@@ -5,6 +5,7 @@ import type {
   SearchResponse,
   SearchResult,
 } from "#/client/search-index/search-index-interface.ts";
+import { filterQuads } from "#/client/quad-store/quad-filter.ts";
 
 /**
  * RdfjsSearchIndex is the implementation of SearchIndexInterface that uses an RDF/JS store.
@@ -19,41 +20,17 @@ export class RdfjsSearchIndex implements SearchIndexInterface {
     const stream = this.store.match(null, null, null, null);
     const results: Array<SearchResult> = [];
 
-    // Prepare fast lookup sets for inclusion/exclusion rules
-    const includeSubjects = request.include?.subjects
-      ? new Set(request.include.subjects)
-      : null;
-    const includePreds = request.include?.predicates
-      ? new Set(request.include.predicates)
-      : null;
-
-    const excludeSubjects = request.exclude?.subjects
-      ? new Set(request.exclude.subjects)
-      : null;
-    const excludePreds = request.exclude?.predicates
-      ? new Set(request.exclude.predicates)
-      : null;
-    const excludeGraphs = request.exclude?.graphs
-      ? new Set(request.exclude.graphs)
-      : null;
-
-    const includeGraphs = request.include?.graphs
-      ? new Set(request.include.graphs)
-      : null;
+    // 🛡️ Pre-compile the centralized O(1) execution gate from the request payload
+    const matcher = filterQuads(request);
 
     await new Promise<void>((resolve, reject) => {
       stream.on("data", (quad: rdfjs.Quad) => {
-        // 1. Primary Filter: Exclusions ALWAYS trump
-        if (excludeSubjects?.has(quad.subject.value)) return;
-        if (excludePreds?.has(quad.predicate.value)) return;
-        if (excludeGraphs?.has(quad.graph.value)) return;
+        // 1. Evaluate Centralized Boundary Filters
+        if (!matcher(quad)) {
+          return;
+        }
 
-        // 2. Scope Filter: Inclusions strictly limit visibility
-        if (includeSubjects && !includeSubjects.has(quad.subject.value)) return;
-        if (includePreds && !includePreds.has(quad.predicate.value)) return;
-        if (includeGraphs && !includeGraphs.has(quad.graph.value)) return;
-
-        // 3. Text Filter: Match literal string objects
+        // 2. Text Filter: Match literal string objects
         if (quad.object.termType === "Literal") {
           const value = quad.object.value;
           if (value.toLowerCase().includes(query)) {

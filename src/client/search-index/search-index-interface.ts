@@ -1,40 +1,11 @@
+import type { QuadFilter } from "#/client/quad-store/quad-filter.ts";
+
 /**
- * SearchRequest defines the parameters for executing a keyword search.
+ * SearchRequest defines the parameters for executing a keyword search, extending central QuadFilter rules.
  */
-export interface SearchRequest {
+export interface SearchRequest extends QuadFilter {
   /** The fuzzy text query evaluated against the graph's Literal objects. */
   query: string;
-
-  /** Positive boundary conditions. If specified, results MUST match these criteria. */
-  include?: SearchFilters;
-
-  /** Negative boundary conditions. Results matching these criteria are automatically suppressed. */
-  exclude?: SearchFilters;
-}
-
-/**
- * SearchFilters provides standard scoping properties usable by both include and exclude vectors.
- */
-export interface SearchFilters {
-  /**
-   * Limit search scope to these specific subject IRIs.
-   *
-   * @tip This is the intended integration point for SPARQL composition.
-   * Run a `client.sparql()` query (e.g., `SELECT ?subject WHERE { ?subject a :Type }`),
-   * extract the identifiers, and pass them here to dynamically bound search space.
-   */
-  subjects?: Array<string>;
-
-  /**
-   * Limit search scope to specific attribute predicates.
-   * Use this to restrict keyword matching only to certain fields like `rdfs:comment`.
-   */
-  predicates?: Array<string>;
-
-  /**
-   * Limit search scope to specific Named Graphs.
-   */
-  graphs?: Array<string>;
 }
 
 /**
