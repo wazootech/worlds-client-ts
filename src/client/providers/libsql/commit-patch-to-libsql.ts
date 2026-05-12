@@ -107,18 +107,25 @@ export async function commitPatchToLibsql(
       throw new Error("failed to chunk insertions", { cause });
     }
     if (chunks.length > 0) {
-      // Supercharged Batch Optimization: Fetch all embeddings in exactly one unified request!
-      let vectors: Array<Float32Array | number[]>;
+      // Performance Optimization First: Strictly deduplicate identical texts to suppress redundant LLM API calls!
+      const uniqueTexts = Array.from(new Set(chunks.map((c) => c.value)));
+
+      let uniqueVectors: Array<Float32Array | number[]>;
       try {
-        const texts = chunks.map((c) => c.value);
-        vectors = await embeddingService.embed(texts);
+        uniqueVectors = await embeddingService.embed(uniqueTexts);
       } catch (cause) {
         throw new Error("failed to embed chunk batch", { cause });
       }
 
-      for (let i = 0; i < chunks.length; i++) {
-        const payload = chunks[i];
-        const vector = vectors[i];
+      // Synthesize lookup cache for distribution back to individual chunks
+      const vectorLookupMap = new Map<string, Float32Array | number[]>();
+      for (let i = 0; i < uniqueTexts.length; i++) {
+        vectorLookupMap.set(uniqueTexts[i], uniqueVectors[i]);
+      }
+
+      for (const payload of chunks) {
+        const vector = vectorLookupMap.get(payload.value);
+        if (!vector) continue; // Defensive guarantee
         const vectorJson = JSON.stringify(Array.from(vector));
 
         statements.push(
