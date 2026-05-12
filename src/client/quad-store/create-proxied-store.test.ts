@@ -8,7 +8,7 @@ const { quad, namedNode, literal } = DataFactory;
 
 Deno.test("Slice 1: createProxiedStore proxy captures raw addQuad mutation", () => {
   const baseStore = new Store();
-  const { store, flush } = createProxiedStore(baseStore);
+  const { store, drainPatches } = createProxiedStore(baseStore);
 
   const testQuad = quad(
     namedNode("urn:sub"),
@@ -20,7 +20,7 @@ Deno.test("Slice 1: createProxiedStore proxy captures raw addQuad mutation", () 
   store.addQuad(testQuad);
 
   // Verify the hook automatically caught the action and loaded our queue!
-  const pending = flush();
+  const pending = drainPatches();
   assertEquals(
     pending.length,
     1,
@@ -42,12 +42,12 @@ Deno.test("Slice 1: createProxiedStore proxy captures raw removeQuad mutation", 
   const testQuad = quad(namedNode("u:s"), namedNode("u:p"), literal("v"));
   baseStore.addQuad(testQuad);
 
-  const { store, flush } = createProxiedStore(baseStore);
+  const { store, drainPatches } = createProxiedStore(baseStore);
 
   // Perform remove through proxy
   store.removeQuad(testQuad);
 
-  const pending = flush();
+  const pending = drainPatches();
   assertEquals(pending.length, 1);
   assertEquals(
     pending[0].deletions.length,
@@ -63,7 +63,7 @@ Deno.test("Slice 1: createProxiedStore proxy captures removeMatches", async () =
   baseStore.addQuad(q1);
   baseStore.addQuad(q2);
 
-  const { store, flush } = createProxiedStore(baseStore);
+  const { store, drainPatches } = createProxiedStore(baseStore);
 
   // removeMatches returns a stream — consume it to ensure queue is populated
   const removalStream = store.removeMatches(null, namedNode("u:p"), null, null);
@@ -74,7 +74,7 @@ Deno.test("Slice 1: createProxiedStore proxy captures removeMatches", async () =
     (removalStream as any).on("error", resolve);
   });
 
-  const pending = flush();
+  const pending = drainPatches();
   assertEquals(pending.length, 1, "Expected exactly one patch");
   assertEquals(
     pending[0].deletions.length,
@@ -90,7 +90,7 @@ Deno.test("Slice 1: createProxiedStore proxy captures removeMatches", async () =
 
 Deno.test("Slice 2: bridge automatically transparently captures implicit Comunica SPARQL updates", async () => {
   const baseStore = new Store();
-  const { store, flush } = createProxiedStore(baseStore);
+  const { store, drainPatches } = createProxiedStore(baseStore);
   const engine = new QueryEngine();
 
   // Fire a live SPARQL Update into the proxied store
@@ -102,7 +102,7 @@ Deno.test("Slice 2: bridge automatically transparently captures implicit Comunic
 
   // Verify the chain worked!
   // Comunica -> Proxy Hook -> Closure Array!
-  const pending = flush();
+  const pending = drainPatches();
 
   // It could trigger either multiple small patches or one big one depending on Comunica internals.
   // We check that SOME insertions made it.

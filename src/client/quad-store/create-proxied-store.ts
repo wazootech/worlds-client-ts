@@ -12,7 +12,7 @@ import type { Patch } from "./patch.ts";
  */
 export function createProxiedStore(target: Store): {
   store: Store;
-  flush: () => Patch[];
+  drainPatches: () => Patch[];
 } {
   let patches: Patch[] = [];
 
@@ -166,7 +166,7 @@ export function createProxiedStore(target: Store): {
 
   return {
     store: proxiedStore,
-    flush: () => {
+    drainPatches: () => {
       const current = patches;
       patches = [];
       return current;

@@ -85,7 +85,7 @@ export async function provideLibsql(
   }
 
   // 3. Instrument memory layer for transparent transaction accumulation.
-  const { store, flush } = createProxiedStore(initialStore);
+  const { store, drainPatches } = createProxiedStore(initialStore);
 
   // 4. Configure specialized support utilities.
   const textSplitter = options.textSplitter ??
@@ -97,11 +97,11 @@ export async function provideLibsql(
   });
 
   /**
-   * commitChanges unifies monitoring queue flushing with standard LibSQL
+   * commitChanges unifies monitoring queue draining with standard LibSQL
    * replication pipeline processing.
    */
   const commitChanges = async () => {
-    const patches = flush();
+    const patches = drainPatches();
     if (patches.length === 0) return;
 
     const merged: Patch = {
