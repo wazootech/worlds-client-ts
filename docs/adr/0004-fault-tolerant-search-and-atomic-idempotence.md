@@ -1,4 +1,4 @@
-# ADR 0004: Fault-Tolerant Search and Atomic Idempotence Safeguards
+# ADR 0004: Fault-tolerant search and atomic idempotence safeguards
 
 ## Status
 
@@ -21,7 +21,7 @@ were surfaced:
 We will harden operational resiliency by integrating dual-layer safeguards into
 the storage and query assembly vectors.
 
-### Part A: Double-Gated Idempotency
+### Part A: Double-gated idempotency
 
 - **Proxy Layer Validation:** The JavaScript Graph Store proxy executes
   proactive `.has()` state checks before queueing mutations. This suppresses
@@ -32,7 +32,7 @@ the storage and query assembly vectors.
   This guarantees ultimate data hygiene in the event of cross-application stale
   footprints.
 
-### Part B: Graceful Search Degradation
+### Part B: Graceful search degradation
 
 - The query assembler is refactored into an intelligent decision vector handling
   three dynamic topologies: Hybrid (Fused), Semantic (Vector-Only), and Keyword

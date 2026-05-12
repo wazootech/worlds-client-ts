@@ -1,4 +1,4 @@
-# ADR 0003: Flattened Orchestration via Provider Adapters
+# ADR 0003: Flattened orchestration via provider adapters
 
 ## Status
 
