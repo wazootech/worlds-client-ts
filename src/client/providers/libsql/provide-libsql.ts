@@ -7,6 +7,7 @@ import type { ClientOptions } from "#/client/client.ts";
 import type { Patch } from "#/client/quad-store/patch.ts";
 import type { TextSplitterInterface } from "#/client/search-index/quad-chunker/chunk-quads.ts";
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
+import type { QuadFilter } from "#/client/quad-store/quad-filter.ts";
 
 import { proxyStore } from "#/client/providers/rdfjs/n3/proxy-store.ts";
 import { RdfjsQuadStore } from "#/client/providers/rdfjs/rdfjs-quad-store.ts";
@@ -38,11 +39,8 @@ export interface LibsqlOptions {
   /** maxLookupChunkSize specifies the maximum number of host parameters allowed in cache query IN clauses before split-chunking. Defaults to a conservative 800 (safely below historical SQLite 999 SQLITE_MAX_VARIABLE_NUMBER variable caps with generous headroom). */
   maxLookupChunkSize?: number;
 
-  /**
-   * @todo FUTURE ENHANCEMENT: Introduce `hydrationFilters?: { graphs?: string[] }`
-   * to enable targeted scoped hydration. Essential for serverless cold-start optimization
-   * limiting memory ingest to explicitly required tenant domains.
-   */
+  /** quadFilter defines positive synchronization inclusion boundaries, governing which sub-graphs hydrate on boot and persist on write, leaving remaining data to serve as fast ephemeral in-memory context. */
+  quadFilter?: QuadFilter;
 }
 
 /**
@@ -77,7 +75,11 @@ export async function provideLibsql(
   // 2. Resolve standard core memory context with optional user-driven injection.
   const initialStore = options.store ?? new Store();
   if (!options.store) {
-    await hydrateStoreFromLibsql(options.client, initialStore);
+    await hydrateStoreFromLibsql(
+      options.client,
+      initialStore,
+      options.quadFilter,
+    );
   }
 
   // 3. Instrument memory layer for transparent transaction accumulation.
@@ -111,6 +113,7 @@ export async function provideLibsql(
       embeddingService: options.embeddingService,
       textSplitter: textSplitter,
       maxLookupChunkSize: options.maxLookupChunkSize,
+      quadFilter: options.quadFilter,
     });
   };
 

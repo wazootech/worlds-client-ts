@@ -1,4 +1,5 @@
 import type { SearchRequest } from "#/client/search-index/search-index-interface.ts";
+import type { QuadFilter } from "#/client/quad-store/quad-filter.ts";
 
 /**
  * libsqlQueryBuilder provides unified pure functions to dynamically construct both DDL schema definitions and active parameterized DML queries.
@@ -141,6 +142,68 @@ export const libsqlQueryBuilder = {
     return {
       sql: `SELECT id FROM quads WHERE id IN (${placeholders})`,
       args: quadIds,
+    };
+  },
+
+  /**
+   * buildHydrateQuery generates parameterized SELECT statement to hydrate active in-memory storage, integrating optional declarative filters.
+   */
+  buildHydrateQuery(
+    filter?: QuadFilter,
+  ): { sql: string; args: string[] } {
+    const whereClauses: string[] = [];
+    const filterArgs: string[] = [];
+
+    // Map nested declarative boundaries down to physical storage columns
+    const filterConfigurations = [
+      {
+        values: filter?.exclude?.subjects,
+        column: "s",
+        operator: "NOT IN",
+      },
+      {
+        values: filter?.exclude?.predicates,
+        column: "p",
+        operator: "NOT IN",
+      },
+      {
+        values: filter?.exclude?.graphs,
+        column: "g",
+        operator: "NOT IN",
+      },
+      {
+        values: filter?.include?.subjects,
+        column: "s",
+        operator: "IN",
+      },
+      {
+        values: filter?.include?.predicates,
+        column: "p",
+        operator: "IN",
+      },
+      {
+        values: filter?.include?.graphs,
+        column: "g",
+        operator: "IN",
+      },
+    ] as const;
+
+    for (const { values, column, operator } of filterConfigurations) {
+      if (values?.length) {
+        const placeholders = generatePlaceholders(values.length);
+        whereClauses.push(`${column} ${operator} (${placeholders})`);
+        filterArgs.push(...values);
+      }
+    }
+
+    const whereFilter = whereClauses.length > 0
+      ? `WHERE ${whereClauses.join(" AND ")}`
+      : "";
+
+    return {
+      sql:
+        `SELECT s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type FROM quads ${whereFilter}`,
+      args: filterArgs,
     };
   },
 

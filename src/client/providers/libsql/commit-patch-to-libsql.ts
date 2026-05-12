@@ -7,6 +7,10 @@ import type {
 import { chunkQuads } from "#/client/search-index/quad-chunker/chunk-quads.ts";
 import { hashQuad } from "#/client/quad-store/hash-quad.ts";
 import type * as rdfjs from "@rdfjs/types";
+import {
+  filterQuads,
+  type QuadFilter,
+} from "#/client/quad-store/quad-filter.ts";
 import { libsqlQueryBuilder } from "./libsql-query-builder.ts";
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
@@ -25,6 +29,9 @@ export interface CommitPatchToLibsqlOptions {
 
   /** maxLookupChunkSize specifies the batch size threshold used to chunk long IN queries, preventing parameter overflow crashes. Defaults to a conservative 800 (accounting for historical SQLite 999 SQLITE_MAX_VARIABLE_NUMBER cap with headroom). */
   maxLookupChunkSize?: number;
+
+  /** quadFilter defines active synchronization inclusion bounds, facilitating hybrid partitioning where only specific facts are persisted. */
+  quadFilter?: QuadFilter;
 }
 
 /**
@@ -37,20 +44,26 @@ export async function commitPatchToLibsql(
   patch: Patch,
   options: CommitPatchToLibsqlOptions,
 ): Promise<void> {
-  const { client, maxLookupChunkSize } = options;
+  const { client, maxLookupChunkSize, quadFilter } = options;
   const statements: InStatement[] = [];
 
+  // ⚡ Performant Optimizations First: Compile pre-emptive filter gates to support lightning-fast memory partitioning
+  const matcher = filterQuads(quadFilter);
+
+  const targetedDeletions = patch.deletions?.filter(matcher) ?? [];
+  const targetedInsertions = patch.insertions?.filter(matcher) ?? [];
+
   // 1. Stage Sweeping Deletion Operations
-  if (patch.deletions?.length) {
-    const deletionQuadIds = await computeQuadIds(patch.deletions);
+  if (targetedDeletions.length) {
+    const deletionQuadIds = await computeQuadIds(targetedDeletions);
     if (deletionQuadIds.length > 0) {
       statements.push(...buildDeletionStatements(deletionQuadIds));
     }
   }
 
   // 2. Stage Content-Addressed Novel Insertion Operations
-  if (patch.insertions?.length) {
-    const proposedQuadIds = await computeQuadIds(patch.insertions);
+  if (targetedInsertions.length) {
+    const proposedQuadIds = await computeQuadIds(targetedInsertions);
     const existingIds = await queryCachePresence(
       client,
       proposedQuadIds,
@@ -60,10 +73,10 @@ export async function commitPatchToLibsql(
     // Deduplication Filter: Process ONLY truly novel facts that are not yet persistent
     const novelInsertions: rdfjs.Quad[] = [];
     const novelQuadIds: string[] = [];
-    for (let i = 0; i < patch.insertions.length; i++) {
+    for (let i = 0; i < targetedInsertions.length; i++) {
       const id = proposedQuadIds[i];
       if (!existingIds.has(id)) {
-        novelInsertions.push(patch.insertions[i]);
+        novelInsertions.push(targetedInsertions[i]);
         novelQuadIds.push(id);
       }
     }

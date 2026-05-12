@@ -109,3 +109,109 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
     },
   );
 });
+
+Deno.test("QuadFilter Integration: enables hybrid partitioning persisting specific graphs while keeping others ephemeral", async () => {
+  const db = createLibsqlClient({ url: ":memory:" });
+  const embeddingService = new FakeEmbeddingService();
+
+  const PERSISTENT_GRAPH = "http://wazoo.world/durable";
+  const EPHEMERAL_GRAPH = "http://wazoo.world/ephemeral";
+
+  // Initialize client with filter restricting SQL writes exclusively to the persistent graph
+  const client = new Client(
+    await provideLibsql({
+      client: db,
+      embeddingService,
+      quadFilter: {
+        include: {
+          graphs: [PERSISTENT_GRAPH],
+        },
+      },
+    }),
+  );
+
+  // 1. Stage both durable and ephemeral facts
+  const durableQuad = quad(
+    namedNode("urn:topic:durable"),
+    namedNode("urn:prop"),
+    literal("This fact belongs to durable storage and must persist."),
+    namedNode(PERSISTENT_GRAPH),
+  );
+
+  const ephemeralQuad = quad(
+    namedNode("urn:topic:ephemeral"),
+    namedNode("urn:prop"),
+    literal("This fact is highly ephemeral and should stay in memory."),
+    namedNode(EPHEMERAL_GRAPH),
+  );
+
+  await client.import({
+    source: { kind: "quads", quads: [durableQuad, ephemeralQuad] },
+  });
+
+  // 2. ASSERT: Both live inside active Memory right now
+  const activeSearchDurable = await client.search({ query: "durable" });
+  const activeSearchEphemeral = await client.search({ query: "ephemeral" });
+
+  assertEquals(
+    activeSearchDurable.results?.length,
+    1,
+    "Durable quad lost in memory context",
+  );
+  assertEquals(
+    activeSearchEphemeral.results?.length,
+    1,
+    "Ephemeral quad lost in memory context",
+  );
+
+  // 3. ASSERT: Verify physical database tables. Only ONE row should exist!
+  const resultSet = await db.execute("SELECT id, g FROM quads");
+  assertEquals(
+    resultSet.rows.length,
+    1,
+    "Database received an ephemeral write that violated synchronization filters!",
+  );
+  assertEquals(
+    String(resultSet.rows[0].g),
+    PERSISTENT_GRAPH,
+    "Database saved the incorrect graph!",
+  );
+
+  // 4. ASSERT: Verify Hydration boundary on reboot
+  // Restart client pointing to the same DB with identical filtering bounds
+  const restartedClient = new Client(
+    await provideLibsql({
+      client: db,
+      embeddingService,
+      quadFilter: {
+        include: {
+          graphs: [PERSISTENT_GRAPH],
+        },
+      },
+    }),
+  );
+
+  const rebootSearchDurable = await restartedClient.search({
+    query: "durable",
+  });
+  const rebootSearchEphemeral = await restartedClient.search({
+    query: "ephemeral",
+  });
+
+  // Durable survives the cycle!
+  assertEquals(
+    rebootSearchDurable.results?.length,
+    1,
+    "Durable quad failed to survive application reboot bootstrap cycle",
+  );
+
+  // Ephemeral is properly lost forever (cleaned out of memory, never saved to disk)
+  const ephemeralMatch = rebootSearchEphemeral.results?.find(
+    (r) => r.subject === "urn:topic:ephemeral",
+  );
+  assertEquals(
+    ephemeralMatch,
+    undefined,
+    "Ephemeral quad leaked into reboot state!",
+  );
+});
