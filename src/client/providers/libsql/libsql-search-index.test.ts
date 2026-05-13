@@ -220,3 +220,41 @@ Deno.test("LibsqlSearchIndex - Vectorless Mode: gracefully degrades to keyword-o
     "Specific search term inside target document",
   );
 });
+
+Deno.test("LibsqlSearchIndex - Stability: executes search safely when query contains special FTS5 syntax characters without throwing crashes", async () => {
+  const client = createClient({ url: ":memory:" });
+  await setupSchema(client);
+
+  // Insert a document we can try to find
+  await client.execute({
+    sql:
+      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, NULL)`,
+    args: [
+      "id-1",
+      "urn:subject",
+      "urn:prop",
+      "urn:g",
+      'The magic phrase with "quotes"',
+      null,
+    ],
+  });
+
+  const searchIndex = new LibsqlSearchIndex({ client });
+
+  // RED EXPECTATION: Running a query containing unclosed special characters (", {, etc.)
+  // will crash SQLite during parsing unless sanitized.
+  const dangerousQueries = [
+    'magic "phrase"', // unclosed quotes within phrase
+    '"hello', // starting lone quote
+    "{ unclosed", // unclosed bracket
+    "foo* bar", // asterisk suffix
+  ];
+
+  for (const query of dangerousQueries) {
+    // This should NOT throw an error!
+    const response = await searchIndex.search({ query });
+
+    // Assert that it gracefully completes search without raising SQL exceptions
+    assertExists(response.results, `Failed on query: ${query}`);
+  }
+});

@@ -247,6 +247,18 @@ export const libsqlQueryBuilder = {
   },
 
   /**
+   * sanitizeFtsQuery defends SQLite against internal parsing crash vectors
+   * by splitting inputs into safe alphanumeric tokens wrapped in explicit quotes.
+   */
+  sanitizeFtsQuery(query: string): string {
+    return query
+      .split(/\s+/)
+      .filter((token) => token.length > 0)
+      .map((token) => `"${token.replace(/"/g, "")}"`)
+      .join(" ");
+  },
+
+  /**
    * buildSearchQuery assembles the optimized hybrid search query leveraging RRF logic.
    *
    * The hybrid scoring uses Reciprocal Rank Fusion (RRF) to combine vector and FTS
@@ -314,13 +326,14 @@ export const libsqlQueryBuilder = {
 
     const hasVector = !!vectorJson;
     const hasQuery = !!request.query && request.query.trim().length > 0;
+    const sanitizedQuery = hasQuery ? this.sanitizeFtsQuery(request.query) : "";
 
     // CASE 1: TOTAL HYBRID SEARCH (Mode A)
     if (hasVector && hasQuery) {
       const args: (string | number)[] = [
         vectorJson!,
         limit,
-        request.query,
+        sanitizedQuery,
         limit,
         ...filterArgs,
         limit,
@@ -407,7 +420,7 @@ export const libsqlQueryBuilder = {
     // CASE 3: FTS / KEYWORD ONLY SEARCH (Mode B)
     if (hasQuery) {
       const args: (string | number)[] = [
-        request.query,
+        sanitizedQuery,
         limit,
         ...filterArgs,
         limit,
