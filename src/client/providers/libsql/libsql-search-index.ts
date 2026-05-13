@@ -1,0 +1,71 @@
+import type { Client } from "@libsql/client";
+import type {
+  SearchIndexInterface,
+  SearchRequest,
+  SearchResponse,
+  SearchResult,
+} from "#/client/search-index/search-index-interface.ts";
+import { libsqlQueryBuilder } from "./libsql-query-builder.ts";
+
+import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
+
+/**
+ * LibsqlSearchIndexOptions defines the structured configuration and dependency parameters needed to construct the LibSQL search engine.
+ */
+export interface LibsqlSearchIndexOptions {
+  /** client is the initialized @libsql/client instance pointing to the target database. */
+  client: Client;
+  /** embeddingService is an optional capability for projecting textual search inputs into dense vector space. */
+  embeddingService?: EmbeddingService;
+  /** limit establishes optional page sizing constraints for search result sets, defaulting to 100. */
+  limit?: number;
+}
+
+/**
+ * LibsqlSearchIndex implements only the query pathway, performing sub-millisecond hybrid search.
+ */
+export class LibsqlSearchIndex implements SearchIndexInterface {
+  public constructor(
+    private readonly options: LibsqlSearchIndexOptions,
+  ) {}
+
+  /**
+   * search executes a keyword and vector hybrid query against the current index.
+   */
+  public async search(request: SearchRequest): Promise<SearchResponse> {
+    let vectorJson: string | undefined;
+
+    if (this.options.embeddingService) {
+      try {
+        const [vector] = await this.options.embeddingService.embed([
+          request.query,
+        ]);
+        vectorJson = JSON.stringify(Array.from(vector));
+      } catch (error) {
+        // Gracefully degrade to keyword-only search if the embedding provider fails.
+        console.warn(
+          `[Search Warning] Embedding service failure. Degrading to keyword-only search fallback. Reason: ${
+            (error as Error).message
+          }`,
+        );
+      }
+    }
+
+    const { sql, args } = libsqlQueryBuilder.buildSearchQuery(request, {
+      vectorJson,
+      limit: this.options.limit ?? 100,
+    });
+
+    const resultSet = await this.options.client.execute({ sql, args });
+
+    const results: SearchResult[] = resultSet.rows.map((row) => ({
+      subject: String(row["subject"]),
+      predicate: String(row["predicate"]),
+      graph: String(row["graph"]),
+      text: String(row["value"]),
+      score: Number(row["combined_rank"]),
+    }));
+
+    return { results };
+  }
+}

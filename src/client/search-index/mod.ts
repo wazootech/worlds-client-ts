@@ -1,2 +1,2 @@
-export * from "./interface.ts";
-export * from "./providers/rdfjs/mod.ts";
+export * from "./search-index-interface.ts";
+export * from "./embedding-service/mod.ts";
