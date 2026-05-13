@@ -1,9 +1,9 @@
+import { Client } from "@worlds/client";
+import { ComunicaSparqlEngine } from "../../src/client/providers/comunica/mod.ts";
 import {
-  Client,
-  ComunicaSparqlEngine,
   RdfjsQuadStore,
   RdfjsSearchIndex,
-} from "@worlds/client";
+} from "../../src/client/providers/rdfjs/mod.ts";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { Store } from "n3";
 

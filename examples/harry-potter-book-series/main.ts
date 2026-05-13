@@ -1,9 +1,7 @@
 import { createClient } from "@libsql/client";
-import {
-  Client,
-  provideLibsql,
-  UniversalSentenceEncoderEmbeddingService,
-} from "@worlds/client";
+import { Client } from "@worlds/client";
+import { provideLibsql } from "../../src/client/providers/libsql/provide-libsql.ts";
+import { UniversalSentenceEncoderEmbeddingService } from "../../src/client/providers/tfjs-universal-sentence-encoder/mod.ts";
 
 /**
  * This example demonstrates creating a persistent Harry Potter knowledge base
@@ -33,14 +31,14 @@ if (import.meta.main) {
   // N3/SPARQL engine usually returns a boolean for ASK queries.
   // Wait, the search/sparql API in wazoo-worlds returns an array or boolean?
   // Let's just do a SELECT check to be safe.
-  const hasBooks = (await client.sparql({
+  const hasBooks = await client.sparql({
     query: `
       PREFIX hp: <http://example.com/hp/>
       SELECT ?title WHERE { hp:book_1 hp:title ?title }
     `,
-  })) as unknown as { data?: { results?: { bindings?: unknown[] } } };
+  });
 
-  if ((hasBooks.data?.results?.bindings?.length ?? 0) > 0) {
+  if (hasBooks.kind === "select" && hasBooks.data.results.bindings.length > 0) {
     console.log(
       "✅ Harry Potter books already exist in the database. Skipping import.",
     );
