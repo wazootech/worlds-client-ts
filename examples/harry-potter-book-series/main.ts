@@ -66,6 +66,18 @@ if (import.meta.main) {
           hp:book_4 hp:title "Harry Potter and the Goblet of Fire" ;
                     hp:description "Harry finds himself selected as an underaged competitor in a dangerous multi-wizardry school tournament." ;
                     hp:year "2000" .
+
+          hp:book_5 hp:title "Harry Potter and the Order of the Phoenix" ;
+                    hp:description "With their warning about Lord Voldemort's return scoffed at, Harry and Dumbledore are targeted by the Wizard authorities as an authoritarian bureaucrat slowly seizes power at Hogwarts." ;
+                    hp:year "2003" .
+
+          hp:book_6 hp:title "Harry Potter and the Half-Blood Prince" ;
+                    hp:description "As Harry Potter begins his sixth year at Hogwarts, he discovers an old book marked as 'the property of the Half-Blood Prince' and begins to learn more about Lord Voldemort's dark past." ;
+                    hp:year "2005" .
+
+          hp:book_7 hp:title "Harry Potter and the Deathly Hallows" ;
+                    hp:description "Harry, Ron, and Hermione race against time to destroy the remaining Horcruxes and uncover the truth about the Deathly Hallows in their final battle against Lord Voldemort." ;
+                    hp:year "2007" .
         `,
         contentType: "text/turtle",
       },
