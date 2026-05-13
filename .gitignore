@@ -1,2 +1,3 @@
 node_modules
 .prior-art
+examples/harry-potter-book-series/*.db

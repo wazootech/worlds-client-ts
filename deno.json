@@ -32,6 +32,7 @@
   "tasks": {
     "example:hello-world": "deno -A ./examples/hello-world/main.ts",
     "example:libsql-hello-world": "deno -A ./examples/libsql-hello-world/main.ts",
+    "example:harry-potter-book-series": "deno -A ./examples/harry-potter-book-series/main.ts",
     "fmt": "deno fmt",
     "fmt:check": "deno fmt --check",
     "lint": "deno lint",
