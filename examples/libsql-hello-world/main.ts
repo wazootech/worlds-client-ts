@@ -1,6 +1,6 @@
 import { createClient } from "@libsql/client";
 import { Client } from "@worlds/client";
-import { provideLibsql } from "../../src/client/providers/libsql/provide-libsql.ts";
+import { provideLibsql } from "@worlds/client/providers/libsql";
 
 /**
  * This example demonstrates how to use `provideLibsql` to instantly wire up a complete

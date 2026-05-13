@@ -3,7 +3,11 @@
   "version": "0.0.1",
   "nodeModulesDir": "auto",
   "exports": {
-    ".": "./src/mod.ts"
+    ".": "./src/mod.ts",
+    "./providers/libsql": "./src/client/providers/libsql/provide-libsql.ts",
+    "./providers/tfjs-universal-sentence-encoder": "./src/client/providers/tfjs-universal-sentence-encoder/mod.ts",
+    "./providers/comunica": "./src/client/providers/comunica/mod.ts",
+    "./providers/rdfjs": "./src/client/providers/rdfjs/mod.ts"
   },
   "imports": {
     "#/": "./src/",

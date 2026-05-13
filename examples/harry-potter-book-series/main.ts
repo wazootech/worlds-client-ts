@@ -1,7 +1,7 @@
 import { createClient } from "@libsql/client";
 import { Client } from "@worlds/client";
-import { provideLibsql } from "../../src/client/providers/libsql/provide-libsql.ts";
-import { UniversalSentenceEncoderEmbeddingService } from "../../src/client/providers/tfjs-universal-sentence-encoder/mod.ts";
+import { provideLibsql } from "@worlds/client/providers/libsql";
+import { UniversalSentenceEncoderEmbeddingService } from "@worlds/client/providers/tfjs-universal-sentence-encoder";
 
 /**
  * This example demonstrates creating a persistent Harry Potter knowledge base
