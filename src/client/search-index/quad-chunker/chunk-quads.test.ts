@@ -110,3 +110,67 @@ Deno.test("QuadChunker.chunk - handles parallel quad batches", async () => {
   assertEquals(results[1].subject, "urn:q2");
   assertEquals(results[1].value, "Doc Two");
 });
+
+Deno.test("QuadChunker.chunk - ignores structured primitive literals (number/boolean)", async () => {
+  const numberQuad = quad(
+    namedNode("urn:subject"),
+    namedNode("urn:predicate"),
+    literal("42", namedNode("http://www.w3.org/2001/XMLSchema#integer")),
+  );
+
+  const booleanQuad = quad(
+    namedNode("urn:subject"),
+    namedNode("urn:predicate"),
+    literal("true", namedNode("http://www.w3.org/2001/XMLSchema#boolean")),
+  );
+
+  const dateQuad = quad(
+    namedNode("urn:subject"),
+    namedNode("urn:predicate"),
+    literal(
+      "2026-05-12T12:00:00Z",
+      namedNode("http://www.w3.org/2001/XMLSchema#dateTime"),
+    ),
+  );
+
+  const chunks = await chunkQuads(
+    [numberQuad, booleanQuad, dateQuad],
+    new RecursiveCharacterTextSplitter({ chunkSize: 1000 }),
+  );
+
+  assertEquals(
+    chunks.length,
+    0,
+    "Should filter out non-textual structured primitives to reduce noise",
+  );
+});
+
+Deno.test("QuadChunker.chunk - accepts explicit strings and localized language strings", async () => {
+  const stringQuad = quad(
+    namedNode("urn:subject"),
+    namedNode("urn:predicate"),
+    literal(
+      "explicit text",
+      namedNode("http://www.w3.org/2001/XMLSchema#string"),
+    ),
+  );
+
+  const langQuad = quad(
+    namedNode("urn:subject"),
+    namedNode("urn:predicate"),
+    literal("bonjour", "fr"), // Automatically generates rdf:langString datatype
+  );
+
+  const chunks = await chunkQuads(
+    [stringQuad, langQuad],
+    new RecursiveCharacterTextSplitter({ chunkSize: 1000 }),
+  );
+
+  assertEquals(
+    chunks.length,
+    2,
+    "Should successfully accept and process string variants",
+  );
+  assertEquals(chunks[0].value, "explicit text");
+  assertEquals(chunks[1].value, "bonjour");
+});

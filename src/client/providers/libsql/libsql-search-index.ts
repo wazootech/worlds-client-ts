@@ -15,8 +15,8 @@ import type { EmbeddingService } from "#/client/search-index/embedding-service/m
 export interface LibsqlSearchIndexOptions {
   /** client is the initialized @libsql/client instance pointing to the target database. */
   client: Client;
-  /** embeddingService provides the capability for projecting textual search inputs into dense vector space. */
-  embeddingService: EmbeddingService;
+  /** embeddingService is an optional capability for projecting textual search inputs into dense vector space. */
+  embeddingService?: EmbeddingService;
   /** limit establishes optional page sizing constraints for search result sets, defaulting to 100. */
   limit?: number;
 }
@@ -35,18 +35,20 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
   public async search(request: SearchRequest): Promise<SearchResponse> {
     let vectorJson: string | undefined;
 
-    try {
-      const [vector] = await this.options.embeddingService.embed([
-        request.query,
-      ]);
-      vectorJson = JSON.stringify(Array.from(vector));
-    } catch (error) {
-      // Gracefully degrade to keyword-only search if the embedding provider fails.
-      console.warn(
-        `[Search Warning] Embedding service failure. Degrading to keyword-only search fallback. Reason: ${
-          (error as Error).message
-        }`,
-      );
+    if (this.options.embeddingService) {
+      try {
+        const [vector] = await this.options.embeddingService.embed([
+          request.query,
+        ]);
+        vectorJson = JSON.stringify(Array.from(vector));
+      } catch (error) {
+        // Gracefully degrade to keyword-only search if the embedding provider fails.
+        console.warn(
+          `[Search Warning] Embedding service failure. Degrading to keyword-only search fallback. Reason: ${
+            (error as Error).message
+          }`,
+        );
+      }
     }
 
     const { sql, args } = libsqlQueryBuilder.buildSearchQuery(request, {

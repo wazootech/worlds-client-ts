@@ -27,8 +27,8 @@ export interface LibsqlOptions {
   /** client is the underlying LibSQL client pointing to the database. */
   client: LibsqlClient;
 
-  /** embeddingService is the service projected for transforming text literals into comparison vectors. */
-  embeddingService: EmbeddingService;
+  /** embeddingService is an optional service projected for transforming text literals into comparison vectors. */
+  embeddingService?: EmbeddingService;
 
   /** textSplitter is an optional custom text splitting facility, defaults to sensible character-based splitting. */
   textSplitter?: TextSplitterInterface;

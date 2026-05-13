@@ -89,20 +89,25 @@ export const libsqlQueryBuilder = {
     predicate: string;
     graph: string;
     value: string;
-    vectorJson: string;
+    vectorJson?: string | null;
   }): { sql: string; args: (string | number)[] } {
+    const hasVector = !!options.vectorJson;
+    const vectorExpr = hasVector ? "vector32(?)" : "NULL";
+    const args: (string | number)[] = [
+      options.quad_id,
+      options.subject,
+      options.predicate,
+      options.graph,
+      options.value,
+    ];
+    if (hasVector) {
+      args.push(options.vectorJson!);
+    }
     return {
       sql:
         `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector)
-            VALUES (?, ?, ?, ?, ?, vector32(?))`,
-      args: [
-        options.quad_id,
-        options.subject,
-        options.predicate,
-        options.graph,
-        options.value,
-        options.vectorJson,
-      ],
+            VALUES (?, ?, ?, ?, ?, ${vectorExpr})`,
+      args,
     };
   },
 

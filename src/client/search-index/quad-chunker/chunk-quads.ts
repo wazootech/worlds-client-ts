@@ -1,5 +1,6 @@
 import type { Quad } from "@rdfjs/types";
 import { hashQuad } from "#/client/quad-store/hash-quad.ts";
+import { isTextualLiteral } from "#/client/quad-store/is-textual-literal.ts";
 
 /**
  * ChunkRowPayload is the standardized structure of data that will be inserted into the FTS table.
@@ -48,8 +49,9 @@ export async function chunkQuads(
   textSplitter: TextSplitterInterface,
   preComputedIds?: string[],
 ): Promise<ChunkRowPayload[]> {
-  // Filter valid candidates from the stream.
-  const candidates = quads.filter((q) => q.object.termType === "Literal");
+  // Filter valid candidates from the stream using the centralized domain validator
+  const candidates = quads.filter((q) => isTextualLiteral(q.object));
+
   if (candidates.length === 0) {
     return [];
   }

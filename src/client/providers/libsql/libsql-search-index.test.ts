@@ -170,3 +170,53 @@ Deno.test("LibsqlSearchIndex - Scope Exclusion: suppresses explicitly excluded p
   );
   assertEquals(response.results?.[0].predicate, "urn:allowed");
 });
+
+Deno.test("LibsqlSearchIndex - Vectorless Mode: gracefully degrades to keyword-only search when embeddingService is omitted", async () => {
+  const client = createClient({ url: ":memory:" });
+  await setupSchema(client);
+
+  // Insert chunk rows with NULL vectors (Vectorless mode)
+  await client.execute({
+    sql:
+      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, NULL)`,
+    args: [
+      "id-1",
+      "urn:target",
+      "urn:prop",
+      "urn:g",
+      "Specific search term inside target document",
+      null,
+    ],
+  });
+  await client.execute({
+    sql:
+      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, NULL)`,
+    args: [
+      "id-2",
+      "urn:other",
+      "urn:prop",
+      "urn:g",
+      "Completely unrelated keywords",
+      null,
+    ],
+  });
+
+  const searchIndex = new LibsqlSearchIndex({
+    client,
+    // embeddingService is omitted intentionally to trigger Keyword-only FTS
+  });
+
+  const response = await searchIndex.search({ query: "search term" });
+
+  assertExists(response.results);
+  assertEquals(
+    response.results.length,
+    1,
+    "Should successfully locate exactly one record using raw FTS5",
+  );
+  assertEquals(response.results[0].subject, "urn:target");
+  assertEquals(
+    response.results[0].text,
+    "Specific search term inside target document",
+  );
+});

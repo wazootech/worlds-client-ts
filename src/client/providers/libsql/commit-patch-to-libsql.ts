@@ -22,7 +22,7 @@ export interface CommitPatchToLibsqlOptions {
   client: Client;
 
   /** embeddingService is an optional projection capability for text literals, needed only if chunking requires new vector math. */
-  embeddingService: EmbeddingService;
+  embeddingService?: EmbeddingService;
 
   /** textSplitter is the splitting facility consumed when breaking large strings into search metadata. */
   textSplitter: TextSplitterInterface;
@@ -223,26 +223,29 @@ async function buildVectorChunkStatements(
     return [];
   }
 
-  // Step B: Execute Deduplicated External Embedding Sweep
-  const uniqueTexts = Array.from(new Set(chunks.map((c) => c.value)));
-  let uniqueVectors: Array<Float32Array | number[]>;
-  try {
-    uniqueVectors = await options.embeddingService.embed(uniqueTexts);
-  } catch (cause) {
-    throw new Error("failed to vectorize literal chunk blocks", { cause });
+  // Step B: Execute Deduplicated External Embedding Sweep (if service available)
+  let uniqueVectors: Array<Float32Array | number[]> | undefined;
+  let vectorLookupMap: Map<string, Float32Array | number[]> | undefined;
+
+  if (options.embeddingService) {
+    const uniqueTexts = Array.from(new Set(chunks.map((c) => c.value)));
+    try {
+      uniqueVectors = await options.embeddingService.embed(uniqueTexts);
+    } catch (cause) {
+      throw new Error("failed to vectorize literal chunk blocks", { cause });
+    }
+
+    // Step C: Synthesize lookup mapping back to original source payloads
+    vectorLookupMap = new Map<string, Float32Array | number[]>();
+    for (let i = 0; i < uniqueTexts.length; i++) {
+      vectorLookupMap.set(uniqueTexts[i], uniqueVectors[i]);
+    }
   }
 
-  // Step C: Synthesize lookup mapping back to original source payloads
-  const vectorLookupMap = new Map<string, Float32Array | number[]>();
-  for (let i = 0; i < uniqueTexts.length; i++) {
-    vectorLookupMap.set(uniqueTexts[i], uniqueVectors[i]);
-  }
-
-  // Step D: Generate relational chunk insertions with embedded JSON vector projections
+  // Step D: Generate relational chunk insertions with optional JSON vector projections
   for (const payload of chunks) {
-    const vector = vectorLookupMap.get(payload.value);
-    if (!vector) continue; // Defensive safety guard
-    const vectorJson = JSON.stringify(Array.from(vector));
+    const vector = vectorLookupMap?.get(payload.value);
+    const vectorJson = vector ? JSON.stringify(Array.from(vector)) : undefined;
 
     statements.push(
       libsqlQueryBuilder.buildInsertChunk({

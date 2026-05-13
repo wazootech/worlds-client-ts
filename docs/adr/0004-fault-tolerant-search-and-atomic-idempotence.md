@@ -48,3 +48,20 @@ the storage and query assembly vectors.
   external downtime.
 - **Negative:** Slight rise in implementation complexity inside SQL generators
   and synchronizer transaction layouts.
+
+## Addendum: Native Support for Vectorless Deployments
+
+To maximize deployment flexibility for resource-constrained or entirely offline
+environments, we expand our **Part B: Graceful search degradation** architecture
+to the database synchronization layer.
+
+- **Optional Embedding Engines:** The system relaxed its instantiation boundary,
+  making `embeddingService` completely optional during initialization.
+- **Vectorless Keyword Indexes:** When omitted, the synchronization pipeline
+  proactively skips external API embedding sweeps. Textual literals are still
+  parsed into standard search chunks, but the `vector` relational column is
+  populated explicitly with SQL `NULL`.
+- **Keyword-Only Fallback Search:** If the system operates in a vectorless
+  setup, the search assembler automatically short-circuits to an FTS-only
+  retrieval vector, yielding instantaneous keyword matching with absolute
+  isolation from vector libraries.

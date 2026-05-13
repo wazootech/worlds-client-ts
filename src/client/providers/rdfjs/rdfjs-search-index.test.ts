@@ -72,3 +72,40 @@ Deno.test("RdfjsSearchIndex.search - exclusion filters correctly strip matching 
     "Excluded predicate hit should have been filtered out",
   );
 });
+
+Deno.test("RdfjsSearchIndex.search - ignores structured primitives to suppress search space noise", async () => {
+  const store = new Store();
+
+  // 1. Insert a valid Searchable Literal (String)
+  store.addQuad(
+    DataFactory.namedNode("http://example.com/s1"),
+    DataFactory.namedNode("http://example.com/p1"),
+    DataFactory.literal("The magic number is 42"),
+  );
+
+  // 2. Insert a non-searchable structured primitive (Integer)
+  store.addQuad(
+    DataFactory.namedNode("http://example.com/s2"),
+    DataFactory.namedNode("http://example.com/p1"),
+    DataFactory.literal(
+      "42",
+      DataFactory.namedNode("http://www.w3.org/2001/XMLSchema#integer"),
+    ),
+  );
+
+  const searchIndex = new RdfjsSearchIndex(store);
+
+  // Search for "42". This matches BOTH raw values string-wise.
+  const response = await searchIndex.search({ query: "42" });
+
+  // RED EXPECTATION: Should ignore the integer, returning ONLY the textual sentence.
+  assertEquals(
+    response.results?.length,
+    1,
+    "Expected raw integer literal to be completely ignored in search index matching",
+  );
+  assertEquals(
+    response.results?.[0].text,
+    "The magic number is 42",
+  );
+});

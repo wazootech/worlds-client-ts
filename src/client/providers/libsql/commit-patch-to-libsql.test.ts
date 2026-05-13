@@ -71,3 +71,44 @@ Deno.test("commitPatchToLibsql - isolated writes and removals flush correctly to
   quadRows = await client.execute("SELECT COUNT(*) as total FROM quads");
   assertEquals(quadRows.rows[0].total, 0, "Master quad cleanup failed");
 });
+
+Deno.test("commitPatchToLibsql - supports synchronization when embeddingService is omitted (vector column left null)", async () => {
+  const client = createClient({ url: ":memory:" });
+  await setupSchema(client);
+
+  const options = {
+    client,
+    // embeddingService is omitted intentionally
+    textSplitter: sharedSplitter,
+  };
+
+  const testQuad = quad(
+    namedNode("urn:subject"),
+    namedNode("urn:predicate"),
+    literal("Vectorless searchable text node"),
+  );
+
+  // Commit insertion
+  await commitPatchToLibsql({
+    insertions: [testQuad],
+    deletions: [],
+  }, options);
+
+  // Verify that the chunk table has the row but with vector null
+  const chunkRows = await client.execute("SELECT value, vector FROM chunks");
+  assertEquals(
+    chunkRows.rows.length,
+    1,
+    "Expected one chunk written to standard FTS index",
+  );
+  assertEquals(chunkRows.rows[0].value, "Vectorless searchable text node");
+  assertEquals(
+    chunkRows.rows[0].vector,
+    null,
+    "The vector data should remain null due to omitted provider",
+  );
+
+  // Confirm parent quad still inserted
+  const quadRows = await client.execute("SELECT COUNT(*) as total FROM quads");
+  assertEquals(quadRows.rows[0].total, 1);
+});

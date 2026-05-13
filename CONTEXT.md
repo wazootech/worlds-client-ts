@@ -40,4 +40,14 @@ redundant external API interactions and precluding database duplication.
 A robust retrieval facility supporting native fusion of Vector Semantic
 similarity and Keyword Full-Text Search. It provides automatic graceful
 degradation to sustain query availability during intermittent upstream API
-outages.
+outages, and natively supports fully vectorless keyword-only deployments when
+embedding engines are omitted.
+
+### Textual literal
+
+A specialized subset of RDF Literals that physically represent textual strings
+(including explicit `xsd:string` and localized `rdf:langString` tags, as well as
+untyped literals). It serves as the canonical filter for semantic indexing,
+explicitly excluding structured primitives (numeric values, booleans,
+timestamps) to suppress high-frequency noise and optimize search space
+relevance.
