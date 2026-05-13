@@ -114,8 +114,8 @@ Deno.test("QuadFilter Integration: enables hybrid partitioning persisting specif
   const db = createLibsqlClient({ url: ":memory:" });
   const embeddingService = new FakeEmbeddingService();
 
-  const PERSISTENT_GRAPH = "http://wazoo.world/durable";
-  const EPHEMERAL_GRAPH = "http://wazoo.world/ephemeral";
+  const PERSISTENT_GRAPH = "http://worlds.wazoo.dev/.well-known/durable";
+  const EPHEMERAL_GRAPH = "http://worlds.wazoo.dev/.well-known/ephemeral";
 
   // Initialize client with filter restricting SQL writes exclusively to the persistent graph
   const client = new Client(

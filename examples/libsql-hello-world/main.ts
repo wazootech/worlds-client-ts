@@ -13,13 +13,11 @@ import { Client, FakeEmbeddingService, provideLibsql } from "@worlds/client";
 if (import.meta.main) {
   console.log("🚀 Initializing durable LibSQL context...");
   const db = createClient({ url: ":memory:" });
-  const embeddings = new FakeEmbeddingService();
 
   // 1. Synthesize unified provider options for the client gateway
   console.log("🧠 Provisioning unified LibSQL sync engine...");
   const providerOptions = await provideLibsql({
     client: db,
-    embeddingService: embeddings,
   });
 
   // 2. Construct the universal client gateway

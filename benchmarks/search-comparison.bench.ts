@@ -1,0 +1,163 @@
+import { createClient as createLibsqlClient } from "@libsql/client";
+import { DataFactory, Store } from "n3";
+import { RdfjsSearchIndex } from "#/client/providers/rdfjs/rdfjs-search-index.ts";
+import { LibsqlSearchIndex } from "#/client/providers/libsql/libsql-search-index.ts";
+import { provideLibsql } from "#/client/providers/libsql/provide-libsql.ts";
+import { Client } from "#/client/client.ts";
+import { generateSyntheticQuads } from "./synthetic-data.ts";
+
+const { quad, namedNode, literal } = DataFactory;
+
+// -----------------------------------------------------------------------------
+// TEST FIXTURE SETUP
+// Pre-populate standard dataset populations to isolate query latencies.
+// -----------------------------------------------------------------------------
+
+async function prepareLibsqlSearchIndex(count: number) {
+  const db = createLibsqlClient({ url: ":memory:" });
+  const client = new Client(
+    await provideLibsql({ client: db }), // No embedding service -> Pure Keyword FTS Mode
+  );
+  
+  // Batch ingestion in segments to prevent exceeding SQL statement variable caps
+  const dataset = generateSyntheticQuads(count);
+  await client.import({
+    source: { kind: "quads", quads: dataset },
+  });
+
+  const searchIndex = new LibsqlSearchIndex({ client: db });
+  return { searchIndex, db };
+}
+
+function prepareRdfjsSearchIndex(count: number) {
+  const store = new Store();
+  const dataset = generateSyntheticQuads(count);
+  store.addQuads(dataset);
+  const searchIndex = new RdfjsSearchIndex(store);
+  return { searchIndex };
+}
+
+console.log("⏳ Pre-populating benchmark datasets (100, 1000, 10000)...");
+
+// 100-Quad Datasets
+const { searchIndex: libsqlSmall, db: dbSmall } = await prepareLibsqlSearchIndex(100);
+const { searchIndex: rdfjsSmall } = prepareRdfjsSearchIndex(100);
+
+// 1,000-Quad Datasets
+const { searchIndex: libsqlMed, db: dbMed } = await prepareLibsqlSearchIndex(1000);
+const { searchIndex: rdfjsMed } = prepareRdfjsSearchIndex(1000);
+
+// 10,000-Quad Datasets
+const { searchIndex: libsqlLarge, db: dbLarge } = await prepareLibsqlSearchIndex(10000);
+const { searchIndex: rdfjsLarge } = prepareRdfjsSearchIndex(10000);
+
+console.log("✅ Datasets populated. Executing benchmarks...");
+
+// -----------------------------------------------------------------------------
+// SCALE 1: Small Dataset (100 Records)
+// -----------------------------------------------------------------------------
+
+Deno.bench({
+  name: "Scale 100: LibSQL Specific Match (Pure FTS)",
+  group: "Scale 100: Specific",
+  async fn() {
+    await libsqlSmall.search({ query: "SYNT-50" });
+  },
+});
+
+Deno.bench({
+  name: "Scale 100: RDF/JS Specific Match (Naive Stream Scan)",
+  group: "Scale 100: Specific",
+  async fn() {
+    await rdfjsSmall.search({ query: "SYNT-50" });
+  },
+});
+
+Deno.bench({
+  name: "Scale 100: LibSQL Miss Query (Zero Matches)",
+  group: "Scale 100: Miss",
+  async fn() {
+    await libsqlSmall.search({ query: "nonexistentwordxyz" });
+  },
+});
+
+Deno.bench({
+  name: "Scale 100: RDF/JS Miss Query (Zero Matches)",
+  group: "Scale 100: Miss",
+  async fn() {
+    await rdfjsSmall.search({ query: "nonexistentwordxyz" });
+  },
+});
+
+// -----------------------------------------------------------------------------
+// SCALE 2: Medium Dataset (1,000 Records)
+// -----------------------------------------------------------------------------
+
+Deno.bench({
+  name: "Scale 1k: LibSQL Specific Match (Pure FTS)",
+  group: "Scale 1k: Specific",
+  async fn() {
+    await libsqlMed.search({ query: "SYNT-500" });
+  },
+});
+
+Deno.bench({
+  name: "Scale 1k: RDF/JS Specific Match (Naive Stream Scan)",
+  group: "Scale 1k: Specific",
+  async fn() {
+    await rdfjsMed.search({ query: "SYNT-500" });
+  },
+});
+
+Deno.bench({
+  name: "Scale 1k: LibSQL Miss Query (Zero Matches)",
+  group: "Scale 1k: Miss",
+  async fn() {
+    await libsqlMed.search({ query: "nonexistentwordxyz" });
+  },
+});
+
+Deno.bench({
+  name: "Scale 1k: RDF/JS Miss Query (Zero Matches)",
+  group: "Scale 1k: Miss",
+  async fn() {
+    await rdfjsMed.search({ query: "nonexistentwordxyz" });
+  },
+});
+
+// -----------------------------------------------------------------------------
+// SCALE 3: Large Dataset (10,000 Records)
+// -----------------------------------------------------------------------------
+
+Deno.bench({
+  name: "Scale 10k: LibSQL Specific Match (Pure FTS)",
+  group: "Scale 10k: Specific",
+  async fn() {
+    await libsqlLarge.search({ query: "SYNT-5000" });
+  },
+});
+
+Deno.bench({
+  name: "Scale 10k: RDF/JS Specific Match (Naive Stream Scan)",
+  group: "Scale 10k: Specific",
+  async fn() {
+    await rdfjsLarge.search({ query: "SYNT-5000" });
+  },
+});
+
+Deno.bench({
+  name: "Scale 10k: LibSQL Miss Query (Zero Matches)",
+  group: "Scale 10k: Miss",
+  async fn() {
+    await libsqlLarge.search({ query: "nonexistentwordxyz" });
+  },
+});
+
+Deno.bench({
+  name: "Scale 10k: RDF/JS Miss Query (Zero Matches)",
+  group: "Scale 10k: Miss",
+  async fn() {
+    await rdfjsLarge.search({ query: "nonexistentwordxyz" });
+  },
+});
+
