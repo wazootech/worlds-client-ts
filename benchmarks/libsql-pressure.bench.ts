@@ -1,12 +1,10 @@
 import { createClient as createLibsqlClient } from "@libsql/client";
-import { DataFactory, Store } from "n3";
+import { Store } from "n3";
 import { Client } from "#/client/client.ts";
 import { provideLibsql } from "#/client/providers/libsql/provide-libsql.ts";
 import { hydrateStoreFromLibsql } from "#/client/providers/libsql/hydrate-store-from-libsql.ts";
 import { FakeEmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 import { generateSyntheticQuads } from "./synthetic-data.ts";
-
-const { quad, namedNode, literal } = DataFactory;
 
 // Pre-allocated payloads for strict repeatable boundaries
 const payloadSmall = generateSyntheticQuads(10);

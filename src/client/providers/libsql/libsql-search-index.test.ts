@@ -2,16 +2,20 @@ import { assertEquals, assertExists } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { FakeEmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
-import { libsqlQueryBuilder } from "./libsql-query-builder.ts";
+import { createLibsqlQueryBuilder } from "./libsql-query-builder.ts";
 
 // --- Helpers ---
 
+const testLibsqlQueryBuilder = createLibsqlQueryBuilder({
+  vectorDimensions: 32,
+});
+
 async function setupSchema(client: ReturnType<typeof createClient>) {
-  await client.execute(libsqlQueryBuilder.buildLibsqlChunksTable());
-  await client.execute(libsqlQueryBuilder.buildLibsqlChunksQuadIdIndex());
-  await client.execute(libsqlQueryBuilder.buildLibsqlChunksFtsTable());
-  await client.execute(libsqlQueryBuilder.buildLibsqlChunksIndex());
-  for (const triggerSql of libsqlQueryBuilder.buildLibsqlChunksTriggers()) {
+  await client.execute(testLibsqlQueryBuilder.buildLibsqlChunksTable());
+  await client.execute(testLibsqlQueryBuilder.buildLibsqlChunksQuadIdIndex());
+  await client.execute(testLibsqlQueryBuilder.buildLibsqlChunksFtsTable());
+  await client.execute(testLibsqlQueryBuilder.buildLibsqlChunksIndex());
+  for (const triggerSql of testLibsqlQueryBuilder.buildLibsqlChunksTriggers()) {
     await client.execute(triggerSql);
   }
 }
@@ -59,6 +63,7 @@ Deno.test("LibsqlSearchIndex - Tracer Bullet: performs basic hybrid search and m
   const searchIndex = new LibsqlSearchIndex({
     client,
     embeddingService: new FakeEmbeddingService(),
+    libsqlQueryBuilder: testLibsqlQueryBuilder,
   });
 
   const response = await searchIndex.search({ query: "Alice" });
@@ -108,6 +113,7 @@ Deno.test("LibsqlSearchIndex - Scope Inclusion: limits matches only to included 
   const searchIndex = new LibsqlSearchIndex({
     client,
     embeddingService: new FakeEmbeddingService(),
+    libsqlQueryBuilder: testLibsqlQueryBuilder,
   });
 
   const base = await searchIndex.search({ query: "coding" });
@@ -154,6 +160,7 @@ Deno.test("LibsqlSearchIndex - Scope Exclusion: suppresses explicitly excluded p
   const searchIndex = new LibsqlSearchIndex({
     client,
     embeddingService: new FakeEmbeddingService(),
+    libsqlQueryBuilder: testLibsqlQueryBuilder,
   });
 
   const response = await searchIndex.search({
@@ -204,6 +211,7 @@ Deno.test("LibsqlSearchIndex - Vectorless Mode: gracefully degrades to keyword-o
   const searchIndex = new LibsqlSearchIndex({
     client,
     // embeddingService is omitted intentionally to trigger Keyword-only FTS
+    libsqlQueryBuilder: testLibsqlQueryBuilder,
   });
 
   const response = await searchIndex.search({ query: "search term" });
@@ -239,7 +247,10 @@ Deno.test("LibsqlSearchIndex - Stability: executes search safely when query cont
     ],
   });
 
-  const searchIndex = new LibsqlSearchIndex({ client });
+  const searchIndex = new LibsqlSearchIndex({
+    client,
+    libsqlQueryBuilder: testLibsqlQueryBuilder,
+  });
 
   // RED EXPECTATION: Running a query containing unclosed special characters (", {, etc.)
   // will crash SQLite during parsing unless sanitized.

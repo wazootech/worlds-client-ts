@@ -5,7 +5,7 @@ import type {
   SearchResponse,
   SearchResult,
 } from "#/client/search-index/search-index-interface.ts";
-import { libsqlQueryBuilder } from "./libsql-query-builder.ts";
+import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
@@ -19,6 +19,11 @@ export interface LibsqlSearchIndexOptions {
   embeddingService?: EmbeddingService;
   /** limit establishes optional page sizing constraints for search result sets, defaulting to 100. */
   limit?: number;
+
+  /**
+   * libsqlQueryBuilder must match the schema and commit path used when materializing chunk vectors.
+   */
+  libsqlQueryBuilder: LibsqlQueryBuilder;
 }
 
 /**
@@ -40,6 +45,14 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
         const [vector] = await this.options.embeddingService.embed([
           request.query,
         ]);
+        const embeddingLength = vector.length;
+        if (
+          embeddingLength !== this.options.libsqlQueryBuilder.vectorDimensions
+        ) {
+          throw new Error(
+            `query embedding length ${embeddingLength} does not match vectorDimensions ${this.options.libsqlQueryBuilder.vectorDimensions}`,
+          );
+        }
         vectorJson = JSON.stringify(Array.from(vector));
       } catch (error) {
         // Gracefully degrade to keyword-only search if the embedding provider fails.
@@ -51,10 +64,13 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
       }
     }
 
-    const { sql, args } = libsqlQueryBuilder.buildSearchQuery(request, {
-      vectorJson,
-      limit: this.options.limit ?? 100,
-    });
+    const { sql, args } = this.options.libsqlQueryBuilder.buildSearchQuery(
+      request,
+      {
+        vectorJson,
+        limit: this.options.limit ?? 100,
+      },
+    );
 
     const resultSet = await this.options.client.execute({ sql, args });
 

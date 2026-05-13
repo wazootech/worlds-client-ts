@@ -2,7 +2,7 @@ import type { Client, Row } from "@libsql/client";
 import { DataFactory, type Store } from "n3";
 import type * as rdfjs from "@rdfjs/types";
 import type { QuadFilter } from "#/client/quad-store/quad-filter.ts";
-import { libsqlQueryBuilder } from "./libsql-query-builder.ts";
+import { defaultLibsqlQueryBuilder } from "./libsql-query-builder.ts";
 
 const { namedNode, literal, blankNode, defaultGraph, quad } = DataFactory;
 
@@ -15,7 +15,7 @@ export async function hydrateStoreFromLibsql(
   target: Store,
   filter?: QuadFilter,
 ): Promise<number> {
-  const query = libsqlQueryBuilder.buildHydrateQuery(filter);
+  const query = defaultLibsqlQueryBuilder.buildHydrateQuery(filter);
   const resultSet = await client.execute(query);
 
   if (!resultSet.rows.length) return 0;

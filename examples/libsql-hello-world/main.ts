@@ -1,5 +1,5 @@
 import { createClient } from "@libsql/client";
-import { Client, FakeEmbeddingService, provideLibsql } from "@worlds/client";
+import { Client, provideLibsql } from "@worlds/client";
 
 /**
  * This example demonstrates how to use `provideLibsql` to instantly wire up a complete

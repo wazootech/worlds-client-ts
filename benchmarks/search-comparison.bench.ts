@@ -1,12 +1,11 @@
 import { createClient as createLibsqlClient } from "@libsql/client";
-import { DataFactory, Store } from "n3";
+import { Store } from "n3";
 import { RdfjsSearchIndex } from "#/client/providers/rdfjs/rdfjs-search-index.ts";
 import { LibsqlSearchIndex } from "#/client/providers/libsql/libsql-search-index.ts";
 import { provideLibsql } from "#/client/providers/libsql/provide-libsql.ts";
+import { defaultLibsqlQueryBuilder } from "#/client/providers/libsql/libsql-query-builder.ts";
 import { Client } from "#/client/client.ts";
 import { generateSyntheticQuads } from "./synthetic-data.ts";
-
-const { quad, namedNode, literal } = DataFactory;
 
 // -----------------------------------------------------------------------------
 // TEST FIXTURE SETUP
@@ -18,14 +17,17 @@ async function prepareLibsqlSearchIndex(count: number) {
   const client = new Client(
     await provideLibsql({ client: db }), // No embedding service -> Pure Keyword FTS Mode
   );
-  
+
   // Batch ingestion in segments to prevent exceeding SQL statement variable caps
   const dataset = generateSyntheticQuads(count);
   await client.import({
     source: { kind: "quads", quads: dataset },
   });
 
-  const searchIndex = new LibsqlSearchIndex({ client: db });
+  const searchIndex = new LibsqlSearchIndex({
+    client: db,
+    libsqlQueryBuilder: defaultLibsqlQueryBuilder,
+  });
   return { searchIndex, db };
 }
 
@@ -40,15 +42,19 @@ function prepareRdfjsSearchIndex(count: number) {
 console.log("⏳ Pre-populating benchmark datasets (100, 1000, 10000)...");
 
 // 100-Quad Datasets
-const { searchIndex: libsqlSmall, db: dbSmall } = await prepareLibsqlSearchIndex(100);
+const { searchIndex: libsqlSmall, db: _dbSmall } =
+  await prepareLibsqlSearchIndex(100);
 const { searchIndex: rdfjsSmall } = prepareRdfjsSearchIndex(100);
 
 // 1,000-Quad Datasets
-const { searchIndex: libsqlMed, db: dbMed } = await prepareLibsqlSearchIndex(1000);
+const { searchIndex: libsqlMed, db: _dbMed } = await prepareLibsqlSearchIndex(
+  1000,
+);
 const { searchIndex: rdfjsMed } = prepareRdfjsSearchIndex(1000);
 
 // 10,000-Quad Datasets
-const { searchIndex: libsqlLarge, db: dbLarge } = await prepareLibsqlSearchIndex(10000);
+const { searchIndex: libsqlLarge, db: _dbLarge } =
+  await prepareLibsqlSearchIndex(10000);
 const { searchIndex: rdfjsLarge } = prepareRdfjsSearchIndex(10000);
 
 console.log("✅ Datasets populated. Executing benchmarks...");
@@ -160,4 +166,3 @@ Deno.bench({
     await rdfjsLarge.search({ query: "nonexistentwordxyz" });
   },
 });
-

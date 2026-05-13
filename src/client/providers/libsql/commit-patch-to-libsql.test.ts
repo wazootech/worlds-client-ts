@@ -4,17 +4,21 @@ import { DataFactory } from "n3";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import { FakeEmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
-import { libsqlQueryBuilder } from "./libsql-query-builder.ts";
+import { createLibsqlQueryBuilder } from "./libsql-query-builder.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 
+const testLibsqlQueryBuilder = createLibsqlQueryBuilder({
+  vectorDimensions: 32,
+});
+
 async function setupSchema(client: ReturnType<typeof createClient>) {
-  await client.execute(libsqlQueryBuilder.buildLibsqlQuadsTable()); // <--- Demand Quads Table exist
-  await client.execute(libsqlQueryBuilder.buildLibsqlChunksTable());
-  await client.execute(libsqlQueryBuilder.buildLibsqlChunksQuadIdIndex());
-  await client.execute(libsqlQueryBuilder.buildLibsqlChunksFtsTable());
-  await client.execute(libsqlQueryBuilder.buildLibsqlChunksIndex());
-  for (const triggerSql of libsqlQueryBuilder.buildLibsqlChunksTriggers()) {
+  await client.execute(testLibsqlQueryBuilder.buildLibsqlQuadsTable()); // <--- Demand Quads Table exist
+  await client.execute(testLibsqlQueryBuilder.buildLibsqlChunksTable());
+  await client.execute(testLibsqlQueryBuilder.buildLibsqlChunksQuadIdIndex());
+  await client.execute(testLibsqlQueryBuilder.buildLibsqlChunksFtsTable());
+  await client.execute(testLibsqlQueryBuilder.buildLibsqlChunksIndex());
+  for (const triggerSql of testLibsqlQueryBuilder.buildLibsqlChunksTriggers()) {
     await client.execute(triggerSql);
   }
 }
@@ -29,6 +33,7 @@ Deno.test("commitPatchToLibsql - isolated writes and removals flush correctly to
     client,
     embeddingService: new FakeEmbeddingService(),
     textSplitter: sharedSplitter,
+    libsqlQueryBuilder: testLibsqlQueryBuilder,
   };
 
   const testQuad = quad(
@@ -80,6 +85,7 @@ Deno.test("commitPatchToLibsql - supports synchronization when embeddingService 
     client,
     // embeddingService is omitted intentionally
     textSplitter: sharedSplitter,
+    libsqlQueryBuilder: testLibsqlQueryBuilder,
   };
 
   const testQuad = quad(

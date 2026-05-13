@@ -16,7 +16,10 @@ import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import { hydrateStoreFromLibsql } from "./hydrate-store-from-libsql.ts";
 
-import { libsqlQueryBuilder } from "./libsql-query-builder.ts";
+import {
+  createLibsqlQueryBuilder,
+  type LibsqlQueryBuilder,
+} from "./libsql-query-builder.ts";
 
 const queryEngine = new QueryEngine();
 
@@ -41,18 +44,26 @@ export interface LibsqlOptions {
 
   /** quadFilter defines positive synchronization inclusion boundaries, governing which sub-graphs hydrate on boot and persist on write, leaving remaining data to serve as fast ephemeral in-memory context. */
   quadFilter?: QuadFilter;
+
+  /**
+   * vectorDimensions pins F32_BLOB width for chunk vectors and must match every embedding produced when embeddingService is set (default 32).
+   */
+  vectorDimensions?: number;
 }
 
 /**
  * initializeSchema synchronously checks and creates the full set of persistent tables needed.
  */
-async function initializeSchema(db: LibsqlClient): Promise<void> {
-  await db.execute(libsqlQueryBuilder.buildLibsqlQuadsTable());
-  await db.execute(libsqlQueryBuilder.buildLibsqlChunksTable());
-  await db.execute(libsqlQueryBuilder.buildLibsqlChunksQuadIdIndex());
-  await db.execute(libsqlQueryBuilder.buildLibsqlChunksFtsTable());
-  await db.execute(libsqlQueryBuilder.buildLibsqlChunksIndex());
-  for (const sql of libsqlQueryBuilder.buildLibsqlChunksTriggers()) {
+async function initializeSchema(
+  db: LibsqlClient,
+  queryBuilder: LibsqlQueryBuilder,
+): Promise<void> {
+  await db.execute(queryBuilder.buildLibsqlQuadsTable());
+  await db.execute(queryBuilder.buildLibsqlChunksTable());
+  await db.execute(queryBuilder.buildLibsqlChunksQuadIdIndex());
+  await db.execute(queryBuilder.buildLibsqlChunksFtsTable());
+  await db.execute(queryBuilder.buildLibsqlChunksIndex());
+  for (const sql of queryBuilder.buildLibsqlChunksTriggers()) {
     await db.execute(sql);
   }
 }
@@ -69,8 +80,11 @@ async function initializeSchema(db: LibsqlClient): Promise<void> {
 export async function provideLibsql(
   options: LibsqlOptions,
 ): Promise<ClientOptions> {
+  const vectorDimensions = options.vectorDimensions ?? 32;
+  const queryBuilder = createLibsqlQueryBuilder({ vectorDimensions });
+
   // 1. Ensure foundational tables are resident before initializing higher systems.
-  await initializeSchema(options.client);
+  await initializeSchema(options.client, queryBuilder);
 
   // 2. Resolve standard core memory context with optional user-driven injection.
   const initialStore = options.store ?? new Store();
@@ -92,6 +106,7 @@ export async function provideLibsql(
   const searchIndex = new LibsqlSearchIndex({
     client: options.client,
     embeddingService: options.embeddingService,
+    libsqlQueryBuilder: queryBuilder,
   });
 
   /**
@@ -114,6 +129,7 @@ export async function provideLibsql(
       textSplitter: textSplitter,
       maxLookupChunkSize: options.maxLookupChunkSize,
       quadFilter: options.quadFilter,
+      libsqlQueryBuilder: queryBuilder,
     });
   };
 

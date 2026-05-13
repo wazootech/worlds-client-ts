@@ -11,7 +11,7 @@ import {
   filterQuads,
   type QuadFilter,
 } from "#/client/quad-store/quad-filter.ts";
-import { libsqlQueryBuilder } from "./libsql-query-builder.ts";
+import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
 /**
@@ -32,6 +32,11 @@ export interface CommitPatchToLibsqlOptions {
 
   /** quadFilter defines active synchronization inclusion bounds, facilitating hybrid partitioning where only specific facts are persisted. */
   quadFilter?: QuadFilter;
+
+  /**
+   * libsqlQueryBuilder supplies dimension-aware SQL used for deletions, inserts, and chunk replication.
+   */
+  libsqlQueryBuilder: LibsqlQueryBuilder;
 }
 
 /**
@@ -44,7 +49,8 @@ export async function commitPatchToLibsql(
   patch: Patch,
   options: CommitPatchToLibsqlOptions,
 ): Promise<void> {
-  const { client, maxLookupChunkSize, quadFilter } = options;
+  const { client, maxLookupChunkSize, quadFilter, libsqlQueryBuilder } =
+    options;
   const statements: InStatement[] = [];
 
   // ⚡ Performant Optimizations First: Compile pre-emptive filter gates to support lightning-fast memory partitioning
@@ -57,7 +63,9 @@ export async function commitPatchToLibsql(
   if (targetedDeletions.length) {
     const deletionQuadIds = await computeQuadIds(targetedDeletions);
     if (deletionQuadIds.length > 0) {
-      statements.push(...buildDeletionStatements(deletionQuadIds));
+      statements.push(
+        ...buildDeletionStatements(deletionQuadIds, libsqlQueryBuilder),
+      );
     }
   }
 
@@ -68,6 +76,7 @@ export async function commitPatchToLibsql(
       client,
       proposedQuadIds,
       maxLookupChunkSize,
+      libsqlQueryBuilder,
     );
 
     // Deduplication Filter: Process ONLY truly novel facts that are not yet persistent
@@ -83,11 +92,17 @@ export async function commitPatchToLibsql(
 
     if (novelQuadIds.length > 0) {
       // Ensure relational clean slate for new items
-      statements.push(...buildDeletionStatements(novelQuadIds));
+      statements.push(
+        ...buildDeletionStatements(novelQuadIds, libsqlQueryBuilder),
+      );
 
       // Stage Fact Decompositions (Relational Index)
       statements.push(
-        ...buildRelationalStatements(novelInsertions, novelQuadIds),
+        ...buildRelationalStatements(
+          novelInsertions,
+          novelQuadIds,
+          libsqlQueryBuilder,
+        ),
       );
 
       // Stage Projected Literals (Semantic/FTS Index)
@@ -130,10 +145,13 @@ async function computeQuadIds(quads: rdfjs.Quad[]): Promise<string[]> {
 /**
  * buildDeletionStatements constructs parameterized deletion statements sweeping facts and vector bounds.
  */
-function buildDeletionStatements(quadIds: string[]): InStatement[] {
+function buildDeletionStatements(
+  quadIds: string[],
+  queryBuilder: LibsqlQueryBuilder,
+): InStatement[] {
   return [
-    libsqlQueryBuilder.buildDeleteByQuadIds(quadIds),
-    libsqlQueryBuilder.buildDeleteQuadsByQuadIds(quadIds),
+    queryBuilder.buildDeleteByQuadIds(quadIds),
+    queryBuilder.buildDeleteQuadsByQuadIds(quadIds),
   ];
 }
 
@@ -143,7 +161,8 @@ function buildDeletionStatements(quadIds: string[]): InStatement[] {
 async function queryCachePresence(
   client: Client,
   quadIds: string[],
-  maxLookupChunkSize?: number,
+  maxLookupChunkSize: number | undefined,
+  queryBuilder: LibsqlQueryBuilder,
 ): Promise<Set<string>> {
   const cachedIds = new Set<string>();
   try {
@@ -152,7 +171,7 @@ async function queryCachePresence(
     const lookupChunkSize = maxLookupChunkSize ?? 800;
     for (let i = 0; i < quadIds.length; i += lookupChunkSize) {
       const batchIds = quadIds.slice(i, i + lookupChunkSize);
-      const query = libsqlQueryBuilder.buildSelectExistingQuadIds(batchIds);
+      const query = queryBuilder.buildSelectExistingQuadIds(batchIds);
       const resultSet = await client.execute(query);
       for (const row of resultSet.rows) {
         if (row.id) {
@@ -173,6 +192,7 @@ async function queryCachePresence(
 function buildRelationalStatements(
   quads: rdfjs.Quad[],
   quadIds: string[],
+  queryBuilder: LibsqlQueryBuilder,
 ): InStatement[] {
   const statements: InStatement[] = [];
   for (let i = 0; i < quads.length; i++) {
@@ -184,7 +204,7 @@ function buildRelationalStatements(
     const literal = isLiteral ? (quad.object as rdfjs.Literal) : null;
 
     statements.push(
-      libsqlQueryBuilder.buildInsertQuad({
+      queryBuilder.buildInsertQuad({
         quad_id: id,
         s: quad.subject.value,
         s_type: quad.subject.termType,
@@ -231,14 +251,27 @@ async function buildVectorChunkStatements(
     const uniqueTexts = Array.from(new Set(chunks.map((c) => c.value)));
     try {
       uniqueVectors = await options.embeddingService.embed(uniqueTexts);
+      for (
+        let vectorIndex = 0;
+        vectorIndex < uniqueVectors.length;
+        vectorIndex++
+      ) {
+        const projectedVector = uniqueVectors[vectorIndex]!;
+        const embeddingLength = projectedVector.length;
+        if (embeddingLength !== options.libsqlQueryBuilder.vectorDimensions) {
+          throw new Error(
+            `embedding length ${embeddingLength} does not match configured vectorDimensions ${options.libsqlQueryBuilder.vectorDimensions}`,
+          );
+        }
+      }
     } catch (cause) {
       throw new Error("failed to vectorize literal chunk blocks", { cause });
     }
 
     // Step C: Synthesize lookup mapping back to original source payloads
     vectorLookupMap = new Map<string, Float32Array | number[]>();
-    for (let i = 0; i < uniqueTexts.length; i++) {
-      vectorLookupMap.set(uniqueTexts[i], uniqueVectors[i]);
+    for (let textIndex = 0; textIndex < uniqueTexts.length; textIndex++) {
+      vectorLookupMap.set(uniqueTexts[textIndex], uniqueVectors[textIndex]!);
     }
   }
 
@@ -248,7 +281,7 @@ async function buildVectorChunkStatements(
     const vectorJson = vector ? JSON.stringify(Array.from(vector)) : undefined;
 
     statements.push(
-      libsqlQueryBuilder.buildInsertChunk({
+      options.libsqlQueryBuilder.buildInsertChunk({
         quad_id: payload.quad_id,
         subject: payload.subject,
         predicate: payload.predicate,

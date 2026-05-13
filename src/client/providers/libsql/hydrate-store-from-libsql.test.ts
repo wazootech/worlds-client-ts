@@ -1,12 +1,12 @@
 import { assertEquals } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { Store } from "n3";
-import { libsqlQueryBuilder } from "./libsql-query-builder.ts";
+import { defaultLibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import { hydrateStoreFromLibsql } from "./hydrate-store-from-libsql.ts";
 
 Deno.test("Slice 4: Hydrator - recovers whole graph from stored serialized quad lines", async () => {
   const client = createClient({ url: ":memory:" });
-  await client.execute(libsqlQueryBuilder.buildLibsqlQuadsTable());
+  await client.execute(defaultLibsqlQueryBuilder.buildLibsqlQuadsTable());
 
   // Manually seed the raw table with granular component columns mimicking sync engine
   await client.execute({
@@ -58,7 +58,7 @@ Deno.test("Slice 4: Hydrator - recovers whole graph from stored serialized quad 
 
 Deno.test("Hydrator - faithfully reconstructs advanced terms (BlankNodes, Datatypes, Languages)", async () => {
   const client = createClient({ url: ":memory:" });
-  await client.execute(libsqlQueryBuilder.buildLibsqlQuadsTable());
+  await client.execute(defaultLibsqlQueryBuilder.buildLibsqlQuadsTable());
 
   await client.execute({
     sql:

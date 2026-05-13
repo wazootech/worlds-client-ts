@@ -1,84 +1,58 @@
 import type { SearchRequest } from "#/client/search-index/search-index-interface.ts";
 import type { QuadFilter } from "#/client/quad-store/quad-filter.ts";
 
+/** Maximum embedding dimensions accepted by createLibsqlQueryBuilder (LibSQL / resource guardrail). */
+const LIBSQL_QUERY_BUILDER_MAX_VECTOR_DIMENSIONS = 8192;
+
 /**
- * libsqlQueryBuilder provides unified pure functions to dynamically construct both DDL schema definitions and active parameterized DML queries.
+ * CreateLibsqlQueryBuilderOptions configures vector column width for LibSQL chunk storage and search.
  */
-export const libsqlQueryBuilder = {
+export interface CreateLibsqlQueryBuilderOptions {
+  /**
+   * vectorDimensions is the fixed float count per stored embedding (F32_BLOB width and JSON array length for vector32).
+   */
+  vectorDimensions: number;
+}
+
+/**
+ * LibsqlQueryBuilder exposes DDL/DML helpers bound to a single vector dimension for schema and hybrid search consistency.
+ */
+export interface LibsqlQueryBuilder {
+  /**
+   * vectorDimensions is the configured embedding width shared by chunks DDL, inserts, and vector_top_k queries.
+   */
+  readonly vectorDimensions: number;
+
   /**
    * buildLibsqlQuadsTable defines the DDL for the master source-of-truth Quad Storage.
    * It facilitates high-fidelity hydration of in-memory graph storage via serialized nquad strings.
    */
-  buildLibsqlQuadsTable(): string {
-    return `CREATE TABLE IF NOT EXISTS quads (
-      id TEXT PRIMARY KEY,
-      s TEXT NOT NULL,
-      s_type TEXT NOT NULL,
-      p TEXT NOT NULL,
-      o TEXT NOT NULL,
-      o_type TEXT NOT NULL,
-      o_datatype TEXT,
-      o_lang TEXT,
-      g TEXT NOT NULL,
-      g_type TEXT NOT NULL
-    )`;
-  },
+  buildLibsqlQuadsTable(): string;
 
   /**
    * buildLibsqlChunksTable generates the DDL for backing relational store.
    */
-  buildLibsqlChunksTable(): string {
-    return `CREATE TABLE IF NOT EXISTS chunks (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      quad_id TEXT NOT NULL,
-      subject TEXT NOT NULL,
-      predicate TEXT NOT NULL,
-      graph TEXT NOT NULL,
-      value TEXT NOT NULL,
-      vector F32_BLOB(32)
-    )`;
-  },
+  buildLibsqlChunksTable(): string;
 
   /**
    * buildLibsqlChunksQuadIdIndex creates an index to accelerate deletion by origin Quad ID.
    */
-  buildLibsqlChunksQuadIdIndex(): string {
-    return `CREATE INDEX IF NOT EXISTS idx_chunks_quad_id ON chunks (quad_id)`;
-  },
+  buildLibsqlChunksQuadIdIndex(): string;
 
   /**
    * buildLibsqlChunksFtsTable generates the DDL for accompanying virtual FTS index.
    */
-  buildLibsqlChunksFtsTable(): string {
-    return `CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
-      value,
-      content='chunks',
-      content_rowid='id'
-    )`;
-  },
+  buildLibsqlChunksFtsTable(): string;
 
   /**
    * buildLibsqlChunksIndex generates the DDL for native vector similarity index.
    */
-  buildLibsqlChunksIndex(): string {
-    return `CREATE INDEX IF NOT EXISTS idx_chunks_vector ON chunks (
-      libsql_vector_idx(vector, 'metric=cosine')
-    )`;
-  },
+  buildLibsqlChunksIndex(): string;
 
   /**
    * buildLibsqlChunksTriggers creates the synchronization triggers ensuring consistency with FTS.
    */
-  buildLibsqlChunksTriggers(): string[] {
-    return [
-      `CREATE TRIGGER IF NOT EXISTS chunks_ai AFTER INSERT ON chunks BEGIN
-        INSERT INTO chunks_fts(rowid, value) VALUES (new.id, new.value);
-      END;`,
-      `CREATE TRIGGER IF NOT EXISTS chunks_ad AFTER DELETE ON chunks BEGIN
-        INSERT INTO chunks_fts(chunks_fts, rowid, value) VALUES('delete', old.id, old.value);
-      END;`,
-    ];
-  },
+  buildLibsqlChunksTriggers(): string[];
 
   /**
    * buildInsertChunk creates the query and arguments for inserting a chunk row.
@@ -90,127 +64,35 @@ export const libsqlQueryBuilder = {
     graph: string;
     value: string;
     vectorJson?: string | null;
-  }): { sql: string; args: (string | number)[] } {
-    const hasVector = !!options.vectorJson;
-    const vectorExpr = hasVector ? "vector32(?)" : "NULL";
-    const args: (string | number)[] = [
-      options.quad_id,
-      options.subject,
-      options.predicate,
-      options.graph,
-      options.value,
-    ];
-    if (hasVector) {
-      args.push(options.vectorJson!);
-    }
-    return {
-      sql:
-        `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector)
-            VALUES (?, ?, ?, ?, ?, ${vectorExpr})`,
-      args,
-    };
-  },
+  }): { sql: string; args: (string | number)[] };
 
   /**
    * buildDeleteByQuadIds creates the query to sweep away existing chunks belonging to stable Quad IDs.
    */
   buildDeleteByQuadIds(
     quadIds: string[],
-  ): { sql: string; args: string[] } {
-    const placeholders = generatePlaceholders(quadIds.length);
-    return {
-      sql: `DELETE FROM chunks WHERE quad_id IN (${placeholders})`,
-      args: quadIds,
-    };
-  },
+  ): { sql: string; args: string[] };
 
   /**
    * buildDeleteQuadsByQuadIds sweeps the master facts storage by ID.
    */
   buildDeleteQuadsByQuadIds(
     quadIds: string[],
-  ): { sql: string; args: string[] } {
-    const placeholders = generatePlaceholders(quadIds.length);
-    return {
-      sql: `DELETE FROM quads WHERE id IN (${placeholders})`,
-      args: quadIds,
-    };
-  },
+  ): { sql: string; args: string[] };
 
   /**
    * buildSelectExistingQuadIds constructs a query to retrieve pre-existing Quad IDs to drive content-addressed deduplication.
    */
   buildSelectExistingQuadIds(
     quadIds: string[],
-  ): { sql: string; args: string[] } {
-    const placeholders = generatePlaceholders(quadIds.length);
-    return {
-      sql: `SELECT id FROM quads WHERE id IN (${placeholders})`,
-      args: quadIds,
-    };
-  },
+  ): { sql: string; args: string[] };
 
   /**
    * buildHydrateQuery generates parameterized SELECT statement to hydrate active in-memory storage, integrating optional declarative filters.
    */
   buildHydrateQuery(
     filter?: QuadFilter,
-  ): { sql: string; args: string[] } {
-    const whereClauses: string[] = [];
-    const filterArgs: string[] = [];
-
-    // Map nested declarative boundaries down to physical storage columns
-    const filterConfigurations = [
-      {
-        values: filter?.exclude?.subjects,
-        column: "s",
-        operator: "NOT IN",
-      },
-      {
-        values: filter?.exclude?.predicates,
-        column: "p",
-        operator: "NOT IN",
-      },
-      {
-        values: filter?.exclude?.graphs,
-        column: "g",
-        operator: "NOT IN",
-      },
-      {
-        values: filter?.include?.subjects,
-        column: "s",
-        operator: "IN",
-      },
-      {
-        values: filter?.include?.predicates,
-        column: "p",
-        operator: "IN",
-      },
-      {
-        values: filter?.include?.graphs,
-        column: "g",
-        operator: "IN",
-      },
-    ] as const;
-
-    for (const { values, column, operator } of filterConfigurations) {
-      if (values?.length) {
-        const placeholders = generatePlaceholders(values.length);
-        whereClauses.push(`${column} ${operator} (${placeholders})`);
-        filterArgs.push(...values);
-      }
-    }
-
-    const whereFilter = whereClauses.length > 0
-      ? `WHERE ${whereClauses.join(" AND ")}`
-      : "";
-
-    return {
-      sql:
-        `SELECT s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type FROM quads ${whereFilter}`,
-      args: filterArgs,
-    };
-  },
+  ): { sql: string; args: string[] };
 
   /**
    * buildInsertQuad generates query to store atomic raw fact safely for backup reconstruction.
@@ -226,120 +108,322 @@ export const libsqlQueryBuilder = {
     o_lang?: string | null;
     g: string;
     g_type: string;
-  }): { sql: string; args: (string | null)[] } {
-    return {
-      sql:
-        `INSERT OR REPLACE INTO quads (id, s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        options.quad_id,
-        options.s,
-        options.s_type,
-        options.p,
-        options.o,
-        options.o_type,
-        options.o_datatype ?? null,
-        options.o_lang ?? null,
-        options.g,
-        options.g_type,
-      ],
-    };
-  },
+  }): { sql: string; args: (string | null)[] };
 
   /**
    * sanitizeFtsQuery defends SQLite against internal parsing crash vectors
    * by splitting inputs into safe alphanumeric tokens wrapped in explicit quotes.
    */
-  sanitizeFtsQuery(query: string): string {
-    return query
-      .split(/\s+/)
-      .filter((token) => token.length > 0)
-      .map((token) => `"${token.replace(/"/g, "")}"`)
-      .join(" ");
-  },
+  sanitizeFtsQuery(query: string): string;
 
   /**
    * buildSearchQuery assembles the optimized hybrid search query leveraging RRF logic.
-   *
-   * The hybrid scoring uses Reciprocal Rank Fusion (RRF) to combine vector and FTS
-   * rankings. The rank offset of 60 is a standard RRF smoothing constant that
-   * prevents zero-division and moderates the influence of high rankings.
-   * The libsql `vector_top_k` table function performs ANN vector search via
-   * the cosine similarity index on the `idx_chunks_vector` index.
    */
   buildSearchQuery(
     request: SearchRequest,
     options: { vectorJson?: string; limit: number },
-  ): { sql: string; args: (string | number)[] } {
-    const { vectorJson, limit } = options;
+  ): { sql: string; args: (string | number)[] };
+}
 
-    // Construct dynamic filtering where conditions based on user constraints
-    const whereClauses: string[] = [];
-    const filterArgs: (string | number)[] = [];
+/**
+ * createLibsqlQueryBuilder returns dimension-aware SQL builders; embedding JSON passed to vector32(?) must hold exactly vectorDimensions floats.
+ */
+export function createLibsqlQueryBuilder(
+  options: CreateLibsqlQueryBuilderOptions,
+): LibsqlQueryBuilder {
+  const rawDimensions = options.vectorDimensions;
+  const vectorDimensions = Math.floor(Number(rawDimensions));
+  if (
+    !Number.isFinite(vectorDimensions) ||
+    vectorDimensions < 1 ||
+    vectorDimensions > LIBSQL_QUERY_BUILDER_MAX_VECTOR_DIMENSIONS
+  ) {
+    throw new Error(
+      `vectorDimensions must be a finite integer in [1, ${LIBSQL_QUERY_BUILDER_MAX_VECTOR_DIMENSIONS}], received: ${
+        String(rawDimensions)
+      }`,
+    );
+  }
 
-    // Map boundary conditions onto declarative relational data structures
-    const filterConfigurations = [
-      {
-        values: request.exclude?.subjects,
-        column: "chunks.subject",
-        operator: "NOT IN",
-      },
-      {
-        values: request.exclude?.predicates,
-        column: "chunks.predicate",
-        operator: "NOT IN",
-      },
-      {
-        values: request.exclude?.graphs,
-        column: "chunks.graph",
-        operator: "NOT IN",
-      },
-      {
-        values: request.include?.subjects,
-        column: "chunks.subject",
-        operator: "IN",
-      },
-      {
-        values: request.include?.predicates,
-        column: "chunks.predicate",
-        operator: "IN",
-      },
-      {
-        values: request.include?.graphs,
-        column: "chunks.graph",
-        operator: "IN",
-      },
-    ] as const;
+  return {
+    vectorDimensions,
 
-    // Consolidate multi-dimensional scoping constraints declaratively
-    for (const { values, column, operator } of filterConfigurations) {
-      if (values?.length) {
-        const placeholders = generatePlaceholders(values.length);
-        whereClauses.push(`${column} ${operator} (${placeholders})`);
-        filterArgs.push(...values);
-      }
-    }
+    buildLibsqlQuadsTable(): string {
+      return `CREATE TABLE IF NOT EXISTS quads (
+      id TEXT PRIMARY KEY,
+      s TEXT NOT NULL,
+      s_type TEXT NOT NULL,
+      p TEXT NOT NULL,
+      o TEXT NOT NULL,
+      o_type TEXT NOT NULL,
+      o_datatype TEXT,
+      o_lang TEXT,
+      g TEXT NOT NULL,
+      g_type TEXT NOT NULL
+    )`;
+    },
 
-    const whereFilter = whereClauses.length > 0
-      ? `WHERE ${whereClauses.join(" AND ")}`
-      : "";
+    buildLibsqlChunksTable(): string {
+      return `CREATE TABLE IF NOT EXISTS chunks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      quad_id TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      predicate TEXT NOT NULL,
+      graph TEXT NOT NULL,
+      value TEXT NOT NULL,
+      vector F32_BLOB(${vectorDimensions})
+    )`;
+    },
 
-    const hasVector = !!vectorJson;
-    const hasQuery = !!request.query && request.query.trim().length > 0;
-    const sanitizedQuery = hasQuery ? this.sanitizeFtsQuery(request.query) : "";
+    buildLibsqlChunksQuadIdIndex(): string {
+      return `CREATE INDEX IF NOT EXISTS idx_chunks_quad_id ON chunks (quad_id)`;
+    },
 
-    // CASE 1: TOTAL HYBRID SEARCH (Mode A)
-    if (hasVector && hasQuery) {
-      const args: (string | number)[] = [
-        vectorJson!,
-        limit,
-        sanitizedQuery,
-        limit,
-        ...filterArgs,
-        limit,
+    buildLibsqlChunksFtsTable(): string {
+      return `CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
+      value,
+      content='chunks',
+      content_rowid='id'
+    )`;
+    },
+
+    buildLibsqlChunksIndex(): string {
+      return `CREATE INDEX IF NOT EXISTS idx_chunks_vector ON chunks (
+      libsql_vector_idx(vector, 'metric=cosine')
+    )`;
+    },
+
+    buildLibsqlChunksTriggers(): string[] {
+      return [
+        `CREATE TRIGGER IF NOT EXISTS chunks_ai AFTER INSERT ON chunks BEGIN
+        INSERT INTO chunks_fts(rowid, value) VALUES (new.id, new.value);
+      END;`,
+        `CREATE TRIGGER IF NOT EXISTS chunks_ad AFTER DELETE ON chunks BEGIN
+        INSERT INTO chunks_fts(chunks_fts, rowid, value) VALUES('delete', old.id, old.value);
+      END;`,
       ];
+    },
 
-      const sql = `
+    buildInsertChunk(insertOptions: {
+      quad_id: string;
+      subject: string;
+      predicate: string;
+      graph: string;
+      value: string;
+      vectorJson?: string | null;
+    }): { sql: string; args: (string | number)[] } {
+      const hasVector = !!insertOptions.vectorJson;
+      const vectorExpr = hasVector ? "vector32(?)" : "NULL";
+      const args: (string | number)[] = [
+        insertOptions.quad_id,
+        insertOptions.subject,
+        insertOptions.predicate,
+        insertOptions.graph,
+        insertOptions.value,
+      ];
+      if (hasVector) {
+        args.push(insertOptions.vectorJson!);
+      }
+      return {
+        sql:
+          `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector)
+            VALUES (?, ?, ?, ?, ?, ${vectorExpr})`,
+        args,
+      };
+    },
+
+    buildDeleteByQuadIds(
+      quadIds: string[],
+    ): { sql: string; args: string[] } {
+      const placeholders = generatePlaceholders(quadIds.length);
+      return {
+        sql: `DELETE FROM chunks WHERE quad_id IN (${placeholders})`,
+        args: quadIds,
+      };
+    },
+
+    buildDeleteQuadsByQuadIds(
+      quadIds: string[],
+    ): { sql: string; args: string[] } {
+      const placeholders = generatePlaceholders(quadIds.length);
+      return {
+        sql: `DELETE FROM quads WHERE id IN (${placeholders})`,
+        args: quadIds,
+      };
+    },
+
+    buildSelectExistingQuadIds(
+      quadIds: string[],
+    ): { sql: string; args: string[] } {
+      const placeholders = generatePlaceholders(quadIds.length);
+      return {
+        sql: `SELECT id FROM quads WHERE id IN (${placeholders})`,
+        args: quadIds,
+      };
+    },
+
+    buildHydrateQuery(
+      filter?: QuadFilter,
+    ): { sql: string; args: string[] } {
+      const whereClauses: string[] = [];
+      const filterArgs: string[] = [];
+
+      const filterConfigurations = [
+        {
+          values: filter?.exclude?.subjects,
+          column: "s",
+          operator: "NOT IN",
+        },
+        {
+          values: filter?.exclude?.predicates,
+          column: "p",
+          operator: "NOT IN",
+        },
+        {
+          values: filter?.exclude?.graphs,
+          column: "g",
+          operator: "NOT IN",
+        },
+        {
+          values: filter?.include?.subjects,
+          column: "s",
+          operator: "IN",
+        },
+        {
+          values: filter?.include?.predicates,
+          column: "p",
+          operator: "IN",
+        },
+        {
+          values: filter?.include?.graphs,
+          column: "g",
+          operator: "IN",
+        },
+      ] as const;
+
+      for (const { values, column, operator } of filterConfigurations) {
+        if (values?.length) {
+          const placeholders = generatePlaceholders(values.length);
+          whereClauses.push(`${column} ${operator} (${placeholders})`);
+          filterArgs.push(...values);
+        }
+      }
+
+      const whereFilter = whereClauses.length > 0
+        ? `WHERE ${whereClauses.join(" AND ")}`
+        : "";
+
+      return {
+        sql:
+          `SELECT s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type FROM quads ${whereFilter}`,
+        args: filterArgs,
+      };
+    },
+
+    buildInsertQuad(insertQuadOptions: {
+      quad_id: string;
+      s: string;
+      s_type: string;
+      p: string;
+      o: string;
+      o_type: string;
+      o_datatype?: string | null;
+      o_lang?: string | null;
+      g: string;
+      g_type: string;
+    }): { sql: string; args: (string | null)[] } {
+      return {
+        sql:
+          `INSERT OR REPLACE INTO quads (id, s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          insertQuadOptions.quad_id,
+          insertQuadOptions.s,
+          insertQuadOptions.s_type,
+          insertQuadOptions.p,
+          insertQuadOptions.o,
+          insertQuadOptions.o_type,
+          insertQuadOptions.o_datatype ?? null,
+          insertQuadOptions.o_lang ?? null,
+          insertQuadOptions.g,
+          insertQuadOptions.g_type,
+        ],
+      };
+    },
+
+    sanitizeFtsQuery(query: string): string {
+      return sanitizeFtsQuery(query);
+    },
+
+    buildSearchQuery(
+      request: SearchRequest,
+      searchBuildOptions: { vectorJson?: string; limit: number },
+    ): { sql: string; args: (string | number)[] } {
+      const { vectorJson, limit } = searchBuildOptions;
+
+      const whereClauses: string[] = [];
+      const filterArgs: (string | number)[] = [];
+
+      const filterConfigurations = [
+        {
+          values: request.exclude?.subjects,
+          column: "chunks.subject",
+          operator: "NOT IN",
+        },
+        {
+          values: request.exclude?.predicates,
+          column: "chunks.predicate",
+          operator: "NOT IN",
+        },
+        {
+          values: request.exclude?.graphs,
+          column: "chunks.graph",
+          operator: "NOT IN",
+        },
+        {
+          values: request.include?.subjects,
+          column: "chunks.subject",
+          operator: "IN",
+        },
+        {
+          values: request.include?.predicates,
+          column: "chunks.predicate",
+          operator: "IN",
+        },
+        {
+          values: request.include?.graphs,
+          column: "chunks.graph",
+          operator: "IN",
+        },
+      ] as const;
+
+      for (const { values, column, operator } of filterConfigurations) {
+        if (values?.length) {
+          const placeholders = generatePlaceholders(values.length);
+          whereClauses.push(`${column} ${operator} (${placeholders})`);
+          filterArgs.push(...values);
+        }
+      }
+
+      const whereFilter = whereClauses.length > 0
+        ? `WHERE ${whereClauses.join(" AND ")}`
+        : "";
+
+      const hasVector = !!vectorJson;
+      const hasQuery = !!request.query && request.query.trim().length > 0;
+      const sanitizedQuery = hasQuery ? sanitizeFtsQuery(request.query) : "";
+
+      if (hasVector && hasQuery) {
+        const args: (string | number)[] = [
+          vectorJson!,
+          limit,
+          sanitizedQuery,
+          limit,
+          ...filterArgs,
+          limit,
+        ];
+
+        const sql = `
         WITH vec_matches AS (
           SELECT
             id AS rowid,
@@ -378,19 +462,18 @@ export const libsqlQueryBuilder = {
         )
         SELECT * FROM final;
       `;
-      return { sql, args };
-    }
+        return { sql, args };
+      }
 
-    // CASE 2: SEMANTIC / VECTOR ONLY SEARCH (Mode C)
-    if (hasVector) {
-      const args: (string | number)[] = [
-        vectorJson!,
-        limit,
-        ...filterArgs,
-        limit,
-      ];
+      if (hasVector) {
+        const args: (string | number)[] = [
+          vectorJson!,
+          limit,
+          ...filterArgs,
+          limit,
+        ];
 
-      const sql = `
+        const sql = `
         WITH vec_matches AS (
           SELECT
             id AS rowid,
@@ -414,19 +497,18 @@ export const libsqlQueryBuilder = {
         )
         SELECT * FROM final;
       `;
-      return { sql, args };
-    }
+        return { sql, args };
+      }
 
-    // CASE 3: FTS / KEYWORD ONLY SEARCH (Mode B)
-    if (hasQuery) {
-      const args: (string | number)[] = [
-        sanitizedQuery,
-        limit,
-        ...filterArgs,
-        limit,
-      ];
+      if (hasQuery) {
+        const args: (string | number)[] = [
+          sanitizedQuery,
+          limit,
+          ...filterArgs,
+          limit,
+        ];
 
-      const sql = `
+        const sql = `
         WITH fts_matches AS (
           SELECT
             rowid,
@@ -454,21 +536,35 @@ export const libsqlQueryBuilder = {
         )
         SELECT * FROM final;
       `;
-      return { sql, args };
-    }
+        return { sql, args };
+      }
 
-    // CASE 4: NO CRITERIA PROVIDED - Empty fallback
-    return {
-      sql:
-        "SELECT NULL as subject, NULL as predicate, NULL as graph, NULL as value, 0 as combined_rank WHERE 0 = 1",
-      args: [],
-    };
-  },
-} as const;
+      return {
+        sql:
+          "SELECT NULL as subject, NULL as predicate, NULL as graph, NULL as value, 0 as combined_rank WHERE 0 = 1",
+        args: [],
+      };
+    },
+  };
+}
 
-// ==========================================
-// PRIVATE RELATIONAL GENERATION HELPERS
-// ==========================================
+/**
+ * defaultLibsqlQueryBuilder is the legacy 32-dimensional builder for callers that do not vary embedding width.
+ */
+export const defaultLibsqlQueryBuilder: LibsqlQueryBuilder =
+  createLibsqlQueryBuilder({ vectorDimensions: 32 });
+
+/**
+ * sanitizeFtsQuery defends SQLite against internal parsing crash vectors
+ * by splitting inputs into safe alphanumeric tokens wrapped in explicit quotes.
+ */
+function sanitizeFtsQuery(query: string): string {
+  return query
+    .split(/\s+/)
+    .filter((token) => token.length > 0)
+    .map((token) => `"${token.replace(/"/g, "")}"`)
+    .join(" ");
+}
 
 /**
  * generatePlaceholders generates a comma-delimited set of parameterized SQLite bound variables.
