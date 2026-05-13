@@ -7,3 +7,4 @@ export * from "./providers/rdfjs/mod.ts";
 export * from "./providers/comunica/mod.ts";
 
 export * from "./providers/libsql/provide-libsql.ts";
+export * from "./providers/tfjs-universal-sentence-encoder/mod.ts";

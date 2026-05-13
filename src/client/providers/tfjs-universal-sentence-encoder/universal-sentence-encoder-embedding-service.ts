@@ -1,7 +1,7 @@
 import "@tensorflow/tfjs-backend-wasm";
 import * as tf from "@tensorflow/tfjs";
 import * as use from "@tensorflow-models/universal-sentence-encoder";
-import type { EmbeddingService } from "../../src/client/search-index/embedding-service/embedding-service.ts";
+import type { EmbeddingService } from "#/client/search-index/embedding-service/embedding-service.ts";
 
 /** UniversalSentenceEncoderEmbeddingService provides 512-dimensional text embeddings using TensorFlow.js. */
 export class UniversalSentenceEncoderEmbeddingService

@@ -1,6 +1,9 @@
 import { createClient } from "@libsql/client";
-import { Client, provideLibsql } from "@worlds/client";
-import { UniversalSentenceEncoderEmbeddingService } from "./universal-sentence-encoder-embedding-service.ts";
+import {
+  Client,
+  provideLibsql,
+  UniversalSentenceEncoderEmbeddingService,
+} from "@worlds/client";
 
 /**
  * This example demonstrates creating a persistent Harry Potter knowledge base
@@ -34,10 +37,10 @@ if (import.meta.main) {
     query: `
       PREFIX hp: <http://example.com/hp/>
       SELECT ?title WHERE { hp:book_1 hp:title ?title }
-    `
-  })) as any;
+    `,
+  })) as unknown as { data?: { results?: { bindings?: unknown[] } } };
 
-  if (hasBooks.data?.results?.bindings?.length > 0) {
+  if ((hasBooks.data?.results?.bindings?.length ?? 0) > 0) {
     console.log(
       "✅ Harry Potter books already exist in the database. Skipping import.",
     );
