@@ -4,13 +4,11 @@ import { DataFactory } from "n3";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import { FakeEmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
-import { createLibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 
-const testLibsqlQueryBuilder = createLibsqlQueryBuilder({
-  vectorDimensions: 32,
-});
+const testLibsqlQueryBuilder = new LibsqlQueryBuilder(32);
 
 async function setupSchema(client: ReturnType<typeof createClient>) {
   await client.execute(testLibsqlQueryBuilder.buildLibsqlQuadsTable()); // <--- Demand Quads Table exist

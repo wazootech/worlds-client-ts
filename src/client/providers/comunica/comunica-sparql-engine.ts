@@ -14,15 +14,17 @@ import type {
  * ComunicaSparqlEngineOptions are the options for ComunicaSparqlEngine.
  */
 export interface ComunicaSparqlEngineOptions {
-  /**
-   * store is the RDFJS store to execute the query on.
-   */
+  /** store is the RDFJS store to execute the query on. */
   store: rdfjs.Store;
 
-  /**
-   * queryEngine is the Comunica query engine to use.
-   */
+  /** queryEngine is the Comunica query engine to use. */
   queryEngine: QueryEngine;
+
+  /**
+   * onVoid is an optional callback invoked after a successful void (UPDATE)
+   * query. Use it to flush a persistent store buffer or trigger side effects.
+   */
+  onVoid?: () => Promise<void>;
 }
 
 /**
@@ -35,11 +37,17 @@ export class ComunicaSparqlEngine implements SparqlEngineInterface {
   ) {}
 
   public async execute(request: SparqlRequest): Promise<SparqlResponse> {
-    return await executeSparql(
+    const response = await executeSparql(
       this.options.queryEngine,
       this.options.store,
       request,
     );
+
+    if (response.kind === "void") {
+      await this.options.onVoid?.();
+    }
+
+    return response;
   }
 }
 

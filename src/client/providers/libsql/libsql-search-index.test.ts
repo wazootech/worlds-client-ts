@@ -2,13 +2,11 @@ import { assertEquals, assertExists } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { FakeEmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
-import { createLibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 
 // --- Helpers ---
 
-const testLibsqlQueryBuilder = createLibsqlQueryBuilder({
-  vectorDimensions: 32,
-});
+const testLibsqlQueryBuilder = new LibsqlQueryBuilder(32);
 
 async function setupSchema(client: ReturnType<typeof createClient>) {
   await client.execute(testLibsqlQueryBuilder.buildLibsqlChunksTable());
