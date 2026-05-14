@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://docs.wazoo.dev">
-    <img src="https://wazoo.dev/assets/wazoo.svg" alt="Wazoo Worlds" width="400" />
+    <img src="https://wazoo.dev/assets/wazoo.svg" alt="Wazoo Worlds" width="120" />
   </a>
 </p>
 
@@ -15,8 +15,8 @@
   <a href="https://deepwiki.com/wazootech/worlds-client-ts"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki" /></a>
 </p>
 
-Worlds is the infrastructure layer for persistent, edge-native knowledge.
-The engine implements a edge-native semantic knowledge graph backed by transactional
+Worlds is the infrastructure layer for persistent, edge-native knowledge. The
+engine implements a edge-native semantic knowledge graph backed by transactional
 persistence, complete with hybrid vector search and a standard SPARQL query
 engine.
 
@@ -185,19 +185,9 @@ All CI checks must pass before merging updates.
 | `deno task test` | Execute comprehensive test suites.           |
 | `deno task ci`   | Run complete CI pipeline sequentially.       |
 
-## Prior research
-
-The following research inspires this work:
-
-- [Thinking with Knowledge Graphs (Arxiv)](https://arxiv.org/abs/2412.10654)
-- [World Models (Ha & Schmidhuber)](https://worldmodels.github.io/)
-- [MemGPT: Towards LLMs as Operating Systems (Arxiv)](https://arxiv.org/abs/2310.08560)
-
 ## Quicklinks
 
 - [Documentation](https://docs.wazoo.dev)
-- [Academy](https://docs.wazoo.dev/academy)
-- [Performance Issue #11](https://github.com/wazootech/worlds-client-ts/issues/11)
 - [Wazoo Technologies](https://wazoo.dev)
 - [Support](https://github.com/wazootech/worlds-client-ts/issues)
 
