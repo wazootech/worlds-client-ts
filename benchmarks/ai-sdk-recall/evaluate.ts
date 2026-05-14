@@ -1,14 +1,13 @@
 import { createClient as createLibsqlClient } from "@libsql/client";
 import { generateText } from "ai";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createOpenAI } from "@ai-sdk/openai";
 import { Client } from "@worlds/client";
 import { provideLibsql } from "@worlds/client/providers/libsql";
 import { UniversalSentenceEncoderEmbeddingService } from "@worlds/client/providers/tfjs-universal-sentence-encoder";
 import { createTools } from "../../examples/ai-sdk-hello-world/tools.ts";
-import {
-  assessAnswer,
-  type BenchmarkQuestion,
-} from "./score.ts";
+import { assessAnswer, type BenchmarkQuestion } from "./score.ts";
+
+type BenchmarkModel = Parameters<typeof generateText>[0]["model"];
 
 interface RawBenchmarkQuestion {
   id: string;
@@ -79,7 +78,7 @@ async function buildClient(corpusPath: string): Promise<Client> {
 }
 
 async function answerWithoutTools(
-  model: ReturnType<ReturnType<typeof createGoogleGenerativeAI>>,
+  model: BenchmarkModel,
   question: BenchmarkQuestion,
 ): Promise<string> {
   const result = await generateText({
@@ -92,7 +91,7 @@ async function answerWithoutTools(
 }
 
 async function answerWithTools(
-  model: ReturnType<ReturnType<typeof createGoogleGenerativeAI>>,
+  model: BenchmarkModel,
   client: Client,
   question: BenchmarkQuestion,
 ): Promise<{ answer: string; toolCalls: number }> {
@@ -112,7 +111,8 @@ async function answerWithTools(
   return { answer: result.text.trim(), toolCalls };
 }
 
-function parseArgs(args: string[]): {
+export function parseArgs(args: string[]): {
+  baseUrl: string;
   corpusPath: string;
   modelId: string;
   outputPath?: string;
@@ -120,7 +120,8 @@ function parseArgs(args: string[]): {
   runs: number;
 } {
   let corpusPath = "benchmarks/ai-sdk-recall/corpus.ttl";
-  let modelId = "gemini-2.5-flash";
+  let baseUrl = Deno.env.get("OLLAMA_BASE_URL") ?? "http://localhost:11434/v1";
+  let modelId = "qwen2.5:1.5b-instruct";
   let outputPath: string | undefined;
   let questionsPath = "benchmarks/ai-sdk-recall/questions.json";
   let runs = 3;
@@ -128,6 +129,7 @@ function parseArgs(args: string[]): {
   for (let index = 0; index < args.length; index++) {
     const argument = args[index];
     if (argument === "--corpus") corpusPath = args[++index] ?? corpusPath;
+    else if (argument === "--base-url") baseUrl = args[++index] ?? baseUrl;
     else if (argument === "--model") modelId = args[++index] ?? modelId;
     else if (argument === "--output") outputPath = args[++index];
     else if (argument === "--questions") {
@@ -137,47 +139,56 @@ function parseArgs(args: string[]): {
     } else if (argument === "--help" || argument === "-h") {
       console.log(
         [
-          "Usage: deno run -A benchmarks/ai-sdk-recall/evaluate.ts [--corpus path] [--questions path] [--model gemini-2.5-flash] [--runs 3] [--output results.json]",
+          "Usage: deno run -A benchmarks/ai-sdk-recall/evaluate.ts [--corpus path] [--questions path] [--base-url http://localhost:11434/v1] [--model qwen2.5:1.5b-instruct] [--runs 3] [--output results.json]",
           "",
           "Environment:",
-          "  GEMINI_API_KEY is required.",
+          "  OLLAMA_BASE_URL can override the base URL.",
         ].join("\n"),
       );
       Deno.exit(0);
     }
   }
 
-  return { corpusPath, modelId, outputPath, questionsPath, runs };
+  return { baseUrl, corpusPath, modelId, outputPath, questionsPath, runs };
 }
 
 function printSummary(summary: BenchmarkSummary): void {
-  console.log(`Without tools accuracy: ${(summary.withoutToolsAccuracy * 100).toFixed(1)}%`);
-  console.log(`With tools accuracy: ${(summary.withToolsAccuracy * 100).toFixed(1)}%`);
+  console.log(
+    `Without tools accuracy: ${
+      (summary.withoutToolsAccuracy * 100).toFixed(1)
+    }%`,
+  );
+  console.log(
+    `With tools accuracy: ${(summary.withToolsAccuracy * 100).toFixed(1)}%`,
+  );
   console.log(`Exact matches: ${summary.exactMatches}`);
   console.log(`Alias matches: ${summary.aliasMatches}`);
   console.log(`Wrong matches: ${summary.wrongMatches}`);
   console.log(`Delta: ${(summary.delta * 100).toFixed(1)}%`);
   console.log("");
-  console.log("questionId | condition | run | correct | matchKind | toolCalls | answer");
+  console.log(
+    "questionId | condition | run | correct | matchKind | toolCalls | answer",
+  );
   console.log("---|---|---:|---|---|---:|---");
   for (const row of summary.rows) {
     console.log(
-      `${row.questionId} | ${row.condition} | ${row.run} | ${row.correct ? "yes" : "no"} | ${row.matchKind} | ${row.toolCalls} | ${row.answer.replace(/\|/g, "\\|")}`,
+      `${row.questionId} | ${row.condition} | ${row.run} | ${
+        row.correct ? "yes" : "no"
+      } | ${row.matchKind} | ${row.toolCalls} | ${
+        row.answer.replace(/\|/g, "\\|")
+      }`,
     );
   }
 }
 
 async function run(): Promise<BenchmarkSummary> {
-  const { corpusPath, modelId, outputPath, questionsPath, runs } = parseArgs(
-    Deno.args,
-  );
-  const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
-  if (!geminiApiKey) {
-    throw new Error("GEMINI_API_KEY is required.");
-  }
+  const { baseUrl, corpusPath, modelId, outputPath, questionsPath, runs } =
+    parseArgs(
+      Deno.args,
+    );
 
-  const google = createGoogleGenerativeAI({ apiKey: geminiApiKey });
-  const model = google(modelId);
+  const openai = createOpenAI({ baseURL: baseUrl });
+  const model = openai(modelId) as unknown as BenchmarkModel;
   const client = await buildClient(corpusPath);
   const questions = await loadQuestions(questionsPath);
 
@@ -218,12 +229,15 @@ async function run(): Promise<BenchmarkSummary> {
     }
   }
 
-  const withoutToolsRows = rows.filter((row) => row.condition === "without-tools");
+  const withoutToolsRows = rows.filter((row) =>
+    row.condition === "without-tools"
+  );
   const withToolsRows = rows.filter((row) => row.condition === "with-tools");
   const exactMatches = rows.filter((row) => row.matchKind === "exact").length;
   const aliasMatches = rows.filter((row) => row.matchKind === "alias").length;
   const wrongMatches = rows.filter((row) => row.matchKind === "wrong").length;
-  const withoutToolsAccuracy = withoutToolsRows.filter((row) => row.correct).length /
+  const withoutToolsAccuracy =
+    withoutToolsRows.filter((row) => row.correct).length /
     Math.max(withoutToolsRows.length, 1);
   const withToolsAccuracy = withToolsRows.filter((row) => row.correct).length /
     Math.max(withToolsRows.length, 1);

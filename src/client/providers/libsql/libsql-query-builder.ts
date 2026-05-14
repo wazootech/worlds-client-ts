@@ -519,7 +519,9 @@ function sanitizeFtsQuery(query: string): string {
     )
     .filter((token) => token.length > 0);
 
-  const filteredTokens = tokens.filter((token) => !LIBSQL_FTS_STOPWORDS.has(token));
+  const filteredTokens = tokens.filter((token) =>
+    !LIBSQL_FTS_STOPWORDS.has(token)
+  );
   const normalizedTokens = filteredTokens.length > 0 ? filteredTokens : tokens;
 
   return normalizedTokens
