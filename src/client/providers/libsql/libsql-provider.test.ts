@@ -108,4 +108,81 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
       assertExists(match, "Bootstrap hydration skipped master record data.");
     },
   );
+
+  await t.step(
+    "Scenario 4: mode replace clears old data from both quads and chunks tables",
+    async () => {
+      // Create a fresh client for this scenario to isolate state
+      const freshDb = createLibsqlClient({ url: ":memory:" });
+      const freshClient = new Client(
+        await provideLibsql({ client: freshDb, embeddingService }),
+      );
+
+      // First import some data
+      const quad1 = quad(
+        namedNode("urn:person:carol"),
+        namedNode("urn:bio"),
+        literal("Carol is a unique_z444_test_tag mountain explorer."),
+      );
+      const quad2 = quad(
+        namedNode("urn:person:dave"),
+        namedNode("urn:bio"),
+        literal("Dave is a unique_z888_test_tag sea navigator."),
+      );
+
+      await freshClient.import({
+        source: { kind: "quads", quads: [quad1, quad2] },
+      });
+
+      // Verify both are searchable via their unique tags.
+      // Hybrid search can return extra semantic neighbors, so assert by subject.
+      const before1 = await freshClient.search({
+        query: "unique_z444_test_tag",
+      });
+      assertExists(before1.results);
+      assertEquals(
+        before1.results.some((result) => result.subject === "urn:person:carol"),
+        true,
+        "Initial carol import missing",
+      );
+
+      const before2 = await freshClient.search({
+        query: "unique_z888_test_tag",
+      });
+      assertExists(before2.results);
+      assertEquals(
+        before2.results.some((result) => result.subject === "urn:person:dave"),
+        true,
+        "Initial dave import missing",
+      );
+
+      // Replace with only quad1, removing quad2
+      await freshClient.import({
+        source: { kind: "quads", quads: [quad1] },
+        mode: "replace",
+      });
+
+      // carol should still be findable via her unique tag
+      const after1 = await freshClient.search({
+        query: "unique_z444_test_tag",
+      });
+      assertExists(after1.results);
+      assertEquals(
+        after1.results.some((result) => result.subject === "urn:person:carol"),
+        true,
+        "Replace failed to preserve carol",
+      );
+
+      // dave should be gone from search via his unique tag
+      const after2 = await freshClient.search({
+        query: "unique_z888_test_tag",
+      });
+      assertExists(after2.results);
+      assertEquals(
+        after2.results.some((result) => result.subject === "urn:person:dave"),
+        false,
+        "Replace failed to clear dave from search index",
+      );
+    },
+  );
 });

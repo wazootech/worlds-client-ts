@@ -19,6 +19,8 @@ export class RdfjsQuadStore implements QuadStoreInterface {
   public async import(request: ImportRequest): Promise<ImportResponse> {
     const mode = request.mode ?? "merge";
     if (mode === "replace") {
+      // Fire-and-forget: trigger removal of all quads so proxy captures them.
+      // The actual flush happens after import in the wrapper via commitChanges.
       this.store.removeMatches(null, null, null, null);
     }
 

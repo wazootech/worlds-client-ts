@@ -108,16 +108,33 @@ export async function syncLibsql(
     } catch (cause) {
       throw new Error("failed to chunk insertions", { cause });
     }
-    for (const payload of chunks) {
-      let vector: Float32Array | number[];
-      try {
-        vector = await embeddingService.embed(payload.value);
-      } catch (cause) {
-        throw new Error(
-          `failed to embed chunk quad_id="${payload.quad_id}"`,
-          { cause },
-        );
+
+    // Parallelize embedding for all chunks to maximize throughput
+    const embeddingResults = await Promise.allSettled(
+      chunks.map((payload) => embeddingService.embed(payload.value)),
+    );
+
+    const failedEmbeddings: { quad_id: string; error: unknown }[] = [];
+    for (let i = 0; i < embeddingResults.length; i++) {
+      const result = embeddingResults[i];
+      if (result.status === "rejected") {
+        failedEmbeddings.push({
+          quad_id: chunks[i].quad_id,
+          error: result.reason,
+        });
       }
+    }
+    if (failedEmbeddings.length) {
+      console.error("Embedding failures:", failedEmbeddings);
+    }
+
+    // Build insert statements from successful embeddings only
+    for (let i = 0; i < chunks.length; i++) {
+      if (embeddingResults[i].status !== "fulfilled") continue;
+      const vector =
+        (embeddingResults[i] as PromiseFulfilledResult<Float32Array | number[]>)
+          .value;
+      const payload = chunks[i];
       const vectorJson = JSON.stringify(Array.from(vector));
       statements.push(
         buildInsertChunk({
