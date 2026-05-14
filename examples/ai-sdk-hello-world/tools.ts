@@ -8,6 +8,10 @@ import {
 } from "./tools/mod.ts";
 import type { ExecuteSparqlOptions } from "./tools/sparql.ts";
 
+// Prior art:
+// - https://github.com/comunica/comunica-feature-mcp/blob/e2f1e500/packages/utils-mcp/lib/SparqlMcpServer.ts#L145-L221
+//
+
 /**
  * AiSdkToolsOptions defines the configuration options for the AI SDK tools.
  */

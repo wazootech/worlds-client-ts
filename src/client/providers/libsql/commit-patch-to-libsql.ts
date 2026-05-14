@@ -60,11 +60,15 @@ export async function commitPatchToLibsql(
   const targetedInsertions = patch.insertions?.filter(matcher) ?? [];
 
   // 1. Stage Sweeping Deletion Operations
+  const deletionQuadIds = new Set<string>();
   if (targetedDeletions.length) {
-    const deletionQuadIds = await computeQuadIds(targetedDeletions);
-    if (deletionQuadIds.length > 0) {
+    const computedDeletionQuadIds = await computeQuadIds(targetedDeletions);
+    for (const quadId of computedDeletionQuadIds) {
+      deletionQuadIds.add(quadId);
+    }
+    if (computedDeletionQuadIds.length > 0) {
       statements.push(
-        ...buildDeletionStatements(deletionQuadIds, libsqlQueryBuilder),
+        ...buildDeletionStatements(computedDeletionQuadIds, libsqlQueryBuilder),
       );
     }
   }
@@ -84,7 +88,7 @@ export async function commitPatchToLibsql(
     const novelQuadIds: string[] = [];
     for (let i = 0; i < targetedInsertions.length; i++) {
       const id = proposedQuadIds[i];
-      if (!existingIds.has(id)) {
+      if (!existingIds.has(id) || deletionQuadIds.has(id)) {
         novelInsertions.push(targetedInsertions[i]);
         novelQuadIds.push(id);
       }

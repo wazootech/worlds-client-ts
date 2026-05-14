@@ -1,6 +1,6 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { createClient as createLibsqlClient } from "@libsql/client";
-import { DataFactory } from "n3";
+import { DataFactory, Store } from "n3";
 import { Client } from "#/client/client.ts";
 import { provideLibsql } from "./provide-libsql.ts";
 import { FakeEmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
@@ -106,6 +106,211 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
 
       const match = res.results.find((r) => r.subject === "urn:person:alice");
       assertExists(match, "Bootstrap hydration skipped master record data.");
+    },
+  );
+
+  await t.step(
+    "Scenario 4: replace mode removes stale quads and search rows",
+    async () => {
+      const firstQuad = quad(
+        namedNode("urn:person:carol"),
+        namedNode("urn:bio"),
+        literal("Carol is a unique_z444_test_tag mountain explorer."),
+      );
+      const secondQuad = quad(
+        namedNode("urn:person:dave"),
+        namedNode("urn:bio"),
+        literal("Dave is a unique_z888_test_tag sea navigator."),
+      );
+
+      await client.import({
+        source: { kind: "quads", quads: [firstQuad, secondQuad] },
+      });
+
+      const beforeCarol = await client.search({
+        query: "unique_z444_test_tag",
+      });
+      const beforeDave = await client.search({
+        query: "unique_z888_test_tag",
+      });
+
+      assertEquals(
+        beforeCarol.results?.some((result) =>
+          result.subject === "urn:person:carol"
+        ),
+        true,
+      );
+      assertEquals(
+        beforeDave.results?.some((result) =>
+          result.subject === "urn:person:dave"
+        ),
+        true,
+      );
+
+      await client.import({
+        mode: "replace",
+        source: { kind: "quads", quads: [firstQuad] },
+      });
+
+      const afterCarol = await client.search({
+        query: "unique_z444_test_tag",
+      });
+      const afterDave = await client.search({
+        query: "unique_z888_test_tag",
+      });
+
+      assertEquals(
+        afterCarol.results?.some((result) =>
+          result.subject === "urn:person:carol"
+        ),
+        true,
+      );
+      assertEquals(
+        afterDave.results?.some((result) =>
+          result.subject === "urn:person:dave"
+        ),
+        false,
+      );
+
+      const quadsTable = await db.execute(
+        "SELECT COUNT(*) AS count FROM quads",
+      );
+      const chunksTable = await db.execute(
+        "SELECT COUNT(*) AS count FROM chunks",
+      );
+      assertEquals(Number(quadsTable.rows[0]?.count), 1);
+      assertEquals(Number(chunksTable.rows[0]?.count), 1);
+    },
+  );
+
+  await t.step(
+    "Scenario 5: dataset replace removes stale rows and keeps survivor",
+    async () => {
+      const db = createLibsqlClient({ url: ":memory:" });
+      const embeddingService = new FakeEmbeddingService();
+      const client = new Client(
+        await provideLibsql({ client: db, embeddingService }),
+      );
+
+      const staleQuad = quad(
+        namedNode("urn:person:erin"),
+        namedNode("urn:bio"),
+        literal("Erin has unique_z111_dataset stale notes."),
+      );
+      const survivingQuad = quad(
+        namedNode("urn:person:frank"),
+        namedNode("urn:bio"),
+        literal("Frank keeps unique_z222_dataset surviving notes."),
+      );
+      const dataset = new Store();
+      dataset.add(survivingQuad);
+
+      await client.import({
+        source: { kind: "quads", quads: [staleQuad, survivingQuad] },
+      });
+      await client.import({
+        mode: "replace",
+        source: { kind: "dataset", dataset },
+      });
+
+      const staleSearch = await client.search({
+        query: "unique_z111_dataset",
+      });
+      const survivingSearch = await client.search({
+        query: "unique_z222_dataset",
+      });
+
+      assertExists(survivingSearch.results);
+      assertEquals(
+        Boolean(
+          staleSearch.results?.some((result) =>
+            result.subject === "urn:person:erin"
+          ),
+        ),
+        false,
+      );
+      assertEquals(
+        Boolean(
+          survivingSearch.results?.some((result) =>
+            result.subject === "urn:person:frank"
+          ),
+        ),
+        true,
+      );
+
+      const quadsTable = await db.execute(
+        "SELECT COUNT(*) AS count FROM quads",
+      );
+      const chunksTable = await db.execute(
+        "SELECT COUNT(*) AS count FROM chunks",
+      );
+      assertEquals(Number(quadsTable.rows[0]?.count), 1);
+      assertEquals(Number(chunksTable.rows[0]?.count), 1);
+    },
+  );
+
+  await t.step(
+    "Scenario 6: serialized replace removes stale rows and keeps survivor",
+    async () => {
+      const db = createLibsqlClient({ url: ":memory:" });
+      const embeddingService = new FakeEmbeddingService();
+      const client = new Client(
+        await provideLibsql({ client: db, embeddingService }),
+      );
+
+      const staleQuad = quad(
+        namedNode("urn:person:gina"),
+        namedNode("urn:bio"),
+        literal("Gina has unique_z333_serialized stale notes."),
+      );
+      const survivingQuad = quad(
+        namedNode("urn:person:henry"),
+        namedNode("urn:bio"),
+        literal("Henry keeps unique_z444_serialized surviving notes."),
+      );
+      const serialized = `<urn:person:henry> <urn:bio> "Henry keeps unique_z444_serialized surviving notes." .`;
+
+      await client.import({
+        source: { kind: "quads", quads: [staleQuad, survivingQuad] },
+      });
+      await client.import({
+        mode: "replace",
+        source: { kind: "serialized", data: serialized },
+      });
+
+      const staleSearch = await client.search({
+        query: "unique_z333_serialized",
+      });
+      const survivingSearch = await client.search({
+        query: "unique_z444_serialized",
+      });
+
+      assertExists(survivingSearch.results);
+      assertEquals(
+        Boolean(
+          staleSearch.results?.some((result) =>
+            result.subject === "urn:person:gina"
+          ),
+        ),
+        false,
+      );
+      assertEquals(
+        Boolean(
+          survivingSearch.results?.some((result) =>
+            result.subject === "urn:person:henry"
+          ),
+        ),
+        true,
+      );
+
+      const quadsTable = await db.execute(
+        "SELECT COUNT(*) AS count FROM quads",
+      );
+      const chunksTable = await db.execute(
+        "SELECT COUNT(*) AS count FROM chunks",
+      );
+      assertEquals(Number(quadsTable.rows[0]?.count), 1);
+      assertEquals(Number(chunksTable.rows[0]?.count), 1);
     },
   );
 });
