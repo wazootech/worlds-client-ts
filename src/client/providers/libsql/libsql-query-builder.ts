@@ -24,6 +24,13 @@ export interface LibsqlQueryBuilder {
   readonly vectorDimensions: number;
 
   /**
+   * buildHexastoreIndexes returns DDL for 7 covering composite indexes on the quads table
+   * (6 SPOG permutations + 1 GPSO for graph-scoped access) enabling any triple or quad pattern
+   * to be resolved via a single index seek.
+   */
+  buildHexastoreIndexes(): string[];
+
+  /**
    * buildLibsqlQuadsTable defines the DDL for the master source-of-truth Quad Storage.
    * It facilitates high-fidelity hydration of in-memory graph storage via serialized nquad strings.
    */
@@ -147,6 +154,18 @@ export function createLibsqlQueryBuilder(
 
   return {
     vectorDimensions,
+
+    buildHexastoreIndexes(): string[] {
+      return [
+        "CREATE INDEX IF NOT EXISTS idx_quads_spog ON quads(s, p, o, g)",
+        "CREATE INDEX IF NOT EXISTS idx_quads_sopg ON quads(s, o, p, g)",
+        "CREATE INDEX IF NOT EXISTS idx_quads_pso ON quads(p, s, o)",
+        "CREATE INDEX IF NOT EXISTS idx_quads_pos ON quads(p, o, s)",
+        "CREATE INDEX IF NOT EXISTS idx_quads_ospg ON quads(o, s, p, g)",
+        "CREATE INDEX IF NOT EXISTS idx_quads_opsg ON quads(o, p, s, g)",
+        "CREATE INDEX IF NOT EXISTS idx_quads_gpso ON quads(g, p, s, o)",
+      ];
+    },
 
     buildLibsqlQuadsTable(): string {
       return `CREATE TABLE IF NOT EXISTS quads (
