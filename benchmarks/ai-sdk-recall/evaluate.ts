@@ -5,11 +5,17 @@ import { Client } from "@worlds/client";
 import { provideLibsql } from "@worlds/client/providers/libsql";
 import { UniversalSentenceEncoderEmbeddingService } from "@worlds/client/providers/tfjs-universal-sentence-encoder";
 import { createTools } from "../../examples/ai-sdk-hello-world/tools.ts";
+import {
+  assessAnswer,
+  type BenchmarkQuestion,
+} from "./score.ts";
 
-interface BenchmarkQuestion {
+interface RawBenchmarkQuestion {
   id: string;
   question: string;
-  answers: string[];
+  answer?: string;
+  answers?: string[];
+  aliases?: string[];
 }
 
 interface BenchmarkRow {
@@ -18,32 +24,36 @@ interface BenchmarkRow {
   run: number;
   answer: string;
   correct: boolean;
+  matchKind: "exact" | "alias" | "wrong";
   toolCalls: number;
 }
 
 interface BenchmarkSummary {
   withoutToolsAccuracy: number;
   withToolsAccuracy: number;
+  exactMatches: number;
+  aliasMatches: number;
+  wrongMatches: number;
   delta: number;
   rows: BenchmarkRow[];
 }
 
-function normalizeText(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-}
-
-function isCorrectAnswer(answer: string, expectedAnswers: string[]): boolean {
-  const normalizedAnswer = normalizeText(answer);
-  return expectedAnswers.some((expectedAnswer) => {
-    const normalizedExpected = normalizeText(expectedAnswer);
-    return normalizedExpected.length > 0 &&
-      normalizedAnswer.includes(normalizedExpected);
-  });
-}
-
 async function loadQuestions(path: string): Promise<BenchmarkQuestion[]> {
   const fileContents = await Deno.readTextFile(path);
-  return JSON.parse(fileContents) as BenchmarkQuestion[];
+  const rawQuestions = JSON.parse(fileContents) as RawBenchmarkQuestion[];
+  return rawQuestions.map((question) => {
+    const answer = question.answer ?? question.answers?.[0];
+    if (!answer) {
+      throw new Error(`Question ${question.id} is missing an answer.`);
+    }
+
+    return {
+      id: question.id,
+      question: question.question,
+      answer,
+      aliases: question.aliases ?? question.answers?.slice(1),
+    };
+  });
 }
 
 async function buildClient(corpusPath: string): Promise<Client> {
@@ -143,13 +153,16 @@ function parseArgs(args: string[]): {
 function printSummary(summary: BenchmarkSummary): void {
   console.log(`Without tools accuracy: ${(summary.withoutToolsAccuracy * 100).toFixed(1)}%`);
   console.log(`With tools accuracy: ${(summary.withToolsAccuracy * 100).toFixed(1)}%`);
+  console.log(`Exact matches: ${summary.exactMatches}`);
+  console.log(`Alias matches: ${summary.aliasMatches}`);
+  console.log(`Wrong matches: ${summary.wrongMatches}`);
   console.log(`Delta: ${(summary.delta * 100).toFixed(1)}%`);
   console.log("");
-  console.log("questionId | condition | run | correct | toolCalls | answer");
-  console.log("---|---|---:|---|---:|---");
+  console.log("questionId | condition | run | correct | matchKind | toolCalls | answer");
+  console.log("---|---|---:|---|---|---:|---");
   for (const row of summary.rows) {
     console.log(
-      `${row.questionId} | ${row.condition} | ${row.run} | ${row.correct ? "yes" : "no"} | ${row.toolCalls} | ${row.answer.replace(/\|/g, "\\|")}`,
+      `${row.questionId} | ${row.condition} | ${row.run} | ${row.correct ? "yes" : "no"} | ${row.matchKind} | ${row.toolCalls} | ${row.answer.replace(/\|/g, "\\|")}`,
     );
   }
 }
@@ -172,22 +185,34 @@ async function run(): Promise<BenchmarkSummary> {
   for (let runIndex = 1; runIndex <= runs; runIndex++) {
     for (const question of questions) {
       const withoutToolsAnswer = await answerWithoutTools(model, question);
+      const withoutToolsAssessment = assessAnswer(
+        withoutToolsAnswer,
+        question.answer,
+        question.aliases,
+      );
       rows.push({
         questionId: question.id,
         condition: "without-tools",
         run: runIndex,
         answer: withoutToolsAnswer,
-        correct: isCorrectAnswer(withoutToolsAnswer, question.answers),
+        correct: withoutToolsAssessment.correct,
+        matchKind: withoutToolsAssessment.matchKind,
         toolCalls: 0,
       });
 
       const withToolsResult = await answerWithTools(model, client, question);
+      const withToolsAssessment = assessAnswer(
+        withToolsResult.answer,
+        question.answer,
+        question.aliases,
+      );
       rows.push({
         questionId: question.id,
         condition: "with-tools",
         run: runIndex,
         answer: withToolsResult.answer,
-        correct: isCorrectAnswer(withToolsResult.answer, question.answers),
+        correct: withToolsAssessment.correct,
+        matchKind: withToolsAssessment.matchKind,
         toolCalls: withToolsResult.toolCalls,
       });
     }
@@ -195,6 +220,9 @@ async function run(): Promise<BenchmarkSummary> {
 
   const withoutToolsRows = rows.filter((row) => row.condition === "without-tools");
   const withToolsRows = rows.filter((row) => row.condition === "with-tools");
+  const exactMatches = rows.filter((row) => row.matchKind === "exact").length;
+  const aliasMatches = rows.filter((row) => row.matchKind === "alias").length;
+  const wrongMatches = rows.filter((row) => row.matchKind === "wrong").length;
   const withoutToolsAccuracy = withoutToolsRows.filter((row) => row.correct).length /
     Math.max(withoutToolsRows.length, 1);
   const withToolsAccuracy = withToolsRows.filter((row) => row.correct).length /
@@ -203,6 +231,9 @@ async function run(): Promise<BenchmarkSummary> {
   const summary = {
     withoutToolsAccuracy,
     withToolsAccuracy,
+    exactMatches,
+    aliasMatches,
+    wrongMatches,
     delta: withToolsAccuracy - withoutToolsAccuracy,
     rows,
   };

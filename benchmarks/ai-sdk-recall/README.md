@@ -23,6 +23,7 @@ The runner:
 - creates AI SDK tools with `createTools` from the hello-world example
 - asks the Gemini model to answer the same questions with and without tools
 - repeats each question multiple times so you can compare average accuracy, not just one-off luck
+- scores answers with phrase-boundary matching so exact answers and aliases are counted separately from wrong answers
 
 ## Scorer
 
