@@ -1,10 +1,6 @@
 <p align="center">
   <a href="https://docs.wazoo.dev">
-    <picture>
-      <source srcset="https://raw.githubusercontent.com/wazootech/worlds/main/packages/docs/logo/dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="https://raw.githubusercontent.com/wazootech/worlds/main/packages/docs/logo/light.svg" media="(prefers-color-scheme: light)">
-      <img src="https://raw.githubusercontent.com/wazootech/worlds/main/packages/docs/logo/dark.svg" alt="Worlds Platform" width="400" />
-    </picture>
+    <img src="https://wazoo.dev/assets/wazoo.svg" alt="Wazoo Worlds" width="400" />
   </a>
 </p>
 
@@ -19,8 +15,8 @@
   <a href="https://deepwiki.com/wazootech/worlds-client-ts"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki" /></a>
 </p>
 
-Worlds Client is the infrastructure layer for persistent, edge-native knowledge.
-The engine implements a client-side semantic Graph Store backed by transactional
+Worlds is the infrastructure layer for persistent, edge-native knowledge.
+The engine implements a edge-native semantic knowledge graph backed by transactional
 persistence, complete with hybrid vector search and a standard SPARQL query
 engine.
 
