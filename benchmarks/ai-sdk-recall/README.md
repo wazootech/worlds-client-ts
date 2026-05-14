@@ -45,14 +45,14 @@ short.
 ## Run it
 
 ```bash
-ollama pull qwen2.5:1.5b-instruct
-deno run -A benchmarks/ai-sdk-recall/evaluate.ts --model qwen2.5:1.5b-instruct
+ollama pull qwen2.5:3b-instruct
+deno run -A benchmarks/ai-sdk-recall/evaluate.ts --model qwen2.5:3b-instruct
 ```
 
 Optional flags:
 
 - `--base-url http://localhost:11434/v1`
-- `--model qwen2.5:1.5b-instruct`
+- `--model qwen2.5:3b-instruct`
 - `--runs 3`
 - `--output ./results.json`
 

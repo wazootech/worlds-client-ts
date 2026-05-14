@@ -97,6 +97,7 @@ async function answerWithTools(
   client: Client,
   question: BenchmarkQuestion,
   forceTools: boolean,
+  debug: boolean,
 ): Promise<{ answer: string; toolCalls: number; toolTrace: string[] }> {
   const tools = createTools(client, {
     sparql: { allowUpdates: false },
@@ -106,9 +107,16 @@ async function answerWithTools(
     model,
     tools,
     toolChoice: forceTools ? "required" : "auto",
-    maxSteps: 5,
+    maxSteps: 8,
     prompt:
       `Use the Worlds tools to answer the question. First search for the relevant facts, then use SPARQL to verify the final answer. Respond with only the final answer.\n\nQuestion: ${question.question}`,
+    onStepFinish: debug
+      ? (event) => {
+        if (event.toolCalls.length > 0) {
+          console.log(JSON.stringify(event.toolCalls, null, 2));
+        }
+      }
+      : undefined,
   });
 
   const toolCalls = result.steps.flatMap((step) => step.toolCalls).length;
@@ -132,7 +140,7 @@ export function parseArgs(args: string[]): {
   let baseUrl = Deno.env.get("OLLAMA_BASE_URL") ?? "http://localhost:11434/v1";
   let debug = false;
   let forceTools = false;
-  let modelId = "qwen2.5:1.5b-instruct";
+  let modelId = "qwen2.5:3b-instruct";
   let outputPath: string | undefined;
   let questionsPath = "benchmarks/ai-sdk-recall/questions.json";
   let runs = 3;
@@ -257,6 +265,7 @@ async function run(): Promise<BenchmarkSummary> {
         client,
         question,
         forceTools,
+        debug,
       );
       const withToolsAssessment = assessAnswer(
         withToolsResult.answer,
