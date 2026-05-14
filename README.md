@@ -39,6 +39,17 @@ database file.
 deno task example:libsql-hello-world
 ```
 
+### AI SDK integration (Gemini + tools)
+
+Demonstrates wrapping the Worlds client as Vercel AI SDK tools, enabling
+autonomous LLM reasoning over your knowledge graph. The tool wrapper code lives
+alongside the example and can be adapted for your own projects.
+
+```bash
+# Setup your Gemini key in a local .env file (GEMINI_API_KEY=...)
+deno task example:ai-sdk-hello-world
+```
+
 ## Development workflow
 
 All CI checks must pass before merging updates.
