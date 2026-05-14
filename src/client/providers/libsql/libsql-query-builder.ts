@@ -3,6 +3,63 @@ import type { QuadFilter } from "#/client/quad-store/quad-filter.ts";
 
 /** Maximum embedding dimensions accepted by LibsqlQueryBuilder (LibSQL / resource guardrail). */
 const LIBSQL_QUERY_BUILDER_MAX_VECTOR_DIMENSIONS = 8192;
+const LIBSQL_FTS_STOPWORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "are",
+  "as",
+  "at",
+  "be",
+  "been",
+  "being",
+  "but",
+  "by",
+  "did",
+  "do",
+  "does",
+  "for",
+  "from",
+  "had",
+  "has",
+  "have",
+  "how",
+  "i",
+  "if",
+  "in",
+  "into",
+  "is",
+  "it",
+  "its",
+  "me",
+  "my",
+  "not",
+  "of",
+  "on",
+  "or",
+  "our",
+  "please",
+  "that",
+  "the",
+  "their",
+  "these",
+  "those",
+  "this",
+  "to",
+  "us",
+  "was",
+  "we",
+  "were",
+  "what",
+  "when",
+  "where",
+  "which",
+  "who",
+  "why",
+  "with",
+  "you",
+  "your",
+]);
 
 /**
  * LibsqlQueryBuilder exposes DDL/DML helpers bound to a single vector dimension for schema and hybrid search consistency.
@@ -449,12 +506,23 @@ export const defaultLibsqlQueryBuilder = new LibsqlQueryBuilder(32);
 
 /**
  * sanitizeFtsQuery defends SQLite against internal parsing crash vectors
- * by splitting inputs into safe alphanumeric tokens wrapped in explicit quotes.
+ * by splitting inputs into safe alphanumeric tokens, stripping filler words,
+ * and wrapping the remaining content words in explicit quotes.
  */
 function sanitizeFtsQuery(query: string): string {
-  return query
+  const tokens = query
     .split(/\s+/)
-    .filter((token) => token.length > 0)
+    .map((token) =>
+      token
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "")
+    )
+    .filter((token) => token.length > 0);
+
+  const filteredTokens = tokens.filter((token) => !LIBSQL_FTS_STOPWORDS.has(token));
+  const normalizedTokens = filteredTokens.length > 0 ? filteredTokens : tokens;
+
+  return normalizedTokens
     .map((token) => `"${token.replace(/"/g, "")}"`)
     .join(" ");
 }
