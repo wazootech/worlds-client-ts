@@ -2,10 +2,19 @@ import type { CoreTool } from "ai";
 import { jsonSchema, tool } from "ai";
 import type { ClientInterface, ExportRequest } from "@worlds/client";
 
+/**
+ * SerializedExportRequest is a discriminated ExportRequest type that only allows "serialized" formats.
+ */
 export type SerializedExportRequest = Omit<ExportRequest, "format"> & {
   format: Extract<ExportRequest["format"], { kind: "serialized" }>;
 };
 
+/**
+ * createExportRdfTool creates an AI SDK tool for exporting data from the knowledge base.
+ *
+ * @param client The Worlds ClientInterface instance.
+ * @returns An AI SDK tool for exporting data from the knowledge base.
+ */
 export function createExportRdfTool(client: ClientInterface): CoreTool {
   return tool({
     description:

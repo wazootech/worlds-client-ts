@@ -2,10 +2,24 @@ import type { CoreTool } from "ai";
 import { jsonSchema, tool } from "ai";
 import type { ClientInterface, SparqlRequest } from "@worlds/client";
 
+/**
+ * ExecuteSparqlOptions defines the configuration options for the executeSparql tool.
+ */
 export interface ExecuteSparqlOptions {
+  /**
+   * allowUpdates controls whether the tool permits SPARQL UPDATE operations (e.g., INSERT, DELETE).
+   * @default true
+   */
   allowUpdates?: boolean;
 }
 
+/**
+ * createExecuteSparqlTool creates an AI SDK tool for executing SPARQL queries against the knowledge base.
+ *
+ * @param client The Worlds ClientInterface instance.
+ * @param options Configuration options for the tool.
+ * @returns An AI SDK tool for executing SPARQL queries against the knowledge base.
+ */
 export function createExecuteSparqlTool(
   client: ClientInterface,
   options?: ExecuteSparqlOptions,

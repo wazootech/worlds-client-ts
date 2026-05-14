@@ -6,6 +6,12 @@ import type {
   SearchResponse,
 } from "@worlds/client";
 
+/**
+ * createSearchWorldTool creates an AI SDK tool for searching the knowledge base.
+ *
+ * @param client The Worlds ClientInterface instance.
+ * @returns An AI SDK tool for searching the knowledge base.
+ */
 export function createSearchWorldTool(client: ClientInterface): CoreTool {
   return tool({
     description:

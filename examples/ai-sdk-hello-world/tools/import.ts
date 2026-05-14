@@ -2,10 +2,19 @@ import type { CoreTool } from "ai";
 import { jsonSchema, tool } from "ai";
 import type { ClientInterface, ImportRequest } from "@worlds/client";
 
+/**
+ * SerializedImportRequest is a discriminated ImportRequest type that only allows "serialized" sources.
+ */
 export type SerializedImportRequest = Omit<ImportRequest, "source"> & {
   source: Extract<ImportRequest["source"], { kind: "serialized" }>;
 };
 
+/**
+ * createImportRdfTool creates an AI SDK tool for importing data into the knowledge base.
+ *
+ * @param client The Worlds ClientInterface instance.
+ * @returns An AI SDK tool for importing data into the knowledge base.
+ */
 export function createImportRdfTool(client: ClientInterface): CoreTool {
   return tool({
     description:
