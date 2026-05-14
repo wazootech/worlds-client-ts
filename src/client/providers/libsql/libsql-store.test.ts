@@ -3,12 +3,12 @@ import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
 import type * as rdfjs from "@rdfjs/types";
 import { Readable } from "node:stream";
-import { createLibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import { LibsqlStore } from "./libsql-store.ts";
 
-const { namedNode, literal, blankNode, defaultGraph, quad } = DataFactory;
+const { namedNode, literal, blankNode, quad } = DataFactory;
 
-const testBuilder = createLibsqlQueryBuilder({ vectorDimensions: 32 });
+const testBuilder = new LibsqlQueryBuilder(32);
 
 async function setupSchema(db: ReturnType<typeof createClient>): Promise<void> {
   await db.execute(testBuilder.buildLibsqlQuadsTable());
@@ -53,7 +53,9 @@ async function seedQuad(
   });
 }
 
-function collectStream(stream: rdfjs.Stream<rdfjs.Quad>): Promise<rdfjs.Quad[]> {
+function collectStream(
+  stream: rdfjs.Stream<rdfjs.Quad>,
+): Promise<rdfjs.Quad[]> {
   return new Promise((resolve, reject) => {
     const quads: rdfjs.Quad[] = [];
     stream.on("data", (q: rdfjs.Quad) => quads.push(q));
@@ -80,10 +82,13 @@ Deno.test("LibsqlStore.match - all four terms bound returns exact quad", async (
   await setupSchema(db);
   await seedQuad(db, {
     id: "hash1",
-    s: "urn:alice", s_type: "NamedNode",
+    s: "urn:alice",
+    s_type: "NamedNode",
     p: "urn:knows",
-    o: "urn:bob", o_type: "NamedNode",
-    g: "urn:graph1", g_type: "NamedNode",
+    o: "urn:bob",
+    o_type: "NamedNode",
+    g: "urn:graph1",
+    g_type: "NamedNode",
   });
   const store = new LibsqlStore(db, testBuilder);
 
@@ -142,12 +147,20 @@ Deno.test("LibsqlStore.match - by graph only uses GPSO index", async () => {
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
   await seedQuad(db, {
-    id: "h1", s: "urn:a", p: "urn:p", o: "o1",
-    g: "urn:g1", g_type: "NamedNode",
+    id: "h1",
+    s: "urn:a",
+    p: "urn:p",
+    o: "o1",
+    g: "urn:g1",
+    g_type: "NamedNode",
   });
   await seedQuad(db, {
-    id: "h2", s: "urn:b", p: "urn:p", o: "o2",
-    g: "urn:g2", g_type: "NamedNode",
+    id: "h2",
+    s: "urn:b",
+    p: "urn:p",
+    o: "o2",
+    g: "urn:g2",
+    g_type: "NamedNode",
   });
   const store = new LibsqlStore(db, testBuilder);
 
@@ -162,8 +175,20 @@ Deno.test("LibsqlStore.match - by graph only uses GPSO index", async () => {
 Deno.test("LibsqlStore.match - by object only uses OPSG index", async () => {
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
-  await seedQuad(db, { id: "h1", s: "urn:a", p: "urn:p", o: "target", o_type: "Literal" });
-  await seedQuad(db, { id: "h2", s: "urn:b", p: "urn:p", o: "other", o_type: "Literal" });
+  await seedQuad(db, {
+    id: "h1",
+    s: "urn:a",
+    p: "urn:p",
+    o: "target",
+    o_type: "Literal",
+  });
+  await seedQuad(db, {
+    id: "h2",
+    s: "urn:b",
+    p: "urn:p",
+    o: "other",
+    o_type: "Literal",
+  });
   const store = new LibsqlStore(db, testBuilder);
 
   const results = await collectStream(
@@ -178,10 +203,18 @@ Deno.test("LibsqlStore.match - disambiguates NamedNode vs BlankNode with same va
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
   await seedQuad(db, {
-    id: "h1", s: "b1", s_type: "NamedNode", p: "urn:p", o: "o1",
+    id: "h1",
+    s: "b1",
+    s_type: "NamedNode",
+    p: "urn:p",
+    o: "o1",
   });
   await seedQuad(db, {
-    id: "h2", s: "b1", s_type: "BlankNode", p: "urn:p", o: "o2",
+    id: "h2",
+    s: "b1",
+    s_type: "BlankNode",
+    p: "urn:p",
+    o: "o2",
   });
   const store = new LibsqlStore(db, testBuilder);
 
@@ -202,8 +235,12 @@ Deno.test("LibsqlStore.match - literal with language tag", async () => {
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
   await seedQuad(db, {
-    id: "h1", s: "urn:s", p: "urn:p",
-    o: "hola", o_type: "Literal", o_lang: "es",
+    id: "h1",
+    s: "urn:s",
+    p: "urn:p",
+    o: "hola",
+    o_type: "Literal",
+    o_lang: "es",
   });
   const store = new LibsqlStore(db, testBuilder);
 
@@ -223,8 +260,11 @@ Deno.test("LibsqlStore.match - literal with datatype", async () => {
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
   await seedQuad(db, {
-    id: "h1", s: "urn:s", p: "urn:p",
-    o: "42", o_type: "Literal",
+    id: "h1",
+    s: "urn:s",
+    p: "urn:p",
+    o: "42",
+    o_type: "Literal",
     o_datatype: "http://www.w3.org/2001/XMLSchema#integer",
   });
   const store = new LibsqlStore(db, testBuilder);
@@ -243,8 +283,12 @@ Deno.test("LibsqlStore.match - DefaultGraph round-trip", async () => {
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
   await seedQuad(db, {
-    id: "h1", s: "urn:s", p: "urn:p", o: "o1",
-    g: "", g_type: "DefaultGraph",
+    id: "h1",
+    s: "urn:s",
+    p: "urn:p",
+    o: "o1",
+    g: "",
+    g_type: "DefaultGraph",
   });
   const store = new LibsqlStore(db, testBuilder);
 
@@ -260,12 +304,20 @@ Deno.test("LibsqlStore.match - multiple named graphs are isolated", async () => 
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
   await seedQuad(db, {
-    id: "h1", s: "urn:s", p: "urn:p", o: "o1",
-    g: "urn:g1", g_type: "NamedNode",
+    id: "h1",
+    s: "urn:s",
+    p: "urn:p",
+    o: "o1",
+    g: "urn:g1",
+    g_type: "NamedNode",
   });
   await seedQuad(db, {
-    id: "h2", s: "urn:s", p: "urn:p", o: "o2",
-    g: "urn:g2", g_type: "NamedNode",
+    id: "h2",
+    s: "urn:s",
+    p: "urn:p",
+    o: "o2",
+    g: "urn:g2",
+    g_type: "NamedNode",
   });
   const store = new LibsqlStore(db, testBuilder);
 
@@ -283,7 +335,9 @@ Deno.test("LibsqlStore.match - multiple named graphs are isolated", async () => 
 function createFlushHandler(
   db: ReturnType<typeof createClient>,
   builder: typeof testBuilder,
-): (patch: { insertions: rdfjs.Quad[]; deletions: rdfjs.Quad[] }) => Promise<void> {
+): (
+  patch: { insertions: rdfjs.Quad[]; deletions: rdfjs.Quad[] },
+) => Promise<void> {
   return async (patch) => {
     const statements: Array<{ sql: string; args: (string | null)[] }> = [];
 
@@ -316,6 +370,7 @@ function createFlushHandler(
     }
 
     if (statements.length > 0) {
+      // deno-lint-ignore no-explicit-any
       await db.batch(statements as any, "write");
     }
   };
@@ -368,11 +423,17 @@ Deno.test("LibsqlStore.add - flush once, then add+flush again accumulates", asyn
 
   store.add(quad(namedNode("urn:s"), namedNode("urn:p"), literal("v1")));
   await store.flush();
-  assertEquals((await collectStream(store.match(null, null, null, null))).length, 1);
+  assertEquals(
+    (await collectStream(store.match(null, null, null, null))).length,
+    1,
+  );
 
   store.add(quad(namedNode("urn:s2"), namedNode("urn:p"), literal("v2")));
   await store.flush();
-  assertEquals((await collectStream(store.match(null, null, null, null))).length, 2);
+  assertEquals(
+    (await collectStream(store.match(null, null, null, null))).length,
+    2,
+  );
 });
 
 Deno.test("LibsqlStore.delete - buffered quad still visible before flush", async () => {
@@ -390,11 +451,17 @@ Deno.test("LibsqlStore.delete - buffered quad still visible before flush", async
 
   store.delete(q);
   // Still visible before flush
-  assertEquals((await collectStream(store.match(null, null, null, null))).length, 1);
+  assertEquals(
+    (await collectStream(store.match(null, null, null, null))).length,
+    1,
+  );
 
   // Gone after flush
   await store.flush();
-  assertEquals((await collectStream(store.match(null, null, null, null))).length, 0);
+  assertEquals(
+    (await collectStream(store.match(null, null, null, null))).length,
+    0,
+  );
 });
 
 Deno.test("LibsqlStore.delete - add then delete same quad before flush is net zero", async () => {
@@ -411,7 +478,10 @@ Deno.test("LibsqlStore.delete - add then delete same quad before flush is net ze
   store.delete(q);
   await store.flush();
 
-  assertEquals((await collectStream(store.match(null, null, null, null))).length, 0);
+  assertEquals(
+    (await collectStream(store.match(null, null, null, null))).length,
+    0,
+  );
 });
 
 Deno.test("LibsqlStore.removeMatches - buffers matching quads for deletion", async () => {
@@ -427,7 +497,10 @@ Deno.test("LibsqlStore.removeMatches - buffers matching quads for deletion", asy
   store.add(quad(namedNode("urn:s"), namedNode("urn:p"), literal("world")));
   store.add(quad(namedNode("urn:other"), namedNode("urn:p"), literal("stay")));
   await store.flush();
-  assertEquals((await collectStream(store.match(null, null, null, null))).length, 3);
+  assertEquals(
+    (await collectStream(store.match(null, null, null, null))).length,
+    3,
+  );
 
   // Remove matching quads for urn:s
   await new Promise<void>((resolve, reject) => {
@@ -437,7 +510,10 @@ Deno.test("LibsqlStore.removeMatches - buffers matching quads for deletion", asy
   });
 
   // Still visible before flush
-  assertEquals((await collectStream(store.match(null, null, null, null))).length, 3);
+  assertEquals(
+    (await collectStream(store.match(null, null, null, null))).length,
+    3,
+  );
 
   await store.flush();
 
@@ -462,7 +538,10 @@ Deno.test("LibsqlStore.clearBuffer - discards pending mutations on error", async
   store.clearBuffer();
   await store.flush(); // should be no-op
 
-  assertEquals((await collectStream(store.match(null, null, null, null))).length, 0);
+  assertEquals(
+    (await collectStream(store.match(null, null, null, null))).length,
+    0,
+  );
 });
 
 Deno.test("LibsqlStore.import - stream buffers all quads, flush persists them", async () => {
@@ -485,5 +564,8 @@ Deno.test("LibsqlStore.import - stream buffers all quads, flush persists them", 
   });
 
   await store.flush();
-  assertEquals((await collectStream(store.match(null, null, null, null))).length, 2);
+  assertEquals(
+    (await collectStream(store.match(null, null, null, null))).length,
+    2,
+  );
 });

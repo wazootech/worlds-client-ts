@@ -3,28 +3,10 @@ import type * as rdfjs from "@rdfjs/types";
 import { DataFactory } from "n3";
 import { Readable } from "node:stream";
 import { EventEmitter } from "node:events";
-import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import type { Patch } from "#/client/quad-store/patch.ts";
 
 const { namedNode, literal, blankNode, defaultGraph, quad } = DataFactory;
-
-/**
- * HexastoreIndexDef describes a covering index on the quads table and the SPOG columns it prefixes.
- */
-interface HexastoreIndexDef {
-  columns: Array<"s" | "p" | "o" | "g">;
-  name: string;
-}
-
-const HEXASTORE_INDEXES: HexastoreIndexDef[] = [
-  { columns: ["s", "p", "o", "g"], name: "idx_quads_spog" },
-  { columns: ["s", "o", "p", "g"], name: "idx_quads_sopg" },
-  { columns: ["p", "s", "o"], name: "idx_quads_pso" },
-  { columns: ["p", "o", "s"], name: "idx_quads_pos" },
-  { columns: ["o", "s", "p", "g"], name: "idx_quads_ospg" },
-  { columns: ["o", "p", "s", "g"], name: "idx_quads_opsg" },
-  { columns: ["g", "p", "s", "o"], name: "idx_quads_gpso" },
-];
 
 /**
  * FlushHandler is a callback that atomically persists a patch of buffered mutations.
@@ -235,33 +217,6 @@ export class LibsqlStore implements rdfjs.Store {
     object: rdfjs.Term | null;
     graph: rdfjs.Term | null;
   }): { sql: string; args: (string | null)[] } {
-    const boundFlags = {
-      s: pattern.subject != null,
-      p: pattern.predicate != null,
-      o: pattern.object != null,
-      g: pattern.graph != null,
-    };
-
-    let bestIndex = HEXASTORE_INDEXES[0]
-      ? HEXASTORE_INDEXES[0]
-      : { columns: ["s", "p", "o", "g"] as Array<"s" | "p" | "o" | "g">, name: "idx_quads_spog" };
-    let bestPrefix = -1;
-
-    for (const candidate of HEXASTORE_INDEXES) {
-      let prefixCount = 0;
-      for (const col of candidate.columns) {
-        if (boundFlags[col]) {
-          prefixCount++;
-        } else {
-          break;
-        }
-      }
-      if (prefixCount > bestPrefix) {
-        bestPrefix = prefixCount;
-        bestIndex = candidate;
-      }
-    }
-
     const conditions: string[] = [];
     const args: (string | null)[] = [];
 
@@ -326,7 +281,10 @@ export class LibsqlStore implements rdfjs.Store {
    * rowToQuad reconstructs an RDF/JS Quad from a LibSQL result row.
    */
   private rowToQuad(row: Row): rdfjs.Quad {
-    const subject = this.reconstructNonLiteral(String(row.s), String(row.s_type));
+    const subject = this.reconstructNonLiteral(
+      String(row.s),
+      String(row.s_type),
+    );
     const predicate = namedNode(String(row.p));
     const object = this.reconstructObject(row);
     const graph = this.reconstructGraph(row);

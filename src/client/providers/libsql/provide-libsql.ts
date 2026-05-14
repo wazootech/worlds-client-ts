@@ -16,10 +16,7 @@ import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import { hydrateStoreFromLibsql } from "./hydrate-store-from-libsql.ts";
 
-import {
-  createLibsqlQueryBuilder,
-  type LibsqlQueryBuilder,
-} from "./libsql-query-builder.ts";
+import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 
 const queryEngine = new QueryEngine();
 
@@ -81,7 +78,7 @@ export async function provideLibsql(
   options: LibsqlOptions,
 ): Promise<ClientOptions> {
   const vectorDimensions = options.vectorDimensions ?? 32;
-  const queryBuilder = createLibsqlQueryBuilder({ vectorDimensions });
+  const queryBuilder = new LibsqlQueryBuilder(vectorDimensions);
 
   // 1. Ensure foundational tables are resident before initializing higher systems.
   await initializeSchema(options.client, queryBuilder);

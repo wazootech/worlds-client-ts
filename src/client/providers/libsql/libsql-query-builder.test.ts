@@ -1,12 +1,8 @@
-import { assertEquals, assertRejects } from "@std/assert";
+import { assertEquals } from "@std/assert";
 import { createClient } from "@libsql/client";
-import {
-  createLibsqlQueryBuilder,
-} from "./libsql-query-builder.ts";
+import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 
-const testLibsqlQueryBuilder = createLibsqlQueryBuilder({
-  vectorDimensions: 32,
-});
+const testLibsqlQueryBuilder = new LibsqlQueryBuilder(32);
 
 Deno.test("buildHexastoreIndexes - returns 7 covering index DDL statements", () => {
   const indexes = testLibsqlQueryBuilder.buildHexastoreIndexes();
