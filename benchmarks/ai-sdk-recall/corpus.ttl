@@ -1,0 +1,31 @@
+@prefix ex: <urn:bench:atlas#> .
+
+ex:Aurelia ex:capital "Lume" ;
+  ex:currency "sunmark" ;
+  ex:border ex:Borealis, ex:Calyx ;
+  ex:festival "Glass Tide" ;
+  ex:river "Vanta" .
+
+ex:Borealis ex:capital "Frosthall" ;
+  ex:currency "ice crown" ;
+  ex:border ex:Aurelia, ex:Calyx ;
+  ex:festival "Night Aurora" ;
+  ex:river "Silverrun" .
+
+ex:Calyx ex:capital "Morrow" ;
+  ex:currency "tide shell" ;
+  ex:border ex:Aurelia, ex:Borealis, ex:Driftland ;
+  ex:festival "Lantern Wake" ;
+  ex:river "Vanta" .
+
+ex:Driftland ex:capital "Kestrel" ;
+  ex:currency "wind note" ;
+  ex:border ex:Calyx, ex:Moonwell ;
+  ex:festival "Windmarket" ;
+  ex:river "Silverrun" .
+
+ex:Moonwell ex:capital "Palegate" ;
+  ex:currency "moonglass" ;
+  ex:border ex:Driftland ;
+  ex:festival "White Lantern" ;
+  ex:river "Emberflow" .
