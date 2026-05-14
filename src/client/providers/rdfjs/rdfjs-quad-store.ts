@@ -18,6 +18,8 @@ export class RdfjsQuadStore implements QuadStoreInterface {
 
   public async import(request: ImportRequest): Promise<ImportResponse> {
     const mode = request.mode ?? "merge";
+    const quads = await materializeImportQuads(request.source);
+
     if (mode === "replace") {
       await new Promise<void>((resolve, reject) => {
         const removalStream = this.store.removeMatches(null, null, null, null);
@@ -26,26 +28,10 @@ export class RdfjsQuadStore implements QuadStoreInterface {
       });
     }
 
-    let stream: rdfjs.Stream<rdfjs.Quad>;
-    if (request.source.kind === "quads") {
-      stream = Readable.from(request.source.quads) as unknown as rdfjs.Stream<
-        rdfjs.Quad
-      >;
-    } else if (request.source.kind === "dataset") {
-      stream = Readable.from(request.source.dataset) as unknown as rdfjs.Stream<
-        rdfjs.Quad
-      >;
-    } else if (request.source.kind === "serialized") {
-      stream = parseQuads(request.source.data, request.source.contentType);
-    } else {
-      throw new Error("Unsupported import source kind");
+    for (const quad of quads) {
+      // deno-lint-ignore no-explicit-any
+      (this.store as any).addQuad(quad);
     }
-
-    return await new Promise<void>((resolve, reject) => {
-      const res = this.store.import(stream);
-      res.on("end", resolve);
-      res.on("error", reject);
-    });
   }
 
   public async export(request: ExportRequest): Promise<ExportResponse> {
@@ -125,4 +111,29 @@ export function parseQuads(
   const parser = new Parser({ format: n3Format });
   const quads = parser.parse(data);
   return Readable.from(quads) as unknown as rdfjs.Stream<rdfjs.Quad>;
+}
+
+async function materializeImportQuads(
+  source: ImportRequest["source"],
+): Promise<rdfjs.Quad[]> {
+  if (source.kind === "quads") {
+    return Array.from(source.quads);
+  }
+
+  if (source.kind === "dataset") {
+    return Array.from(source.dataset);
+  }
+
+  if (source.kind === "serialized") {
+    const parsedStream = parseQuads(source.data, source.contentType);
+    const quads: rdfjs.Quad[] = [];
+    await new Promise<void>((resolve, reject) => {
+      parsedStream.on("data", (quad: rdfjs.Quad) => quads.push(quad));
+      parsedStream.on("end", resolve);
+      parsedStream.on("error", reject);
+    });
+    return quads;
+  }
+
+  throw new Error("Unsupported import source kind");
 }
