@@ -11,7 +11,7 @@ import {
   filterQuads,
   type QuadFilter,
 } from "#/client/quad-store/quad-filter.ts";
-import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
 /**

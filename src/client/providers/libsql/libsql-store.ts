@@ -3,7 +3,7 @@ import type * as rdfjs from "@rdfjs/types";
 import { DataFactory } from "n3";
 import { Readable } from "node:stream";
 import { EventEmitter } from "node:events";
-import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import type { Patch } from "#/client/quad-store/patch.ts";
 
 const { namedNode, literal, blankNode, defaultGraph, quad } = DataFactory;

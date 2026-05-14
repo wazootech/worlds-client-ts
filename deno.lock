@@ -5,6 +5,7 @@
     "jsr:@std/encoding@^1.0.10": "1.0.10",
     "jsr:@std/fs@^1.0.23": "1.0.23",
     "jsr:@std/internal@^1.0.12": "1.0.13",
+    "jsr:@std/path@^1.0.8": "1.1.4",
     "jsr:@std/path@^1.1.4": "1.1.4",
     "npm:@ai-sdk/google@^0.0.52": "0.0.52_zod@3.25.76",
     "npm:@comunica/query-sparql-rdfjs-lite@^5.2.2": "5.2.2",
@@ -36,7 +37,7 @@
       "integrity": "3ecbae4ce4fee03b180fa710caff36bb5adb66631c46a6460aaad49515565a37",
       "dependencies": [
         "jsr:@std/internal",
-        "jsr:@std/path"
+        "jsr:@std/path@^1.1.4"
       ]
     },
     "@std/internal@1.0.13": {
