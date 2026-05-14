@@ -4,7 +4,7 @@ import type {
   ClientInterface,
   SearchRequest,
   SearchResponse,
-} from "#/client/mod.ts";
+} from "@worlds/client";
 
 /**
  * createSearchWorldTool creates an AI SDK tool for searching the knowledge base.

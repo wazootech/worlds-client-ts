@@ -1,6 +1,6 @@
 import type { CoreTool } from "ai";
 import { jsonSchema, tool } from "ai";
-import type { ClientInterface, ExportRequest } from "#/client/mod.ts";
+import type { ClientInterface, ExportRequest } from "@worlds/client";
 
 /**
  * SerializedExportRequest is a discriminated ExportRequest type that only allows "serialized" formats.

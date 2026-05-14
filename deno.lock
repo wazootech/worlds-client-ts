@@ -17,7 +17,7 @@
     "npm:@tensorflow/tfjs-backend-wasm@^4.22.0": "4.22.0_@tensorflow+tfjs-core@4.22.0",
     "npm:@tensorflow/tfjs@^4.22.0": "4.22.0_seedrandom@3.0.5",
     "npm:@types/n3@1.26.1": "1.26.1",
-    "npm:ai@^3.1.0": "3.4.33_zod@3.25.76",
+    "npm:ai@^3.1.0": "3.4.33_react@19.2.6_svelte@5.55.5_zod@3.25.76_vue@3.5.34",
     "npm:libsql@*": "0.5.29",
     "npm:n3@^2.0.3": "2.0.3",
     "npm:rdf-canonize@5": "5.0.0"
@@ -145,7 +145,7 @@
         "zod"
       ]
     },
-    "@ai-sdk/vue@0.0.59_zod@3.25.76": {
+    "@ai-sdk/vue@0.0.59_vue@3.5.34_zod@3.25.76": {
       "integrity": "sha512-+ofYlnqdc8c4F6tM0IKF0+7NagZRAiqBJpGDJ+6EYhDW8FHLUP/JFBgu32SjxSxC6IKFZxEnl68ZoP/Z38EMlw==",
       "dependencies": [
         "@ai-sdk/provider-utils@1.0.22_zod@3.25.76",
@@ -3320,7 +3320,7 @@
       "integrity": "sha512-UVJyE9MttOsBQIDKw1skb9nAwQuR5wuGD3+82K6JgJlm/Y+KI92oNsMNGZCYdDsVtRHSak0pcV5Dno5+4jh9sw==",
       "bin": true
     },
-    "ai@3.4.33_zod@3.25.76": {
+    "ai@3.4.33_react@19.2.6_svelte@5.55.5_zod@3.25.76_vue@3.5.34": {
       "integrity": "sha512-plBlrVZKwPoRTmM8+D1sJac9Bq8eaa2jiZlHLZIWekKWI1yMWYZvCCEezY9ASPwRhULYDJB2VhKOBUUeg3S5JQ==",
       "dependencies": [
         "@ai-sdk/provider@0.0.26",

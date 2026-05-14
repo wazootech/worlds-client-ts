@@ -1,6 +1,6 @@
 import type { CoreTool } from "ai";
 import { jsonSchema, tool } from "ai";
-import type { ClientInterface, SparqlRequest } from "#/client/mod.ts";
+import type { ClientInterface, SparqlRequest } from "@worlds/client";
 
 /**
  * ExecuteSparqlOptions defines the configuration options for the executeSparql tool.
@@ -47,7 +47,6 @@ export function createExecuteSparqlTool(
       required: ["query"],
     }),
     execute: async (request) => {
-      // Safely block updates if explicitly disabled
       if (options?.allowUpdates === false) {
         if (/\b(INSERT|DELETE|DROP|CLEAR|LOAD|CREATE)\b/i.test(request.query)) {
           return {

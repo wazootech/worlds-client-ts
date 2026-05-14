@@ -1,4 +1,4 @@
-import type { ClientInterface } from "#/client/mod.ts";
+import type { ClientInterface } from "@worlds/client";
 import type { CoreTool } from "ai";
 import {
   createExecuteSparqlTool,

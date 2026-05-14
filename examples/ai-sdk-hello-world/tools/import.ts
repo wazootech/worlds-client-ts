@@ -1,6 +1,6 @@
 import type { CoreTool } from "ai";
 import { jsonSchema, tool } from "ai";
-import type { ClientInterface, ImportRequest } from "#/client/mod.ts";
+import type { ClientInterface, ImportRequest } from "@worlds/client";
 
 /**
  * SerializedImportRequest is a discriminated ImportRequest type that only allows "serialized" sources.

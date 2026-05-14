@@ -4,7 +4,6 @@
   "nodeModulesDir": "auto",
   "exports": {
     ".": "./src/mod.ts",
-    "./providers/ai-sdk": "./src/client/providers/ai-sdk/mod.ts",
     "./providers/libsql": "./src/client/providers/libsql/provide-libsql.ts",
     "./providers/tfjs-universal-sentence-encoder": "./src/client/providers/tfjs-universal-sentence-encoder/mod.ts",
     "./providers/comunica": "./src/client/providers/comunica/mod.ts",
