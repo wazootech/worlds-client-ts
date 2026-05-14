@@ -6,7 +6,7 @@ This eval compares the same Gemini model answering the same factual questions:
 - with the `searchWorld` and `executeSparql` tools from `examples/ai-sdk-hello-world`
 
 The benchmark uses `provideLibsql` plus the TensorFlow universal sentence encoder provider so semantic search is real, not stubbed.
-The LibSQL search path now strips common stopwords before FTS lookup so retrieval keys off content words instead of filler words.
+The shipped dataset is an 18-question synthetic atlas so the benchmark stays deterministic and easy to extend.
 
 ## Dataset
 

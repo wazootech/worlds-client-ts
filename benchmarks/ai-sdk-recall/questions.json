@@ -2,41 +2,91 @@
   {
     "id": "q1",
     "question": "What is the capital of Aurelia?",
-    "answers": ["Lume"]
+    "answer": "Lume"
   },
   {
     "id": "q2",
     "question": "Which country uses the currency ice crown?",
-    "answers": ["Borealis"]
+    "answer": "Borealis"
   },
   {
     "id": "q3",
     "question": "Which country borders both Aurelia and Borealis?",
-    "answers": ["Calyx"]
+    "answer": "Calyx"
   },
   {
     "id": "q4",
     "question": "What is the capital of the country that borders Driftland?",
-    "answers": ["Morrow"]
+    "answer": "Morrow"
   },
   {
     "id": "q5",
     "question": "Which country has the festival White Lantern?",
-    "answers": ["Moonwell"]
+    "answer": "Moonwell"
   },
   {
     "id": "q6",
     "question": "Which country uses wind note?",
-    "answers": ["Driftland"]
+    "answer": "Driftland"
   },
   {
     "id": "q7",
     "question": "What is the currency of the country with capital Morrow?",
-    "answers": ["tide shell"]
+    "answer": "tide shell"
   },
   {
     "id": "q8",
     "question": "Which country has the capital Palegate?",
-    "answers": ["Moonwell"]
+    "answer": "Moonwell"
+  },
+  {
+    "id": "q9",
+    "question": "Which country borders Moonwell?",
+    "answer": "Driftland"
+  },
+  {
+    "id": "q10",
+    "question": "What is the festival of Aurelia?",
+    "answer": "Glass Tide"
+  },
+  {
+    "id": "q11",
+    "question": "What river does Borealis have?",
+    "answer": "Silverrun"
+  },
+  {
+    "id": "q12",
+    "question": "Which country has river Emberflow?",
+    "answer": "Moonwell"
+  },
+  {
+    "id": "q13",
+    "question": "What is the capital of the country whose currency is moonglass?",
+    "answer": "Palegate"
+  },
+  {
+    "id": "q14",
+    "question": "Which country has the festival Night Aurora?",
+    "answer": "Borealis"
+  },
+  {
+    "id": "q15",
+    "question": "Which country has the currency sunmark?",
+    "answer": "Aurelia"
+  },
+  {
+    "id": "q16",
+    "question": "What is the capital of the country with capital Kestrel?",
+    "answer": "Kestrel"
+  },
+  {
+    "id": "q17",
+    "question": "Which country borders both Driftland and Aurelia?",
+    "answer": "Calyx"
+  },
+  {
+    "id": "q18",
+    "question": "What is the capital of the country with the river Silverrun and the currency ice crown?",
+    "answer": "Frosthall"
   }
 ]
