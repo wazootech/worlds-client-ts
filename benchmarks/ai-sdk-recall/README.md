@@ -9,8 +9,8 @@ questions:
 
 The benchmark uses `provideLibsql` plus the TensorFlow universal sentence
 encoder provider so semantic search is real, not stubbed. The shipped dataset is
-an 18-question synthetic atlas so the benchmark stays deterministic and easy to
-extend.
+a 50-question synthetic atlas covering 13 countries so the benchmark stays
+deterministic and easy to extend.
 
 ## Dataset
 
@@ -59,6 +59,10 @@ Optional flags:
 Other models we used while iterating:
 
 ```bash
+# Recommended for ultra-fast smoke tests (~25 mins for 1-run full sweep)
+ollama pull qwen2.5:0.5b-instruct
+
+# High quality local models
 ollama pull qwen2.5:3b-instruct
 ollama pull hermes3:3b
 ```
