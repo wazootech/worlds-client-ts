@@ -228,7 +228,7 @@ async function run(): Promise<BenchmarkSummary> {
     runs,
   } = parseArgs(Deno.args);
 
-  const openai = createOpenAI({ baseURL: baseUrl });
+  const openai = createOpenAI({ baseURL: baseUrl, apiKey: "ollama" });
   const model = openai(modelId) as unknown as BenchmarkModel;
   const client = await buildClient(corpusPath);
   const questions = await loadQuestions(questionsPath);
