@@ -106,6 +106,25 @@ Deno.test("RdfjsQuadStore.import - replace mode combined with serialized data cl
   assertEquals(store.has(q1), false);
 });
 
+Deno.test("RdfjsQuadStore.import - replace mode preserves existing data when serialized import fails", async () => {
+  const store = new Store();
+  store.add(q1);
+
+  await assertRejects(async () => {
+    await new RdfjsQuadStore(store).import({
+      mode: "replace",
+      source: {
+        kind: "serialized",
+        data: "GARBAGE SNOT@@$",
+        contentType: "text/turtle",
+      },
+    });
+  });
+
+  assertEquals(store.size, 1);
+  assertEquals(store.has(q1), true);
+});
+
 Deno.test("RdfjsQuadStore.import - invalid serialization rejects properly", async () => {
   const store = new Store();
 
