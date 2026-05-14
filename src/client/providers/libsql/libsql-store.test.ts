@@ -275,3 +275,215 @@ Deno.test("LibsqlStore.match - multiple named graphs are isolated", async () => 
   assertEquals(g1Results.length, 1);
   assertEquals(g1Results[0].object.value, "o1");
 });
+
+// ──────────────────────────────────────────────────
+// Phase 2: mutation and flush tests
+// ──────────────────────────────────────────────────
+
+function createFlushHandler(
+  db: ReturnType<typeof createClient>,
+  builder: typeof testBuilder,
+): (patch: { insertions: rdfjs.Quad[]; deletions: rdfjs.Quad[] }) => Promise<void> {
+  return async (patch) => {
+    const statements: Array<{ sql: string; args: (string | null)[] }> = [];
+
+    for (const quad of patch.deletions) {
+      const id = await computeQuadId(quad);
+      statements.push({
+        sql: `DELETE FROM quads WHERE id = ?`,
+        args: [id],
+      });
+    }
+
+    for (const quad of patch.insertions) {
+      const id = await computeQuadId(quad);
+      const isLit = quad.object.termType === "Literal";
+      const litNode = isLit ? (quad.object as rdfjs.Literal) : null;
+      statements.push(
+        builder.buildInsertQuad({
+          quad_id: id,
+          s: quad.subject.value,
+          s_type: quad.subject.termType,
+          p: quad.predicate.value,
+          o: quad.object.value,
+          o_type: quad.object.termType,
+          o_datatype: litNode?.datatype?.value,
+          o_lang: litNode?.language,
+          g: quad.graph.value,
+          g_type: quad.graph.termType,
+        }),
+      );
+    }
+
+    if (statements.length > 0) {
+      await db.batch(statements as any, "write");
+    }
+  };
+}
+
+async function computeQuadId(quad: rdfjs.Quad): Promise<string> {
+  const { hashQuad } = await import("#/client/quad-store/hash-quad.ts");
+  return await hashQuad(quad);
+}
+
+Deno.test("LibsqlStore.add - buffered quad not visible before flush", async () => {
+  const db = createClient({ url: ":memory:" });
+  await setupSchema(db);
+  const store = new LibsqlStore(db, testBuilder);
+
+  store.add(quad(namedNode("urn:s"), namedNode("urn:p"), literal("v1")));
+
+  // Not visible before flush
+  const results = await collectStream(store.match(null, null, null, null));
+  assertEquals(results.length, 0);
+});
+
+Deno.test("LibsqlStore.add - flush persists quad, match finds it", async () => {
+  const db = createClient({ url: ":memory:" });
+  await setupSchema(db);
+  const store = new LibsqlStore(
+    db,
+    testBuilder,
+    createFlushHandler(db, testBuilder),
+  );
+
+  const q = quad(namedNode("urn:s"), namedNode("urn:p"), literal("v1"));
+  store.add(q);
+  await store.flush();
+
+  const results = await collectStream(store.match(null, null, null, null));
+  assertEquals(results.length, 1);
+  assertEquals(results[0].subject.value, "urn:s");
+  assertEquals(results[0].object.value, "v1");
+});
+
+Deno.test("LibsqlStore.add - flush once, then add+flush again accumulates", async () => {
+  const db = createClient({ url: ":memory:" });
+  await setupSchema(db);
+  const store = new LibsqlStore(
+    db,
+    testBuilder,
+    createFlushHandler(db, testBuilder),
+  );
+
+  store.add(quad(namedNode("urn:s"), namedNode("urn:p"), literal("v1")));
+  await store.flush();
+  assertEquals((await collectStream(store.match(null, null, null, null))).length, 1);
+
+  store.add(quad(namedNode("urn:s2"), namedNode("urn:p"), literal("v2")));
+  await store.flush();
+  assertEquals((await collectStream(store.match(null, null, null, null))).length, 2);
+});
+
+Deno.test("LibsqlStore.delete - buffered quad still visible before flush", async () => {
+  const db = createClient({ url: ":memory:" });
+  await setupSchema(db);
+  const store = new LibsqlStore(
+    db,
+    testBuilder,
+    createFlushHandler(db, testBuilder),
+  );
+
+  const q = quad(namedNode("urn:s"), namedNode("urn:p"), literal("v1"));
+  store.add(q);
+  await store.flush();
+
+  store.delete(q);
+  // Still visible before flush
+  assertEquals((await collectStream(store.match(null, null, null, null))).length, 1);
+
+  // Gone after flush
+  await store.flush();
+  assertEquals((await collectStream(store.match(null, null, null, null))).length, 0);
+});
+
+Deno.test("LibsqlStore.delete - add then delete same quad before flush is net zero", async () => {
+  const db = createClient({ url: ":memory:" });
+  await setupSchema(db);
+  const store = new LibsqlStore(
+    db,
+    testBuilder,
+    createFlushHandler(db, testBuilder),
+  );
+
+  const q = quad(namedNode("urn:s"), namedNode("urn:p"), literal("v1"));
+  store.add(q);
+  store.delete(q);
+  await store.flush();
+
+  assertEquals((await collectStream(store.match(null, null, null, null))).length, 0);
+});
+
+Deno.test("LibsqlStore.removeMatches - buffers matching quads for deletion", async () => {
+  const db = createClient({ url: ":memory:" });
+  await setupSchema(db);
+  const store = new LibsqlStore(
+    db,
+    testBuilder,
+    createFlushHandler(db, testBuilder),
+  );
+
+  store.add(quad(namedNode("urn:s"), namedNode("urn:p"), literal("hello")));
+  store.add(quad(namedNode("urn:s"), namedNode("urn:p"), literal("world")));
+  store.add(quad(namedNode("urn:other"), namedNode("urn:p"), literal("stay")));
+  await store.flush();
+  assertEquals((await collectStream(store.match(null, null, null, null))).length, 3);
+
+  // Remove matching quads for urn:s
+  await new Promise<void>((resolve, reject) => {
+    const emitter = store.removeMatches(namedNode("urn:s"), null, null, null);
+    emitter.on("end", resolve);
+    emitter.on("error", reject);
+  });
+
+  // Still visible before flush
+  assertEquals((await collectStream(store.match(null, null, null, null))).length, 3);
+
+  await store.flush();
+
+  // Two removed, one stays
+  const remaining = await collectStream(store.match(null, null, null, null));
+  assertEquals(remaining.length, 1);
+  assertEquals(remaining[0].subject.value, "urn:other");
+});
+
+Deno.test("LibsqlStore.clearBuffer - discards pending mutations on error", async () => {
+  const db = createClient({ url: ":memory:" });
+  await setupSchema(db);
+  const store = new LibsqlStore(
+    db,
+    testBuilder,
+    createFlushHandler(db, testBuilder),
+  );
+
+  store.add(quad(namedNode("urn:s"), namedNode("urn:p"), literal("v1")));
+  store.delete(quad(namedNode("urn:s"), namedNode("urn:p"), literal("v2")));
+
+  store.clearBuffer();
+  await store.flush(); // should be no-op
+
+  assertEquals((await collectStream(store.match(null, null, null, null))).length, 0);
+});
+
+Deno.test("LibsqlStore.import - stream buffers all quads, flush persists them", async () => {
+  const db = createClient({ url: ":memory:" });
+  await setupSchema(db);
+  const store = new LibsqlStore(
+    db,
+    testBuilder,
+    createFlushHandler(db, testBuilder),
+  );
+
+  const q1 = quad(namedNode("urn:s1"), namedNode("urn:p"), literal("a"));
+  const q2 = quad(namedNode("urn:s2"), namedNode("urn:p"), literal("b"));
+  const stream = Readable.from([q1, q2]) as unknown as rdfjs.Stream<rdfjs.Quad>;
+
+  await new Promise<void>((resolve, reject) => {
+    const emitter = store.import(stream);
+    emitter.on("end", resolve);
+    emitter.on("error", reject);
+  });
+
+  await store.flush();
+  assertEquals((await collectStream(store.match(null, null, null, null))).length, 2);
+});

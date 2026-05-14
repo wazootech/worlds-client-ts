@@ -4,6 +4,7 @@ import { DataFactory } from "n3";
 import { Readable } from "node:stream";
 import { EventEmitter } from "node:events";
 import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import type { Patch } from "#/client/quad-store/patch.ts";
 
 const { namedNode, literal, blankNode, defaultGraph, quad } = DataFactory;
 
@@ -26,6 +27,11 @@ const HEXASTORE_INDEXES: HexastoreIndexDef[] = [
 ];
 
 /**
+ * FlushHandler is a callback that atomically persists a patch of buffered mutations.
+ */
+export type FlushHandler = (patch: Patch) => Promise<void>;
+
+/**
  * LibsqlStore is a full RDF/JS Store implementation backed by LibSQL and hexastore covering indexes.
  * All triple/quad patterns resolve via a single SQL index seek with no in-memory hydration needed.
  */
@@ -43,22 +49,8 @@ export class LibsqlStore implements rdfjs.Store {
   public constructor(
     private readonly client: Client,
     private readonly queryBuilder: LibsqlQueryBuilder,
+    private readonly flushHandler?: FlushHandler,
   ) {}
-
-  /**
-   * size returns the total number of quads persisted in the database.
-   * Does not account for unflushed buffer entries.
-   */
-  public get size(): number {
-    throw new Error("size not yet implemented");
-  }
-
-  /**
-   * has checks whether an exact quad exists in the persistent store.
-   */
-  public has(quad: rdfjs.Quad): boolean {
-    throw new Error("has not yet implemented");
-  }
 
   /**
    * match returns a stream of quads matching the given SPOG pattern.
@@ -95,6 +87,22 @@ export class LibsqlStore implements rdfjs.Store {
     });
 
     return rowStream as unknown as rdfjs.Stream<rdfjs.Quad>;
+  }
+
+  /**
+   * add buffers a single quad for insertion on the next flush.
+   */
+  public add(quad: rdfjs.Quad): this {
+    this.insertBuffer.push(quad);
+    return this;
+  }
+
+  /**
+   * delete buffers a single quad for deletion on the next flush.
+   */
+  public delete(quad: rdfjs.Quad): this {
+    this.deleteBuffer.push(quad);
+    return this;
   }
 
   /**
@@ -166,13 +174,42 @@ export class LibsqlStore implements rdfjs.Store {
 
   /**
    * flush atomically persists all buffered insertions and deletions through
-   * the commit-patch-to-libsql pipeline.
+   * the configured FlushHandler. Deduplicates quads that appear in both
+   * buffers before invoking the handler.
    */
   public async flush(): Promise<void> {
+    this.deduplicateBuffers();
     if (this.insertBuffer.length === 0 && this.deleteBuffer.length === 0) {
       return;
     }
-    throw new Error("flush pipeline binding not yet implemented");
+    if (this.flushHandler) {
+      await this.flushHandler({
+        insertions: this.insertBuffer,
+        deletions: this.deleteBuffer,
+      });
+    }
+    this.clearBuffer();
+  }
+
+  /**
+   * deduplicateBuffers removes entries that appear in both insert and delete
+   * buffers, since adding then deleting the same quad before flush should
+   * be a semantic no-op.
+   */
+  private deduplicateBuffers(): void {
+    const removeFromInsert: number[] = [];
+    for (let i = this.insertBuffer.length - 1; i >= 0; i--) {
+      for (let j = this.deleteBuffer.length - 1; j >= 0; j--) {
+        if (this.insertBuffer[i].equals(this.deleteBuffer[j])) {
+          removeFromInsert.push(i);
+          this.deleteBuffer.splice(j, 1);
+          break;
+        }
+      }
+    }
+    for (const idx of removeFromInsert) {
+      this.insertBuffer.splice(idx, 1);
+    }
   }
 
   /**
