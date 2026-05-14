@@ -53,6 +53,8 @@ Deno.test("parseArgs defaults to the local Ollama target", () => {
     assertEquals(parseArgs([]), {
       baseUrl: "http://localhost:11434/v1",
       corpusPath: "benchmarks/ai-sdk-recall/corpus.ttl",
+      debug: false,
+      forceTools: false,
       modelId: "qwen2.5:1.5b-instruct",
       outputPath: undefined,
       questionsPath: "benchmarks/ai-sdk-recall/questions.json",
@@ -82,10 +84,25 @@ Deno.test("parseArgs accepts local model and base URL overrides", () => {
     {
       baseUrl: "http://localhost:11435/v1",
       corpusPath: "benchmarks/ai-sdk-recall/corpus.ttl",
+      debug: false,
+      forceTools: false,
       modelId: "hermes3:3b",
       outputPath: "results.json",
       questionsPath: "benchmarks/ai-sdk-recall/questions.json",
       runs: 5,
     },
   );
+});
+
+Deno.test("parseArgs accepts debug and force-tools flags", () => {
+  assertEquals(parseArgs(["--debug", "--force-tools"]), {
+    baseUrl: "http://localhost:11434/v1",
+    corpusPath: "benchmarks/ai-sdk-recall/corpus.ttl",
+    debug: true,
+    forceTools: true,
+    modelId: "qwen2.5:1.5b-instruct",
+    outputPath: undefined,
+    questionsPath: "benchmarks/ai-sdk-recall/questions.json",
+    runs: 3,
+  });
 });

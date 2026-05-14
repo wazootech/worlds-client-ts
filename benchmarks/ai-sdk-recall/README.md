@@ -33,6 +33,8 @@ The runner:
   just one-off luck
 - scores answers with phrase-boundary matching so exact answers and aliases are
   counted separately from wrong answers
+- can force tool use with `--force-tools`
+- can print per-question traces with `--debug`
 
 ## Scorer
 
@@ -61,11 +63,26 @@ ollama pull qwen2.5:3b-instruct
 ollama pull hermes3:3b
 ```
 
+Recommended next debug pass:
+
+```bash
+deno run -A benchmarks/ai-sdk-recall/evaluate.ts \
+  --model qwen2.5:3b-instruct \
+  --force-tools \
+  --debug
+```
+
 ## What to look for
 
 The main metric is the accuracy delta:
 
 - `with-tools accuracy - without-tools accuracy`
+
+Also check the tool usage rate:
+
+- if it stays near `0%`, the model is not actually calling Worlds
+- if it rises but accuracy stays low, the tool path is being exercised but the
+  prompt/model still needs work
 
 If that delta is positive and stable across repeated runs, the tool-assisted
 path is doing real work.

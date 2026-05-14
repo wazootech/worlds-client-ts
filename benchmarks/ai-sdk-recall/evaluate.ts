@@ -25,11 +25,13 @@ interface BenchmarkRow {
   correct: boolean;
   matchKind: "exact" | "alias" | "wrong";
   toolCalls: number;
+  toolTrace?: string[];
 }
 
 interface BenchmarkSummary {
   withoutToolsAccuracy: number;
   withToolsAccuracy: number;
+  withToolsToolUsageRate: number;
   exactMatches: number;
   aliasMatches: number;
   wrongMatches: number;
@@ -94,7 +96,8 @@ async function answerWithTools(
   model: BenchmarkModel,
   client: Client,
   question: BenchmarkQuestion,
-): Promise<{ answer: string; toolCalls: number }> {
+  forceTools: boolean,
+): Promise<{ answer: string; toolCalls: number; toolTrace: string[] }> {
   const tools = createTools(client, {
     sparql: { allowUpdates: false },
   });
@@ -102,18 +105,24 @@ async function answerWithTools(
   const result = await generateText({
     model,
     tools,
+    toolChoice: forceTools ? "required" : "auto",
     maxSteps: 5,
     prompt:
       `Use the Worlds tools to answer the question. First search for the relevant facts, then use SPARQL to verify the final answer. Respond with only the final answer.\n\nQuestion: ${question.question}`,
   });
 
   const toolCalls = result.steps.flatMap((step) => step.toolCalls).length;
-  return { answer: result.text.trim(), toolCalls };
+  const toolTrace = result.steps.flatMap((step) =>
+    step.toolCalls.map((toolCall) => JSON.stringify(toolCall))
+  );
+  return { answer: result.text.trim(), toolCalls, toolTrace };
 }
 
 export function parseArgs(args: string[]): {
   baseUrl: string;
   corpusPath: string;
+  debug: boolean;
+  forceTools: boolean;
   modelId: string;
   outputPath?: string;
   questionsPath: string;
@@ -121,6 +130,8 @@ export function parseArgs(args: string[]): {
 } {
   let corpusPath = "benchmarks/ai-sdk-recall/corpus.ttl";
   let baseUrl = Deno.env.get("OLLAMA_BASE_URL") ?? "http://localhost:11434/v1";
+  let debug = false;
+  let forceTools = false;
   let modelId = "qwen2.5:1.5b-instruct";
   let outputPath: string | undefined;
   let questionsPath = "benchmarks/ai-sdk-recall/questions.json";
@@ -130,6 +141,8 @@ export function parseArgs(args: string[]): {
     const argument = args[index];
     if (argument === "--corpus") corpusPath = args[++index] ?? corpusPath;
     else if (argument === "--base-url") baseUrl = args[++index] ?? baseUrl;
+    else if (argument === "--debug") debug = true;
+    else if (argument === "--force-tools") forceTools = true;
     else if (argument === "--model") modelId = args[++index] ?? modelId;
     else if (argument === "--output") outputPath = args[++index];
     else if (argument === "--questions") {
@@ -139,7 +152,7 @@ export function parseArgs(args: string[]): {
     } else if (argument === "--help" || argument === "-h") {
       console.log(
         [
-          "Usage: deno run -A benchmarks/ai-sdk-recall/evaluate.ts [--corpus path] [--questions path] [--base-url http://localhost:11434/v1] [--model qwen2.5:1.5b-instruct] [--runs 3] [--output results.json]",
+          "Usage: deno run -A benchmarks/ai-sdk-recall/evaluate.ts [--corpus path] [--questions path] [--base-url http://localhost:11434/v1] [--model qwen2.5:1.5b-instruct] [--runs 3] [--output results.json] [--debug] [--force-tools]",
           "",
           "Environment:",
           "  OLLAMA_BASE_URL can override the base URL.",
@@ -149,7 +162,16 @@ export function parseArgs(args: string[]): {
     }
   }
 
-  return { baseUrl, corpusPath, modelId, outputPath, questionsPath, runs };
+  return {
+    baseUrl,
+    corpusPath,
+    debug,
+    forceTools,
+    modelId,
+    outputPath,
+    questionsPath,
+    runs,
+  };
 }
 
 function printSummary(summary: BenchmarkSummary): void {
@@ -164,6 +186,11 @@ function printSummary(summary: BenchmarkSummary): void {
   console.log(`Exact matches: ${summary.exactMatches}`);
   console.log(`Alias matches: ${summary.aliasMatches}`);
   console.log(`Wrong matches: ${summary.wrongMatches}`);
+  console.log(
+    `With-tools rows that used tools: ${
+      (summary.withToolsToolUsageRate * 100).toFixed(1)
+    }%`,
+  );
   console.log(`Delta: ${(summary.delta * 100).toFixed(1)}%`);
   console.log("");
   console.log(
@@ -182,10 +209,16 @@ function printSummary(summary: BenchmarkSummary): void {
 }
 
 async function run(): Promise<BenchmarkSummary> {
-  const { baseUrl, corpusPath, modelId, outputPath, questionsPath, runs } =
-    parseArgs(
-      Deno.args,
-    );
+  const {
+    baseUrl,
+    corpusPath,
+    debug,
+    forceTools,
+    modelId,
+    outputPath,
+    questionsPath,
+    runs,
+  } = parseArgs(Deno.args);
 
   const openai = createOpenAI({ baseURL: baseUrl });
   const model = openai(modelId) as unknown as BenchmarkModel;
@@ -201,7 +234,7 @@ async function run(): Promise<BenchmarkSummary> {
         question.answer,
         question.aliases,
       );
-      rows.push({
+      const withoutToolsRow: BenchmarkRow = {
         questionId: question.id,
         condition: "without-tools",
         run: runIndex,
@@ -209,15 +242,28 @@ async function run(): Promise<BenchmarkSummary> {
         correct: withoutToolsAssessment.correct,
         matchKind: withoutToolsAssessment.matchKind,
         toolCalls: 0,
-      });
+      };
+      rows.push(withoutToolsRow);
+      if (debug) {
+        console.log(
+          `[without-tools] run=${runIndex} question=${question.id} correct=${
+            withoutToolsRow.correct ? "yes" : "no"
+          } match=${withoutToolsRow.matchKind} answer=${withoutToolsRow.answer}`,
+        );
+      }
 
-      const withToolsResult = await answerWithTools(model, client, question);
+      const withToolsResult = await answerWithTools(
+        model,
+        client,
+        question,
+        forceTools,
+      );
       const withToolsAssessment = assessAnswer(
         withToolsResult.answer,
         question.answer,
         question.aliases,
       );
-      rows.push({
+      const withToolsRow: BenchmarkRow = {
         questionId: question.id,
         condition: "with-tools",
         run: runIndex,
@@ -225,7 +271,19 @@ async function run(): Promise<BenchmarkSummary> {
         correct: withToolsAssessment.correct,
         matchKind: withToolsAssessment.matchKind,
         toolCalls: withToolsResult.toolCalls,
-      });
+        toolTrace: debug ? withToolsResult.toolTrace : undefined,
+      };
+      rows.push(withToolsRow);
+      if (debug) {
+        console.log(
+          `[with-tools] run=${runIndex} question=${question.id} correct=${
+            withToolsRow.correct ? "yes" : "no"
+          } match=${withToolsRow.matchKind} toolCalls=${withToolsRow.toolCalls} answer=${withToolsRow.answer}`,
+        );
+        if (withToolsRow.toolTrace && withToolsRow.toolTrace.length > 0) {
+          console.log(withToolsRow.toolTrace.join("\n"));
+        }
+      }
     }
   }
 
@@ -236,15 +294,20 @@ async function run(): Promise<BenchmarkSummary> {
   const exactMatches = rows.filter((row) => row.matchKind === "exact").length;
   const aliasMatches = rows.filter((row) => row.matchKind === "alias").length;
   const wrongMatches = rows.filter((row) => row.matchKind === "wrong").length;
+  const withToolsRowsWithToolCalls =
+    withToolsRows.filter((row) => row.toolCalls > 0).length;
   const withoutToolsAccuracy =
     withoutToolsRows.filter((row) => row.correct).length /
     Math.max(withoutToolsRows.length, 1);
   const withToolsAccuracy = withToolsRows.filter((row) => row.correct).length /
     Math.max(withToolsRows.length, 1);
+  const withToolsToolUsageRate = withToolsRowsWithToolCalls /
+    Math.max(withToolsRows.length, 1);
 
   const summary = {
     withoutToolsAccuracy,
     withToolsAccuracy,
+    withToolsToolUsageRate,
     exactMatches,
     aliasMatches,
     wrongMatches,
