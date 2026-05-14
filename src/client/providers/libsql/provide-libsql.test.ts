@@ -108,6 +108,80 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
       assertExists(match, "Bootstrap hydration skipped master record data.");
     },
   );
+
+  await t.step(
+    "Scenario 4: replace mode removes stale quads and search rows",
+    async () => {
+      const firstQuad = quad(
+        namedNode("urn:person:carol"),
+        namedNode("urn:bio"),
+        literal("Carol is a unique_z444_test_tag mountain explorer."),
+      );
+      const secondQuad = quad(
+        namedNode("urn:person:dave"),
+        namedNode("urn:bio"),
+        literal("Dave is a unique_z888_test_tag sea navigator."),
+      );
+
+      await client.import({
+        source: { kind: "quads", quads: [firstQuad, secondQuad] },
+      });
+
+      const beforeCarol = await client.search({
+        query: "unique_z444_test_tag",
+      });
+      const beforeDave = await client.search({
+        query: "unique_z888_test_tag",
+      });
+
+      assertEquals(
+        beforeCarol.results?.some((result) =>
+          result.subject === "urn:person:carol"
+        ),
+        true,
+      );
+      assertEquals(
+        beforeDave.results?.some((result) =>
+          result.subject === "urn:person:dave"
+        ),
+        true,
+      );
+
+      await client.import({
+        mode: "replace",
+        source: { kind: "quads", quads: [firstQuad] },
+      });
+
+      const afterCarol = await client.search({
+        query: "unique_z444_test_tag",
+      });
+      const afterDave = await client.search({
+        query: "unique_z888_test_tag",
+      });
+
+      assertEquals(
+        afterCarol.results?.some((result) =>
+          result.subject === "urn:person:carol"
+        ),
+        true,
+      );
+      assertEquals(
+        afterDave.results?.some((result) =>
+          result.subject === "urn:person:dave"
+        ),
+        false,
+      );
+
+      const quadsTable = await db.execute(
+        "SELECT COUNT(*) AS count FROM quads",
+      );
+      const chunksTable = await db.execute(
+        "SELECT COUNT(*) AS count FROM chunks",
+      );
+      assertEquals(Number(quadsTable.rows[0]?.count), 1);
+      assertEquals(Number(chunksTable.rows[0]?.count), 1);
+    },
+  );
 });
 
 Deno.test("QuadFilter Integration: enables hybrid partitioning persisting specific graphs while keeping others ephemeral", async () => {

@@ -19,7 +19,11 @@ export class RdfjsQuadStore implements QuadStoreInterface {
   public async import(request: ImportRequest): Promise<ImportResponse> {
     const mode = request.mode ?? "merge";
     if (mode === "replace") {
-      this.store.removeMatches(null, null, null, null);
+      await new Promise<void>((resolve, reject) => {
+        const removalStream = this.store.removeMatches(null, null, null, null);
+        removalStream.on("end", resolve);
+        removalStream.on("error", reject);
+      });
     }
 
     let stream: rdfjs.Stream<rdfjs.Quad>;
