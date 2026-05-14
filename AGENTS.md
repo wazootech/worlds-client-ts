@@ -67,3 +67,21 @@ implement localized fallback handlers:
 - Automatically fallback to native local logic pathways (such as pure
   keyword-only FTS) to sustain primary capability availability during dependency
   outages.
+
+## Documentation aesthetics and markdown conventions
+
+To ensure visual continuity and ease of navigation across all repository
+documentation files:
+
+- **Uniform sentence-case headings:** All markdown headings must be clear,
+  concise, and exclusively use sentence casing. Do not use decorative emojis in
+  any markdown headings.
+  - ❌ **Avoid:** `## 🚀 Key Capabilities`, `### ✨ Available Examples`
+  - ✅ **Prefer:** `## Key capabilities`, `### Available examples`
+- **Non-numbered structural boundaries:** Do not include numeric prefixes in
+  markdown headings. Let the physical document outline establish hierarchy
+  naturally.
+  - ❌ **Avoid:** `### 4. AI SDK agent (Gemini + tools)`
+  - ✅ **Prefer:** `### AI SDK agent`
+- **Suppression of horizontal rules:** Avoid utilizing `---` divider lines to
+  segment documents. Let empty lines establish boundaries cleanly.
