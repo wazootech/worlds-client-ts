@@ -22,14 +22,16 @@ export interface DenokvQuadStoreOptions {
   keyPrefix?: Deno.KvKey;
 }
 
-interface SerializedTerm {
+/** SerializedTerm represents a flat V8-serializable descriptor of an RDF Term. */
+export interface SerializedTerm {
   termType: string;
   value: string;
   language?: string;
   datatype?: string;
 }
 
-interface SerializedQuad {
+/** SerializedQuad bundles four serialized terms representing an RDF quad. */
+export interface SerializedQuad {
   subject: SerializedTerm;
   predicate: SerializedTerm;
   object: SerializedTerm;
@@ -161,7 +163,10 @@ function serializeTerm(term: rdfjs.Term): SerializedTerm {
   };
 }
 
-function deserializeTerm(t: SerializedTerm): rdfjs.Term {
+/**
+ * deserializeTerm reconstitutes a rich RDF/JS Term from a flat, persisted serialization.
+ */
+export function deserializeTerm(t: SerializedTerm): rdfjs.Term {
   switch (t.termType) {
     case "NamedNode":
       return namedNode(t.value);

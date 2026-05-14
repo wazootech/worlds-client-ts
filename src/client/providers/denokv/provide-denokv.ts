@@ -1,8 +1,8 @@
 import { Store } from "n3";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import type { ClientOptions } from "#/client/client.ts";
-import { RdfjsSearchIndex } from "#/client/providers/rdfjs/rdfjs-search-index.ts";
 import { ComunicaSparqlEngine } from "#/client/providers/comunica/comunica-sparql-engine.ts";
+import { DenokvSearchIndex } from "./denokv-search-index.ts";
 import {
   DenokvQuadStore,
   type DenokvQuadStoreOptions,
@@ -45,13 +45,7 @@ export function provideDenoKv(options: DenokvOptions): ClientOptions {
   return {
     quadStore,
 
-    searchIndex: {
-      search: async (request) => {
-        const workspace = await hydrateWorkspace();
-        const index = new RdfjsSearchIndex(workspace);
-        return await index.search(request);
-      },
-    },
+    searchIndex: new DenokvSearchIndex(options),
 
     sparqlEngine: {
       execute: async (request) => {
