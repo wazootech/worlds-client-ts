@@ -118,29 +118,10 @@ function resolveModel(modelIdentifier: string, ollamaBaseUrl?: string): Benchmar
 async function buildClient(corpus: string): Promise<Client> {
   const database = createLibsqlClient({ url: ":memory:" });
 
-  const modelsBaseUrl = new URL(
-    "../src/client/providers/tfjs-universal-sentence-encoder/models/",
-    import.meta.url,
-  );
-  const modelUrl = new URL("model.json", modelsBaseUrl);
-  const vocabUrl = new URL("vocab.json", modelsBaseUrl);
-  let modelExists = false;
-  try {
-    Deno.statSync(modelUrl);
-    Deno.statSync(vocabUrl);
-    modelExists = true;
-  } catch {
-    console.warn(
-      "Local TFJS model artifacts not found. Defaulting to online download.",
-    );
-  }
-
   const client = new Client(
     await provideLibsql({
       client: database,
-      embeddingService: new UniversalSentenceEncoderEmbeddingService(
-        modelExists ? { modelUrl: modelUrl.href, vocabUrl: vocabUrl.href } : {},
-      ),
+      embeddingService: new UniversalSentenceEncoderEmbeddingService(),
       vectorDimensions: 512,
     }),
   );
@@ -177,31 +158,39 @@ async function answerWithTools(
   forceTools: boolean,
   debug: boolean,
 ): Promise<{ answer: string; toolCalls: number; toolTrace: string[] }> {
-  const tools = createTools(client, {
-    sparql: { allowUpdates: false },
-  });
+  try {
+    const tools = createTools(client, {
+      sparql: { allowUpdates: false },
+    });
 
-  const result = await robustGenerateText({
-    model,
-    tools,
-    toolChoice: forceTools ? "required" : "auto",
-    stopWhen: stepCountIs(8),
-    prompt:
-      `Use the Worlds tools to answer the question. First search for the relevant facts, then use SPARQL to verify the final answer. Respond with only the final answer.\n\nQuestion: ${question}`,
-    onStepFinish: debug
-      ? (event) => {
-        if (event.toolCalls.length > 0) {
-          console.log(JSON.stringify(event.toolCalls, null, 2));
+    const result = await robustGenerateText({
+      model,
+      tools,
+      toolChoice: forceTools ? "required" : "auto",
+      stopWhen: stepCountIs(8),
+      prompt:
+        `Use the Worlds tools to answer the question. First search for the relevant facts, then use SPARQL to verify the final answer. Respond with only the final answer.\n\nQuestion: ${question}`,
+      onStepFinish: debug
+        ? (event) => {
+          if (event.toolCalls.length > 0) {
+            console.log(JSON.stringify(event.toolCalls, null, 2));
+          }
         }
-      }
-      : undefined,
-  });
+        : undefined,
+    });
 
-  const toolCalls = result.steps.flatMap((step) => step.toolCalls).length;
-  const toolTrace = result.steps.flatMap((step) =>
-    step.toolCalls.map((toolCall) => JSON.stringify(toolCall))
-  );
-  return { answer: result.text.trim(), toolCalls, toolTrace };
+    const toolCalls = result.steps.flatMap((step) => step.toolCalls).length;
+    const toolTrace = result.steps.flatMap((step) =>
+      step.toolCalls.map((toolCall) => JSON.stringify(toolCall))
+    );
+    return { answer: result.text.trim(), toolCalls, toolTrace };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.warn(
+      `    [WARN] answerWithTools failed: ${errorMessage.slice(0, 200)}`,
+    );
+    return { answer: `ERROR: ${errorMessage}`, toolCalls: 0, toolTrace: [] };
+  }
 }
 
 function printRow(

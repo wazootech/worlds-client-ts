@@ -27,7 +27,9 @@
     "npm:ai@^6.0.182": "6.0.182_zod@4.4.3",
     "npm:libsql@*": "0.5.29",
     "npm:n3@^2.0.3": "2.0.3",
-    "npm:rdf-canonize@5": "5.0.0"
+    "npm:rdf-canonize@5": "5.0.0",
+    "npm:sparqlalgebrajs@*": "5.0.2",
+    "npm:sparqlalgebrajs@^5.0.2": "5.0.2"
   },
   "jsr": {
     "@std/assert@1.0.19": {
@@ -4182,7 +4184,8 @@
       "npm:ai-sdk-ollama@^3.8.4",
       "npm:ai@^6.0.182",
       "npm:n3@^2.0.3",
-      "npm:rdf-canonize@5"
+      "npm:rdf-canonize@5",
+      "npm:sparqlalgebrajs@^5.0.2"
     ],
     "links": {
       "npm:jsonld-context-parser@2.4.0": {

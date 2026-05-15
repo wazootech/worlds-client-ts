@@ -1,5 +1,6 @@
 import { jsonSchema, tool } from "ai";
 import type { ClientInterface, SparqlRequest } from "@worlds/client";
+import { translate } from "sparqlalgebrajs";
 
 /**
  * ExecuteSparqlOptions defines the configuration options for the executeSparql tool.
@@ -10,6 +11,23 @@ export interface ExecuteSparqlOptions {
    * @default true
    */
   allowUpdates?: boolean;
+}
+
+/**
+ * validateSparqlSyntax checks the SPARQL query string for syntax errors using the SPARQL algebra parser.
+ * Returns a clear error message on failure, or null on success.
+ * The parser distinguishes SPARQL syntax errors from other failures so the model
+ * can retry with corrected syntax. Syntax errors are intentionally prefixed with
+ * "SPARQL syntax error:" for easy detection in tool selection evals.
+ */
+function validateSparqlSyntax(query: string): string | null {
+  try {
+    translate(query);
+    return null;
+  } catch (error) {
+    const rawMessage = error instanceof Error ? error.message : String(error);
+    return `SPARQL syntax error: ${rawMessage}`;
+  }
 }
 
 /**
@@ -54,6 +72,14 @@ export function createExecuteSparqlTool(
               "SPARQL updates are disabled for this agent. Please only execute SELECT or ASK queries.",
           };
         }
+      }
+
+      const syntaxError = validateSparqlSyntax(request.query);
+      if (syntaxError !== null) {
+        return {
+          success: false,
+          error: syntaxError,
+        };
       }
 
       try {
