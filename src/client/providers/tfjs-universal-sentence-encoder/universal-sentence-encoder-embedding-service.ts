@@ -20,23 +20,46 @@ export class UniversalSentenceEncoderEmbeddingService
   private modelPromise: Promise<use.UniversalSentenceEncoder> | null = null;
 
   public constructor(
-    options: UniversalSentenceEncoderEmbeddingServiceOptions = {},
+    private readonly options: UniversalSentenceEncoderEmbeddingServiceOptions = {},
   ) {
-    this.options = options;
     // Initialize backend immediately
     tf.setBackend("wasm").catch(console.error);
   }
+
 
   private async getModel(): Promise<use.UniversalSentenceEncoder> {
     if (!this.modelPromise) {
       console.log("Loading TensorFlow USE model...");
       const config: { modelUrl?: string; vocabUrl?: string } = {};
 
-      if (this.options.modelUrl) {
-        config.modelUrl = this.resolveToUrlString(this.options.modelUrl);
+      let modelUrl = this.options.modelUrl;
+      let vocabUrl = this.options.vocabUrl;
+
+      // Auto-detect provider-local model artifacts if not explicitly provided
+      if (!modelUrl && !vocabUrl) {
+        try {
+          const localModelUrl = new URL("./models/model.json", import.meta.url);
+          const localVocabUrl = new URL("./models/vocab.json", import.meta.url);
+
+          Deno.statSync(localModelUrl);
+          Deno.statSync(localVocabUrl);
+          modelUrl = localModelUrl.href;
+          vocabUrl = localVocabUrl.href;
+          console.log(
+            "[UniversalSentenceEncoderEmbeddingService] Auto-detected provider-local model artifacts.",
+          );
+        } catch {
+          console.warn(
+            "[UniversalSentenceEncoderEmbeddingService] Provider-local model artifacts not found. Defaulting to online download.",
+          );
+        }
       }
-      if (this.options.vocabUrl) {
-        config.vocabUrl = this.resolveToUrlString(this.options.vocabUrl);
+
+      if (modelUrl) {
+        config.modelUrl = this.resolveToUrlString(modelUrl);
+      }
+      if (vocabUrl) {
+        config.vocabUrl = this.resolveToUrlString(vocabUrl);
       }
 
       console.log(`[UniversalSentenceEncoderEmbeddingService] config=`, config);

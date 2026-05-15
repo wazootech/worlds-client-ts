@@ -77,13 +77,9 @@ export function createSearchWorldTool(client: ClientInterface) {
     > => {
       try {
         const response = await client.search(request);
-        const hasResults = response.results ? response.results.length > 0 : false;
         return {
           success: true,
           ...response,
-          message: hasResults
-            ? `Found ${response.results.length} result(s).`
-            : "No matching information found in the knowledge base.",
         };
       } catch (error) {
         return {
