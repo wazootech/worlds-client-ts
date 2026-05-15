@@ -14,7 +14,7 @@
     "#/": "./src/",
     "ai": "npm:ai@^6.0.182",
     "@ai-sdk/google": "npm:@ai-sdk/google@^3.0.73",
-    "@ai-sdk/openai": "npm:@ai-sdk/openai@^3.0.63",
+    "@ai-sdk/ollama": "npm:ai-sdk-ollama@^3.8.4",
     "@comunica/query-sparql-rdfjs-lite": "npm:@comunica/query-sparql-rdfjs-lite@^5.2.2",
     "@rdfjs/types": "npm:@rdfjs/types@^2.0.1",
     "@libsql/client": "npm:@libsql/client@^0.17.3",

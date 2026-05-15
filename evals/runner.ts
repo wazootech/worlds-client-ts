@@ -1,6 +1,6 @@
 import { createClient as createLibsqlClient } from "@libsql/client";
 import { generateText, stepCountIs } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
+import { createOllama } from "@ai-sdk/ollama";
 import { Client } from "@worlds/client";
 import { provideLibsql } from "@worlds/client/providers/libsql";
 import { UniversalSentenceEncoderEmbeddingService } from "@worlds/client/providers/tfjs-universal-sentence-encoder";
@@ -232,7 +232,8 @@ export async function runExperiment(
     ? await discoverEvals()
     : config.evals;
 
-  const openai = createOpenAI({ baseURL: config.baseUrl, apiKey: "ollama" });
+  const baseUrl = config.baseUrl.replace(/\/v1\/?$/, "");
+  const ollama = createOllama({ baseURL: baseUrl });
   const allResults: PerModelResult[] = [];
 
   for (const evalName of evalNames) {
@@ -247,7 +248,7 @@ export async function runExperiment(
     );
 
     for (const modelEntry of config.models) {
-      const model = openai(modelEntry.id) as unknown as BenchmarkModel;
+      const model = ollama(modelEntry.id) as unknown as BenchmarkModel;
       const displayModel = modelEntry.displayName ?? modelEntry.id;
       console.log(`  Model: ${displayModel}`);
 
