@@ -32,6 +32,14 @@ Deno.test("assessAnswer rejects unrelated answers", () => {
   assertEquals(result, { correct: false, matchKind: "wrong" });
 });
 
+Deno.test("assessAnswer rejects conversational refusals even if they contain the answer subject", () => {
+  const result = assessAnswer(
+    "I do not have direct knowledge about the capital of Aurelia.",
+    "Aurelia",
+  );
+  assertEquals(result, { correct: false, matchKind: "wrong" });
+});
+
 Deno.test("assessAnswer matches single-word answer as whole-answer exact", () => {
   const result = assessAnswer("lume", "Lume");
   assertEquals(result, { correct: true, matchKind: "exact" });

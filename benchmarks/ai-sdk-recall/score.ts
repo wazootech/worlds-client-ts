@@ -24,13 +24,43 @@ export function normalizeText(text: string): string {
 }
 
 /**
+ * REFUSAL_MARKERS contains normalized phrases indicative of an LLM refusing to
+ * answer due to a lack of factual knowledge, preventing accidental substring
+ * matches on repeated question subjects.
+ */
+const REFUSAL_MARKERS = [
+  "do not have direct",
+  "not based on my",
+  "could not find any",
+  "does not provide enough",
+  "no direct information",
+  "not able to specify",
+  "fictional or hypothetical",
+  "unable to determine",
+  "i am not aware",
+  "do not have information",
+  "do not have access",
+];
+
+/**
+ * isRefusal checks whether the answer matches known LLM refusal signatures.
+ */
+export function isRefusal(normalizedAnswer: string): boolean {
+  return REFUSAL_MARKERS.some((marker) => normalizedAnswer.includes(marker));
+}
+
+/**
  * Checks whether the full normalized expected phrase appears as a contiguous
- * token sequence inside the normalized answer.
+ * token sequence inside the normalized answer, provided the answer is not a
+ * conversational refusal.
  */
 function phraseContainedIn(answer: string, expectedPhrase: string): boolean {
   const normalizedAnswer = normalizeText(answer);
   const normalizedExpectedPhrase = normalizeText(expectedPhrase);
+
   if (normalizedExpectedPhrase.length === 0) return false;
+  if (isRefusal(normalizedAnswer)) return false;
+
   // Whole-answer exact match (single-word case)
   if (normalizedAnswer === normalizedExpectedPhrase) return true;
   // Contiguous token substring
