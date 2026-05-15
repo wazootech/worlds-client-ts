@@ -14,7 +14,7 @@ import type {
 export function createSearchWorldTool(client: ClientInterface) {
   return tool({
     description:
-      "Search the knowledge base for semantic statements or documents that match a query. Use this to find information about any entities or subjects in the graph.",
+      "Search the knowledge base for semantic statements or documents that match a query. Returns an empty results array if no matching information exists. Do not fabricate information when results are empty. Use this to find information about any entities or subjects in the graph.",
     inputSchema: jsonSchema<SearchRequest>({
       type: "object",
       properties: {
@@ -77,9 +77,13 @@ export function createSearchWorldTool(client: ClientInterface) {
     > => {
       try {
         const response = await client.search(request);
+        const hasResults = response.results ? response.results.length > 0 : false;
         return {
           success: true,
           ...response,
+          message: hasResults
+            ? `Found ${response.results.length} result(s).`
+            : "No matching information found in the knowledge base.",
         };
       } catch (error) {
         return {

@@ -145,7 +145,7 @@ async function answerWithoutTools(
   const result = await robustGenerateText({
     model,
     prompt:
-      `The following data describes a fictional world. Use it to answer the question. Do not use any tools. Respond with only the final answer.\n\nData:\n${corpus}\n\nQuestion: ${question}`,
+      `The following data describes a fictional world. Answer ONLY using information present in this data. If the data does not contain the answer, say "I cannot find this information in the provided data." Do not rely on external knowledge. Do not use any tools.\n\nData:\n${corpus}\n\nQuestion: ${question}`,
   });
 
   return result.text.trim();
@@ -166,10 +166,12 @@ async function answerWithTools(
     const result = await robustGenerateText({
       model,
       tools,
+      system:
+        "You are a helpful assistant that answers questions using only the provided tools. If the tools return no data, you must honestly say you cannot find the information rather than making up an answer.",
       toolChoice: forceTools ? "required" : "auto",
       stopWhen: stepCountIs(8),
       prompt:
-        `Use the Worlds tools to answer the question. First search for the relevant facts, then use SPARQL to verify the final answer. Respond with only the final answer.\n\nQuestion: ${question}`,
+        `Use the Worlds tools to answer the question. First search for the relevant facts, then use SPARQL to verify the final answer. If the tools return no results, say "I cannot find this information." Do not make up or guess answers.\n\nQuestion: ${question}`,
       onStepFinish: debug
         ? (event) => {
           if (event.toolCalls.length > 0) {

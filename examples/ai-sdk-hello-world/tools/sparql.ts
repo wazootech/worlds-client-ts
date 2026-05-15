@@ -43,7 +43,7 @@ export function createExecuteSparqlTool(
 ) {
   return tool({
     description:
-      "Execute a SPARQL query against the knowledge base. Use this for complex, precise relational queries across the RDF graph.",
+      "Execute a SPARQL query against the knowledge base. Returns empty data if the query matches no triples. Do not infer or fabricate information that is not present in the result set. Use this for complex, precise relational queries across the RDF graph.",
     inputSchema: jsonSchema<SparqlRequest>({
       type: "object",
       properties: {
