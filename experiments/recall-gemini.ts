@@ -9,7 +9,6 @@ const config: ExperimentConfig = {
     { name: "without-tools" },
     { name: "with-tools" },
   ],
-  baseUrl: "n/a",
 };
 
 export default config;

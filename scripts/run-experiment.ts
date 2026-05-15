@@ -86,7 +86,7 @@ if (import.meta.main) {
         }`,
       );
       console.log(`  Runs per question: ${config.runs}`);
-      console.log(`  Base URL: ${config.baseUrl}`);
+      console.log(`  Base URL: ${config.baseUrl ?? "N/A"}`);
       continue;
     }
 

@@ -31,7 +31,7 @@ export interface ExperimentConfig {
   models: ModelEntry[];
   runs: number;
   conditions: EvalCondition[];
-  baseUrl: string;
+  baseUrl?: string;
 }
 
 export interface EvalRunRow {

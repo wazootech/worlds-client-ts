@@ -9,7 +9,6 @@ const config: ExperimentConfig = {
     { name: "without-tools" },
     { name: "with-tools" },
   ],
-  baseUrl: Deno.env.get("OLLAMA_BASE_URL") ?? "http://localhost:11434/v1",
 };
 
 export default config;

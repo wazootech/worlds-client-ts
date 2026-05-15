@@ -39,7 +39,7 @@ async function robustGenerateText(
 /**
  * resolveModel instantiates the correct AI SDK model based on the provider prefix in the model identifier.
  */
-function resolveModel(modelIdentifier: string, ollamaBaseUrl: string): BenchmarkModel {
+function resolveModel(modelIdentifier: string, ollamaBaseUrl?: string): BenchmarkModel {
   if (modelIdentifier.startsWith("google:")) {
     const googleProvider = createGoogleGenerativeAI({
       apiKey: Deno.env.get("GEMINI_API_KEY"),
@@ -57,7 +57,8 @@ function resolveModel(modelIdentifier: string, ollamaBaseUrl: string): Benchmark
   }
 
   // Default to Ollama, removing optional prefix
-  const cleanOllamaBaseUrl = ollamaBaseUrl.replace(/\/v1\/?$/, "");
+  const cleanOllamaBaseUrl = (ollamaBaseUrl ?? Deno.env.get("OLLAMA_BASE_URL") ?? "http://localhost:11434/v1")
+    .replace(/\/v1\/?$/, "");
   const ollamaProvider = createOllama({ baseURL: cleanOllamaBaseUrl });
   const cleanModelId = modelIdentifier.startsWith("ollama:")
     ? modelIdentifier.slice("ollama:".length)
