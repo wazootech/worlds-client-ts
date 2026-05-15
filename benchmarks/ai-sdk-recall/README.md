@@ -49,6 +49,19 @@ ollama pull qwen2.5:3b-instruct
 deno run -A benchmarks/ai-sdk-recall/evaluate.ts --model qwen2.5:3b-instruct
 ```
 
+### Cache embeddings model for 100x speedup
+
+By default, the Universal Sentence Encoder will download model artifacts from
+TensorFlow Hub on every evaluator boot. To cache the model locally for instant
+loading:
+
+```bash
+deno task download:tfjs-use
+```
+
+Once cached, the evaluator automatically detects the local files in `./models/`
+and bypasses the external download, starting inference in under 300ms.
+
 Optional flags:
 
 - `--base-url http://localhost:11434/v1`

@@ -60,10 +60,25 @@ async function loadQuestions(path: string): Promise<BenchmarkQuestion[]> {
 async function buildClient(corpusPath: string): Promise<Client> {
   const corpusText = await Deno.readTextFile(corpusPath);
   const database = createLibsqlClient({ url: ":memory:" });
+  const modelPath = "./models/tfjs-universal-sentence-encoder/model.json";
+  const vocabPath = "./models/tfjs-universal-sentence-encoder/vocab.json";
+  let modelExists = false;
+  try {
+    Deno.statSync(modelPath);
+    Deno.statSync(vocabPath);
+    modelExists = true;
+  } catch (_error) {
+    console.warn(
+      "Local TFJS model artifacts not found. Defaulting to online download. Run `deno task download:tfjs-use` to cache artifacts locally.",
+    );
+  }
+
   const client = new Client(
     await provideLibsql({
       client: database,
-      embeddingService: new UniversalSentenceEncoderEmbeddingService(),
+      embeddingService: new UniversalSentenceEncoderEmbeddingService(
+        modelExists ? { modelUrl: modelPath, vocabUrl: vocabPath } : {},
+      ),
       vectorDimensions: 512,
     }),
   );
