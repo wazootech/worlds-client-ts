@@ -1,15 +1,15 @@
 import type { ExperimentConfig } from "../evals/types.ts";
 
 const config: ExperimentConfig = {
-  name: "recall-comparison",
+  name: "recall-gemini",
   evals: ["recall"],
-  models: [{ id: "qwen2.5:3b" }],
-  runs: 1,
+  models: [{ id: "google:gemini-2.5-flash", displayName: "gemini-2.5-flash" }],
+  runs: 3,
   conditions: [
     { name: "without-tools" },
     { name: "with-tools" },
   ],
-  baseUrl: Deno.env.get("OLLAMA_BASE_URL") ?? "http://localhost:11434/v1",
+  baseUrl: "n/a",
 };
 
 export default config;

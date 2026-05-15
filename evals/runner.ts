@@ -1,6 +1,9 @@
 import { createClient as createLibsqlClient } from "@libsql/client";
 import { generateText, stepCountIs } from "ai";
 import { createOllama } from "@ai-sdk/ollama";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createGroq } from "@ai-sdk/groq";
+import { retry } from "@std/async/retry";
 import { Client } from "@worlds/client";
 import { provideLibsql } from "@worlds/client/providers/libsql";
 import { UniversalSentenceEncoderEmbeddingService } from "@worlds/client/providers/tfjs-universal-sentence-encoder";
@@ -15,6 +18,52 @@ import type {
 import { discoverEvals, loadEval } from "./registry.ts";
 
 type BenchmarkModel = Parameters<typeof generateText>[0]["model"];
+
+/**
+ * robustGenerateText provides an augmented interface to generateText with automated exponential backoff retries.
+ */
+async function robustGenerateText(
+  generationOptions: Parameters<typeof generateText>[0],
+): Promise<Awaited<ReturnType<typeof generateText>>> {
+  return await retry(
+    () => generateText(generationOptions),
+    {
+      maxAttempts: 5,
+      minTimeout: 1000,
+      maxTimeout: 15000,
+      multiplier: 2,
+    },
+  );
+}
+
+/**
+ * resolveModel instantiates the correct AI SDK model based on the provider prefix in the model identifier.
+ */
+function resolveModel(modelIdentifier: string, ollamaBaseUrl: string): BenchmarkModel {
+  if (modelIdentifier.startsWith("google:")) {
+    const googleProvider = createGoogleGenerativeAI({
+      apiKey: Deno.env.get("GEMINI_API_KEY"),
+    });
+    const cleanModelId = modelIdentifier.slice("google:".length);
+    return googleProvider(cleanModelId) as unknown as BenchmarkModel;
+  }
+
+  if (modelIdentifier.startsWith("groq:")) {
+    const groqProvider = createGroq({
+      apiKey: Deno.env.get("GROQ_API_KEY"),
+    });
+    const cleanModelId = modelIdentifier.slice("groq:".length);
+    return groqProvider(cleanModelId) as unknown as BenchmarkModel;
+  }
+
+  // Default to Ollama, removing optional prefix
+  const cleanOllamaBaseUrl = ollamaBaseUrl.replace(/\/v1\/?$/, "");
+  const ollamaProvider = createOllama({ baseURL: cleanOllamaBaseUrl });
+  const cleanModelId = modelIdentifier.startsWith("ollama:")
+    ? modelIdentifier.slice("ollama:".length)
+    : modelIdentifier;
+  return ollamaProvider(cleanModelId) as unknown as BenchmarkModel;
+}
 
 async function buildClient(corpus: string): Promise<Client> {
   const database = createLibsqlClient({ url: ":memory:" });
@@ -56,7 +105,7 @@ async function answerWithoutTools(
   model: BenchmarkModel,
   question: string,
 ): Promise<string> {
-  const result = await generateText({
+  const result = await robustGenerateText({
     model,
     prompt:
       `Answer the question using only your own knowledge. Do not use any tools. Respond with only the final answer.\n\nQuestion: ${question}`,
@@ -76,7 +125,7 @@ async function answerWithTools(
     sparql: { allowUpdates: false },
   });
 
-  const result = await generateText({
+  const result = await robustGenerateText({
     model,
     tools,
     toolChoice: forceTools ? "required" : "auto",
@@ -132,7 +181,11 @@ async function runEvalFixture(
     const rows: EvalRunRow[] = [];
 
     for (let runIndex = 1; runIndex <= config.runs; runIndex++) {
-      for (const question of fixture.questions) {
+      const activeQuestions = config.name.includes("smoke")
+        ? fixture.questions.slice(0, 3)
+        : fixture.questions;
+
+      for (const question of activeQuestions) {
         let answer: string;
         let toolCalls = 0;
         let toolTrace: string[] | undefined;
@@ -232,8 +285,6 @@ export async function runExperiment(
     ? await discoverEvals()
     : config.evals;
 
-  const baseUrl = config.baseUrl.replace(/\/v1\/?$/, "");
-  const ollama = createOllama({ baseURL: baseUrl });
   const allResults: PerModelResult[] = [];
 
   for (const evalName of evalNames) {
@@ -248,7 +299,7 @@ export async function runExperiment(
     );
 
     for (const modelEntry of config.models) {
-      const model = ollama(modelEntry.id) as unknown as BenchmarkModel;
+      const model = resolveModel(modelEntry.id, config.baseUrl);
       const displayModel = modelEntry.displayName ?? modelEntry.id;
       console.log(`  Model: ${displayModel}`);
 
@@ -277,8 +328,9 @@ export async function runExperiment(
         });
       }
 
+      const sanitizedModelDir = displayModel.replace(/[:]/g, "-");
       const resultsDir = new URL(
-        `../results/${config.name}/${timestamp}/${fixture.name}/${displayModel}/`,
+        `../results/${config.name}/${timestamp}/${fixture.name}/${sanitizedModelDir}/`,
         import.meta.url,
       );
       Deno.mkdirSync(resultsDir, { recursive: true });
