@@ -1,5 +1,6 @@
 import { parseArgs } from "@std/cli/parse-args";
 import { runExperiment } from "../evals/runner.ts";
+import { formatClassBreakdownSummary, formatModelResultSummary } from "../evals/reporting/format-result-summary.ts";
 import type { ExperimentConfig } from "../evals/types.ts";
 
 const USAGE = [
@@ -101,22 +102,11 @@ if (import.meta.main) {
     );
 
     for (const result of summary.models) {
-      const extras: string[] = [];
-      if (result.refusalMatches !== undefined) {
-        extras.push(`refusal:${result.refusalMatches}`);
+      console.log(formatModelResultSummary(result));
+
+      for (const classSummary of result.classBreakdown ?? []) {
+        console.log(formatClassBreakdownSummary(classSummary));
       }
-      if (result.toolSelectionAccuracy !== undefined) {
-        extras.push(`toolSel:${(result.toolSelectionAccuracy * 100).toFixed(1)}%`);
-      }
-      if (result.unnecessaryToolCalls !== undefined && result.unnecessaryToolCalls > 0) {
-        extras.push(`unnecessaryTools:${result.unnecessaryToolCalls}`);
-      }
-      const extrasStr = extras.length > 0 ? ` (${extras.join(", ")})` : "";
-      console.log(
-        `  ${result.model} / ${result.condition}: ${
-          (result.accuracy * 100).toFixed(1)
-        }%  tools:${(result.toolUsageRate * 100).toFixed(1)}%${extrasStr}`,
-      );
     }
   }
 }

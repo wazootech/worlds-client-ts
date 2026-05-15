@@ -1,0 +1,22 @@
+@prefix ex: <http://example.org/> .
+
+ex:Aurelia ex:capital ex:Lume ;
+  ex:festival "Glass Tide" ;
+  ex:ally ex:SunstoneGuild .
+
+ex:SunstoneGuild ex:kind "organization" ;
+  ex:basedIn ex:Lume ;
+  ex:holds ex:Sunblade .
+
+ex:Sunblade ex:kind "artifact" ;
+  ex:material "sunstone" .
+
+ex:Kael ex:kind "person" ;
+  ex:basedIn ex:Lume .
+
+ex:Lume ex:kind "city" .
+
+ex:Driftland ex:kind "country" ;
+  ex:capital ex:Kestrel .
+
+ex:Kestrel ex:kind "city" .

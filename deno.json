@@ -48,6 +48,7 @@
     "example:libsql-hello-world": "deno -A ./examples/libsql-hello-world/main.ts",
     "example:denokv-hello-world": "deno -A --unstable-kv ./examples/denokv-hello-world/main.ts",
     "example:ai-sdk-hello-world": "deno -A --env ./examples/ai-sdk-hello-world/main.ts",
+    "experiment": "deno -A --env scripts/run-experiment.ts",
     "fmt": "deno fmt",
     "fmt:check": "deno fmt --check",
     "lint": "deno lint",
@@ -56,6 +57,7 @@
     "publish:dry": "deno publish --dry-run --allow-dirty",
     "eval": "deno test --allow-all --unstable-kv evals/",
     "validate:evals": "deno run -A scripts/validate-eval-configs.ts",
+    "normalize:search-quality-fixture": "deno run -A scripts/normalize-search-quality-fixture.ts",
     "ci": {
       "description": "Formats, lints, checks, and tests the code",
       "dependencies": [

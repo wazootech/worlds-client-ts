@@ -1,12 +1,14 @@
 import type { ExperimentConfig } from "../evals/types.ts";
 
 const config: ExperimentConfig = {
-  name: "recall-comparison",
-  evals: ["recall"],
-  models: [{ id: "qwen2.5:3b" }],
+  name: "recall-negative-smoke-micro",
+  evals: ["negative-tests"],
+  models: [
+    { id: "groq:llama-3.1-8b-instant", displayName: "llama3.1-8b" },
+  ],
+  smokeQuestionLimit: 3,
   runs: 1,
   conditions: [
-    { name: "without-tools", mode: "without-tools" },
     { name: "with-tools", mode: "with-tools", toolChoice: "auto" },
   ],
 };

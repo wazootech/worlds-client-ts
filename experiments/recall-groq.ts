@@ -13,8 +13,8 @@ const config: ExperimentConfig = {
   ],
   runs: 3,
   conditions: [
-    { name: "without-tools" },
-    { name: "with-tools" },
+    { name: "without-tools", mode: "without-tools" },
+    { name: "with-tools", mode: "with-tools", toolChoice: "auto" },
   ],
 };
 

@@ -9,10 +9,11 @@ const config: ExperimentConfig = {
     { id: "groq:qwen/qwen3-32b", displayName: "qwen3-32b" },
     { id: "groq:llama-3.3-70b-versatile", displayName: "llama3.3-70b" },
   ],
+  smokeQuestionLimit: 3,
   runs: 1,
   conditions: [
-    { name: "without-tools" },
-    { name: "with-tools" },
+    { name: "without-tools", mode: "without-tools" },
+    { name: "with-tools", mode: "with-tools", toolChoice: "auto" },
   ],
 };
 

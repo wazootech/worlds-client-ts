@@ -4,6 +4,7 @@ import { Client } from "./client.ts";
 import { RdfjsQuadStore, RdfjsSearchIndex } from "./providers/rdfjs/mod.ts";
 import { ComunicaSparqlEngine } from "#/client/providers/comunica/mod.ts";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
+import { hashQuad } from "#/client/quad-store/hash-quad.ts";
 
 const queryEngine = new QueryEngine();
 
@@ -71,4 +72,23 @@ Deno.test("Client.search delegates to searchIndex.search", async () => {
   const response = await client.search({ query: "integrate" });
   assertEquals(response.results?.length, 1);
   assertEquals(response.results?.[0].text, "Integrate all systems.");
+});
+
+Deno.test("Client.search returns stable hashQuad-based search result ids", async () => {
+  const store = new Store();
+  const indexedQuad = DataFactory.quad(
+    DataFactory.namedNode("http://example.com/sub"),
+    DataFactory.namedNode("http://example.com/pred"),
+    DataFactory.literal("Integrate all systems."),
+  );
+  store.addQuad(indexedQuad);
+
+  const client = createTestClient(store);
+
+  const firstResponse = await client.search({ query: "integrate" });
+  const secondResponse = await client.search({ query: "integrate" });
+  const expectedId = await hashQuad(indexedQuad);
+
+  assertEquals(firstResponse.results?.[0].id, expectedId);
+  assertEquals(secondResponse.results?.[0].id, expectedId);
 });

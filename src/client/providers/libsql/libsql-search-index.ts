@@ -1,13 +1,17 @@
 import type { Client } from "@libsql/client";
+import { DataFactory } from "n3";
 import type {
   SearchIndexInterface,
   SearchRequest,
   SearchResponse,
   SearchResult,
 } from "#/client/search-index/search-index-interface.ts";
+import { hashQuad } from "#/client/quad-store/hash-quad.ts";
 import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
+
+const { literal, namedNode, quad: createQuad, defaultGraph } = DataFactory;
 
 /**
  * LibsqlSearchIndexOptions defines the structured configuration and dependency parameters needed to construct the LibSQL search engine.
@@ -74,13 +78,28 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
 
     const resultSet = await this.options.client.execute({ sql, args });
 
-    const results: SearchResult[] = resultSet.rows.map((row) => ({
-      subject: String(row["subject"]),
-      predicate: String(row["predicate"]),
-      graph: String(row["graph"]),
-      text: String(row["value"]),
-      score: Number(row["combined_rank"]),
-    }));
+    const results: SearchResult[] = [];
+
+    for (const row of resultSet.rows) {
+      const searchResultBase = {
+        subject: String(row["subject"]),
+        predicate: String(row["predicate"]),
+        graph: String(row["graph"]),
+        text: String(row["value"]),
+      };
+      const searchQuad = createQuad(
+        namedNode(searchResultBase.subject),
+        namedNode(searchResultBase.predicate),
+        literal(searchResultBase.text),
+        searchResultBase.graph ? namedNode(searchResultBase.graph) : defaultGraph(),
+      );
+
+      results.push({
+        id: await hashQuad(searchQuad),
+        ...searchResultBase,
+        score: Number(row["combined_rank"]),
+      });
+    }
 
     return { results };
   }

@@ -11,9 +11,9 @@ function score(answer: string, question: EvalQuestion) {
 
 const fixture: EvalFixture = {
   name: "recall",
+  evaluationKind: "answer",
   questions: questions as EvalQuestion[],
   corpus,
-  score,
 };
 
 export default fixture;

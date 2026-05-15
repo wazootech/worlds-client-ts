@@ -1,12 +1,16 @@
 import type * as rdfjs from "@rdfjs/types";
+import { DataFactory } from "n3";
 import type {
   SearchIndexInterface,
   SearchRequest,
   SearchResponse,
   SearchResult,
 } from "#/client/search-index/search-index-interface.ts";
+import { hashQuad } from "#/client/quad-store/hash-quad.ts";
 import { filterQuads } from "#/client/quad-store/quad-filter.ts";
 import { isTextualLiteral } from "#/client/quad-store/is-textual-literal.ts";
+
+const { literal, namedNode, quad: createQuad, defaultGraph } = DataFactory;
 
 /**
  * RdfjsSearchIndex is the implementation of SearchIndexInterface that uses an RDF/JS store.
@@ -20,6 +24,7 @@ export class RdfjsSearchIndex implements SearchIndexInterface {
     const query = request.query.toLowerCase();
     const stream = this.store.match(null, null, null, null);
     const results: Array<SearchResult> = [];
+    const pendingSearchResultPromises: Array<Promise<void>> = [];
 
     // 🛡️ Pre-compile the centralized O(1) execution gate from the request payload
     const matcher = filterQuads(request);
@@ -35,19 +40,33 @@ export class RdfjsSearchIndex implements SearchIndexInterface {
         if (isTextualLiteral(quad.object)) {
           const value = quad.object.value;
           if (value.toLowerCase().includes(query)) {
-            results.push({
-              subject: quad.subject.value,
-              predicate: quad.predicate.value,
-              graph: quad.graph.value,
-              text: value,
-              score: 1.0,
-            });
+            pendingSearchResultPromises.push((async () => {
+              const searchResultBase = {
+                subject: quad.subject.value,
+                predicate: quad.predicate.value,
+                graph: quad.graph.value,
+                text: value,
+              };
+              const searchQuad = createQuad(
+                namedNode(searchResultBase.subject),
+                namedNode(searchResultBase.predicate),
+                literal(searchResultBase.text),
+                searchResultBase.graph ? namedNode(searchResultBase.graph) : defaultGraph(),
+              );
+              results.push({
+                id: await hashQuad(searchQuad),
+                ...searchResultBase,
+                score: 1.0,
+              });
+            })());
           }
         }
       });
       stream.on("end", resolve);
       stream.on("error", reject);
     });
+
+    await Promise.all(pendingSearchResultPromises);
 
     return { results };
   }

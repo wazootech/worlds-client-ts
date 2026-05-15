@@ -7,17 +7,37 @@ import { Client } from "@worlds/client";
 import { provideLibsql } from "@worlds/client/providers/libsql";
 import { UniversalSentenceEncoderEmbeddingService } from "@worlds/client/providers/tfjs-universal-sentence-encoder";
 import { createTools } from "../examples/ai-sdk-hello-world/tools.ts";
-import { scoreWithLLM } from "./llm-scorer.ts";
+import { evaluateQuestion } from "./evaluators/mod.ts";
 import type {
   EvalFixture,
   EvalRunRow,
   ExperimentConfig,
   ExperimentSummary,
+  PerQuestionClassSummary,
   PerModelResult,
 } from "./types.ts";
 import { discoverEvals, loadEval } from "./registry.ts";
+import { average, computeCostPerCorrectAnswer, computeMedian } from "./runner/metrics.ts";
+import { countRedundantToolCalls, parseToolName } from "./runner/tool-trace.ts";
 
 type BenchmarkModel = Parameters<typeof generateText>[0]["model"];
+
+interface EvalFixtureRunResult {
+  perModelResults: PerModelResult[];
+  rowsByCondition: Record<string, EvalRunRow[]>;
+}
+
+export interface AnswerMetrics {
+  answer: string;
+  toolCalls: number;
+  toolTrace: string[];
+  latencyMs: number;
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+  toolSequence: string[];
+  redundantToolCalls: number;
+}
 
 /**
  * isTransientError returns true only for retryable API errors (rate limits, server errors, network failures).
@@ -141,14 +161,28 @@ async function answerWithoutTools(
   model: BenchmarkModel,
   question: string,
   corpus: string,
-): Promise<string> {
+): Promise<AnswerMetrics> {
+  const startTime = performance.now();
   const result = await robustGenerateText({
     model,
     prompt:
       `The following data describes a fictional world. Answer ONLY using information present in this data. If the data does not contain the answer, say "I cannot find this information in the provided data." Do not rely on external knowledge. Do not use any tools.\n\nData:\n${corpus}\n\nQuestion: ${question}`,
   });
 
-  return result.text.trim();
+  const finishTime = performance.now();
+  const usage = (result as { usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number } }).usage;
+
+  return {
+    answer: result.text.trim(),
+    toolCalls: 0,
+    toolTrace: [],
+    latencyMs: Math.round(finishTime - startTime),
+    promptTokens: usage?.promptTokens,
+    completionTokens: usage?.completionTokens,
+    totalTokens: usage?.totalTokens,
+    toolSequence: [],
+    redundantToolCalls: 0,
+  };
 }
 
 async function answerWithTools(
@@ -157,11 +191,12 @@ async function answerWithTools(
   question: string,
   forceTools: boolean,
   debug: boolean,
-): Promise<{ answer: string; toolCalls: number; toolTrace: string[] }> {
+): Promise<AnswerMetrics> {
   try {
     const tools = createTools(client, {
       sparql: { allowUpdates: false },
     });
+    const startTime = performance.now();
 
     const result = await robustGenerateText({
       model,
@@ -180,18 +215,39 @@ async function answerWithTools(
         }
         : undefined,
     });
+    const finishTime = performance.now();
 
     const toolCalls = result.steps.flatMap((step) => step.toolCalls).length;
     const toolTrace = result.steps.flatMap((step) =>
       step.toolCalls.map((toolCall) => JSON.stringify(toolCall))
     );
-    return { answer: result.text.trim(), toolCalls, toolTrace };
+    const usage = (result as { usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number } }).usage;
+    const toolSequence = toolTrace.map(parseToolName).filter((toolName): toolName is string => toolName !== null);
+
+    return {
+      answer: result.text.trim(),
+      toolCalls,
+      toolTrace,
+      latencyMs: Math.round(finishTime - startTime),
+      promptTokens: usage?.promptTokens,
+      completionTokens: usage?.completionTokens,
+      totalTokens: usage?.totalTokens,
+      toolSequence,
+      redundantToolCalls: countRedundantToolCalls(toolTrace),
+    };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.warn(
       `    [WARN] answerWithTools failed: ${errorMessage.slice(0, 200)}`,
     );
-    return { answer: `ERROR: ${errorMessage}`, toolCalls: 0, toolTrace: [] };
+    return {
+      answer: `ERROR: ${errorMessage}`,
+      toolCalls: 0,
+      toolTrace: [],
+      latencyMs: 0,
+      toolSequence: [],
+      redundantToolCalls: 0,
+    };
   }
 }
 
@@ -218,8 +274,9 @@ async function runEvalFixture(
   config: ExperimentConfig,
   modelName: string,
   options?: { debug?: boolean },
-): Promise<PerModelResult[]> {
+): Promise<EvalFixtureRunResult> {
   const results: PerModelResult[] = [];
+  const rowsByCondition: Record<string, EvalRunRow[]> = {};
 
   for (const condition of config.conditions) {
     console.log(
@@ -229,63 +286,39 @@ async function runEvalFixture(
     const rows: EvalRunRow[] = [];
 
     for (let runIndex = 1; runIndex <= config.runs; runIndex++) {
-      const activeQuestions = config.name.includes("smoke")
-        ? fixture.questions.slice(0, 3)
+      const activeQuestions = config.smokeQuestionLimit !== undefined
+        ? fixture.questions.slice(0, config.smokeQuestionLimit)
         : fixture.questions;
 
       for (const question of activeQuestions) {
-        let answer: string;
-        let toolCalls = 0;
+        let answerMetrics: AnswerMetrics;
         let toolTrace: string[] | undefined;
 
-        if (condition.name === "without-tools") {
-          answer = await answerWithoutTools(model, question.question, fixture.corpus);
+        if (condition.mode === "without-tools") {
+          answerMetrics = await answerWithoutTools(model, question.question, fixture.corpus);
         } else {
-          const result = await answerWithTools(
+          answerMetrics = await answerWithTools(
             model,
             client!,
             question.question,
-            condition.forceTools ?? false,
+            condition.toolChoice === "required",
             options?.debug ?? false,
           );
-          answer = result.answer;
-          toolCalls = result.toolCalls;
           const shouldCaptureTrace = options?.debug || question.scoringMode === "llm";
-          toolTrace = shouldCaptureTrace ? result.toolTrace : undefined;
+          toolTrace = shouldCaptureTrace ? answerMetrics.toolTrace : undefined;
         }
 
-        let toolCorrect: boolean | undefined;
-        if (question.expectedTool !== undefined) {
-          if (question.expectedTool === null) {
-            const isParametric = question.tags?.includes("parametric") ?? false;
-            toolCorrect = isParametric ? toolCalls === 0 : true;
-          } else {
-            toolCorrect = (toolTrace ?? []).some((tc) => {
-              try {
-                const parsed = JSON.parse(tc);
-                return (
-                  parsed.name === question.expectedTool ||
-                  parsed.toolName === question.expectedTool
-                );
-              } catch {
-                return tc.includes(question.expectedTool!);
-              }
-            });
-          }
-        }
+        const answer = answerMetrics.answer;
+        const toolCalls = answerMetrics.toolCalls;
 
-        let assessment = fixture.score(answer, question);
-
-        if (question.scoringMode === "llm" && toolTrace && toolTrace.length > 0) {
-          try {
-            const llmResult = await scoreWithLLM(question, answer, toolTrace);
-            assessment = { correct: llmResult.correct, matchKind: llmResult.matchKind };
-          } catch (error) {
-            console.warn(
-              `LLM scoring failed for ${question.id}, fallback to code scoring: ${error instanceof Error ? error.message : error}`,
-            );
-          }
-        }
+        const evaluationResult = await evaluateQuestion({
+          fixture,
+          question,
+          answer,
+          answerMetrics,
+          client,
+          toolTrace: answerMetrics.toolTrace,
+        });
 
         if (question.expectedTool !== undefined && !question.answer) {
           assessment = {
@@ -300,11 +333,22 @@ async function runEvalFixture(
           model: "",
           run: runIndex,
           answer,
-          correct: assessment.correct,
-          matchKind: assessment.matchKind,
+          correct: evaluationResult.correct,
+          matchKind: evaluationResult.matchKind,
           toolCalls,
           toolTrace: options?.debug ? toolTrace : undefined,
-          toolCorrect,
+          toolCorrect: evaluationResult.toolCorrect,
+          latencyMs: answerMetrics.latencyMs,
+          promptTokens: answerMetrics.promptTokens,
+          completionTokens: answerMetrics.completionTokens,
+          totalTokens: answerMetrics.totalTokens,
+          toolSequence: answerMetrics.toolSequence,
+          redundantToolCalls: answerMetrics.redundantToolCalls,
+          workflowCorrect: evaluationResult.workflowCorrect,
+          safetyCorrect: evaluationResult.safetyCorrect,
+          searchPrecisionAtK: evaluationResult.searchPrecisionAtK,
+          searchRecallAtK: evaluationResult.searchRecallAtK,
+          searchMrr: evaluationResult.searchMrr,
         });
 
         if (options?.debug) {
@@ -312,8 +356,8 @@ async function runEvalFixture(
             condition.name,
             runIndex,
             question.id,
-            assessment.correct,
-            assessment.matchKind,
+            evaluationResult.correct,
+            evaluationResult.matchKind,
             toolCalls,
             answer,
           );
@@ -346,6 +390,64 @@ async function runEvalFixture(
       if (parametricRows.length === 0) return undefined;
       return parametricRows.filter((r) => r.toolCalls > 0).length;
     })();
+    const latencyValues = rows.flatMap((row) => row.latencyMs !== undefined ? [row.latencyMs] : []);
+    const totalTokenValues = rows.flatMap((row) => row.totalTokens !== undefined ? [row.totalTokens] : []);
+    const redundantToolCalls = rows.reduce(
+      (accumulator, row) => accumulator + (row.redundantToolCalls ?? 0),
+      0,
+    );
+    const totalToolCalls = rows.reduce((accumulator, row) => accumulator + row.toolCalls, 0);
+    const workflowAccuracy: number | undefined = (() => {
+      const workflowRows = rows.filter((row) => row.workflowCorrect !== undefined);
+      if (workflowRows.length === 0) {
+        return undefined;
+      }
+      const correctWorkflowRows = workflowRows.filter((row) => row.workflowCorrect).length;
+      return correctWorkflowRows / workflowRows.length;
+    })();
+    const safetyAccuracy: number | undefined = (() => {
+      const safetyRows = rows.filter((row) => row.safetyCorrect !== undefined);
+      if (safetyRows.length === 0) {
+        return undefined;
+      }
+      const correctSafetyRows = safetyRows.filter((row) => row.safetyCorrect).length;
+      return correctSafetyRows / safetyRows.length;
+    })();
+    const precisionValues = rows.flatMap((row) => row.searchPrecisionAtK !== undefined ? [row.searchPrecisionAtK] : []);
+    const recallValues = rows.flatMap((row) => row.searchRecallAtK !== undefined ? [row.searchRecallAtK] : []);
+    const mrrValues = rows.flatMap((row) => row.searchMrr !== undefined ? [row.searchMrr] : []);
+    const classBreakdown: PerQuestionClassSummary[] = fixture.questions
+      .flatMap((question) => question.questionClass ? [question.questionClass] : [])
+      .filter((questionClass, questionClassIndex, questionClasses) =>
+        questionClasses.indexOf(questionClass) === questionClassIndex
+      )
+      .map((questionClass) => {
+        const classQuestionIds = new Set(
+          fixture.questions
+            .filter((question) => question.questionClass === questionClass)
+            .map((question) => question.id),
+        );
+        const classRows = rows.filter((row) => classQuestionIds.has(row.questionId));
+        const classCorrectCount = classRows.filter((row) => row.correct).length;
+        const classToolUsageCount = classRows.filter((row) => row.toolCalls > 0).length;
+        const classLatencyValues = classRows.flatMap((row) => row.latencyMs !== undefined ? [row.latencyMs] : []);
+        const classTokenValues = classRows.flatMap((row) => row.totalTokens !== undefined ? [row.totalTokens] : []);
+        const classParametricRows = classRows.filter((row) => {
+          const question = fixture.questions.find((candidateQuestion) => candidateQuestion.id === row.questionId);
+          return question?.questionClass === "parametric" || question?.tags?.includes("parametric") === true;
+        });
+
+        return {
+          questionClass,
+          accuracy: classRows.length > 0 ? classCorrectCount / classRows.length : 0,
+          toolUsageRate: classRows.length > 0 ? classToolUsageCount / classRows.length : 0,
+          averageLatencyMs: average(classLatencyValues),
+          averageTotalTokens: average(classTokenValues),
+          unnecessaryToolCalls: classParametricRows.length > 0
+            ? classParametricRows.filter((row) => row.toolCalls > 0).length
+            : undefined,
+        };
+      });
 
     results.push({
       model: modelName,
@@ -358,6 +460,18 @@ async function runEvalFixture(
       refusalMatches: refusalMatches > 0 ? refusalMatches : undefined,
       toolSelectionAccuracy,
       unnecessaryToolCalls,
+      averageLatencyMs: average(latencyValues),
+      medianLatencyMs: computeMedian(latencyValues),
+      averageTotalTokens: average(totalTokenValues),
+      totalToolCalls,
+      redundantToolCallRate: totalToolCalls > 0 ? redundantToolCalls / totalToolCalls : undefined,
+      workflowAccuracy,
+      safetyAccuracy,
+      averagePrecisionAtK: average(precisionValues),
+      averageRecallAtK: average(recallValues),
+      averageMrr: average(mrrValues),
+      costPerCorrectAnswer: computeCostPerCorrectAnswer(correctCount, totalTokenValues),
+      classBreakdown: classBreakdown.length > 0 ? classBreakdown : undefined,
     });
 
     const refusalStr = refusalMatches > 0
@@ -376,10 +490,15 @@ async function runEvalFixture(
         (toolUsageRate * 100).toFixed(1)
       }%  (exact:${exactMatches} alias:${aliasMatches} wrong:${wrongMatches}${refusalStr}${toolSelStr}${unnecessaryStr})`,
     );
+
+    rowsByCondition[condition.name] = rows;
   }
 
   const withoutToolsResult = results.find(
     (r) => r.condition === "without-tools",
+  );
+  const withoutToolsClassBreakdown = new Map(
+    (withoutToolsResult?.classBreakdown ?? []).map((classSummary) => [classSummary.questionClass, classSummary]),
   );
   for (const result of results) {
     if (result === withoutToolsResult) continue;
@@ -389,9 +508,24 @@ async function runEvalFixture(
         `    Delta (${result.condition} - without-tools): ${(delta * 100).toFixed(1)}%`,
       );
     }
+
+    if (result.classBreakdown) {
+      result.classBreakdown = result.classBreakdown.map((classSummary) => {
+        const withoutToolsClassSummary = withoutToolsClassBreakdown.get(classSummary.questionClass);
+        return {
+          ...classSummary,
+          accuracyDeltaVsWithoutTools: withoutToolsClassSummary
+            ? classSummary.accuracy - withoutToolsClassSummary.accuracy
+            : undefined,
+        };
+      });
+    }
   }
 
-  return results;
+  return {
+    perModelResults: results,
+    rowsByCondition,
+  };
 }
 
 export async function runExperiment(
@@ -425,7 +559,7 @@ export async function runExperiment(
 
       let client: Client | undefined;
       const needsClient = config.conditions.some(
-        (c) => c.name !== "without-tools",
+        (c) => c.mode !== "without-tools",
       );
       if (needsClient) {
         console.log("  Building client with corpus...");
@@ -433,7 +567,7 @@ export async function runExperiment(
       }
 
       const runOptions = { debug: options?.debug };
-      const perModelResults = await runEvalFixture(
+      const fixtureRunResult = await runEvalFixture(
         fixture,
         model,
         client,
@@ -441,6 +575,7 @@ export async function runExperiment(
         displayModel,
         runOptions,
       );
+      const perModelResults = fixtureRunResult.perModelResults;
 
       for (const result of perModelResults) {
         allResults.push(result);
@@ -456,6 +591,10 @@ export async function runExperiment(
       await Deno.writeTextFile(
         new URL("summary.json", resultsDir),
         JSON.stringify(perModelResults, null, 2),
+      );
+      await Deno.writeTextFile(
+        new URL("rows.json", resultsDir),
+        JSON.stringify(fixtureRunResult.rowsByCondition, null, 2),
       );
     }
   }

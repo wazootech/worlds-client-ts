@@ -1,0 +1,45 @@
+[
+  {
+    "id": "wf01",
+    "question": "Import that Eldoria has capital Kingswatch, verify it with SPARQL, and then export the graph in Turtle.",
+    "answer": "",
+    "aliases": [],
+    "questionClass": "workflow",
+    "requiredTools": ["importRdf", "executeSparql", "exportRdf"],
+    "expectedToolsInOrder": ["importRdf", "executeSparql", "exportRdf"],
+    "expectedMutation": "import",
+    "expectedGraphStateChecks": [
+      "PREFIX ex: <http://example.org/> ASK WHERE { ex:Eldoria ex:capital ex:Kingswatch . }"
+    ],
+    "scoringMode": "code"
+  },
+  {
+    "id": "wf02",
+    "question": "Add that Kael was born in Driftland, search for Kael, then verify the birth country using SPARQL.",
+    "answer": "",
+    "aliases": [],
+    "questionClass": "workflow",
+    "requiredTools": ["importRdf", "searchWorld", "executeSparql"],
+    "expectedToolsInOrder": ["importRdf", "searchWorld", "executeSparql"],
+    "expectedMutation": "import",
+    "expectedGraphStateChecks": [
+      "PREFIX ex: <http://example.org/> ASK WHERE { ex:Kael ex:bornIn ex:Driftland . }"
+    ],
+    "scoringMode": "code"
+  },
+  {
+    "id": "wf03",
+    "question": "Try to import malformed Turtle for Eldoria and Kingswatch, then verify whether the graph changed.",
+    "answer": "",
+    "aliases": [],
+    "questionClass": "workflow",
+    "requiredTools": ["importRdf", "executeSparql"],
+    "expectedToolsInOrder": ["importRdf", "executeSparql"],
+    "expectedMutation": "none",
+    "expectedErrorSubstring": "error",
+    "expectedGraphStateChecks": [
+      "PREFIX ex: <http://example.org/> ASK WHERE { ex:Eldoria ex:capital ex:Kingswatch . }"
+    ],
+    "scoringMode": "code"
+  }
+]

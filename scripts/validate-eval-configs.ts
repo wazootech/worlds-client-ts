@@ -1,8 +1,39 @@
 import { translate } from "npm:sparqlalgebrajs";
+import { Parser } from "n3";
+import { hashQuad } from "../src/client/quad-store/hash-quad.ts";
 
 const VALID_TOOL_NAMES = ["searchWorld", "executeSparql", "importRdf", "exportRdf"];
+const VALID_QUESTION_CLASSES = [
+  "parametric",
+  "graph-fact",
+  "workflow",
+  "retrieval",
+  "adversarial",
+  "refusal",
+];
+const VALID_EXPECTED_MUTATIONS = ["none", "import"];
+const VALID_SAFETY_OUTCOMES = ["refuse", "safe-fail", "safe-answer"];
+const VALID_EVALUATION_KINDS = ["answer", "workflow", "retrieval", "adversarial"];
 
-const EVAL_DIRS = ["recall", "negative-tests", "tool-selection"];
+function looksLikeLegacySearchKey(value: string): boolean {
+  return value.includes("|");
+}
+
+const EVAL_DIRS = [
+  ...new Set(
+    Array.from(Deno.readDirSync(new URL("../evals/", import.meta.url)))
+      .filter((entry) => entry.isDirectory)
+      .filter((entry) => {
+        try {
+          Deno.statSync(new URL(`../evals/${entry.name}/EVAL.ts`, import.meta.url));
+          return true;
+        } catch {
+          return false;
+        }
+      })
+      .map((entry) => entry.name),
+  ),
+].sort();
 
 interface ValidationError {
   file: string;
@@ -51,9 +82,60 @@ async function validateEvalQuestions(evalName: string): Promise<ValidationError[
     if (q.aliases !== undefined && !Array.isArray(q.aliases)) {
       errors.push(error(`${evalName}/questions.json`, `Question ${q.id} aliases must be an array`));
     }
-    if (q.tags !== undefined && !Array.isArray(q.tags)) {
-      errors.push(error(`${evalName}/questions.json`, `Question ${q.id} tags must be an array`));
-    }
+      if (q.tags !== undefined && !Array.isArray(q.tags)) {
+        errors.push(error(`${evalName}/questions.json`, `Question ${q.id} tags must be an array`));
+      }
+      if (q.questionClass !== undefined && !VALID_QUESTION_CLASSES.includes(q.questionClass)) {
+        errors.push(
+          error(
+            `${evalName}/questions.json`,
+            `Question ${q.id} questionClass "${q.questionClass}" not in ${VALID_QUESTION_CLASSES.join(", ")}`,
+          ),
+        );
+      }
+      if (q.requiredTools !== undefined && !Array.isArray(q.requiredTools)) {
+        errors.push(error(`${evalName}/questions.json`, `Question ${q.id} requiredTools must be an array`));
+      }
+      if (q.forbiddenTools !== undefined && !Array.isArray(q.forbiddenTools)) {
+        errors.push(error(`${evalName}/questions.json`, `Question ${q.id} forbiddenTools must be an array`));
+      }
+      if (q.expectedToolsInOrder !== undefined && !Array.isArray(q.expectedToolsInOrder)) {
+        errors.push(error(`${evalName}/questions.json`, `Question ${q.id} expectedToolsInOrder must be an array`));
+      }
+      if (q.expectedMutation !== undefined && !VALID_EXPECTED_MUTATIONS.includes(q.expectedMutation)) {
+        errors.push(
+          error(
+            `${evalName}/questions.json`,
+            `Question ${q.id} expectedMutation "${q.expectedMutation}" not in ${VALID_EXPECTED_MUTATIONS.join(", ")}`,
+          ),
+        );
+      }
+      if (q.expectedGraphStateChecks !== undefined && !Array.isArray(q.expectedGraphStateChecks)) {
+        errors.push(error(`${evalName}/questions.json`, `Question ${q.id} expectedGraphStateChecks must be an array`));
+      }
+      if (q.expectedSafetyOutcome !== undefined && !VALID_SAFETY_OUTCOMES.includes(q.expectedSafetyOutcome)) {
+        errors.push(
+          error(
+            `${evalName}/questions.json`,
+            `Question ${q.id} expectedSafetyOutcome "${q.expectedSafetyOutcome}" not in ${VALID_SAFETY_OUTCOMES.join(", ")}`,
+          ),
+        );
+      }
+      if (q.expectedErrorSubstring !== undefined && typeof q.expectedErrorSubstring !== "string") {
+        errors.push(error(`${evalName}/questions.json`, `Question ${q.id} expectedErrorSubstring must be a string`));
+      }
+      if (q.expectedSearchResultIds !== undefined) {
+        if (!Array.isArray(q.expectedSearchResultIds) || q.expectedSearchResultIds.length === 0) {
+          errors.push(
+            error(`${evalName}/questions.json`, `Question ${q.id} expectedSearchResultIds must be a non-empty array`),
+          );
+        }
+      }
+      if (q.searchEvaluationK !== undefined) {
+        if (typeof q.searchEvaluationK !== "number" || q.searchEvaluationK <= 0) {
+          errors.push(error(`${evalName}/questions.json`, `Question ${q.id} searchEvaluationK must be a positive number`));
+        }
+      }
 
     if (evalName === "negative-tests") {
       if (q.expectedOutcome !== "refusal") {
@@ -109,14 +191,14 @@ async function validateEvalFixture(evalName: string): Promise<ValidationError[]>
     if (!fixture || typeof fixture.name !== "string") {
       errors.push(error(`${evalName}/EVAL.ts`, "Must export default with string name"));
     }
+    if (!fixture || !VALID_EVALUATION_KINDS.includes(fixture.evaluationKind)) {
+      errors.push(error(`${evalName}/EVAL.ts`, `Must export default with evaluationKind in ${VALID_EVALUATION_KINDS.join(", ")}`));
+    }
     if (!Array.isArray(fixture.questions)) {
       errors.push(error(`${evalName}/EVAL.ts`, "Must export default with questions array"));
     }
     if (typeof fixture.corpus !== "string") {
       errors.push(error(`${evalName}/EVAL.ts`, "Must export default with corpus string"));
-    }
-    if (typeof fixture.score !== "function") {
-      errors.push(error(`${evalName}/EVAL.ts`, "Must export default with score function"));
     }
   } catch (cause) {
     errors.push(error(`${evalName}/EVAL.ts`, `Cannot import: ${cause}`));
@@ -163,10 +245,58 @@ async function validateExperimentConfigs(): Promise<ValidationError[]> {
         if (typeof condition.name !== "string") {
           errors.push(error(`experiments/${entry.name}`, "Condition missing name"));
         }
+        if (!["without-tools", "with-tools"].includes(condition.mode)) {
+          errors.push(error(`experiments/${entry.name}`, `Condition ${condition.name} must declare mode "without-tools" or "with-tools"`));
+        }
+        if (condition.mode === "with-tools" && condition.toolChoice !== undefined && !["auto", "required"].includes(condition.toolChoice)) {
+          errors.push(error(`experiments/${entry.name}`, `Condition ${condition.name} toolChoice must be "auto" or "required"`));
+        }
       }
     } catch (cause) {
       errors.push(error(`experiments/${entry.name}`, `Cannot import: ${cause}`));
     }
+  }
+
+  return errors;
+}
+
+async function validateSearchQualityFixture(): Promise<ValidationError[]> {
+  const errors: ValidationError[] = [];
+  const corpusUrl = new URL("../evals/search-quality/corpus.ttl", import.meta.url);
+  const questionsUrl = new URL("../evals/search-quality/questions.json", import.meta.url);
+
+  try {
+    const corpusText = await Deno.readTextFile(corpusUrl);
+    const parser = new Parser({ format: "text/turtle" });
+    const quads = parser.parse(corpusText);
+    const validHashIds = new Set<string>();
+    for (const quad of quads) {
+      validHashIds.add(await hashQuad(quad));
+    }
+
+    const questions = JSON.parse(await Deno.readTextFile(questionsUrl)) as Array<Record<string, unknown>>;
+    for (const question of questions) {
+      const questionId = typeof question.id === "string" ? question.id : "<unknown>";
+      const expectedSearchResultIds = Array.isArray(question.expectedSearchResultIds)
+        ? question.expectedSearchResultIds
+        : [];
+
+      for (const expectedSearchResultId of expectedSearchResultIds) {
+        if (typeof expectedSearchResultId !== "string") {
+          errors.push(error("search-quality/questions.json", `Question ${questionId} has non-string expectedSearchResultIds entry`));
+          continue;
+        }
+        if (looksLikeLegacySearchKey(expectedSearchResultId)) {
+          errors.push(error("search-quality/questions.json", `Question ${questionId} still contains legacy search key ${expectedSearchResultId}`));
+          continue;
+        }
+        if (!validHashIds.has(expectedSearchResultId)) {
+          errors.push(error("search-quality/questions.json", `Question ${questionId} references search result id not present in corpus: ${expectedSearchResultId}`));
+        }
+      }
+    }
+  } catch (cause) {
+    errors.push(error("search-quality", `Semantic validation failed: ${cause}`));
   }
 
   return errors;
@@ -184,6 +314,9 @@ async function main(): Promise<void> {
     evalErrors.push(...await validateEvalFixture(evalName));
     evalErrors.push(...await validateEvalQuestions(evalName));
     evalErrors.push(...await validateCorpusFile(evalName));
+    if (evalName === "search-quality") {
+      evalErrors.push(...await validateSearchQualityFixture());
+    }
 
     for (const err of evalErrors) {
       console.log(`    FAIL  ${err.file}: ${err.message}`);

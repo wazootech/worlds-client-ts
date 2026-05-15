@@ -17,9 +17,9 @@ function score(answer: string, question: EvalQuestion) {
 
 const fixture: EvalFixture = {
   name: "negative-tests",
+  evaluationKind: "answer",
   questions: questions as EvalQuestion[],
   corpus,
-  score,
 };
 
 export default fixture;
