@@ -1,4 +1,3 @@
-import type { CoreTool } from "ai";
 import { jsonSchema, tool } from "ai";
 import type { ClientInterface, ExportRequest } from "@worlds/client";
 
@@ -15,11 +14,11 @@ export type SerializedExportRequest = Omit<ExportRequest, "format"> & {
  * @param client The Worlds ClientInterface instance.
  * @returns An AI SDK tool for exporting data from the knowledge base.
  */
-export function createExportRdfTool(client: ClientInterface): CoreTool {
+export function createExportRdfTool(client: ClientInterface) {
   return tool({
     description:
       "Export the entire knowledge base graph as serialized RDF data (like Turtle or N-Triples). Use this as a safety hatch or when a full system dump is explicitly requested.",
-    parameters: jsonSchema<SerializedExportRequest>({
+    inputSchema: jsonSchema<SerializedExportRequest>({
       type: "object",
       properties: {
         format: {

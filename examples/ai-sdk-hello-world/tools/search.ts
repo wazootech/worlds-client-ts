@@ -1,4 +1,3 @@
-import type { CoreTool } from "ai";
 import { jsonSchema, tool } from "ai";
 import type {
   ClientInterface,
@@ -12,11 +11,11 @@ import type {
  * @param client The Worlds ClientInterface instance.
  * @returns An AI SDK tool for searching the knowledge base.
  */
-export function createSearchWorldTool(client: ClientInterface): CoreTool {
+export function createSearchWorldTool(client: ClientInterface) {
   return tool({
     description:
       "Search the knowledge base for semantic statements or documents that match a query. Use this to find information about any entities or subjects in the graph.",
-    parameters: jsonSchema<SearchRequest>({
+    inputSchema: jsonSchema<SearchRequest>({
       type: "object",
       properties: {
         query: {

@@ -1,4 +1,3 @@
-import type { CoreTool } from "ai";
 import { jsonSchema, tool } from "ai";
 import type { ClientInterface, SparqlRequest } from "@worlds/client";
 
@@ -23,11 +22,11 @@ export interface ExecuteSparqlOptions {
 export function createExecuteSparqlTool(
   client: ClientInterface,
   options?: ExecuteSparqlOptions,
-): CoreTool {
+) {
   return tool({
     description:
       "Execute a SPARQL query against the knowledge base. Use this for complex, precise relational queries across the RDF graph.",
-    parameters: jsonSchema<SparqlRequest>({
+    inputSchema: jsonSchema<SparqlRequest>({
       type: "object",
       properties: {
         query: {

@@ -1,5 +1,5 @@
 import { createClient as createLibsqlClient } from "@libsql/client";
-import { generateText } from "ai";
+import { generateText, stepCountIs } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { Client } from "@worlds/client";
 import { provideLibsql } from "@worlds/client/providers/libsql";
@@ -122,7 +122,7 @@ async function answerWithTools(
     model,
     tools,
     toolChoice: forceTools ? "required" : "auto",
-    maxSteps: 8,
+    stopWhen: stepCountIs(8),
     prompt:
       `Use the Worlds tools to answer the question. First search for the relevant facts, then use SPARQL to verify the final answer. Respond with only the final answer.\n\nQuestion: ${question.question}`,
     onStepFinish: debug
