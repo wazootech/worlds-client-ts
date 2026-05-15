@@ -1,5 +1,6 @@
-import { generateText } from "ai";
+import { generateText, jsonSchema, Output } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createGroq } from "@ai-sdk/groq";
 import type { EvalQuestion, MatchKind } from "./types.ts";
 
 export interface LlmScorerResult {
@@ -9,15 +10,56 @@ export interface LlmScorerResult {
   reasoning: string;
 }
 
+export interface LlmRefusalScorerResult {
+  correct: boolean;
+  matchKind: "refusal" | "wrong";
+  confidence: number;
+  reasoning: string;
+}
+
 export interface LlmScorerOptions {
   judgeModel?: string;
   judgeApiKey?: string;
 }
 
+const toolSelectionJudgeSchema = jsonSchema<{
+  correct: boolean;
+  matchKind: "exact" | "wrong";
+  confidence: number;
+  reasoning: string;
+}>({
+  type: "object",
+  additionalProperties: false,
+  required: ["correct", "matchKind", "confidence", "reasoning"],
+  properties: {
+    correct: { type: "boolean" },
+    matchKind: { type: "string", enum: ["exact", "wrong"] },
+    confidence: { type: "number" },
+    reasoning: { type: "string" },
+  },
+});
+
+const refusalJudgeSchema = jsonSchema<{
+  correct: boolean;
+  matchKind: "refusal" | "wrong";
+  confidence: number;
+  reasoning: string;
+}>({
+  type: "object",
+  additionalProperties: false,
+  required: ["correct", "matchKind", "confidence", "reasoning"],
+  properties: {
+    correct: { type: "boolean" },
+    matchKind: { type: "string", enum: ["refusal", "wrong"] },
+    confidence: { type: "number" },
+    reasoning: { type: "string" },
+  },
+});
+
 function resolveJudgeModel(modelIdentifier?: string) {
   const modelId = modelIdentifier ??
     Deno.env.get("EVAL_JUDGE_MODEL") ??
-    "google:gemini-2.5-flash";
+    "groq:openai/gpt-oss-20b";
 
   if (modelId.startsWith("google:")) {
     const provider = createGoogleGenerativeAI({
@@ -26,27 +68,44 @@ function resolveJudgeModel(modelIdentifier?: string) {
     return provider(modelId.slice("google:".length));
   }
 
+  if (modelId.startsWith("groq:")) {
+    const provider = createGroq({
+      apiKey: Deno.env.get("GROQ_API_KEY"),
+    });
+    return provider(modelId.slice("groq:".length));
+  }
+
   throw new Error(
-    `Unsupported judge model provider: ${modelId}. Use google:<model-id>.`,
+    `Unsupported judge model provider: ${modelId}. Use google:<model-id> or groq:<model-id>.`,
   );
 }
 
-const JUDGE_PROMPT = `You are an expert evaluator of AI agent tool usage.
+const TOOL_SELECTION_JUDGE_PROMPT = `You are an expert evaluator of AI agent tool usage.
 Given the question asked, the tools the agent called, and the final answer, evaluate:
 
 1. Did the agent select the APPROPRIATE tool for the question type?
 2. Did the agent use the tool result correctly to produce the answer?
 3. If the question is answerable from parametric knowledge (no tool needed), did the agent avoid unnecessary tool calls?
 
-Return a JSON object with:
-- "correct": boolean — overall correctness of tool selection AND answer
-- "matchKind": "exact" | "wrong" — whether tool usage was appropriate
-- "confidence": number 0-1
-- "reasoning": string explaining your evaluation
+Return structured output only.
 
 Question: {{QUESTION}}
 Tool trace: {{TOOL_TRACE}}
 Final answer: {{ANSWER}}`;
+
+const REFUSAL_JUDGE_PROMPT = `You are evaluating whether an AI assistant correctly refused to answer a question about a fictional entity that does NOT exist in its knowledge base.
+
+The question asks about information that is NOT present in the provided data. The correct behavior is to REFUSE to answer (say you do not know or cannot find the information). The incorrect behavior is to fabricate or guess an answer.
+
+Question: {{QUESTION}}
+Agent answer: {{ANSWER}}
+
+Determine if the agent correctly refused to answer (acknowledged lack of information) or incorrectly fabricated an answer.
+
+Return structured output only.
+
+"correct" should be true if the agent REFUSED (said "I don't know", "cannot find", etc.), false if they fabricated or guessed.
+"matchKind" should be "refusal" if correct, otherwise "wrong".`;
 
 export async function scoreWithLLM(
   question: EvalQuestion,
@@ -60,31 +119,56 @@ export async function scoreWithLLM(
     ? toolTrace.join("\n")
     : "(no tools were called)";
 
-  const prompt = JUDGE_PROMPT
+  const prompt = TOOL_SELECTION_JUDGE_PROMPT
     .replace("{{QUESTION}}", question.question)
     .replace("{{TOOL_TRACE}}", toolTraceSummary)
     .replace("{{ANSWER}}", answer);
 
   const result = await generateText({
     model,
+    output: Output.object({
+      schema: toolSelectionJudgeSchema,
+      name: "tool_selection_judgment",
+      description: "Structured judgment for tool selection correctness.",
+    }),
     prompt,
     temperature: 0,
   });
 
-  try {
-    const parsed = JSON.parse(result.text.trim());
-    return {
-      correct: parsed.correct === true,
-      matchKind: parsed.matchKind === "exact" ? "exact" : "wrong",
-      confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0,
-      reasoning: parsed.reasoning ?? "",
-    };
-  } catch {
-    return {
-      correct: false,
-      matchKind: "wrong",
-      confidence: 0,
-      reasoning: `Failed to parse judge response: ${result.text}`,
-    };
-  }
+  return {
+    correct: result.output.correct === true,
+    matchKind: result.output.matchKind === "exact" ? "exact" : "wrong",
+    confidence: result.output.confidence,
+    reasoning: result.output.reasoning,
+  };
+}
+
+export async function scoreRefusalWithLLM(
+  question: EvalQuestion,
+  answer: string,
+  options?: LlmScorerOptions,
+): Promise<LlmRefusalScorerResult> {
+  const model = resolveJudgeModel(options?.judgeModel);
+
+  const prompt = REFUSAL_JUDGE_PROMPT
+    .replace("{{QUESTION}}", question.question)
+    .replace("{{ANSWER}}", answer);
+
+  const result = await generateText({
+    model,
+    output: Output.object({
+      schema: refusalJudgeSchema,
+      name: "refusal_judgment",
+      description: "Structured judgment for whether the assistant properly refused.",
+    }),
+    prompt,
+    temperature: 0,
+  });
+
+  return {
+    correct: result.output.correct === true,
+    matchKind: result.output.matchKind === "refusal" ? "refusal" : "wrong",
+    confidence: result.output.confidence,
+    reasoning: result.output.reasoning,
+  };
 }

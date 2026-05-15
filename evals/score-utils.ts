@@ -30,6 +30,10 @@ const REFUSAL_MARKERS = [
   "cant provide",
   "will not be able",
   "wont be able",
+  "cannot find this",
+  "cant find this",
+  "cannot find the",
+  "cant find the",
 ];
 
 export function normalizeText(text: string): string {

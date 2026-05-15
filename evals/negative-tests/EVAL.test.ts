@@ -1,5 +1,6 @@
 import { assertEquals } from "@std/assert";
 import { assessRefusal, normalizeText } from "../score-utils.ts";
+import type { EvalRunRow } from "../types.ts";
 import { scoreNegativeTest } from "./score.ts";
 import questions from "./questions.json" with { type: "json" };
 
@@ -60,4 +61,43 @@ Deno.test("negative-test questions dataset shaped correctly", () => {
     assertEquals(typeof q.question, "string");
     assertEquals(q.tags?.includes("refusal"), true);
   }
+});
+
+Deno.test("rows.json shape can contain refusal matches", () => {
+  const rowsByCondition: Record<string, EvalRunRow[]> = {
+    "with-tools": [
+      {
+        questionId: "n01",
+        condition: "with-tools",
+        model: "llama3.1-8b",
+        run: 1,
+        answer: "I cannot find this information.",
+        correct: true,
+        matchKind: "refusal",
+        toolCalls: 2,
+        toolTrace: [
+          '{"toolName":"searchWorld"}',
+          '{"toolName":"executeSparql"}',
+        ],
+      },
+      {
+        questionId: "n03",
+        condition: "with-tools",
+        model: "llama3.1-8b",
+        run: 1,
+        answer: "ERROR: Failed to call a function.",
+        correct: false,
+        matchKind: "wrong",
+        toolCalls: 0,
+        toolTrace: [],
+      },
+    ],
+  };
+
+  const refusalMatches = Object.values(rowsByCondition)
+    .flat()
+    .filter((row) => row.matchKind === "refusal");
+
+  assertEquals(refusalMatches.length, 1);
+  assertEquals(refusalMatches[0].questionId, "n01");
 });
