@@ -17,7 +17,7 @@ export interface BenchmarkAssessment {
 export function normalizeText(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s]/gu, "") // strip all non-alphanumeric chars (preserves unicode letters)
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
     .split(/\s+/)
     .filter((word) => word.length > 0)
     .join(" ");
@@ -49,11 +49,6 @@ export function isRefusal(normalizedAnswer: string): boolean {
   return REFUSAL_MARKERS.some((marker) => normalizedAnswer.includes(marker));
 }
 
-/**
- * Checks whether the full normalized expected phrase appears as a contiguous
- * token sequence inside the normalized answer, provided the answer is not a
- * conversational refusal.
- */
 function phraseContainedIn(answer: string, expectedPhrase: string): boolean {
   const normalizedAnswer = normalizeText(answer);
   const normalizedExpectedPhrase = normalizeText(expectedPhrase);
@@ -61,9 +56,7 @@ function phraseContainedIn(answer: string, expectedPhrase: string): boolean {
   if (normalizedExpectedPhrase.length === 0) return false;
   if (isRefusal(normalizedAnswer)) return false;
 
-  // Whole-answer exact match (single-word case)
   if (normalizedAnswer === normalizedExpectedPhrase) return true;
-  // Contiguous token substring
   return normalizedAnswer.includes(normalizedExpectedPhrase);
 }
 
@@ -72,7 +65,7 @@ function phraseContainedIn(answer: string, expectedPhrase: string): boolean {
  * optionally a list of acceptable aliases.
  *
  * Match priority:
- *   1. exact   — canonical answer or alias matched as a contiguous token span
+ *   1. exact   — canonical answer matched as a contiguous token span
  *   2. alias   — non-canonical alias matched
  *   3. wrong   — no match
  */
