@@ -1,8 +1,14 @@
+export type MatchKind = "exact" | "alias" | "wrong" | "refusal";
+
 export interface EvalQuestion {
   id: string;
   question: string;
   answer: string;
   aliases?: string[];
+  expectedOutcome?: "factoid" | "refusal";
+  expectedTool?: string | null;
+  tags?: string[];
+  scoringMode?: "code" | "llm";
 }
 
 export interface EvalFixture {
@@ -12,11 +18,11 @@ export interface EvalFixture {
   score(
     answer: string,
     question: EvalQuestion,
-  ): { correct: boolean; matchKind: "exact" | "alias" | "wrong" };
+  ): { correct: boolean; matchKind: MatchKind };
 }
 
 export interface EvalCondition {
-  name: "without-tools" | "with-tools";
+  name: string;
   forceTools?: boolean;
 }
 
@@ -41,9 +47,10 @@ export interface EvalRunRow {
   run: number;
   answer: string;
   correct: boolean;
-  matchKind: "exact" | "alias" | "wrong";
+  matchKind: MatchKind;
   toolCalls: number;
   toolTrace?: string[];
+  toolCorrect?: boolean;
 }
 
 export interface PerModelResult {
@@ -54,6 +61,9 @@ export interface PerModelResult {
   exactMatches: number;
   aliasMatches: number;
   wrongMatches: number;
+  refusalMatches?: number;
+  toolSelectionAccuracy?: number;
+  unnecessaryToolCalls?: number;
 }
 
 export interface ExperimentSummary {

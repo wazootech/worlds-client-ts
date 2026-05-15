@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { assessAnswer, normalizeText } from "./score.ts";
+import { assessAnswer, normalizeText } from "../score-utils.ts";
 import questions from "./questions.json" with { type: "json" };
 
 Deno.test("normalizeText lowercases and removes punctuation", () => {

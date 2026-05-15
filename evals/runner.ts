@@ -158,11 +158,12 @@ async function buildClient(corpus: string): Promise<Client> {
 async function answerWithoutTools(
   model: BenchmarkModel,
   question: string,
+  corpus: string,
 ): Promise<string> {
   const result = await robustGenerateText({
     model,
     prompt:
-      `Answer the question using only your own knowledge. Do not use any tools. Respond with only the final answer.\n\nQuestion: ${question}`,
+      `The following data describes a fictional world. Use it to answer the question. Do not use any tools. Respond with only the final answer.\n\nData:\n${corpus}\n\nQuestion: ${question}`,
   });
 
   return result.text.trim();
@@ -246,7 +247,7 @@ async function runEvalFixture(
         let toolTrace: string[] | undefined;
 
         if (condition.name === "without-tools") {
-          answer = await answerWithoutTools(model, question.question);
+          answer = await answerWithoutTools(model, question.question, fixture.corpus);
         } else {
           const result = await answerWithTools(
             model,
@@ -260,6 +261,26 @@ async function runEvalFixture(
           toolTrace = options?.debug ? result.toolTrace : undefined;
         }
 
+        let toolCorrect: boolean | undefined;
+        if (question.expectedTool !== undefined) {
+          if (question.expectedTool === null) {
+            const isParametric = question.tags?.includes("parametric") ?? false;
+            toolCorrect = isParametric ? toolCalls === 0 : true;
+          } else {
+            toolCorrect = (toolTrace ?? []).some((tc) => {
+              try {
+                const parsed = JSON.parse(tc);
+                return (
+                  parsed.name === question.expectedTool ||
+                  parsed.toolName === question.expectedTool
+                );
+              } catch {
+                return tc.includes(question.expectedTool!);
+              }
+            });
+          }
+        }
+
         const assessment = fixture.score(answer, question);
         rows.push({
           questionId: question.id,
@@ -271,6 +292,7 @@ async function runEvalFixture(
           matchKind: assessment.matchKind,
           toolCalls,
           toolTrace,
+          toolCorrect,
         });
 
         if (options?.debug) {
@@ -292,9 +314,26 @@ async function runEvalFixture(
     const exactMatches = rows.filter((r) => r.matchKind === "exact").length;
     const aliasMatches = rows.filter((r) => r.matchKind === "alias").length;
     const wrongMatches = rows.filter((r) => r.matchKind === "wrong").length;
+    const refusalMatches = rows.filter((r) => r.matchKind === "refusal").length;
     const toolUsageCount = rows.filter((r) => r.toolCalls > 0).length;
     const accuracy = totalCount > 0 ? correctCount / totalCount : 0;
     const toolUsageRate = totalCount > 0 ? toolUsageCount / totalCount : 0;
+
+    const toolSelectionAccuracy: number | undefined = (() => {
+      const toolRows = rows.filter((r) => r.toolCorrect !== undefined);
+      if (toolRows.length === 0) return undefined;
+      const correct = toolRows.filter((r) => r.toolCorrect).length;
+      return correct / toolRows.length;
+    })();
+
+    const unnecessaryToolCalls: number | undefined = (() => {
+      const parametricRows = rows.filter((r) => {
+        const q = fixture.questions.find((q) => q.id === r.questionId);
+        return q?.tags?.includes("parametric") ?? false;
+      });
+      if (parametricRows.length === 0) return undefined;
+      return parametricRows.filter((r) => r.toolCalls > 0).length;
+    })();
 
     results.push({
       model: modelName,
@@ -304,26 +343,37 @@ async function runEvalFixture(
       exactMatches,
       aliasMatches,
       wrongMatches,
+      refusalMatches: refusalMatches > 0 ? refusalMatches : undefined,
+      toolSelectionAccuracy,
+      unnecessaryToolCalls,
     });
 
+    const refusalStr = refusalMatches > 0
+      ? ` refusal:${refusalMatches}`
+      : "";
+    const toolSelStr = toolSelectionAccuracy !== undefined
+      ? ` toolSel:${(toolSelectionAccuracy * 100).toFixed(1)}%`
+      : "";
     console.log(
       `    Accuracy: ${
         (accuracy * 100).toFixed(1)
       }% (${correctCount}/${totalCount})  Tools used: ${
         (toolUsageRate * 100).toFixed(1)
-      }%  (exact:${exactMatches} alias:${aliasMatches} wrong:${wrongMatches})`,
+      }%  (exact:${exactMatches} alias:${aliasMatches} wrong:${wrongMatches}${refusalStr}${toolSelStr})`,
     );
   }
 
-  const withToolsResult = results.find((r) => r.condition === "with-tools");
   const withoutToolsResult = results.find(
     (r) => r.condition === "without-tools",
   );
-  if (withToolsResult && withoutToolsResult) {
-    const delta = withToolsResult.accuracy - withoutToolsResult.accuracy;
-    console.log(
-      `    Delta (with-tools - without-tools): ${(delta * 100).toFixed(1)}%`,
-    );
+  for (const result of results) {
+    if (result === withoutToolsResult) continue;
+    if (withoutToolsResult) {
+      const delta = result.accuracy - withoutToolsResult.accuracy;
+      console.log(
+        `    Delta (${result.condition} - without-tools): ${(delta * 100).toFixed(1)}%`,
+      );
+    }
   }
 
   return results;
@@ -360,7 +410,7 @@ export async function runExperiment(
 
       let client: Client | undefined;
       const needsClient = config.conditions.some(
-        (c) => c.name === "with-tools",
+        (c) => c.name !== "without-tools",
       );
       if (needsClient) {
         console.log("  Building client with corpus...");

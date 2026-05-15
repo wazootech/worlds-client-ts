@@ -53,6 +53,7 @@
     "check": "deno check",
     "test": "deno test --allow-all --unstable-kv",
     "publish:dry": "deno publish --dry-run --allow-dirty",
+    "eval": "deno test --allow-all --unstable-kv evals/",
     "ci": {
       "description": "Formats, lints, checks, and tests the code",
       "dependencies": [

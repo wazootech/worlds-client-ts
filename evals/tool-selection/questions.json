@@ -1,0 +1,293 @@
+[
+  {
+    "id": "ts01",
+    "question": "Search for anything related to 'sun' or 'gold'.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "searchWorld",
+    "tags": ["tool-selection"],
+    "scoringMode": "llm"
+  },
+  {
+    "id": "ts02",
+    "question": "Find all entities that mention 'frost'.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "searchWorld",
+    "tags": ["tool-selection"],
+    "scoringMode": "llm"
+  },
+  {
+    "id": "ts03",
+    "question": "Look up what information exists about the city of Lume.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "searchWorld",
+    "tags": ["tool-selection"]
+  },
+  {
+    "id": "ts04",
+    "question": "Search for artifacts made of precious materials.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "searchWorld",
+    "tags": ["tool-selection"],
+    "scoringMode": "llm"
+  },
+  {
+    "id": "ts05",
+    "question": "Find events related to 'night' or 'aurora'.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "searchWorld",
+    "tags": ["tool-selection"]
+  },
+  {
+    "id": "ts06",
+    "question": "What does the graph contain about 'stone' or 'rock'?",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "searchWorld",
+    "tags": ["tool-selection"]
+  },
+  {
+    "id": "ts07",
+    "question": "Search for any data mentioning the word 'guard'.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "searchWorld",
+    "tags": ["tool-selection"]
+  },
+  {
+    "id": "ts08",
+    "question": "Find people or organizations related to 'sunstone'.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "searchWorld",
+    "tags": ["tool-selection"]
+  },
+  {
+    "id": "ts09",
+    "question": "Look up everything about the 'Glass Tide' festival.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "searchWorld",
+    "tags": ["tool-selection"]
+  },
+  {
+    "id": "ts10",
+    "question": "Search the knowledge base for 'crown' or 'blade'.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "searchWorld",
+    "tags": ["tool-selection"]
+  },
+  {
+    "id": "ts11",
+    "question": "Which people were born in Aurelia?",
+    "answer": "",
+    "aliases": ["Elara", "Mira"],
+    "expectedTool": "executeSparql",
+    "tags": ["tool-selection"]
+  },
+  {
+    "id": "ts12",
+    "question": "List all organizations based in cities located in Borealis.",
+    "answer": "",
+    "aliases": ["Frostguard"],
+    "expectedTool": "executeSparql",
+    "tags": ["tool-selection"]
+  },
+  {
+    "id": "ts13",
+    "question": "Which people lead an organization in the same country they were born in?",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "executeSparql",
+    "tags": ["tool-selection"],
+    "scoringMode": "llm"
+  },
+  {
+    "id": "ts14",
+    "question": "What artifacts are located in organizations based in Aurelia?",
+    "answer": "",
+    "aliases": ["Sunblade"],
+    "expectedTool": "executeSparql",
+    "tags": ["tool-selection"]
+  },
+  {
+    "id": "ts15",
+    "question": "Which countries have both a festival and a river?",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "executeSparql",
+    "tags": ["tool-selection"]
+  },
+  {
+    "id": "ts16",
+    "question": "Find all people who were born in a country that borders Borealis.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "executeSparql",
+    "tags": ["tool-selection"],
+    "scoringMode": "llm"
+  },
+  {
+    "id": "ts17",
+    "question": "How many cities have recorded population data?",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "executeSparql",
+    "tags": ["tool-selection"]
+  },
+  {
+    "id": "ts18",
+    "question": "Which organizations are based in the same city as the person who leads them?",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "executeSparql",
+    "tags": ["tool-selection"],
+    "scoringMode": "llm"
+  },
+  {
+    "id": "ts19",
+    "question": "List all events held in countries that have a capital city with a recorded population.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "executeSparql",
+    "tags": ["tool-selection"],
+    "scoringMode": "llm"
+  },
+  {
+    "id": "ts20",
+    "question": "Find all pairs of people who were born in the same country.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "executeSparql",
+    "tags": ["tool-selection"],
+    "scoringMode": "llm"
+  },
+  {
+    "id": "ts21",
+    "question": "Add a new country called Eldoria with capital Kingswatch.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "importRdf",
+    "tags": ["tool-selection"],
+    "scoringMode": "llm"
+  },
+  {
+    "id": "ts22",
+    "question": "Import that the person Kael was born in Driftland using Turtle format.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "importRdf",
+    "tags": ["tool-selection"]
+  },
+  {
+    "id": "ts23",
+    "question": "Store the fact that the artifact 'Moonstone' is located at SunstoneGuild.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "importRdf",
+    "tags": ["tool-selection"],
+    "scoringMode": "llm"
+  },
+  {
+    "id": "ts24",
+    "question": "Add an event called 'Harvest Moon' to be held in Moonwell.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "importRdf",
+    "tags": ["tool-selection"]
+  },
+  {
+    "id": "ts25",
+    "question": "Export all data from the knowledge base.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "exportRdf",
+    "tags": ["tool-selection"]
+  },
+  {
+    "id": "ts26",
+    "question": "Give me a complete dump of all facts about Aurelia.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "exportRdf",
+    "tags": ["tool-selection"],
+    "scoringMode": "llm"
+  },
+  {
+    "id": "ts27",
+    "question": "Export the entire graph in Turtle format.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": "exportRdf",
+    "tags": ["tool-selection"]
+  },
+  {
+    "id": "ts28",
+    "question": "Tell me about the country Aurelia.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": null,
+    "tags": ["tool-selection", "ambiguous"]
+  },
+  {
+    "id": "ts29",
+    "question": "What information do you have about the Frostguard organization?",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": null,
+    "tags": ["tool-selection", "ambiguous"]
+  },
+  {
+    "id": "ts30",
+    "question": "Describe the city of Frosthall.",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": null,
+    "tags": ["tool-selection", "ambiguous"]
+  },
+  {
+    "id": "ts31",
+    "question": "What festivals are there in the data?",
+    "answer": "",
+    "aliases": [],
+    "expectedTool": null,
+    "tags": ["tool-selection", "ambiguous"]
+  },
+  {
+    "id": "ts32",
+    "question": "What is the capital of France?",
+    "answer": "Paris",
+    "aliases": [],
+    "expectedTool": null,
+    "tags": ["tool-selection", "parametric"]
+  },
+  {
+    "id": "ts33",
+    "question": "What is the chemical symbol for water?",
+    "answer": "H2O",
+    "aliases": ["h2o"],
+    "expectedTool": null,
+    "tags": ["tool-selection", "parametric"]
+  },
+  {
+    "id": "ts34",
+    "question": "Who painted the Mona Lisa?",
+    "answer": "Leonardo da Vinci",
+    "aliases": ["da Vinci", "Leonardo"],
+    "expectedTool": null,
+    "tags": ["tool-selection", "parametric"]
+  },
+  {
+    "id": "ts35",
+    "question": "What planet is known as the Red Planet?",
+    "answer": "Mars",
+    "aliases": [],
+    "expectedTool": null,
+    "tags": ["tool-selection", "parametric"]
+  }
+]
