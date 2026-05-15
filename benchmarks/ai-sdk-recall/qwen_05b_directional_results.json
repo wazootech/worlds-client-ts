@@ -1,0 +1,911 @@
+{
+  "withoutToolsAccuracy": 0.02,
+  "withToolsAccuracy": 0.28,
+  "withToolsToolUsageRate": 0.58,
+  "exactMatches": 15,
+  "aliasMatches": 0,
+  "wrongMatches": 85,
+  "delta": 0.26,
+  "rows": [
+    {
+      "questionId": "q1",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The capital of Aurelia is Ephesus.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q1",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The capital of Aurelia is Vanta.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q2",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The currency used in the country that uses the ice crown is the Chinese Yuan Renminbi (also known as RMB).",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q2",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The country that uses the currency ice crown is Borealis.",
+      "correct": true,
+      "matchKind": "exact",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q3",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "To determine which country borders both Aurelia and Borealis, I'll follow these steps:\n\n1. Identify the countries that border Aurelia:\n   - Greece (bordering the Aegean Sea)\n   - Albania (bordering the Mediterranean Sea)\n\n2. Identify the countries that border Borealis:\n   - Russia\n   - Canada\n\n3. Compare the two sets of borders:\n   - Greece and Albania both border both Aurelia and Borealis.\n   - Russia and Canada do not border both Aurelia and Borealis.\n\nTherefore, the country that borders both Aurelia and Borealis is **Russia**.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q3",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The country that borders both Aurelia and Borealis is the Northern Lights (Borealis).",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q4",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The capital of the country that borders Driftland is London, United Kingdom.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q4",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The query failed because the SPARQL query did not end with a closing parenthesis. The correct format should be: SELECT ?capital\".",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 3
+    },
+    {
+      "questionId": "q5",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The White Lantern Festival is celebrated in the country of Nepal. This unique cultural tradition involves lighting up a white lantern and performing elaborate rituals to honor the goddess of light, known as Durga. The festival typically takes place during the winter months when the sun sets at dusk.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q5",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The country that has the festival White Lantern is Moonwell.",
+      "correct": true,
+      "matchKind": "exact",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q6",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Wind note is used in the United States.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q6",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q7",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The currency of the country with the capital Morrow is the United States Dollar (USD).",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q7",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The currency of the country with capital Morrow is wind note.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q8",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Palegate is located in the state of Georgia, which is part of the United States.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q8",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q9",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Moonwell is located in Australia.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q9",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q10",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The festival of Aurelia is an ancient Greek festival that takes place in late summer or early autumn, typically around August 15th or September 20th. It is one of the most important festivals in the Greek calendar and is dedicated to the goddess of love, beauty, and fertility, Aurelia. The festival involves various rituals, including the sacrifice of a lamb, the burning of incense, and the offering of fruits and flowers.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q10",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q11",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Borealis is a fictional river in the Marvel Comics universe, created by Jack Kirby and published by DC Comics. It has no physical existence outside of the stories that feature it in comic books. Therefore, there is no river named \"Borealis\" in reality. However, if we were to imagine a river that exists in the Marvel Universe, it would be Borealis River, which is a fictional river that appears in various DC Comics stories and comics published by DC Entertainment.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q11",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q12",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "River Emberflow is located in the Democratic Republic of Congo (DRC). It flows through several countries including Uganda, Rwanda, and the Democratic Republic of Congo itself.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q12",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q13",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The capital of the country whose currency is moonglass is New Delhi, India. Moonglass is a type of glass that has been used in various forms throughout history, including as a material for making jewelry and other decorative items. However, it's important to note that the use of moonglass or any specific material can vary depending on the context and region. In general, New Delhi is known for its rich cultural heritage and diverse population, which contributes to its status as a capital city in India.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q13",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The capital of the country whose currency is moonglass is Moonwell.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q14",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The festival of Night Aurora is celebrated in Japan.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q14",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The country that has the festival Night Aurora is Borealis.",
+      "correct": true,
+      "matchKind": "exact",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q15",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The currency of the United States is the dollar.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q15",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The country with the currency \"SunMark\" is Valeholm.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q16",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The capital of the country with the capital \"Kestrel\" is London, United Kingdom.",
+      "correct": true,
+      "matchKind": "exact",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q16",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The capital of the country with the capital Kestrel is Driftland.",
+      "correct": true,
+      "matchKind": "exact",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q17",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "To determine which country borders both Driftland and Aurelia, I'll follow these steps:\n\n1. Identify the countries involved:\n   - Driftland is a fictional land in a video game series.\n   - Aurelia is a real-world country.\n\n2. Research the geographical locations of Driftland and Aurelia:\n   - Driftland is an imaginary land with no known physical borders.\n   - Aurelia is a real-world country, but it's not a fictional one.\n\n3. Analyze the possible border scenarios:\n   - If we consider only the fictional Driftland, it would be impossible to have a real-world border between two imaginary lands.\n   - However, if we assume that Driftland and Aurelia are part of the same country (e.g., they're both in the same province or region), then we can explore this possibility.\n\n4. Explore the possibility:\n   - If we consider Driftland as a part of Aurelia, it's possible to have a border between them.\n   - However, since Driftland is an imaginary land with no known physical borders, it's not practical to establish a real-world border between two fictional lands.\n\n5. Conclude based on the available information:\n   - Given that both Driftland and Aurelia are fictional entities, it's impossible to have a real-world border between them.\n   - Therefore, we can conclude that neither Driftland nor Aurelia borders both of these fictional countries.\n\nFinal answer: Neither Driftland nor Aurelia borders both of these fictional countries.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q17",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The country that borders both Driftland and Aurelia is the Moonwell, which is located in the Northern Hemisphere.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q18",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The capital of the country with the River Silverrun and the Ice Crown is London, United Kingdom.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q18",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The capital of the country with the river Silverrun and the currency ice crown is Frosthall.",
+      "correct": true,
+      "matchKind": "exact",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q19",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The capital of Thornwick is Thornbury.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q19",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q20",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Thornwick is an English village located in the county of Oxfordshire, England. It is known for its rich history and cultural heritage, particularly related to the town's association with the author William Shakespeare. The village hosts a variety of festivals throughout the year that celebrate the Bard's life and work.\n\nOne of the most significant festivals held in Thornwick is the Shakespeare Festival, which takes place annually from late September to early November. This festival features various events such as plays, readings, concerts, and exhibitions related to William Shakespeare's life and works.\n\nThe festival typically includes performances by local actors, musicians, and artists who are associated with Shakespeare's plays or have a connection to his life and legacy. It also offers opportunities for visitors to learn more about the Bard through guided tours of the village and its surroundings.\n\nIn addition to the Shakespeare Festival, Thornwick hosts other festivals throughout the year that celebrate different aspects of Shakespeare's life and work. These include:\n\n1. The Shakespearean Village Festival: This festival takes place in late September or early October and features a variety of events related to Shakespeare's life and times.\n2. The Shakespearean Theatre Festival: Held annually from November 30th to December 5th, this festival showcases plays by William Shakespeare and other renowned playwrights.\n3. The Shakespearean Artisan Show: This event takes place in late September or early October and features a variety of workshops and demonstrations related to the arts associated with Shakespeare.\n\nThese festivals provide an opportunity for visitors to experience the rich cultural heritage of Thornwick and its surrounding area, while also enjoying local entertainment and activities.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q20",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q21",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Valeholm is a fictional country in the video game \"Final Fantasy X\". The currency used in this game is called \"Valeria\".",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q21",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The currency of Valeholm is amber buck.",
+      "correct": true,
+      "matchKind": "exact",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q22",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Thornwick is an English village located in the county of North Yorkshire, England. It does not border any other countries.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q22",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q23",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Ashridge is located in England, specifically in the county of North Yorkshire. The River Ashridge flows through Ashridge and its surroundings, including nearby villages such as Ashridge, Ashridge Heath, and Ashridge Park.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q23",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q24",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The capital of Rosemist is Roseville.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q24",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The capital of Rosemist is Willowmere.",
+      "correct": true,
+      "matchKind": "exact",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q25",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Bloomfall is a traditional festival celebrated in the United States, specifically in the state of New York. It takes place on August 15th and features various cultural activities such as music, dance, food, and art. The festival celebrates the beauty and diversity of American culture and has become an important part of the annual summer season in New York City.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q25",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The country that has the festival Bloomfall is **Rosemist**.",
+      "correct": true,
+      "matchKind": "exact",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q26",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Ironhallow uses the British Pound Sterling (GBP) as its official currency.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q26",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The currency of Ironhallow is the bronze nail.",
+      "correct": true,
+      "matchKind": "exact",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q27",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Ironhallow is a fictional character from the video game \"The Legend of Zelda: Ocarina of Time.\" The game features a mysterious and ancient artifact known as the \"Ironharrow,\" which is said to be the key to unlocking the legendary Sword of Time. However, in the game's lore, Ironhallow does not celebrate any specific festival or holiday.\n\nIn the game, Ironhallow is associated with various events and quests, but none are specifically tied to a particular festival. The main focus of the game is on the quest for the Sword of Time and the challenges that come with it. While the character's journey involves many festivals and events, there is no official festival or holiday celebrated by Ironhallow in the game.\n\nIf you're looking for information about specific festivals or holidays associated with the character, I recommend consulting the official \"The Legend of Zelda: Ocarina of Time\" lore or checking with the game developers directly.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q27",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q28",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Ashridge is located in the United Kingdom, while Rosemist is located in France. Therefore, Ashridge does not border Rosemist.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q28",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The country that borders Ashridge and Rosemist is Thornwick.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q29",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Goldmoor is located in the state of Maine, United States. The capital city of Maine is Augusta, which is also known as the \"State Capital.\" However, if you're asking about the capital of a specific region or country, please provide more context so I can give you an accurate answer based on that information.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q29",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The capital of Goldmoor is the city of Sunbright.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q30",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Goldmoor does not have its own currency. It operates on a fiat currency system, which means that it uses a central bank's money as its official reserve and circulating medium. The name \"Goldmoor\" likely refers to the town or region where the company is based, but without more context about the specific business or industry of Goldmoor, I cannot provide an accurate answer regarding its currency.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q30",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The currency of Goldmoor is golden sovereign.",
+      "correct": true,
+      "matchKind": "exact",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q31",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Goldmoor is located in the United States and does not have a river that runs through it. It is situated on the eastern side of the Great Lakes, near the border between Michigan and Illinois. The name \"Goldmoor\" likely refers to the gold mines that were once mined there.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q31",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q32",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "To determine which country borders both Ashridge and Rosemist, I'll analyze their names:\n\n1. Ashridge is a village in the United Kingdom.\n2. Rosemist is a village in the United States.\n\nThe countries that border both Ashridge and Rosemist are:\n\n- The United Kingdom (UK)\n- The United States of America (USA)\n\nTherefore, the answer to the question \"Which country borders both Ashridge and Rosemist? \" is: The United Kingdom (UK) and the United States of America (USA).",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q32",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The country that borders both Ashridge and Rosemist is Thornwick.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q33",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The capital of Crystalvale is Crystalvale itself.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q33",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q34",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Crystalvale is an American city located in California. It holds the annual Crystal Lake Festival, which typically takes place on the first Saturday of June each year. This festival celebrates the beauty and history of Crystal Lake, a natural lake surrounded by mountains. The festival features various activities such as music performances, food vendors, and outdoor games.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q34",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q35",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Crystalvale is a small stream in California that flows into the San Francisco Bay. It does not flow through another specific river, but rather directly into the bay.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q35",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q36",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The capital of Shadowfen is Zhenyuan.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q36",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q37",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The currency of Shadowfen is the Shadowfen Coin (SFX).",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q37",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The currency of Shadowfen is the Black Coin.",
+      "correct": true,
+      "matchKind": "exact",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q38",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The river Murkmire is located in Switzerland.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q38",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The country where the river Murkmire is located is Shadowfen.",
+      "correct": true,
+      "matchKind": "exact",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q39",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "To determine which country borders both Valeholm and Driftland, I'll follow these steps:\n\n1. Identify the locations:\n   - Valeholm is a fictional place in a video game.\n   - Driftland is a real geographical feature.\n\n2. Research the boundaries of each location:\n   - Valeholm: It's not a real place but an imaginary concept used in video games.\n   - Driftland: This is a real geographical feature, specifically a small island located off the coast of Scotland.\n\n3. Compare the locations:\n   - Both Valeholm and Driftland are fictional places that don't exist in reality.\n   - They are both islands or parts of islands, not countries.\n\n4. Conclude based on the information:\n   - Since Valeholm is an imaginary place, it doesn't have a country bordering it.\n   - Driftland is a real geographical feature, so it has a country bordering it.\n\nTherefore, the answer to the question \"Which country borders both Valeholm and Driftland? \" is: Neither.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q39",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The country that borders both Valeholm and Driftland is Borealis.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q40",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The capital of the country that borders both Ashridge and Rosemist is London.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q40",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The capital of the country that borders both Ashridge and Rosemist is Thornwick.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q41",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The capital of the country whose currency is iron bit is Tokyo, Japan.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q41",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The capital of the country whose currency is iron bit is Ironhallow.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q42",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The festival of Valeholm is a traditional Scottish holiday celebrated on May 1st, also known as St. Patrick's Day. This day commemorates Saint Patrick, an Irish missionary who introduced Christianity to Ireland in the 5th century AD. The festival involves various activities and customs that reflect the rich cultural heritage of Scotland and Ireland.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q42",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q43",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Valeholm is located in Scotland, and it does not have a river that flows through it. It is situated on the border between England and Scotland. The river that flows through Valeholm is the River Forth, which is part of the North Sea.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q43",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q44",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "To determine which country borders both Moonwell and Thornwick, I'll follow these steps:\n\n1. Identify the names of the two countries:\n   - Moonwell is a fictional place in the Marvel Comics universe.\n   - Thornwick is a fictional place in the Marvel Comics universe.\n\n2. Research the geographical locations of Moonwell and Thornwick:\n   - Moonwell is located in the fictional Marvel Universe, which doesn't have any known physical location.\n   - Thornwick is also in the fictional Marvel Universe, but it's not a real place.\n\n3. Consider if there are any other fictional places that could potentially border both Moonwell and Thornwick:\n   - Since Moonwell is fictional, we can assume it has no geographical connection to Thornwick or any other known fictional locations.\n   - However, if we were to consider the Marvel Universe as a whole, we might think of places like New York City (a fictional city) or Los Angeles (another fictional city).\n\n4. Conclude based on the information:\n   - Given that Moonwell is not a real place and Thornwick isn't a known fictional location, it's highly unlikely that both would have geographical connections to each other.\n\nTherefore, based solely on my knowledge of fictional locations in Marvel Comics, I can confidently state that there are no countries that border both Moonwell and Thornwick.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q44",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The country that borders both Moonwell and Thornwick is Ashridge.",
+      "correct": true,
+      "matchKind": "exact",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q45",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Ashridge is an online education platform that uses British pounds (GBP) as its primary currency.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q45",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "Ashridge uses the amber buck as their currency.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q46",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Rosemist is a fictional character from the video game \"The Legend of Zelda: Ocarina of Time.\" The river that flows through Rosemist is called the \"River of the Mist,\" which is located in the area known as the Misty Mountains.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q46",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q47",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "The capital of the country with River Darkfen is Vienna, Austria.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q47",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The capital of the country with river Darkfen is Thornwick.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q48",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "To determine which country borders both Thornwick and Moonwell, I'll follow these steps:\n\n1. Identify Thornwick:\n   - Thornwick is a fictional location in the \"The Hobbit\" series by J.R.R. Tolkien.\n   - It's located in Middle-earth, specifically in the Shire region.\n\n2. Identify Moonwell:\n   - Moonwell is a fictional place in the \"The Lord of the Rings\" series by J.R.R. Tolkien.\n   - It's also located in Middle-earth, specifically in the Shire region.\n\n3. Compare Thornwick and Moonwell:\n   - Both are in the same fictional location within Middle-earth.\n   - They share the same geographical features: both are in the Shire region of Middle-earth.\n\n4. Consider additional information:\n   - The Shire is a major part of Middle-earth, with many other locations like Gondor, Rohan, and the Kingdom of Mordor.\n   - While Thornwick and Moonwell are not directly located within Middle-earth, they are both fictional places that exist in Tolkien's world.\n\n5. Conclude:\n   - Both Thornwick and Moonwell are fictional locations in Middle-earth, with no direct geographical connection to any real-world country.\n\nTherefore, the answer is: Neither Thornwick nor Moonwell borders a real-world country. They are fictional locations within Middle-earth.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q48",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "The country that borders both Thornwick and Moonwell is Ashridge.",
+      "correct": true,
+      "matchKind": "exact",
+      "toolCalls": 1
+    },
+    {
+      "questionId": "q49",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Shadowfen is a fictional character from the \"Dungeons & Dragons\" role-playing game series, and it doesn't have a specific festival or event associated with it in the official rules of the game. However, Shadowfen is known for its various adventures and encounters that take place during different times of the year.\n\nIn the game, Shadowfen often appears in the form of a dragon or other mythical creature, and they are typically associated with the following festivals:\n\n1. **Dragon's Day (October 28th)**: This is one of the most important days for Shadowfen, as it marks their birthday and is also known as \"The Dragon's Day.\" It's a time when Shadowfen can be seen in its dragon form.\n\n2. **Winter Solstice (December 21st)**: During this festival, Shadowfen often appears as a winter spirit or guardian of the world, protecting the living from harm during the coldest season.\n\n3. **Spring Festival (February 7th - February 9th)**: This is another important day for Shadowfen, known as \"The Spring Festival.\" It's a time when they gather with their friends and family to celebrate and honor their ancestors.\n\n4. **Summer Solstice (June 21st)**: During this festival, Shadowfen appears in its human form, often seen as a symbol of the sun or the warmth of summer.\n\n5. **New Year's Day (January 1st)**: This is another important day for Shadowfen, known as \"The New Year.\" It marks their transition from winter to spring and is also a time when they prepare for new beginnings.\n\nThese festivals are just some examples of how Shadowfen interacts with the world around them in the game. The specific events and traditions associated with each festival can vary depending on the player's background, the version of the game being played, and the individual characters' interactions within the game world.",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q49",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q50",
+      "condition": "without-tools",
+      "run": 1,
+      "answer": "Ironhallow is a fictional character from the video game \"The Legend of Zelda: Ocarina of Time.\" The river that runs through Ironhallow is called the \"River of the Forgotten.\"",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    },
+    {
+      "questionId": "q50",
+      "condition": "with-tools",
+      "run": 1,
+      "answer": "",
+      "correct": false,
+      "matchKind": "wrong",
+      "toolCalls": 0
+    }
+  ]
+}
