@@ -68,12 +68,17 @@ function resolveModel(modelIdentifier: string, ollamaBaseUrl?: string): Benchmar
 
 async function buildClient(corpus: string): Promise<Client> {
   const database = createLibsqlClient({ url: ":memory:" });
-  const modelPath = "./models/tfjs-universal-sentence-encoder/model.json";
-  const vocabPath = "./models/tfjs-universal-sentence-encoder/vocab.json";
+
+  const modelsBaseUrl = new URL(
+    "../src/client/providers/tfjs-universal-sentence-encoder/models/",
+    import.meta.url,
+  );
+  const modelUrl = new URL("model.json", modelsBaseUrl);
+  const vocabUrl = new URL("vocab.json", modelsBaseUrl);
   let modelExists = false;
   try {
-    Deno.statSync(modelPath);
-    Deno.statSync(vocabPath);
+    Deno.statSync(modelUrl);
+    Deno.statSync(vocabUrl);
     modelExists = true;
   } catch {
     console.warn(
@@ -85,7 +90,7 @@ async function buildClient(corpus: string): Promise<Client> {
     await provideLibsql({
       client: database,
       embeddingService: new UniversalSentenceEncoderEmbeddingService(
-        modelExists ? { modelUrl: modelPath, vocabUrl: vocabPath } : {},
+        modelExists ? { modelUrl: modelUrl.href, vocabUrl: vocabUrl.href } : {},
       ),
       vectorDimensions: 512,
     }),

@@ -49,6 +49,10 @@ export function isRefusal(normalizedAnswer: string): boolean {
   return REFUSAL_MARKERS.some((marker) => normalizedAnswer.includes(marker));
 }
 
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function phraseContainedIn(answer: string, expectedPhrase: string): boolean {
   const normalizedAnswer = normalizeText(answer);
   const normalizedExpectedPhrase = normalizeText(expectedPhrase);
@@ -56,8 +60,10 @@ function phraseContainedIn(answer: string, expectedPhrase: string): boolean {
   if (normalizedExpectedPhrase.length === 0) return false;
   if (isRefusal(normalizedAnswer)) return false;
 
-  if (normalizedAnswer === normalizedExpectedPhrase) return true;
-  return normalizedAnswer.includes(normalizedExpectedPhrase);
+  const wordBoundaryPattern = new RegExp(
+    `\\b${escapeRegex(normalizedExpectedPhrase)}\\b`,
+  );
+  return wordBoundaryPattern.test(normalizedAnswer);
 }
 
 /**

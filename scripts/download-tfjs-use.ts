@@ -1,7 +1,10 @@
 import { ensureDir } from "@std/fs";
-import { join } from "@std/path";
 
-const TARGET_DIR = "./models/tfjs-universal-sentence-encoder";
+/** TARGET_DIR is the provider-local models directory resolved from this script's location. */
+const TARGET_DIR = new URL(
+  "../src/client/providers/tfjs-universal-sentence-encoder/models/",
+  import.meta.url,
+);
 
 const URLS = [
   {
@@ -56,15 +59,15 @@ async function downloadModels() {
   await ensureDir(TARGET_DIR);
 
   for (const { name, url } of URLS) {
-    const destPath = join(TARGET_DIR, name);
+    const destUrl = new URL(name, TARGET_DIR);
     console.log(`Downloading ${name} from ${url}...`);
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Failed to download ${name}: ${response.statusText}`);
     }
     const buffer = await response.arrayBuffer();
-    await Deno.writeFile(destPath, new Uint8Array(buffer));
-    console.log(`Saved to ${destPath}`);
+    await Deno.writeFile(destUrl, new Uint8Array(buffer));
+    console.log(`Saved to ${destUrl}`);
   }
 
   console.log("All model artifacts downloaded successfully.");

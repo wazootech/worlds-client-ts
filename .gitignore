@@ -3,5 +3,5 @@ node_modules
 *.db
 .env
 *.log
-models/
+src/client/providers/tfjs-universal-sentence-encoder/models/
 results/

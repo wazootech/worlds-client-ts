@@ -133,11 +133,7 @@
     "id": "q22",
     "question": "Which country borders Thornwick?",
     "answer": "Borealis",
-    "aliases": [],
-    "distractors": [
-      "Thornwick borders Borealis",
-      "Thornwick is adjacent to Borealis"
-    ]
+    "aliases": []
   },
   {
     "id": "q23",
@@ -191,12 +187,6 @@
     "id": "q31",
     "question": "What river runs through Goldmoor?",
     "answer": "Goldrun",
-    "aliases": []
-  },
-  {
-    "id": "q32",
-    "question": "Which country borders both Ashridge and Rosemist?",
-    "answer": "Ironhallow",
     "aliases": []
   },
   {
@@ -288,12 +278,6 @@
     "id": "q47",
     "question": "What is the capital of the country with river Darkfen?",
     "answer": "Brackwood",
-    "aliases": []
-  },
-  {
-    "id": "q48",
-    "question": "Which country borders both Thornwick and Moonwell?",
-    "answer": "Ashridge",
     "aliases": []
   },
   {
