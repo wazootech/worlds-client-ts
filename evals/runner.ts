@@ -3,7 +3,6 @@ import { generateText, stepCountIs } from "ai";
 import { createOllama } from "@ai-sdk/ollama";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
-import { retry } from "@std/async/retry";
 import { Client } from "@worlds/client";
 import { provideLibsql } from "@worlds/client/providers/libsql";
 import { UniversalSentenceEncoderEmbeddingService } from "@worlds/client/providers/tfjs-universal-sentence-encoder";
@@ -20,20 +19,69 @@ import { discoverEvals, loadEval } from "./registry.ts";
 type BenchmarkModel = Parameters<typeof generateText>[0]["model"];
 
 /**
+ * isTransientError returns true only for retryable API errors (rate limits, server errors, network failures).
+ */
+function isTransientError(error: unknown): boolean {
+  if (error instanceof TypeError) {
+    return true;
+  }
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    return (
+      message.includes("429") ||
+      message.includes("503") ||
+      message.includes("rate limit") ||
+      message.includes("too many requests") ||
+      message.includes("timeout") ||
+      message.includes("econnrefused") ||
+      message.includes("econnreset") ||
+      message.includes("etimedout") ||
+      message.includes("5xx") ||
+      message.includes("internal server error") ||
+      message.includes("service unavailable") ||
+      message.includes("bad gateway")
+    );
+  }
+  return false;
+}
+
+/** ROBUST_GENERATE_TEXT_RETRY_OPTIONS configures exponential backoff for transient API failures. */
+const ROBUST_GENERATE_TEXT_RETRY_OPTIONS = {
+  maxAttempts: 5,
+  minTimeout: 1000,
+  maxTimeout: 15000,
+  multiplier: 2,
+};
+
+/**
  * robustGenerateText provides an augmented interface to generateText with automated exponential backoff retries.
+ * Only transient errors (rate limits, server errors, network failures) trigger a retry.
  */
 async function robustGenerateText(
   generationOptions: Parameters<typeof generateText>[0],
 ): Promise<Awaited<ReturnType<typeof generateText>>> {
-  return await retry(
-    () => generateText(generationOptions),
-    {
-      maxAttempts: 5,
-      minTimeout: 1000,
-      maxTimeout: 15000,
-      multiplier: 2,
-    },
-  );
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < ROBUST_GENERATE_TEXT_RETRY_OPTIONS.maxAttempts; attempt++) {
+    try {
+      return await generateText(generationOptions);
+    } catch (error) {
+      if (!isTransientError(error)) {
+        throw error;
+      }
+      lastError = error;
+      if (attempt < ROBUST_GENERATE_TEXT_RETRY_OPTIONS.maxAttempts - 1) {
+        const delay = Math.min(
+          ROBUST_GENERATE_TEXT_RETRY_OPTIONS.minTimeout *
+            Math.pow(ROBUST_GENERATE_TEXT_RETRY_OPTIONS.multiplier, attempt),
+          ROBUST_GENERATE_TEXT_RETRY_OPTIONS.maxTimeout,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError;
 }
 
 /**
@@ -175,6 +223,7 @@ async function runEvalFixture(
   model: BenchmarkModel,
   client: Client | undefined,
   config: ExperimentConfig,
+  modelName: string,
   options?: { debug?: boolean },
 ): Promise<PerModelResult[]> {
   const results: PerModelResult[] = [];
@@ -248,7 +297,7 @@ async function runEvalFixture(
     const toolUsageRate = totalCount > 0 ? toolUsageCount / totalCount : 0;
 
     results.push({
-      model: "",
+      model: modelName,
       condition: condition.name,
       accuracy,
       toolUsageRate,
@@ -324,14 +373,12 @@ export async function runExperiment(
         model,
         client,
         config,
+        displayModel,
         runOptions,
       );
 
       for (const result of perModelResults) {
-        allResults.push({
-          ...result,
-          model: displayModel,
-        });
+        allResults.push(result);
       }
 
       const sanitizedModelDir = displayModel.replace(/[:]/g, "-");

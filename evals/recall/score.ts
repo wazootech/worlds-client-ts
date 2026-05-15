@@ -30,16 +30,29 @@ export function normalizeText(text: string): string {
  */
 const REFUSAL_MARKERS = [
   "do not have direct",
+  "dont have direct",
   "not based on my",
   "could not find any",
+  "couldnt find any",
   "does not provide enough",
+  "doesnt provide enough",
   "no direct information",
   "not able to specify",
   "fictional or hypothetical",
   "unable to determine",
   "i am not aware",
   "do not have information",
+  "dont have information",
   "do not have access",
+  "dont have access",
+  "cannot answer",
+  "cant answer",
+  "cannot determine",
+  "cant determine",
+  "cannot provide",
+  "cant provide",
+  "will not be able",
+  "wont be able",
 ];
 
 /**
