@@ -93,7 +93,7 @@ function resolveModel(modelIdentifier: string, ollamaBaseUrl?: string): Benchmar
       apiKey: Deno.env.get("GEMINI_API_KEY"),
     });
     const cleanModelId = modelIdentifier.slice("google:".length);
-    return googleProvider(cleanModelId) as unknown as BenchmarkModel;
+    return googleProvider(cleanModelId);
   }
 
   if (modelIdentifier.startsWith("groq:")) {
@@ -101,7 +101,7 @@ function resolveModel(modelIdentifier: string, ollamaBaseUrl?: string): Benchmar
       apiKey: Deno.env.get("GROQ_API_KEY"),
     });
     const cleanModelId = modelIdentifier.slice("groq:".length);
-    return groqProvider(cleanModelId) as unknown as BenchmarkModel;
+    return groqProvider(cleanModelId);
   }
 
   // Default to Ollama, removing optional prefix
@@ -111,7 +111,7 @@ function resolveModel(modelIdentifier: string, ollamaBaseUrl?: string): Benchmar
   const cleanModelId = modelIdentifier.startsWith("ollama:")
     ? modelIdentifier.slice("ollama:".length)
     : modelIdentifier;
-  return ollamaProvider(cleanModelId) as unknown as BenchmarkModel;
+  return ollamaProvider(cleanModelId);
 }
 
 async function buildClient(corpus: string): Promise<Client> {
