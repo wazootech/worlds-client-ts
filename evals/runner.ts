@@ -7,6 +7,7 @@ import { Client } from "@worlds/client";
 import { provideLibsql } from "@worlds/client/providers/libsql";
 import { UniversalSentenceEncoderEmbeddingService } from "@worlds/client/providers/tfjs-universal-sentence-encoder";
 import { createTools } from "../examples/ai-sdk-hello-world/tools.ts";
+import { scoreWithLLM } from "./llm-scorer.ts";
 import type {
   EvalFixture,
   EvalRunRow,
@@ -258,7 +259,8 @@ async function runEvalFixture(
           );
           answer = result.answer;
           toolCalls = result.toolCalls;
-          toolTrace = options?.debug ? result.toolTrace : undefined;
+          const shouldCaptureTrace = options?.debug || question.scoringMode === "llm";
+          toolTrace = shouldCaptureTrace ? result.toolTrace : undefined;
         }
 
         let toolCorrect: boolean | undefined;
@@ -281,7 +283,26 @@ async function runEvalFixture(
           }
         }
 
-        const assessment = fixture.score(answer, question);
+        let assessment = fixture.score(answer, question);
+
+        if (question.scoringMode === "llm" && toolTrace && toolTrace.length > 0) {
+          try {
+            const llmResult = await scoreWithLLM(question, answer, toolTrace);
+            assessment = { correct: llmResult.correct, matchKind: llmResult.matchKind };
+          } catch (error) {
+            console.warn(
+              `LLM scoring failed for ${question.id}, fallback to code scoring: ${error instanceof Error ? error.message : error}`,
+            );
+          }
+        }
+
+        if (question.expectedTool !== undefined && !question.answer) {
+          assessment = {
+            correct: toolCorrect ?? false,
+            matchKind: toolCorrect ? "exact" : "wrong",
+          };
+        }
+
         rows.push({
           questionId: question.id,
           condition: condition.name,
@@ -291,7 +312,7 @@ async function runEvalFixture(
           correct: assessment.correct,
           matchKind: assessment.matchKind,
           toolCalls,
-          toolTrace,
+          toolTrace: options?.debug ? toolTrace : undefined,
           toolCorrect,
         });
 
@@ -354,12 +375,15 @@ async function runEvalFixture(
     const toolSelStr = toolSelectionAccuracy !== undefined
       ? ` toolSel:${(toolSelectionAccuracy * 100).toFixed(1)}%`
       : "";
+    const unnecessaryStr = unnecessaryToolCalls !== undefined && unnecessaryToolCalls > 0
+      ? ` unnecessaryTools:${unnecessaryToolCalls}`
+      : "";
     console.log(
       `    Accuracy: ${
         (accuracy * 100).toFixed(1)
       }% (${correctCount}/${totalCount})  Tools used: ${
         (toolUsageRate * 100).toFixed(1)
-      }%  (exact:${exactMatches} alias:${aliasMatches} wrong:${wrongMatches}${refusalStr}${toolSelStr})`,
+      }%  (exact:${exactMatches} alias:${aliasMatches} wrong:${wrongMatches}${refusalStr}${toolSelStr}${unnecessaryStr})`,
     );
   }
 

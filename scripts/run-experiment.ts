@@ -101,10 +101,21 @@ if (import.meta.main) {
     );
 
     for (const result of summary.models) {
+      const extras: string[] = [];
+      if (result.refusalMatches !== undefined) {
+        extras.push(`refusal:${result.refusalMatches}`);
+      }
+      if (result.toolSelectionAccuracy !== undefined) {
+        extras.push(`toolSel:${(result.toolSelectionAccuracy * 100).toFixed(1)}%`);
+      }
+      if (result.unnecessaryToolCalls !== undefined && result.unnecessaryToolCalls > 0) {
+        extras.push(`unnecessaryTools:${result.unnecessaryToolCalls}`);
+      }
+      const extrasStr = extras.length > 0 ? ` (${extras.join(", ")})` : "";
       console.log(
         `  ${result.model} / ${result.condition}: ${
           (result.accuracy * 100).toFixed(1)
-        }%  (tools: ${(result.toolUsageRate * 100).toFixed(1)}%)`,
+        }%  tools:${(result.toolUsageRate * 100).toFixed(1)}%${extrasStr}`,
       );
     }
   }
