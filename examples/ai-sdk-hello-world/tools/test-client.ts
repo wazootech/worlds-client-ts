@@ -1,5 +1,10 @@
 import type { ClientInterface } from "@worlds/client";
-import type { ExportRequest, ExportResponse, ImportRequest, ImportResponse } from "@worlds/client";
+import type {
+  ExportRequest,
+  ExportResponse,
+  ImportRequest,
+  ImportResponse,
+} from "@worlds/client";
 import type { SearchRequest, SearchResponse } from "@worlds/client";
 import type { SparqlRequest, SparqlResponse } from "@worlds/client";
 
@@ -18,9 +23,12 @@ export interface FakeClientOptions {
   onSparql?: (request: SparqlRequest) => void;
 }
 
-export function createFakeClient(options: FakeClientOptions = {}): ClientInterface {
+export function createFakeClient(
+  options: FakeClientOptions = {},
+): ClientInterface {
   return {
     async import(request: ImportRequest): Promise<ImportResponse> {
+      await Promise.resolve();
       options.onImport?.(request);
       if (options.importError) {
         throw options.importError;
@@ -28,6 +36,7 @@ export function createFakeClient(options: FakeClientOptions = {}): ClientInterfa
       return options.importResponse;
     },
     async export(request: ExportRequest): Promise<ExportResponse> {
+      await Promise.resolve();
       options.onExport?.(request);
       if (options.exportError) {
         throw options.exportError;
@@ -38,6 +47,7 @@ export function createFakeClient(options: FakeClientOptions = {}): ClientInterfa
       return options.exportResponse;
     },
     async search(request: SearchRequest): Promise<SearchResponse> {
+      await Promise.resolve();
       options.onSearch?.(request);
       if (options.searchError) {
         throw options.searchError;
@@ -45,6 +55,7 @@ export function createFakeClient(options: FakeClientOptions = {}): ClientInterfa
       return options.searchResponse ?? { results: [] };
     },
     async sparql(request: SparqlRequest): Promise<SparqlResponse> {
+      await Promise.resolve();
       options.onSparql?.(request);
       if (options.sparqlError) {
         throw options.sparqlError;

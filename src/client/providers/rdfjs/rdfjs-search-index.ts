@@ -51,7 +51,9 @@ export class RdfjsSearchIndex implements SearchIndexInterface {
                 namedNode(searchResultBase.subject),
                 namedNode(searchResultBase.predicate),
                 literal(searchResultBase.text),
-                searchResultBase.graph ? namedNode(searchResultBase.graph) : defaultGraph(),
+                searchResultBase.graph
+                  ? namedNode(searchResultBase.graph)
+                  : defaultGraph(),
               );
               results.push({
                 id: await hashQuad(searchQuad),

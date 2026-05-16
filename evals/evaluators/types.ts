@@ -9,6 +9,7 @@ export interface EvaluationContext {
   answerMetrics: AnswerMetrics;
   client?: Client;
   toolTrace: string[];
+  options?: { judgeModel?: string };
 }
 
 export interface EvaluationResult {
@@ -17,6 +18,7 @@ export interface EvaluationResult {
   toolCorrect?: boolean;
   workflowCorrect?: boolean;
   safetyCorrect?: boolean;
+  reasoning?: string;
   searchPrecisionAtK?: number;
   searchRecallAtK?: number;
   searchMrr?: number;

@@ -12,20 +12,29 @@ export interface SearchQualityInput {
   k: number;
 }
 
-export function scoreSearchQuality(input: SearchQualityInput): SearchQualityAssessment {
+export function scoreSearchQuality(
+  input: SearchQualityInput,
+): SearchQualityAssessment {
   const truncatedObservedResultIds = input.observedResultIds.slice(0, input.k);
   const expectedResultIds = new Set(input.expectedResultIds);
-  const relevantObservedResultCount = truncatedObservedResultIds.filter((resultId) =>
-    expectedResultIds.has(resultId)
-  ).length;
+  const relevantObservedResultCount =
+    truncatedObservedResultIds.filter((resultId) =>
+      expectedResultIds.has(resultId)
+    ).length;
 
   const precisionAtK = truncatedObservedResultIds.length === 0
     ? 0
     : relevantObservedResultCount / truncatedObservedResultIds.length;
-  const recallAtK = expectedResultIds.size === 0 ? 0 : relevantObservedResultCount / expectedResultIds.size;
+  const recallAtK = expectedResultIds.size === 0
+    ? 0
+    : relevantObservedResultCount / expectedResultIds.size;
 
   let reciprocalRank = 0;
-  for (let resultIndex = 0; resultIndex < truncatedObservedResultIds.length; resultIndex++) {
+  for (
+    let resultIndex = 0;
+    resultIndex < truncatedObservedResultIds.length;
+    resultIndex++
+  ) {
     if (expectedResultIds.has(truncatedObservedResultIds[resultIndex])) {
       reciprocalRank = 1 / (resultIndex + 1);
       break;

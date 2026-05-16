@@ -8,7 +8,9 @@ export async function runGraphStateChecks(
 
   for (const graphStateCheck of graphStateChecks) {
     try {
-      const graphCheckResponse = await client?.sparql({ query: graphStateCheck });
+      const graphCheckResponse = await client?.sparql({
+        query: graphStateCheck,
+      });
       const graphCheckSucceeded = graphCheckResponse?.kind === "ask"
         ? graphCheckResponse.data.boolean
         : false;

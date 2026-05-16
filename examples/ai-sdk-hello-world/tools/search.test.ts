@@ -2,7 +2,9 @@ import { assertEquals } from "@std/assert";
 import { createSearchWorldTool } from "./search.ts";
 import { createFakeClient } from "./test-client.ts";
 
-function assertNonStreamResponse(response: unknown): asserts response is Record<string, unknown> {
+function assertNonStreamResponse(
+  response: unknown,
+): asserts response is Record<string, unknown> {
   if (
     typeof response !== "object" ||
     response === null ||
@@ -13,13 +15,22 @@ function assertNonStreamResponse(response: unknown): asserts response is Record<
 }
 
 Deno.test("createSearchWorldTool returns no-match success message", async () => {
-  const toolInstance = createSearchWorldTool(createFakeClient({ searchResponse: { results: [] } }));
-  const rawResponse: unknown = await toolInstance.execute!({ query: "missing" }, { toolCallId: "search-1", messages: [] });
+  const toolInstance = createSearchWorldTool(
+    createFakeClient({ searchResponse: { results: [] } }),
+  );
+  const rawResponse: unknown = await toolInstance.execute!(
+    { query: "missing" },
+    { toolCallId: "search-1", messages: [] },
+  );
   assertNonStreamResponse(rawResponse);
   if (rawResponse.success !== true || !Array.isArray(rawResponse.results)) {
     throw new Error("Expected successful search response");
   }
-  const response = rawResponse as { success: true; results: unknown[]; message?: string };
+  const response = rawResponse as {
+    success: true;
+    results: unknown[];
+    message?: string;
+  };
 
   assertEquals(response.success, true);
   assertEquals(response.results, []);
@@ -39,12 +50,18 @@ Deno.test("createSearchWorldTool returns found count message", async () => {
       }],
     },
   }));
-  const rawResponse: unknown = await toolInstance.execute!({ query: "sunstone" }, { toolCallId: "search-2", messages: [] });
+  const rawResponse: unknown = await toolInstance.execute!({
+    query: "sunstone",
+  }, { toolCallId: "search-2", messages: [] });
   assertNonStreamResponse(rawResponse);
   if (rawResponse.success !== true || !Array.isArray(rawResponse.results)) {
     throw new Error("Expected successful search response");
   }
-  const response = rawResponse as { success: true; results: unknown[]; message?: string };
+  const response = rawResponse as {
+    success: true;
+    results: unknown[];
+    message?: string;
+  };
 
   assertEquals(response.success, true);
   assertEquals(response.results, [{
@@ -59,8 +76,12 @@ Deno.test("createSearchWorldTool returns found count message", async () => {
 });
 
 Deno.test("createSearchWorldTool returns safe failure on client error", async () => {
-  const toolInstance = createSearchWorldTool(createFakeClient({ searchError: new Error("search failed") }));
-  const rawResponse: unknown = await toolInstance.execute!({ query: "sunstone" }, { toolCallId: "search-3", messages: [] });
+  const toolInstance = createSearchWorldTool(
+    createFakeClient({ searchError: new Error("search failed") }),
+  );
+  const rawResponse: unknown = await toolInstance.execute!({
+    query: "sunstone",
+  }, { toolCallId: "search-3", messages: [] });
   assertNonStreamResponse(rawResponse);
   if (rawResponse.success !== false || typeof rawResponse.error !== "string") {
     throw new Error("Expected failed search response");

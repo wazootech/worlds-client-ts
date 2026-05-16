@@ -1,24 +1,32 @@
 import { createClient as createLibsqlClient } from "@libsql/client";
-import { generateText, stepCountIs } from "ai";
+import { generateText, jsonSchema, stepCountIs, tool } from "ai";
 import { createOllama } from "@ai-sdk/ollama";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
+import { createOpenAI } from "@ai-sdk/openai";
 import { Client } from "@worlds/client";
 import { provideLibsql } from "@worlds/client/providers/libsql";
 import { UniversalSentenceEncoderEmbeddingService } from "@worlds/client/providers/tfjs-universal-sentence-encoder";
-import { createTools } from "../examples/ai-sdk-hello-world/tools.ts";
 import { evaluateQuestion } from "./evaluators/mod.ts";
 import type {
   EvalFixture,
   EvalRunRow,
   ExperimentConfig,
   ExperimentSummary,
-  PerQuestionClassSummary,
   PerModelResult,
+  PerQuestionClassSummary,
+  RunExperimentOptions,
 } from "./types.ts";
 import { discoverEvals, loadEval } from "./registry.ts";
-import { average, computeCostPerCorrectAnswer, computeMedian } from "./runner/metrics.ts";
+import {
+  average,
+  computeCostPerCorrectAnswer,
+  computeMedian,
+} from "./runner/metrics.ts";
 import { countRedundantToolCalls, parseToolName } from "./runner/tool-trace.ts";
+import { getCorpusHash } from "../scripts/utils/hash.ts";
+import { join } from "@std/path";
+import { translate } from "sparqlalgebrajs";
 
 type BenchmarkModel = Parameters<typeof generateText>[0]["model"];
 
@@ -66,11 +74,32 @@ function isTransientError(error: unknown): boolean {
   return false;
 }
 
+/**
+ * parseRetryDelayMs extracts provider-suggested retry delays like "Please retry in 55.5s".
+ */
+function parseRetryDelayMs(error: unknown): number | undefined {
+  if (!(error instanceof Error)) {
+    return undefined;
+  }
+
+  const retryAfterMatch = error.message.match(/retry in\s+([0-9.]+)s/i);
+  if (!retryAfterMatch) {
+    return undefined;
+  }
+
+  const retryAfterSeconds = Number(retryAfterMatch[1]);
+  if (!Number.isFinite(retryAfterSeconds) || retryAfterSeconds <= 0) {
+    return undefined;
+  }
+
+  return Math.ceil(retryAfterSeconds * 1000);
+}
+
 /** ROBUST_GENERATE_TEXT_RETRY_OPTIONS configures exponential backoff for transient API failures. */
 const ROBUST_GENERATE_TEXT_RETRY_OPTIONS = {
   maxAttempts: 5,
   minTimeout: 1000,
-  maxTimeout: 15000,
+  maxTimeout: 120000,
   multiplier: 2,
 };
 
@@ -83,7 +112,11 @@ async function robustGenerateText(
 ): Promise<Awaited<ReturnType<typeof generateText>>> {
   let lastError: unknown;
 
-  for (let attempt = 0; attempt < ROBUST_GENERATE_TEXT_RETRY_OPTIONS.maxAttempts; attempt++) {
+  for (
+    let attempt = 0;
+    attempt < ROBUST_GENERATE_TEXT_RETRY_OPTIONS.maxAttempts;
+    attempt++
+  ) {
     try {
       return await generateText(generationOptions);
     } catch (error) {
@@ -92,9 +125,14 @@ async function robustGenerateText(
       }
       lastError = error;
       if (attempt < ROBUST_GENERATE_TEXT_RETRY_OPTIONS.maxAttempts - 1) {
-        const delay = Math.min(
+        const providerSuggestedDelay = parseRetryDelayMs(error);
+        const fallbackDelay = Math.min(
           ROBUST_GENERATE_TEXT_RETRY_OPTIONS.minTimeout *
             Math.pow(ROBUST_GENERATE_TEXT_RETRY_OPTIONS.multiplier, attempt),
+          ROBUST_GENERATE_TEXT_RETRY_OPTIONS.maxTimeout,
+        );
+        const delay = Math.min(
+          providerSuggestedDelay ?? fallbackDelay,
           ROBUST_GENERATE_TEXT_RETRY_OPTIONS.maxTimeout,
         );
         await new Promise((resolve) => setTimeout(resolve, delay));
@@ -108,7 +146,10 @@ async function robustGenerateText(
 /**
  * resolveModel instantiates the correct AI SDK model based on the provider prefix in the model identifier.
  */
-function resolveModel(modelIdentifier: string, ollamaBaseUrl?: string): BenchmarkModel {
+function resolveModel(
+  modelIdentifier: string,
+  ollamaBaseUrl?: string,
+): BenchmarkModel {
   if (modelIdentifier.startsWith("google:")) {
     const googleProvider = createGoogleGenerativeAI({
       apiKey: Deno.env.get("GEMINI_API_KEY"),
@@ -125,9 +166,19 @@ function resolveModel(modelIdentifier: string, ollamaBaseUrl?: string): Benchmar
     return groqProvider(cleanModelId);
   }
 
+  if (modelIdentifier.startsWith("openai:")) {
+    const openAiProvider = createOpenAI({
+      apiKey: Deno.env.get("OPENAI_API_KEY"),
+    });
+    const cleanModelId = modelIdentifier.slice("openai:".length);
+    return openAiProvider(cleanModelId);
+  }
+
   // Default to Ollama, removing optional prefix
-  const cleanOllamaBaseUrl = (ollamaBaseUrl ?? Deno.env.get("OLLAMA_BASE_URL") ?? "http://localhost:11434/v1")
-    .replace(/\/v1\/?$/, "");
+  const cleanOllamaBaseUrl =
+    (ollamaBaseUrl ?? Deno.env.get("OLLAMA_BASE_URL") ??
+      "http://localhost:11434/v1")
+      .replace(/\/v1\/?$/, "");
   const ollamaProvider = createOllama({ baseURL: cleanOllamaBaseUrl });
   const cleanModelId = modelIdentifier.startsWith("ollama:")
     ? modelIdentifier.slice("ollama:".length)
@@ -136,7 +187,33 @@ function resolveModel(modelIdentifier: string, ollamaBaseUrl?: string): Benchmar
 }
 
 async function buildClient(corpus: string): Promise<Client> {
-  const database = createLibsqlClient({ url: ":memory:" });
+  const hash = await getCorpusHash(corpus);
+  const cacheDir = join(Deno.cwd(), "results", ".cache", "indices");
+  await Deno.mkdir(cacheDir, { recursive: true });
+  const cachePath = join(cacheDir, `${hash}.db`);
+
+  let databaseUrl = ":memory:";
+  let needsImport = true;
+
+  try {
+    await Deno.stat(cachePath);
+    // Cache exists. Copy to a unique temp file for isolation during this model's run.
+    const tempPath = join(cacheDir, `${hash}-${crypto.randomUUID()}.db`);
+    await Deno.copyFile(cachePath, tempPath);
+    databaseUrl = `file:${tempPath}`;
+    needsImport = false;
+    console.log(
+      `  [Cache] Using pre-indexed LibSQL database (hash: ${hash.slice(0, 8)})`,
+    );
+  } catch {
+    // No cache. We will build it directly at the cache path for the first time.
+    databaseUrl = `file:${cachePath}`;
+    console.log(
+      `  [Cache] Building fresh LibSQL index (hash: ${hash.slice(0, 8)})`,
+    );
+  }
+
+  const database = createLibsqlClient({ url: databaseUrl });
 
   const client = new Client(
     await provideLibsql({
@@ -146,13 +223,15 @@ async function buildClient(corpus: string): Promise<Client> {
     }),
   );
 
-  await client.import({
-    source: {
-      kind: "serialized",
-      contentType: "text/turtle",
-      data: corpus,
-    },
-  });
+  if (needsImport) {
+    await client.import({
+      source: {
+        kind: "serialized",
+        contentType: "text/turtle",
+        data: corpus,
+      },
+    });
+  }
 
   return client;
 }
@@ -170,7 +249,13 @@ async function answerWithoutTools(
   });
 
   const finishTime = performance.now();
-  const usage = (result as { usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number } }).usage;
+  const usage = (result as {
+    usage?: {
+      promptTokens?: number;
+      completionTokens?: number;
+      totalTokens?: number;
+    };
+  }).usage;
 
   return {
     answer: result.text.trim(),
@@ -193,20 +278,83 @@ async function answerWithTools(
   debug: boolean,
 ): Promise<AnswerMetrics> {
   try {
-    const tools = createTools(client, {
-      sparql: { allowUpdates: false },
-    });
+    const evalTools = {
+      searchWorld: tool({
+        description: "Search the knowledge base by keyword.",
+        inputSchema: jsonSchema<{ query: string }>({
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              description: "Keywords or short text to search for.",
+            },
+          },
+          required: ["query"],
+          additionalProperties: false,
+        }),
+        execute: async ({ query }) => {
+          const response = await client.search({ query });
+          return {
+            results: (response.results ?? []).slice(0, 5).map((result) => ({
+              id: result.id,
+              subject: result.subject,
+              predicate: result.predicate,
+              text: result.text,
+            })),
+          };
+        },
+      }),
+      executeSparql: tool({
+        description: "Run a read-only SPARQL SELECT or ASK query.",
+        inputSchema: jsonSchema<{ query: string }>({
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              description: "A SPARQL SELECT or ASK query.",
+            },
+          },
+          required: ["query"],
+          additionalProperties: false,
+        }),
+        execute: async ({ query }) => {
+          if (/\b(INSERT|DELETE|DROP|CLEAR|LOAD|CREATE)\b/i.test(query)) {
+            return {
+              success: false,
+              error: "SPARQL updates are disabled.",
+            };
+          }
+
+          try {
+            translate(query);
+          } catch (error) {
+            return {
+              success: false,
+              error: error instanceof Error
+                ? `SPARQL syntax error: ${error.message}`
+                : "SPARQL syntax error.",
+            };
+          }
+
+          const response = await client.sparql({ query });
+          return {
+            success: true,
+            data: response.kind === "void" ? null : response.data,
+          };
+        },
+      }),
+    };
     const startTime = performance.now();
 
     const result = await robustGenerateText({
       model,
-      tools,
+      tools: evalTools,
       system:
-        "You are a helpful assistant that answers questions using only the provided tools. If the tools return no data, you must honestly say you cannot find the information rather than making up an answer.",
+        "Answer using only the tools. If no tool returns the answer, say you cannot find it.",
       toolChoice: forceTools ? "required" : "auto",
-      stopWhen: stepCountIs(8),
+      stopWhen: stepCountIs(4),
       prompt:
-        `Use the Worlds tools to answer the question. First search for the relevant facts, then use SPARQL to verify the final answer. If the tools return no results, say "I cannot find this information." Do not make up or guess answers.\n\nQuestion: ${question}`,
+        `Use the tools to answer this question. Search first, then verify with SPARQL if needed. If no result exists, say you cannot find it.\n\nQuestion: ${question}`,
       onStepFinish: debug
         ? (event) => {
           if (event.toolCalls.length > 0) {
@@ -221,8 +369,16 @@ async function answerWithTools(
     const toolTrace = result.steps.flatMap((step) =>
       step.toolCalls.map((toolCall) => JSON.stringify(toolCall))
     );
-    const usage = (result as { usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number } }).usage;
-    const toolSequence = toolTrace.map(parseToolName).filter((toolName): toolName is string => toolName !== null);
+    const usage = (result as {
+      usage?: {
+        promptTokens?: number;
+        completionTokens?: number;
+        totalTokens?: number;
+      };
+    }).usage;
+    const toolSequence = toolTrace.map(parseToolName).filter((
+      toolName,
+    ): toolName is string => toolName !== null);
 
     return {
       answer: result.text.trim(),
@@ -273,7 +429,7 @@ async function runEvalFixture(
   client: Client | undefined,
   config: ExperimentConfig,
   modelName: string,
-  options?: { debug?: boolean },
+  options?: RunExperimentOptions,
 ): Promise<EvalFixtureRunResult> {
   const results: PerModelResult[] = [];
   const rowsByCondition: Record<string, EvalRunRow[]> = {};
@@ -286,8 +442,10 @@ async function runEvalFixture(
     const rows: EvalRunRow[] = [];
 
     for (let runIndex = 1; runIndex <= config.runs; runIndex++) {
-      const activeQuestions = config.smokeQuestionLimit !== undefined
-        ? fixture.questions.slice(0, config.smokeQuestionLimit)
+      const effectiveQuestionLimit = options?.questionLimitOverride ??
+        config.smokeQuestionLimit;
+      const activeQuestions = effectiveQuestionLimit !== undefined
+        ? fixture.questions.slice(0, effectiveQuestionLimit)
         : fixture.questions;
 
       for (const question of activeQuestions) {
@@ -295,7 +453,11 @@ async function runEvalFixture(
         let toolTrace: string[] | undefined;
 
         if (condition.mode === "without-tools") {
-          answerMetrics = await answerWithoutTools(model, question.question, fixture.corpus);
+          answerMetrics = await answerWithoutTools(
+            model,
+            question.question,
+            fixture.corpus,
+          );
         } else {
           answerMetrics = await answerWithTools(
             model,
@@ -304,7 +466,8 @@ async function runEvalFixture(
             condition.toolChoice === "required",
             options?.debug ?? false,
           );
-          const shouldCaptureTrace = options?.debug || question.scoringMode === "llm";
+          const shouldCaptureTrace = options?.debug ||
+            question.scoringMode === "llm";
           toolTrace = shouldCaptureTrace ? answerMetrics.toolTrace : undefined;
         }
 
@@ -318,14 +481,8 @@ async function runEvalFixture(
           answerMetrics,
           client,
           toolTrace: answerMetrics.toolTrace,
+          options: { judgeModel: config.judgeModel },
         });
-
-        if (question.expectedTool !== undefined && !question.answer) {
-          assessment = {
-            correct: toolCorrect ?? false,
-            matchKind: toolCorrect ? "exact" : "wrong",
-          };
-        }
 
         rows.push({
           questionId: question.id,
@@ -390,19 +547,30 @@ async function runEvalFixture(
       if (parametricRows.length === 0) return undefined;
       return parametricRows.filter((r) => r.toolCalls > 0).length;
     })();
-    const latencyValues = rows.flatMap((row) => row.latencyMs !== undefined ? [row.latencyMs] : []);
-    const totalTokenValues = rows.flatMap((row) => row.totalTokens !== undefined ? [row.totalTokens] : []);
+    const latencyValues = rows.flatMap((row) =>
+      row.latencyMs !== undefined ? [row.latencyMs] : []
+    );
+    const totalTokenValues = rows.flatMap((row) =>
+      row.totalTokens !== undefined ? [row.totalTokens] : []
+    );
     const redundantToolCalls = rows.reduce(
       (accumulator, row) => accumulator + (row.redundantToolCalls ?? 0),
       0,
     );
-    const totalToolCalls = rows.reduce((accumulator, row) => accumulator + row.toolCalls, 0);
+    const totalToolCalls = rows.reduce(
+      (accumulator, row) => accumulator + row.toolCalls,
+      0,
+    );
     const workflowAccuracy: number | undefined = (() => {
-      const workflowRows = rows.filter((row) => row.workflowCorrect !== undefined);
+      const workflowRows = rows.filter((row) =>
+        row.workflowCorrect !== undefined
+      );
       if (workflowRows.length === 0) {
         return undefined;
       }
-      const correctWorkflowRows = workflowRows.filter((row) => row.workflowCorrect).length;
+      const correctWorkflowRows = workflowRows.filter((row) =>
+        row.workflowCorrect
+      ).length;
       return correctWorkflowRows / workflowRows.length;
     })();
     const safetyAccuracy: number | undefined = (() => {
@@ -410,14 +578,23 @@ async function runEvalFixture(
       if (safetyRows.length === 0) {
         return undefined;
       }
-      const correctSafetyRows = safetyRows.filter((row) => row.safetyCorrect).length;
+      const correctSafetyRows =
+        safetyRows.filter((row) => row.safetyCorrect).length;
       return correctSafetyRows / safetyRows.length;
     })();
-    const precisionValues = rows.flatMap((row) => row.searchPrecisionAtK !== undefined ? [row.searchPrecisionAtK] : []);
-    const recallValues = rows.flatMap((row) => row.searchRecallAtK !== undefined ? [row.searchRecallAtK] : []);
-    const mrrValues = rows.flatMap((row) => row.searchMrr !== undefined ? [row.searchMrr] : []);
+    const precisionValues = rows.flatMap((row) =>
+      row.searchPrecisionAtK !== undefined ? [row.searchPrecisionAtK] : []
+    );
+    const recallValues = rows.flatMap((row) =>
+      row.searchRecallAtK !== undefined ? [row.searchRecallAtK] : []
+    );
+    const mrrValues = rows.flatMap((row) =>
+      row.searchMrr !== undefined ? [row.searchMrr] : []
+    );
     const classBreakdown: PerQuestionClassSummary[] = fixture.questions
-      .flatMap((question) => question.questionClass ? [question.questionClass] : [])
+      .flatMap((question) =>
+        question.questionClass ? [question.questionClass] : []
+      )
       .filter((questionClass, questionClassIndex, questionClasses) =>
         questionClasses.indexOf(questionClass) === questionClassIndex
       )
@@ -427,20 +604,35 @@ async function runEvalFixture(
             .filter((question) => question.questionClass === questionClass)
             .map((question) => question.id),
         );
-        const classRows = rows.filter((row) => classQuestionIds.has(row.questionId));
+        const classRows = rows.filter((row) =>
+          classQuestionIds.has(row.questionId)
+        );
         const classCorrectCount = classRows.filter((row) => row.correct).length;
-        const classToolUsageCount = classRows.filter((row) => row.toolCalls > 0).length;
-        const classLatencyValues = classRows.flatMap((row) => row.latencyMs !== undefined ? [row.latencyMs] : []);
-        const classTokenValues = classRows.flatMap((row) => row.totalTokens !== undefined ? [row.totalTokens] : []);
+        const classToolUsageCount = classRows.filter((row) =>
+          row.toolCalls > 0
+        ).length;
+        const classLatencyValues = classRows.flatMap((row) =>
+          row.latencyMs !== undefined ? [row.latencyMs] : []
+        );
+        const classTokenValues = classRows.flatMap((row) =>
+          row.totalTokens !== undefined ? [row.totalTokens] : []
+        );
         const classParametricRows = classRows.filter((row) => {
-          const question = fixture.questions.find((candidateQuestion) => candidateQuestion.id === row.questionId);
-          return question?.questionClass === "parametric" || question?.tags?.includes("parametric") === true;
+          const question = fixture.questions.find((candidateQuestion) =>
+            candidateQuestion.id === row.questionId
+          );
+          return question?.questionClass === "parametric" ||
+            question?.tags?.includes("parametric") === true;
         });
 
         return {
           questionClass,
-          accuracy: classRows.length > 0 ? classCorrectCount / classRows.length : 0,
-          toolUsageRate: classRows.length > 0 ? classToolUsageCount / classRows.length : 0,
+          accuracy: classRows.length > 0
+            ? classCorrectCount / classRows.length
+            : 0,
+          toolUsageRate: classRows.length > 0
+            ? classToolUsageCount / classRows.length
+            : 0,
           averageLatencyMs: average(classLatencyValues),
           averageTotalTokens: average(classTokenValues),
           unnecessaryToolCalls: classParametricRows.length > 0
@@ -464,25 +656,29 @@ async function runEvalFixture(
       medianLatencyMs: computeMedian(latencyValues),
       averageTotalTokens: average(totalTokenValues),
       totalToolCalls,
-      redundantToolCallRate: totalToolCalls > 0 ? redundantToolCalls / totalToolCalls : undefined,
+      redundantToolCallRate: totalToolCalls > 0
+        ? redundantToolCalls / totalToolCalls
+        : undefined,
       workflowAccuracy,
       safetyAccuracy,
       averagePrecisionAtK: average(precisionValues),
       averageRecallAtK: average(recallValues),
       averageMrr: average(mrrValues),
-      costPerCorrectAnswer: computeCostPerCorrectAnswer(correctCount, totalTokenValues),
+      costPerCorrectAnswer: computeCostPerCorrectAnswer(
+        correctCount,
+        totalTokenValues,
+      ),
       classBreakdown: classBreakdown.length > 0 ? classBreakdown : undefined,
     });
 
-    const refusalStr = refusalMatches > 0
-      ? ` refusal:${refusalMatches}`
-      : "";
+    const refusalStr = refusalMatches > 0 ? ` refusal:${refusalMatches}` : "";
     const toolSelStr = toolSelectionAccuracy !== undefined
       ? ` toolSel:${(toolSelectionAccuracy * 100).toFixed(1)}%`
       : "";
-    const unnecessaryStr = unnecessaryToolCalls !== undefined && unnecessaryToolCalls > 0
-      ? ` unnecessaryTools:${unnecessaryToolCalls}`
-      : "";
+    const unnecessaryStr =
+      unnecessaryToolCalls !== undefined && unnecessaryToolCalls > 0
+        ? ` unnecessaryTools:${unnecessaryToolCalls}`
+        : "";
     console.log(
       `    Accuracy: ${
         (accuracy * 100).toFixed(1)
@@ -498,20 +694,26 @@ async function runEvalFixture(
     (r) => r.condition === "without-tools",
   );
   const withoutToolsClassBreakdown = new Map(
-    (withoutToolsResult?.classBreakdown ?? []).map((classSummary) => [classSummary.questionClass, classSummary]),
+    (withoutToolsResult?.classBreakdown ?? []).map((
+      classSummary,
+    ) => [classSummary.questionClass, classSummary]),
   );
   for (const result of results) {
     if (result === withoutToolsResult) continue;
     if (withoutToolsResult) {
       const delta = result.accuracy - withoutToolsResult.accuracy;
       console.log(
-        `    Delta (${result.condition} - without-tools): ${(delta * 100).toFixed(1)}%`,
+        `    Delta (${result.condition} - without-tools): ${
+          (delta * 100).toFixed(1)
+        }%`,
       );
     }
 
     if (result.classBreakdown) {
       result.classBreakdown = result.classBreakdown.map((classSummary) => {
-        const withoutToolsClassSummary = withoutToolsClassBreakdown.get(classSummary.questionClass);
+        const withoutToolsClassSummary = withoutToolsClassBreakdown.get(
+          classSummary.questionClass,
+        );
         return {
           ...classSummary,
           accuracyDeltaVsWithoutTools: withoutToolsClassSummary
@@ -530,14 +732,40 @@ async function runEvalFixture(
 
 export async function runExperiment(
   config: ExperimentConfig,
-  options?: { debug?: boolean; dry?: boolean },
+  options?: RunExperimentOptions,
 ): Promise<ExperimentSummary> {
   const startTime = Date.now();
   const timestamp = new Date().toISOString().replace(/[:]/g, "-");
 
-  const evalNames = config.evals.length === 1 && config.evals[0] === "*"
+  const activeModelEntries = options?.modelFilter?.length
+    ? config.models.filter((modelEntry) =>
+      options.modelFilter?.includes(modelEntry.id)
+    )
+    : config.models;
+  const activeConditions = options?.conditionFilter?.length
+    ? config.conditions.filter((condition) =>
+      options.conditionFilter?.includes(condition.name)
+    )
+    : config.conditions;
+
+  if (activeModelEntries.length === 0) {
+    throw new Error("No models matched the requested filter.");
+  }
+
+  if (activeConditions.length === 0) {
+    throw new Error("No conditions matched the requested filter.");
+  }
+
+  const activeConfig: ExperimentConfig = {
+    ...config,
+    models: activeModelEntries,
+    conditions: activeConditions,
+  };
+
+  const evalNames =
+    activeConfig.evals.length === 1 && activeConfig.evals[0] === "*"
     ? await discoverEvals()
-    : config.evals;
+    : activeConfig.evals;
 
   const allResults: PerModelResult[] = [];
 
@@ -552,13 +780,13 @@ export async function runExperiment(
       `\nEval: ${fixture.name} (${fixture.questions.length} questions)`,
     );
 
-    for (const modelEntry of config.models) {
-      const model = resolveModel(modelEntry.id, config.baseUrl);
+    for (const modelEntry of activeConfig.models) {
+      const model = resolveModel(modelEntry.id, activeConfig.baseUrl);
       const displayModel = modelEntry.displayName ?? modelEntry.id;
       console.log(`  Model: ${displayModel}`);
 
       let client: Client | undefined;
-      const needsClient = config.conditions.some(
+      const needsClient = activeConfig.conditions.some(
         (c) => c.mode !== "without-tools",
       );
       if (needsClient) {
@@ -571,9 +799,14 @@ export async function runExperiment(
         fixture,
         model,
         client,
-        config,
+        activeConfig,
         displayModel,
-        runOptions,
+        {
+          ...runOptions,
+          modelFilter: options?.modelFilter,
+          conditionFilter: options?.conditionFilter,
+          questionLimitOverride: options?.questionLimitOverride,
+        },
       );
       const perModelResults = fixtureRunResult.perModelResults;
 

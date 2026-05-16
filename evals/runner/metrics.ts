@@ -22,11 +22,17 @@ export function average(values: number[]): number | undefined {
   return sum / values.length;
 }
 
-export function computeCostPerCorrectAnswer(correctCount: number, totalTokenValues: number[]): number | undefined {
+export function computeCostPerCorrectAnswer(
+  correctCount: number,
+  totalTokenValues: number[],
+): number | undefined {
   if (correctCount === 0 || totalTokenValues.length === 0) {
     return undefined;
   }
 
-  const totalTokenCount = totalTokenValues.reduce((accumulator, value) => accumulator + value, 0);
+  const totalTokenCount = totalTokenValues.reduce(
+    (accumulator, value) => accumulator + value,
+    0,
+  );
   return totalTokenCount / correctCount;
 }

@@ -16,8 +16,14 @@ function looksLikeLegacySearchKey(value: string): boolean {
 }
 
 async function main(): Promise<void> {
-  const corpusPath = new URL("../evals/search-quality/corpus.ttl", import.meta.url);
-  const questionsPath = new URL("../evals/search-quality/questions.json", import.meta.url);
+  const corpusPath = new URL(
+    "../evals/search-quality/corpus.ttl",
+    import.meta.url,
+  );
+  const questionsPath = new URL(
+    "../evals/search-quality/questions.json",
+    import.meta.url,
+  );
 
   const corpusText = await Deno.readTextFile(corpusPath);
   const parser = new Parser({ format: "text/turtle" });
@@ -27,12 +33,16 @@ async function main(): Promise<void> {
   for (const quad of parsedQuads) {
     const legacySearchFixtureKey = createLegacySearchFixtureKey(quad);
     if (quadLookup.has(legacySearchFixtureKey)) {
-      throw new Error(`Duplicate legacy search fixture key in corpus: ${legacySearchFixtureKey}`);
+      throw new Error(
+        `Duplicate legacy search fixture key in corpus: ${legacySearchFixtureKey}`,
+      );
     }
     quadLookup.set(legacySearchFixtureKey, quad);
   }
 
-  const questions = JSON.parse(await Deno.readTextFile(questionsPath)) as SearchQualityQuestion[];
+  const questions = JSON.parse(
+    await Deno.readTextFile(questionsPath),
+  ) as SearchQualityQuestion[];
 
   for (const question of questions) {
     if (!Array.isArray(question.expectedSearchResultIds)) {
@@ -49,7 +59,9 @@ async function main(): Promise<void> {
 
       const matchingQuad = quadLookup.get(searchResultId);
       if (!matchingQuad) {
-        throw new Error(`Question ${question.id} references unknown legacy search fixture key: ${searchResultId}`);
+        throw new Error(
+          `Question ${question.id} references unknown legacy search fixture key: ${searchResultId}`,
+        );
       }
 
       normalizedSearchResultIds.push(await hashQuad(matchingQuad));
@@ -58,7 +70,10 @@ async function main(): Promise<void> {
     question.expectedSearchResultIds = normalizedSearchResultIds;
   }
 
-  await Deno.writeTextFile(questionsPath, `${JSON.stringify(questions, null, 2)}\n`);
+  await Deno.writeTextFile(
+    questionsPath,
+    `${JSON.stringify(questions, null, 2)}\n`,
+  );
 }
 
 if (import.meta.main) {

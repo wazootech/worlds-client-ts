@@ -30,7 +30,9 @@ Deno.test("createExportRdfTool defaults serialized contentType to text/turtle", 
 });
 
 Deno.test("createExportRdfTool returns safe failure on client error", async () => {
-  const toolInstance = createExportRdfTool(createFakeClient({ exportError: new Error("export failed") }));
+  const toolInstance = createExportRdfTool(
+    createFakeClient({ exportError: new Error("export failed") }),
+  );
   const response = await toolInstance.execute!({
     format: {
       kind: "serialized",

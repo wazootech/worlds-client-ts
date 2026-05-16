@@ -1,6 +1,7 @@
 import { jsonSchema, tool } from "ai";
 import type { ClientInterface, SparqlRequest } from "@worlds/client";
 import { translate } from "sparqlalgebrajs";
+import { wrapToolExecution } from "./utils.ts";
 
 /**
  * ExecuteSparqlOptions defines the configuration options for the executeSparql tool.
@@ -82,18 +83,12 @@ export function createExecuteSparqlTool(
         };
       }
 
-      try {
+      return await wrapToolExecution(async () => {
         const response = await client.sparql(request);
         return {
-          success: true,
           data: response.kind === "void" ? null : response.data,
         };
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
+      });
     },
   });
 }

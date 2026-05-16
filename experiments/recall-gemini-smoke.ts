@@ -1,16 +1,11 @@
 import type { ExperimentConfig } from "../evals/types.ts";
 
 const config: ExperimentConfig = {
-  name: "recall-smoke",
+  name: "recall-gemini-smoke",
   evals: ["recall"],
   models: [
-    { id: "groq:llama-3.1-8b-instant", displayName: "llama3.1-8b" },
-    {
-      id: "groq:meta-llama/llama-4-scout-17b-16e-instruct",
-      displayName: "llama4-scout",
-    },
-    { id: "groq:qwen/qwen3-32b", displayName: "qwen3-32b" },
-    { id: "groq:llama-3.3-70b-versatile", displayName: "llama3.3-70b" },
+    { id: "google:gemini-2.0-flash", displayName: "gemini-2.0-flash" },
+    { id: "google:gemini-2.5-flash", displayName: "gemini-2.5-flash" },
   ],
   smokeQuestionLimit: 3,
   runs: 1,

@@ -4,7 +4,9 @@ import { evaluateRetrievalQuestion } from "./retrieval-evaluator.ts";
 import { evaluateWorkflowQuestion } from "./workflow-evaluator.ts";
 import type { EvaluationContext, EvaluationResult } from "./types.ts";
 
-export async function evaluateQuestion(context: EvaluationContext): Promise<EvaluationResult> {
+export async function evaluateQuestion(
+  context: EvaluationContext,
+): Promise<EvaluationResult> {
   switch (context.fixture.evaluationKind) {
     case "adversarial":
       return await evaluateAdversarialQuestion(context);

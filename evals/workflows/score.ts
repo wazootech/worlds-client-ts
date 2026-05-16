@@ -13,7 +13,10 @@ export interface WorkflowScoringInput {
   graphCheckResults: boolean[];
 }
 
-function includesOrderedTools(observedToolSequence: string[], expectedToolSequence: string[]): boolean {
+function includesOrderedTools(
+  observedToolSequence: string[],
+  expectedToolSequence: string[],
+): boolean {
   let searchIndex = 0;
 
   for (const expectedTool of expectedToolSequence) {
@@ -43,10 +46,15 @@ export function scoreWorkflow(input: WorkflowScoringInput): WorkflowAssessment {
     : includesOrderedTools(input.toolSequence, expectedToolsInOrder);
 
   const graphChecksCorrect = input.question.expectedMutation === "none"
-    ? input.graphCheckResults.every((graphCheckResult) => graphCheckResult === false)
-    : input.graphCheckResults.every((graphCheckResult) => graphCheckResult === true);
+    ? input.graphCheckResults.every((graphCheckResult) =>
+      graphCheckResult === false
+    )
+    : input.graphCheckResults.every((graphCheckResult) =>
+      graphCheckResult === true
+    );
 
-  const workflowCorrect = requiredToolsPresent && forbiddenToolsAbsent && orderedToolsCorrect &&
+  const workflowCorrect = requiredToolsPresent && forbiddenToolsAbsent &&
+    orderedToolsCorrect &&
     graphChecksCorrect;
 
   return {

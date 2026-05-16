@@ -1,5 +1,6 @@
 import { jsonSchema, tool } from "ai";
 import type { ClientInterface, ImportRequest } from "@worlds/client";
+import { wrapToolExecution } from "./utils.ts";
 
 /**
  * SerializedImportRequest is a discriminated ImportRequest type that only allows "serialized" sources.
@@ -49,8 +50,8 @@ export function createImportRdfTool(client: ClientInterface) {
       },
       required: ["source"],
     }),
-    execute: async (request) => {
-      try {
+    execute: (request) =>
+      wrapToolExecution(async () => {
         if (
           request.source.kind === "serialized" && !request.source.contentType
         ) {
@@ -58,15 +59,8 @@ export function createImportRdfTool(client: ClientInterface) {
         }
         await client.import(request);
         return {
-          success: true,
           message: "Data imported successfully.",
         };
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    },
+      }),
   });
 }

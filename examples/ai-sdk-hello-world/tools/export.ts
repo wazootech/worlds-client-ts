@@ -1,5 +1,6 @@
 import { jsonSchema, tool } from "ai";
 import type { ClientInterface, ExportRequest } from "@worlds/client";
+import { wrapToolExecution } from "./utils.ts";
 
 /**
  * SerializedExportRequest is a discriminated ExportRequest type that only allows "serialized" formats.
@@ -40,8 +41,8 @@ export function createExportRdfTool(client: ClientInterface) {
       },
       required: ["format"],
     }),
-    execute: async (request) => {
-      try {
+    execute: (request) =>
+      wrapToolExecution(async () => {
         if (
           request.format.kind === "serialized" && !request.format.contentType
         ) {
@@ -49,15 +50,8 @@ export function createExportRdfTool(client: ClientInterface) {
         }
         const response = await client.export(request);
         return {
-          success: true,
           data: response.kind === "serialized" ? response.data : null,
         };
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    },
+      }),
   });
 }

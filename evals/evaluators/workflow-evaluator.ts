@@ -2,7 +2,9 @@ import { scoreWorkflow } from "../workflows/score.ts";
 import { runGraphStateChecks } from "../runner/graph-checks.ts";
 import type { EvaluationContext, EvaluationResult } from "./types.ts";
 
-export async function evaluateWorkflowQuestion(context: EvaluationContext): Promise<EvaluationResult> {
+export async function evaluateWorkflowQuestion(
+  context: EvaluationContext,
+): Promise<EvaluationResult> {
   const graphCheckResults = await runGraphStateChecks(
     context.client,
     context.question.expectedGraphStateChecks ?? [],

@@ -5,7 +5,7 @@ import questions from "./questions.json" with { type: "json" };
 const corpusUrl = new URL("../recall/corpus.ttl", import.meta.url);
 const corpus = Deno.readTextFileSync(corpusUrl);
 
-function score(answer: string, question: EvalQuestion) {
+function _score(answer: string, question: EvalQuestion) {
   const expectsRefusal = question.expectedOutcome === "refusal";
   return scoreNegativeTest(
     answer,

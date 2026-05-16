@@ -1,5 +1,5 @@
-import { toFileUrl } from "@std/path";
 import "@tensorflow/tfjs-backend-wasm";
+import { isAbsolute, toFileUrl } from "@std/path";
 import * as tf from "@tensorflow/tfjs";
 import * as use from "@tensorflow-models/universal-sentence-encoder";
 import type { EmbeddingService } from "#/client/search-index/embedding-service/embedding-service.ts";
@@ -16,16 +16,35 @@ export interface UniversalSentenceEncoderEmbeddingServiceOptions {
 /** UniversalSentenceEncoderEmbeddingService provides 512-dimensional text embeddings using TensorFlow.js. */
 export class UniversalSentenceEncoderEmbeddingService
   implements EmbeddingService {
-  private readonly options: UniversalSentenceEncoderEmbeddingServiceOptions;
   private modelPromise: Promise<use.UniversalSentenceEncoder> | null = null;
 
   public constructor(
-    private readonly options: UniversalSentenceEncoderEmbeddingServiceOptions = {},
+    private readonly options: UniversalSentenceEncoderEmbeddingServiceOptions =
+      {},
   ) {
     // Initialize backend immediately
     tf.setBackend("wasm").catch(console.error);
   }
 
+  private resolveModelResourcePath(pathOrUrl: string): string {
+    if (
+      pathOrUrl.startsWith("http://") ||
+      pathOrUrl.startsWith("https://") ||
+      pathOrUrl.startsWith("file://")
+    ) {
+      return pathOrUrl;
+    }
+
+    if (isAbsolute(pathOrUrl)) {
+      return toFileUrl(pathOrUrl).toString();
+    }
+
+    try {
+      return toFileUrl(Deno.realPathSync(pathOrUrl)).toString();
+    } catch {
+      return pathOrUrl;
+    }
+  }
 
   private async getModel(): Promise<use.UniversalSentenceEncoder> {
     if (!this.modelPromise) {
@@ -56,10 +75,10 @@ export class UniversalSentenceEncoderEmbeddingService
       }
 
       if (modelUrl) {
-        config.modelUrl = this.resolveToUrlString(modelUrl);
+        config.modelUrl = this.resolveModelResourcePath(modelUrl);
       }
       if (vocabUrl) {
-        config.vocabUrl = this.resolveToUrlString(vocabUrl);
+        config.vocabUrl = this.resolveModelResourcePath(vocabUrl);
       }
 
       console.log(`[UniversalSentenceEncoderEmbeddingService] config=`, config);
@@ -69,24 +88,6 @@ export class UniversalSentenceEncoderEmbeddingService
       return model;
     }
     return this.modelPromise;
-  }
-
-  private resolveToUrlString(pathOrUrl: string): string {
-    if (
-      pathOrUrl.startsWith("http://") ||
-      pathOrUrl.startsWith("https://") ||
-      pathOrUrl.startsWith("file://")
-    ) {
-      return pathOrUrl;
-    }
-    try {
-      // Assuming local system path if it isn't an explicit protocol.
-      const absolutePath = Deno.realPathSync(pathOrUrl);
-      return toFileUrl(absolutePath).toString();
-    } catch (_error) {
-      // Fallback if file does not exist or error occurs (treat as URL or string anyway)
-      return pathOrUrl;
-    }
   }
 
   /** embed converts text segments into 512-dimensional vector arrays. */

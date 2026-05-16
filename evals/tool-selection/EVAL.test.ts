@@ -8,23 +8,34 @@ Deno.test("all tool-selection questions have expectedTool field", () => {
       true,
       `question ${q.id} must have expectedTool`,
     );
-    assertEquals(typeof q.expectedTool === "string" || q.expectedTool === null, true);
+    assertEquals(
+      typeof q.expectedTool === "string" || q.expectedTool === null,
+      true,
+    );
   }
 });
 
 Deno.test("searchWorld questions are tagged correctly", () => {
-  const searchQuestions = questions.filter((q) => q.expectedTool === "searchWorld");
+  const searchQuestions = questions.filter((q) =>
+    q.expectedTool === "searchWorld"
+  );
   assertEquals(searchQuestions.length >= 8, true);
 });
 
 Deno.test("executeSparql questions are tagged correctly", () => {
-  const sparqlQuestions = questions.filter((q) => q.expectedTool === "executeSparql");
+  const sparqlQuestions = questions.filter((q) =>
+    q.expectedTool === "executeSparql"
+  );
   assertEquals(sparqlQuestions.length >= 8, true);
 });
 
 Deno.test("import/export questions present", () => {
-  const importQuestions = questions.filter((q) => q.expectedTool === "importRdf");
-  const exportQuestions = questions.filter((q) => q.expectedTool === "exportRdf");
+  const importQuestions = questions.filter((q) =>
+    q.expectedTool === "importRdf"
+  );
+  const exportQuestions = questions.filter((q) =>
+    q.expectedTool === "exportRdf"
+  );
   assertEquals(importQuestions.length >= 3, true);
   assertEquals(exportQuestions.length >= 2, true);
 });
@@ -34,7 +45,11 @@ Deno.test("parametric questions expectedTool is null", () => {
     q.tags?.includes("parametric")
   );
   for (const q of parametricQuestions) {
-    assertEquals(q.expectedTool, null, `parametric question ${q.id} should have null expectedTool`);
+    assertEquals(
+      q.expectedTool,
+      null,
+      `parametric question ${q.id} should have null expectedTool`,
+    );
   }
 });
 
@@ -46,6 +61,9 @@ Deno.test("questions dataset shaped correctly", () => {
   );
   for (const q of questions) {
     assertEquals(typeof q.question, "string");
-    assertEquals(typeof q.expectedTool === "string" || q.expectedTool === null, true);
+    assertEquals(
+      typeof q.expectedTool === "string" || q.expectedTool === null,
+      true,
+    );
   }
 });

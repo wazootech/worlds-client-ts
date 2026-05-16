@@ -2,7 +2,9 @@ import { scoreRefusalWithLLM, scoreWithLLM } from "../llm-scorer.ts";
 import { assessAnswer } from "../score-utils.ts";
 import type { EvaluationContext, EvaluationResult } from "./types.ts";
 
-export async function evaluateAnswerQuestion(context: EvaluationContext): Promise<EvaluationResult> {
+export async function evaluateAnswerQuestion(
+  context: EvaluationContext,
+): Promise<EvaluationResult> {
   const { question, answer, answerMetrics, toolTrace } = context;
 
   let toolCorrect: boolean | undefined;
@@ -14,7 +16,8 @@ export async function evaluateAnswerQuestion(context: EvaluationContext): Promis
       toolCorrect = toolTrace.some((tc) => {
         try {
           const parsed = JSON.parse(tc);
-          return parsed.name === question.expectedTool || parsed.toolName === question.expectedTool;
+          return parsed.name === question.expectedTool ||
+            parsed.toolName === question.expectedTool;
         } catch {
           return tc.includes(question.expectedTool!);
         }
@@ -32,7 +35,11 @@ export async function evaluateAnswerQuestion(context: EvaluationContext): Promis
 
   if (question.scoringMode === "llm") {
     if (question.expectedOutcome === "refusal") {
-      const llmResult = await scoreRefusalWithLLM(question, answer);
+      const llmResult = await scoreRefusalWithLLM(
+        question,
+        answer,
+        context.options,
+      );
       return {
         correct: llmResult.correct,
         matchKind: llmResult.matchKind,
@@ -41,7 +48,12 @@ export async function evaluateAnswerQuestion(context: EvaluationContext): Promis
     }
 
     if (toolTrace.length > 0) {
-      const llmResult = await scoreWithLLM(question, answer, toolTrace);
+      const llmResult = await scoreWithLLM(
+        question,
+        answer,
+        toolTrace,
+        context.options,
+      );
       return {
         correct: llmResult.correct,
         matchKind: llmResult.matchKind,

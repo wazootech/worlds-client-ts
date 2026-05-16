@@ -4,6 +4,7 @@ import type {
   SearchRequest,
   SearchResponse,
 } from "@worlds/client";
+import { type ToolResult, wrapToolExecution } from "./utils.ts";
 
 /**
  * createSearchWorldTool creates an AI SDK tool for searching the knowledge base.
@@ -69,24 +70,7 @@ export function createSearchWorldTool(client: ClientInterface) {
       },
       required: ["query"],
     }),
-    execute: async (
-      request,
-    ): Promise<
-      | ({ success: true } & SearchResponse)
-      | { success: false; error: string }
-    > => {
-      try {
-        const response = await client.search(request);
-        return {
-          success: true,
-          ...response,
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    },
+    execute: (request): Promise<ToolResult<SearchResponse>> =>
+      wrapToolExecution(() => client.search(request)),
   });
 }

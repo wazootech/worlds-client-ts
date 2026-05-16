@@ -11,10 +11,10 @@
     "jsr:@std/internal@^1.0.12": "1.0.13",
     "jsr:@std/internal@^1.0.13": "1.0.13",
     "jsr:@std/path@^1.1.4": "1.1.4",
-    "npm:@ai-sdk/google@^3.0.73": "3.0.73_zod@4.4.3",
+    "npm:@ai-sdk/google@^3.0.74": "3.0.74_zod@4.4.3",
     "npm:@ai-sdk/groq@^3.0.39": "3.0.39_zod@4.4.3",
+    "npm:@ai-sdk/openai@^3.0.64": "3.0.64_zod@4.4.3",
     "npm:@comunica/query-sparql-rdfjs-lite@^5.2.2": "5.2.2",
-    "npm:@langchain/core@^1.1.46": "1.1.46",
     "npm:@langchain/textsplitters@^1.0.1": "1.0.1_@langchain+core@1.1.46",
     "npm:@libsql/client@*": "0.17.3",
     "npm:@libsql/client@~0.17.3": "0.17.3",
@@ -23,13 +23,14 @@
     "npm:@tensorflow/tfjs-backend-wasm@^4.22.0": "4.22.0_@tensorflow+tfjs-core@4.22.0",
     "npm:@tensorflow/tfjs@^4.22.0": "4.22.0_seedrandom@3.0.5",
     "npm:@types/n3@1.26.1": "1.26.1",
-    "npm:ai-sdk-ollama@^3.8.4": "3.8.4_ai@6.0.182__zod@4.4.3_zod@4.4.3",
-    "npm:ai@^6.0.182": "6.0.182_zod@4.4.3",
+    "npm:ai-sdk-ollama@^3.8.4": "3.8.4_ai@6.0.183__zod@4.4.3_zod@4.4.3",
+    "npm:ai@^6.0.183": "6.0.183_zod@4.4.3",
     "npm:libsql@*": "0.5.29",
     "npm:n3@^2.0.3": "2.0.3",
     "npm:rdf-canonize@5": "5.0.0",
     "npm:sparqlalgebrajs@*": "5.0.2",
-    "npm:sparqlalgebrajs@^5.0.2": "5.0.2"
+    "npm:sparqlalgebrajs@^5.0.2": "5.0.2",
+    "npm:zod@*": "4.4.3"
   },
   "jsr": {
     "@std/assert@1.0.19": {
@@ -78,8 +79,8 @@
     }
   },
   "npm": {
-    "@ai-sdk/gateway@3.0.114_zod@4.4.3": {
-      "integrity": "sha512-MqkZ5sd+qiq6RgIxELkoFQXg2/JwK+WCMaot7U+rtrZpWJl3fSyYvc28SC03b256o4F7OXjQtdjTqs81B2w+dA==",
+    "@ai-sdk/gateway@3.0.115_zod@4.4.3": {
+      "integrity": "sha512-xonmGfN9pt54WdKqMzWe68BRYS3rsYvraBzioyA0gfNcecHs8Ir5qk/X8grJSyZ95hghjWiOphrK6bAc11E6SA==",
       "dependencies": [
         "@ai-sdk/provider",
         "@ai-sdk/provider-utils",
@@ -87,8 +88,8 @@
         "zod"
       ]
     },
-    "@ai-sdk/google@3.0.73_zod@4.4.3": {
-      "integrity": "sha512-o2MuIeyvZrFIeIbnbA8Thrr63irdyUBh0uWBZ2lY6yFeXuE/tcwyXF74bDKS4KvTu84uFpQfpbS/LXHGKKXz+g==",
+    "@ai-sdk/google@3.0.74_zod@4.4.3": {
+      "integrity": "sha512-LMuDNHYNt4bfDMTE2oxe83ClF0HenCepkBs5Wb0LKBokuN1dxIUirPQHQvi1AuT+80SLyrOZ5c4wPGTVUl2A4w==",
       "dependencies": [
         "@ai-sdk/provider",
         "@ai-sdk/provider-utils",
@@ -97,6 +98,14 @@
     },
     "@ai-sdk/groq@3.0.39_zod@4.4.3": {
       "integrity": "sha512-BZAr6DjCbzWQ0Qn1/TSsHo/bmCt4JaAMb4A7HCSUZBQCAcOjne/03D0sVjHnQhUC3TpwcmYiv7tHAviK7BluRw==",
+      "dependencies": [
+        "@ai-sdk/provider",
+        "@ai-sdk/provider-utils",
+        "zod"
+      ]
+    },
+    "@ai-sdk/openai@3.0.64_zod@4.4.3": {
+      "integrity": "sha512-epO4iS6QwktaY2PF6uBcPnDTJ3BxPOfsGS7/OEtBe3GtNj7C8h8gMDVtIe5K8W16HNDbn0tbR4dcQfpfs+XVFg==",
       "dependencies": [
         "@ai-sdk/provider",
         "@ai-sdk/provider-utils",
@@ -3147,7 +3156,7 @@
         "event-target-shim"
       ]
     },
-    "ai-sdk-ollama@3.8.4_ai@6.0.182__zod@4.4.3_zod@4.4.3": {
+    "ai-sdk-ollama@3.8.4_ai@6.0.183__zod@4.4.3_zod@4.4.3": {
       "integrity": "sha512-vvhLHo9MrOhDxsxRWfOGqBmQsnbDPKQHqDG5vSYMkdu6q8RPxJIYag001jQIAKA2MO37Nf96gCAPWM+dufvglw==",
       "dependencies": [
         "@ai-sdk/provider",
@@ -3157,8 +3166,8 @@
         "ollama"
       ]
     },
-    "ai@6.0.182_zod@4.4.3": {
-      "integrity": "sha512-ooJdziFjYrYRcsCx107roqA8gDTI3P82nUfroNWIhVvwrkYzEN3W1l50YK+XNqkUew8AiimaW0/SLBewRXMuHQ==",
+    "ai@6.0.183_zod@4.4.3": {
+      "integrity": "sha512-7pJ03j/XFbkdW6wadPWNCvNpFoxPwShEkzuACEvKBNeL+P5EbHrffh12Qzn1gdEO8Wunk1kkM37XX12bGQokUg==",
       "dependencies": [
         "@ai-sdk/gateway",
         "@ai-sdk/provider",
@@ -4168,12 +4177,13 @@
       "jsr:@std/async@^1.3.0",
       "jsr:@std/cli@^1.0.29",
       "jsr:@std/encoding@^1.0.10",
+      "jsr:@std/fmt@^1.0.10",
       "jsr:@std/fs@^1.0.23",
       "jsr:@std/path@^1.1.4",
-      "npm:@ai-sdk/google@^3.0.73",
+      "npm:@ai-sdk/google@^3.0.74",
       "npm:@ai-sdk/groq@^3.0.39",
+      "npm:@ai-sdk/openai@^3.0.64",
       "npm:@comunica/query-sparql-rdfjs-lite@^5.2.2",
-      "npm:@langchain/core@^1.1.46",
       "npm:@langchain/textsplitters@^1.0.1",
       "npm:@libsql/client@~0.17.3",
       "npm:@rdfjs/types@^2.0.1",
@@ -4182,7 +4192,7 @@
       "npm:@tensorflow/tfjs@^4.22.0",
       "npm:@types/n3@1.26.1",
       "npm:ai-sdk-ollama@^3.8.4",
-      "npm:ai@^6.0.182",
+      "npm:ai@^6.0.183",
       "npm:n3@^2.0.3",
       "npm:rdf-canonize@5",
       "npm:sparqlalgebrajs@^5.0.2"

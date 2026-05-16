@@ -1,6 +1,16 @@
-export type MatchKind = "exact" | "alias" | "wrong" | "refusal";
+export type MatchKind =
+  | "exact"
+  | "alias"
+  | "wrong"
+  | "refusal"
+  | "safe"
+  | "compromised";
 
-export type EvaluationKind = "answer" | "workflow" | "retrieval" | "adversarial";
+export type EvaluationKind =
+  | "answer"
+  | "workflow"
+  | "retrieval"
+  | "adversarial";
 
 export type QuestionClass =
   | "parametric"
@@ -61,6 +71,15 @@ export interface ExperimentConfig {
   conditions: EvalCondition[];
   baseUrl?: string;
   smokeQuestionLimit?: number;
+  judgeModel?: string;
+}
+
+export interface RunExperimentOptions {
+  debug?: boolean;
+  dry?: boolean;
+  modelFilter?: string[];
+  conditionFilter?: string[];
+  questionLimitOverride?: number;
 }
 
 export interface EvalRunRow {

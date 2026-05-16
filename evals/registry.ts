@@ -1,4 +1,5 @@
 import type { EvalFixture } from "./types.ts";
+import { discoverModules } from "../scripts/utils/discovery.ts";
 
 export async function loadEval(name: string): Promise<EvalFixture> {
   const modulePath = new URL(`./${name}/EVAL.ts`, import.meta.url);
@@ -7,17 +8,10 @@ export async function loadEval(name: string): Promise<EvalFixture> {
 }
 
 export async function discoverEvals(): Promise<string[]> {
-  const evalNames: string[] = [];
-  for await (const entry of Deno.readDir(new URL(".", import.meta.url))) {
-    if (entry.isDirectory) {
-      try {
-        const evalUrl = new URL(`./${entry.name}/EVAL.ts`, import.meta.url);
-        await Deno.stat(evalUrl);
-        evalNames.push(entry.name);
-      } catch {
-        // No EVAL.ts in this directory
-      }
-    }
-  }
-  return evalNames.sort();
+  const baseUrl = new URL(".", import.meta.url);
+  return await discoverModules(baseUrl, {
+    includeFiles: false,
+    includeDirectories: true,
+    requiredFile: "EVAL.ts",
+  });
 }

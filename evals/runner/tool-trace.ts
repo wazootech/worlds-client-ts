@@ -31,8 +31,12 @@ export function extractObservedSearchResultIds(toolTrace: string[]): string[] {
       const result = parsed?.result;
       if (result?.success === true && Array.isArray(result.results)) {
         return result.results
-          .map((searchResult: { id?: unknown }) => typeof searchResult.id === "string" ? searchResult.id : null)
-          .filter((searchResultId: string | null): searchResultId is string => searchResultId !== null);
+          .map((searchResult: { id?: unknown }) =>
+            typeof searchResult.id === "string" ? searchResult.id : null
+          )
+          .filter((searchResultId: string | null): searchResultId is string =>
+            searchResultId !== null
+          );
       }
     } catch {
       // Ignore malformed tool traces.

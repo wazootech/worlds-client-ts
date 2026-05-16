@@ -27,7 +27,9 @@ Deno.test("createImportRdfTool defaults serialized contentType to text/turtle", 
 });
 
 Deno.test("createImportRdfTool returns safe failure on client error", async () => {
-  const toolInstance = createImportRdfTool(createFakeClient({ importError: new Error("import failed") }));
+  const toolInstance = createImportRdfTool(
+    createFakeClient({ importError: new Error("import failed") }),
+  );
   const response = await toolInstance.execute!({
     source: {
       kind: "serialized",

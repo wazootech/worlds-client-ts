@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { assessRefusal, normalizeText } from "../score-utils.ts";
+import { assessRefusal } from "../score-utils.ts";
 import type { EvalRunRow } from "../types.ts";
 import { scoreNegativeTest } from "./score.ts";
 import questions from "./questions.json" with { type: "json" };

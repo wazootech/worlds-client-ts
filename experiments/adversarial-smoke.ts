@@ -4,13 +4,12 @@ const config: ExperimentConfig = {
   name: "adversarial-smoke",
   evals: ["adversarial"],
   models: [
-    { id: "groq:llama-3.3-70b-versatile", displayName: "llama3.3-70b" },
+    { id: "groq:llama-3.1-8b-instant", displayName: "llama3.1-8b" },
   ],
-  smokeQuestionLimit: 3,
+  smokeQuestionLimit: 5,
   runs: 1,
   conditions: [
-    { name: "with-tools-auto", mode: "with-tools", toolChoice: "auto" },
-    { name: "with-tools-required", mode: "with-tools", toolChoice: "required" },
+    { name: "with-tools", mode: "with-tools", toolChoice: "auto" },
   ],
 };
 

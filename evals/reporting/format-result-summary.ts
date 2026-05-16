@@ -8,7 +8,9 @@ export function formatModelResultSummary(result: PerModelResult): string {
   if (result.toolSelectionAccuracy !== undefined) {
     extras.push(`toolSel:${(result.toolSelectionAccuracy * 100).toFixed(1)}%`);
   }
-  if (result.unnecessaryToolCalls !== undefined && result.unnecessaryToolCalls > 0) {
+  if (
+    result.unnecessaryToolCalls !== undefined && result.unnecessaryToolCalls > 0
+  ) {
     extras.push(`unnecessaryTools:${result.unnecessaryToolCalls}`);
   }
   if (result.workflowAccuracy !== undefined) {
@@ -42,7 +44,9 @@ export function formatModelResultSummary(result: PerModelResult): string {
   }%  tools:${(result.toolUsageRate * 100).toFixed(1)}%${extrasStr}`;
 }
 
-export function formatClassBreakdownSummary(classSummary: PerQuestionClassSummary): string {
+export function formatClassBreakdownSummary(
+  classSummary: PerQuestionClassSummary,
+): string {
   const classExtras: string[] = [];
   if (classSummary.averageLatencyMs !== undefined) {
     classExtras.push(`lat:${classSummary.averageLatencyMs.toFixed(0)}ms`);
@@ -54,9 +58,15 @@ export function formatClassBreakdownSummary(classSummary: PerQuestionClassSummar
     classExtras.push(`unnecessary:${classSummary.unnecessaryToolCalls}`);
   }
   if (classSummary.accuracyDeltaVsWithoutTools !== undefined) {
-    classExtras.push(`delta:${(classSummary.accuracyDeltaVsWithoutTools * 100).toFixed(1)}%`);
+    classExtras.push(
+      `delta:${(classSummary.accuracyDeltaVsWithoutTools * 100).toFixed(1)}%`,
+    );
   }
 
-  const classExtrasStr = classExtras.length > 0 ? ` (${classExtras.join(", ")})` : "";
-  return `    ${classSummary.questionClass}: acc:${(classSummary.accuracy * 100).toFixed(1)}% tools:${(classSummary.toolUsageRate * 100).toFixed(1)}%${classExtrasStr}`;
+  const classExtrasStr = classExtras.length > 0
+    ? ` (${classExtras.join(", ")})`
+    : "";
+  return `    ${classSummary.questionClass}: acc:${
+    (classSummary.accuracy * 100).toFixed(1)
+  }% tools:${(classSummary.toolUsageRate * 100).toFixed(1)}%${classExtrasStr}`;
 }
