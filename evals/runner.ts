@@ -1,5 +1,6 @@
 import { createClient as createLibsqlClient } from "@libsql/client";
 import { generateText, jsonSchema, stepCountIs, tool } from "ai";
+import { createHuggingFace } from "@ai-sdk/huggingface";
 import { createOllama } from "@ai-sdk/ollama";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
@@ -172,6 +173,15 @@ function resolveModel(
     });
     const cleanModelId = modelIdentifier.slice("openai:".length);
     return openAiProvider(cleanModelId);
+  }
+
+  if (modelIdentifier.startsWith("huggingface:")) {
+    const huggingFaceProvider = createHuggingFace({
+      apiKey: Deno.env.get("HF_ACCESS_TOKEN") ??
+        Deno.env.get("HUGGINGFACE_API_KEY"),
+    });
+    const cleanModelId = modelIdentifier.slice("huggingface:".length);
+    return huggingFaceProvider(cleanModelId);
   }
 
   // Default to Ollama, removing optional prefix

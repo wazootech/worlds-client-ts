@@ -1,4 +1,5 @@
 import { generateText, jsonSchema, Output } from "ai";
+import { createHuggingFace } from "@ai-sdk/huggingface";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
 import type { EvalQuestion, MatchKind } from "./types.ts";
@@ -92,8 +93,16 @@ function resolveJudgeModel(modelIdentifier?: string) {
     return provider(modelId.slice("groq:".length));
   }
 
+  if (modelId.startsWith("huggingface:")) {
+    const provider = createHuggingFace({
+      apiKey: Deno.env.get("HF_ACCESS_TOKEN") ??
+        Deno.env.get("HUGGINGFACE_API_KEY"),
+    });
+    return provider(modelId.slice("huggingface:".length));
+  }
+
   throw new Error(
-    `Unsupported judge model provider: ${modelId}. Use google:<model-id> or groq:<model-id>.`,
+    `Unsupported judge model provider: ${modelId}. Use google:<model-id>, groq:<model-id>, or huggingface:<model-id>.`,
   );
 }
 

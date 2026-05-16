@@ -13,6 +13,7 @@
     "jsr:@std/path@^1.1.4": "1.1.4",
     "npm:@ai-sdk/google@^3.0.74": "3.0.74_zod@4.4.3",
     "npm:@ai-sdk/groq@^3.0.39": "3.0.39_zod@4.4.3",
+    "npm:@ai-sdk/huggingface@^1.0.49": "1.0.49_zod@4.4.3",
     "npm:@ai-sdk/openai@^3.0.64": "3.0.64_zod@4.4.3",
     "npm:@comunica/query-sparql-rdfjs-lite@^5.2.2": "5.2.2",
     "npm:@langchain/textsplitters@^1.0.1": "1.0.1_@langchain+core@1.1.46",
@@ -98,6 +99,23 @@
     },
     "@ai-sdk/groq@3.0.39_zod@4.4.3": {
       "integrity": "sha512-BZAr6DjCbzWQ0Qn1/TSsHo/bmCt4JaAMb4A7HCSUZBQCAcOjne/03D0sVjHnQhUC3TpwcmYiv7tHAviK7BluRw==",
+      "dependencies": [
+        "@ai-sdk/provider",
+        "@ai-sdk/provider-utils",
+        "zod"
+      ]
+    },
+    "@ai-sdk/huggingface@1.0.49_zod@4.4.3": {
+      "integrity": "sha512-FUHX3vKmpobYHTntTYBsjh8hBs/uvnLpqDf8S3EJu9gGkaoXreWz5fUmAnA3zlIfxuttacd0h+tLZm90fQ2cJA==",
+      "dependencies": [
+        "@ai-sdk/openai-compatible",
+        "@ai-sdk/provider",
+        "@ai-sdk/provider-utils",
+        "zod"
+      ]
+    },
+    "@ai-sdk/openai-compatible@2.0.47_zod@4.4.3": {
+      "integrity": "sha512-Enm5UlL0zUCrW3792opk5h7hRWxZOZzDe6eQYVFqX9LUOGGCe1h8MZWAGim765nwzgnjlpeYOsuzZmLtRsTPlg==",
       "dependencies": [
         "@ai-sdk/provider",
         "@ai-sdk/provider-utils",
@@ -4182,6 +4200,7 @@
       "jsr:@std/path@^1.1.4",
       "npm:@ai-sdk/google@^3.0.74",
       "npm:@ai-sdk/groq@^3.0.39",
+      "npm:@ai-sdk/huggingface@^1.0.49",
       "npm:@ai-sdk/openai@^3.0.64",
       "npm:@comunica/query-sparql-rdfjs-lite@^5.2.2",
       "npm:@langchain/textsplitters@^1.0.1",

@@ -13,6 +13,7 @@
   "imports": {
     "#/": "./src/",
     "ai": "npm:ai@^6.0.183",
+    "@ai-sdk/huggingface": "npm:@ai-sdk/huggingface@^1.0.49",
     "@ai-sdk/google": "npm:@ai-sdk/google@^3.0.74",
     "@ai-sdk/groq": "npm:@ai-sdk/groq@^3.0.39",
     "@ai-sdk/ollama": "npm:ai-sdk-ollama@^3.8.4",
@@ -50,6 +51,7 @@
     "example:denokv-hello-world": "deno -A --unstable-kv ./examples/denokv-hello-world/main.ts",
     "example:ai-sdk-hello-world": "deno -A --env ./examples/ai-sdk-hello-world/main.ts",
     "experiment": "deno -A --env scripts/run-experiment.ts",
+    "experiment:recall-huggingface-smoke": "deno -A --env scripts/run-experiment.ts recall-huggingface-smoke",
     "fmt": "deno fmt",
     "fmt:check": "deno fmt --check",
     "lint": "deno lint",
