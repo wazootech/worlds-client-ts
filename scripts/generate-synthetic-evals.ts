@@ -1,5 +1,5 @@
 import { generateText } from "ai";
-import { createGroq } from "@ai-sdk/groq";
+import { createHuggingFace } from "@ai-sdk/huggingface";
 import { parseArgs } from "@std/cli/parse-args";
 import type { EvalQuestion } from "../evals/types.ts";
 
@@ -9,7 +9,7 @@ Usage: deno run -A scripts/generate-synthetic-evals.ts --corpus <path> --output 
 Options:
   --count <num>       Number of questions to generate (default: 10)
   --examples <path>   Path to existing questions.json for style/format examples
-  --model <id>        Groq model ID (default: llama-3.3-70b-versatile)
+  --model <id>        Hugging Face model ID (default: Qwen/Qwen2.5-7B-Instruct)
 `;
 
 async function main() {
@@ -17,7 +17,7 @@ async function main() {
     string: ["corpus", "output", "count", "examples", "model"],
     default: {
       count: "10",
-      model: "llama-3.3-70b-versatile",
+      model: "Qwen/Qwen2.5-7B-Instruct",
     },
   });
 
@@ -32,8 +32,9 @@ async function main() {
     ? JSON.parse(await Deno.readTextFile(parsed.examples)).slice(0, 5)
     : [];
 
-  const groq = createGroq({
-    apiKey: Deno.env.get("GROQ_API_KEY"),
+  const huggingFace = createHuggingFace({
+    apiKey: Deno.env.get("HF_ACCESS_TOKEN") ??
+      Deno.env.get("HUGGINGFACE_API_KEY"),
   });
 
   console.log(
@@ -71,7 +72,7 @@ ${corpus}
 `;
 
   const result = await generateText({
-    model: groq(parsed.model),
+    model: huggingFace(parsed.model),
     prompt,
     temperature: 0.1,
   });

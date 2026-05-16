@@ -116,7 +116,9 @@ if (import.meta.main) {
       );
       console.log(`  Runs per question: ${config.runs}`);
       console.log(
-        `  Question limit: ${questionLimitOverride ?? config.smokeQuestionLimit ?? "all"}`,
+        `  Question limit: ${
+          questionLimitOverride ?? config.smokeQuestionLimit ?? "all"
+        }`,
       );
       console.log(`  Base URL: ${config.baseUrl ?? "N/A"}`);
       continue;

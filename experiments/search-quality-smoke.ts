@@ -4,7 +4,7 @@ const config: ExperimentConfig = {
   name: "search-quality-smoke",
   evals: ["search-quality"],
   models: [
-    { id: "groq:qwen/qwen3-32b", displayName: "qwen3-32b" },
+    { id: "huggingface:Qwen/Qwen2.5-32B-Instruct", displayName: "qwen2.5-32b" },
   ],
   smokeQuestionLimit: 3,
   runs: 1,

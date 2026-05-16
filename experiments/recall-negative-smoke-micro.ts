@@ -4,7 +4,7 @@ const config: ExperimentConfig = {
   name: "recall-negative-smoke-micro",
   evals: ["negative-tests"],
   models: [
-    { id: "groq:llama-3.3-70b-versatile", displayName: "llama3.3-70b" },
+    { id: "huggingface:Qwen/Qwen2.5-32B-Instruct", displayName: "qwen2.5-32b" },
   ],
   smokeQuestionLimit: 3,
   runs: 1,

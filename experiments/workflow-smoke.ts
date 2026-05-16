@@ -5,8 +5,8 @@ const config: ExperimentConfig = {
   evals: ["workflows"],
   models: [
     {
-      id: "groq:meta-llama/llama-4-scout-17b-16e-instruct",
-      displayName: "llama4-scout",
+      id: "huggingface:Qwen/Qwen2.5-14B-Instruct",
+      displayName: "qwen2.5-14b",
     },
   ],
   smokeQuestionLimit: 3,

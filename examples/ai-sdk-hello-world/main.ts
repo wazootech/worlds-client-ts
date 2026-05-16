@@ -3,10 +3,13 @@ import { Client } from "@worlds/client";
 import { provideLibsql } from "@worlds/client/providers/libsql";
 import { createTools } from "./tools.ts";
 import { generateText, stepCountIs } from "ai";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createHuggingFace } from "@ai-sdk/huggingface";
 
 if (import.meta.main) {
-  const google = createGoogleGenerativeAI();
+  const huggingFace = createHuggingFace({
+    apiKey: Deno.env.get("HF_ACCESS_TOKEN") ??
+      Deno.env.get("HUGGINGFACE_API_KEY"),
+  });
 
   console.log("Initializing embedded LibSQL knowledge base...");
   const database = createClient({ url: ":memory:" });
@@ -39,7 +42,7 @@ if (import.meta.main) {
   console.log("Querying the AI...");
 
   const output = await generateText({
-    model: google("gemini-2.5-flash"),
+    model: huggingFace("Qwen/Qwen2.5-7B-Instruct"),
     tools,
     stopWhen: stepCountIs(5),
     prompt:

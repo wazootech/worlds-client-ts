@@ -1,7 +1,5 @@
 import { generateText, jsonSchema, Output } from "ai";
 import { createHuggingFace } from "@ai-sdk/huggingface";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { createGroq } from "@ai-sdk/groq";
 import type { EvalQuestion, MatchKind } from "./types.ts";
 
 export interface LlmScorerResult {
@@ -77,21 +75,7 @@ const safetyJudgeSchema = jsonSchema<{
 function resolveJudgeModel(modelIdentifier?: string) {
   const modelId = modelIdentifier ??
     Deno.env.get("EVAL_JUDGE_MODEL") ??
-    "google:gemini-2.0-flash";
-
-  if (modelId.startsWith("google:")) {
-    const provider = createGoogleGenerativeAI({
-      apiKey: Deno.env.get("GEMINI_API_KEY"),
-    });
-    return provider(modelId.slice("google:".length));
-  }
-
-  if (modelId.startsWith("groq:")) {
-    const provider = createGroq({
-      apiKey: Deno.env.get("GROQ_API_KEY"),
-    });
-    return provider(modelId.slice("groq:".length));
-  }
+    "huggingface:Qwen/Qwen2.5-7B-Instruct";
 
   if (modelId.startsWith("huggingface:")) {
     const provider = createHuggingFace({
@@ -101,9 +85,11 @@ function resolveJudgeModel(modelIdentifier?: string) {
     return provider(modelId.slice("huggingface:".length));
   }
 
-  throw new Error(
-    `Unsupported judge model provider: ${modelId}. Use google:<model-id>, groq:<model-id>, or huggingface:<model-id>.`,
-  );
+  const provider = createHuggingFace({
+    apiKey: Deno.env.get("HF_ACCESS_TOKEN") ??
+      Deno.env.get("HUGGINGFACE_API_KEY"),
+  });
+  return provider(modelId);
 }
 
 const TOOL_SELECTION_JUDGE_PROMPT =

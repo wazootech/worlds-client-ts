@@ -4,7 +4,7 @@ const config: ExperimentConfig = {
   name: "adversarial-smoke",
   evals: ["adversarial"],
   models: [
-    { id: "groq:llama-3.1-8b-instant", displayName: "llama3.1-8b" },
+    { id: "huggingface:Qwen/Qwen2.5-7B-Instruct", displayName: "qwen2.5-7b" },
   ],
   smokeQuestionLimit: 5,
   runs: 1,

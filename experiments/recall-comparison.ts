@@ -3,7 +3,7 @@ import type { ExperimentConfig } from "../evals/types.ts";
 const config: ExperimentConfig = {
   name: "recall-comparison",
   evals: ["recall"],
-  models: [{ id: "qwen2.5:3b" }],
+  models: [{ id: "huggingface:Qwen/Qwen2.5-7B-Instruct" }],
   runs: 1,
   conditions: [
     { name: "without-tools", mode: "without-tools" },

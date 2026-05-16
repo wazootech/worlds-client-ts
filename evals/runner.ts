@@ -1,10 +1,6 @@
 import { createClient as createLibsqlClient } from "@libsql/client";
 import { generateText, jsonSchema, stepCountIs, tool } from "ai";
 import { createHuggingFace } from "@ai-sdk/huggingface";
-import { createOllama } from "@ai-sdk/ollama";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { createGroq } from "@ai-sdk/groq";
-import { createOpenAI } from "@ai-sdk/openai";
 import { Client } from "@worlds/client";
 import { provideLibsql } from "@worlds/client/providers/libsql";
 import { UniversalSentenceEncoderEmbeddingService } from "@worlds/client/providers/tfjs-universal-sentence-encoder";
@@ -149,32 +145,7 @@ async function robustGenerateText(
  */
 function resolveModel(
   modelIdentifier: string,
-  ollamaBaseUrl?: string,
 ): BenchmarkModel {
-  if (modelIdentifier.startsWith("google:")) {
-    const googleProvider = createGoogleGenerativeAI({
-      apiKey: Deno.env.get("GEMINI_API_KEY"),
-    });
-    const cleanModelId = modelIdentifier.slice("google:".length);
-    return googleProvider(cleanModelId);
-  }
-
-  if (modelIdentifier.startsWith("groq:")) {
-    const groqProvider = createGroq({
-      apiKey: Deno.env.get("GROQ_API_KEY"),
-    });
-    const cleanModelId = modelIdentifier.slice("groq:".length);
-    return groqProvider(cleanModelId);
-  }
-
-  if (modelIdentifier.startsWith("openai:")) {
-    const openAiProvider = createOpenAI({
-      apiKey: Deno.env.get("OPENAI_API_KEY"),
-    });
-    const cleanModelId = modelIdentifier.slice("openai:".length);
-    return openAiProvider(cleanModelId);
-  }
-
   if (modelIdentifier.startsWith("huggingface:")) {
     const huggingFaceProvider = createHuggingFace({
       apiKey: Deno.env.get("HF_ACCESS_TOKEN") ??
@@ -184,16 +155,11 @@ function resolveModel(
     return huggingFaceProvider(cleanModelId);
   }
 
-  // Default to Ollama, removing optional prefix
-  const cleanOllamaBaseUrl =
-    (ollamaBaseUrl ?? Deno.env.get("OLLAMA_BASE_URL") ??
-      "http://localhost:11434/v1")
-      .replace(/\/v1\/?$/, "");
-  const ollamaProvider = createOllama({ baseURL: cleanOllamaBaseUrl });
-  const cleanModelId = modelIdentifier.startsWith("ollama:")
-    ? modelIdentifier.slice("ollama:".length)
-    : modelIdentifier;
-  return ollamaProvider(cleanModelId);
+  const huggingFaceProvider = createHuggingFace({
+    apiKey: Deno.env.get("HF_ACCESS_TOKEN") ??
+      Deno.env.get("HUGGINGFACE_API_KEY"),
+  });
+  return huggingFaceProvider(modelIdentifier);
 }
 
 async function buildClient(corpus: string): Promise<Client> {
@@ -774,8 +740,8 @@ export async function runExperiment(
 
   const evalNames =
     activeConfig.evals.length === 1 && activeConfig.evals[0] === "*"
-    ? await discoverEvals()
-    : activeConfig.evals;
+      ? await discoverEvals()
+      : activeConfig.evals;
 
   const allResults: PerModelResult[] = [];
 
@@ -791,7 +757,7 @@ export async function runExperiment(
     );
 
     for (const modelEntry of activeConfig.models) {
-      const model = resolveModel(modelEntry.id, activeConfig.baseUrl);
+      const model = resolveModel(modelEntry.id);
       const displayModel = modelEntry.displayName ?? modelEntry.id;
       console.log(`  Model: ${displayModel}`);
 
