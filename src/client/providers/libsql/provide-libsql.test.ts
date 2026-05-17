@@ -268,7 +268,8 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
         namedNode("urn:bio"),
         literal("Henry keeps unique_z444_serialized surviving notes."),
       );
-      const serialized = `<urn:person:henry> <urn:bio> "Henry keeps unique_z444_serialized surviving notes." .`;
+      const serialized =
+        `<urn:person:henry> <urn:bio> "Henry keeps unique_z444_serialized surviving notes." .`;
 
       await client.import({
         source: { kind: "quads", quads: [staleQuad, survivingQuad] },
