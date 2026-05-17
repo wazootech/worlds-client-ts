@@ -37,6 +37,7 @@
     ".prior-art"
   ],
   "tasks": {
+    "download:tfjs-use": "deno run -A ./scripts/download-tfjs-use.ts",
     "example:hello-world": "deno -A ./examples/hello-world/main.ts",
     "example:libsql-hello-world": "deno -A ./examples/libsql-hello-world/main.ts",
     "example:denokv-hello-world": "deno -A --unstable-kv ./examples/denokv-hello-world/main.ts",
