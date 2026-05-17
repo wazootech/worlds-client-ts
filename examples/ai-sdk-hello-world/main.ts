@@ -2,11 +2,23 @@ import { createClient } from "@libsql/client";
 import { Client } from "@worlds/client";
 import { provideLibsql } from "@worlds/client/providers/libsql";
 import { createTools } from "./tools.ts";
-import { generateText } from "ai";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { generateText, stepCountIs } from "ai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 if (import.meta.main) {
-  const google = createGoogleGenerativeAI();
+  const routerProvider = createOpenAICompatible({
+    name: "9router",
+    baseURL: Deno.env.get("NINE_ROUTER_BASE_URL") ??
+      Deno.env.get("OPENROUTER_BASE_URL") ??
+      "http://localhost:20128/v1",
+    ...(Deno.env.get("NINE_ROUTER_API_KEY") ??
+        Deno.env.get("OPENROUTER_API_KEY")
+      ? {
+        apiKey: Deno.env.get("NINE_ROUTER_API_KEY") ??
+          Deno.env.get("OPENROUTER_API_KEY") ?? "",
+      }
+      : {}),
+  });
 
   console.log("Initializing embedded LibSQL knowledge base...");
   const database = createClient({ url: ":memory:" });
@@ -39,9 +51,9 @@ if (import.meta.main) {
   console.log("Querying the AI...");
 
   const output = await generateText({
-    model: google("gemini-2.5-flash"),
+    model: routerProvider("cc/claude-sonnet-4-6"),
     tools,
-    maxSteps: 5,
+    stopWhen: stepCountIs(5),
     prompt:
       "Find out what house the protagonist of Harry Potter is in. First, use 'searchWorld' to discover the subject URI for Harry Potter. Then, write an 'executeSparql' query to look up the properties/relations of that URI so you can traverse to the protagonist and find their house.",
   });

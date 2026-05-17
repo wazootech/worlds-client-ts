@@ -166,7 +166,7 @@ Per-operation lazy hydration running in zero-maintenance edge contexts.
 deno task example:denokv-hello-world
 ```
 
-### AI SDK integration (Gemini + tools)
+### AI SDK integration (9Router + tools)
 
 Wrap the Client as Vercel AI SDK tools for autonomous LLM reasoning.
 
@@ -185,9 +185,18 @@ All CI checks must pass before merging updates.
 | `deno task test` | Execute comprehensive test suites.           |
 | `deno task ci`   | Run complete CI pipeline sequentially.       |
 
+### Eval workflow
+
+Local experiment runs use the runner in `scripts/run-experiment.ts` and save
+artifacts under `results/<experiment>/<timestamp>/`.
+
+See [docs/evals.md](docs/evals.md) for the repository eval policy, including
+`smoke`, `candidate`, and `formal` eval lanes.
+
 ## Quicklinks
 
 - [Documentation](https://docs.wazoo.dev)
+- [Eval policy](docs/evals.md)
 - [Wazoo Technologies](https://wazoo.dev)
 - [Support](https://github.com/wazootech/worlds-client-ts/issues)
 

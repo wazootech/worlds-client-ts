@@ -1,6 +1,6 @@
-import type { CoreTool } from "ai";
 import { jsonSchema, tool } from "ai";
 import type { ClientInterface, ImportRequest } from "@worlds/client";
+import { wrapToolExecution } from "./utils.ts";
 
 /**
  * SerializedImportRequest is a discriminated ImportRequest type that only allows "serialized" sources.
@@ -15,11 +15,11 @@ export type SerializedImportRequest = Omit<ImportRequest, "source"> & {
  * @param client The Worlds ClientInterface instance.
  * @returns An AI SDK tool for importing data into the knowledge base.
  */
-export function createImportRdfTool(client: ClientInterface): CoreTool {
+export function createImportRdfTool(client: ClientInterface) {
   return tool({
     description:
       "Import serialized RDF data (like Turtle or N-Triples) into the knowledge base. Useful for storing new factual statements or relations.",
-    parameters: jsonSchema<SerializedImportRequest>({
+    inputSchema: jsonSchema<SerializedImportRequest>({
       type: "object",
       properties: {
         mode: {
@@ -50,8 +50,8 @@ export function createImportRdfTool(client: ClientInterface): CoreTool {
       },
       required: ["source"],
     }),
-    execute: async (request) => {
-      try {
+    execute: (request) =>
+      wrapToolExecution(async () => {
         if (
           request.source.kind === "serialized" && !request.source.contentType
         ) {
@@ -59,15 +59,8 @@ export function createImportRdfTool(client: ClientInterface): CoreTool {
         }
         await client.import(request);
         return {
-          success: true,
           message: "Data imported successfully.",
         };
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    },
+      }),
   });
 }

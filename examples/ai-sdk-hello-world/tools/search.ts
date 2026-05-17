@@ -1,10 +1,10 @@
-import type { CoreTool } from "ai";
 import { jsonSchema, tool } from "ai";
 import type {
   ClientInterface,
   SearchRequest,
   SearchResponse,
 } from "@worlds/client";
+import { type ToolResult, wrapToolExecution } from "./utils.ts";
 
 /**
  * createSearchWorldTool creates an AI SDK tool for searching the knowledge base.
@@ -12,11 +12,11 @@ import type {
  * @param client The Worlds ClientInterface instance.
  * @returns An AI SDK tool for searching the knowledge base.
  */
-export function createSearchWorldTool(client: ClientInterface): CoreTool {
+export function createSearchWorldTool(client: ClientInterface) {
   return tool({
     description:
-      "Search the knowledge base for semantic statements or documents that match a query. Use this to find information about any entities or subjects in the graph.",
-    parameters: jsonSchema<SearchRequest>({
+      "Search the knowledge base for semantic statements or documents that match a query. Returns an empty results array if no matching information exists. Do not fabricate information when results are empty. Use this to find information about any entities or subjects in the graph.",
+    inputSchema: jsonSchema<SearchRequest>({
       type: "object",
       properties: {
         query: {
@@ -70,24 +70,7 @@ export function createSearchWorldTool(client: ClientInterface): CoreTool {
       },
       required: ["query"],
     }),
-    execute: async (
-      request,
-    ): Promise<
-      | ({ success: true } & SearchResponse)
-      | { success: false; error: string }
-    > => {
-      try {
-        const response = await client.search(request);
-        return {
-          success: true,
-          ...response,
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    },
+    execute: (request): Promise<ToolResult<SearchResponse>> =>
+      wrapToolExecution(() => client.search(request)),
   });
 }

@@ -1,0 +1,204 @@
+[
+  {
+    "id": "sq01",
+    "question": "Search for anything related to sunstone artifacts.",
+    "answer": "",
+    "aliases": [],
+    "questionClass": "retrieval",
+    "expectedTool": "searchWorld",
+    "expectedSearchResultIds": [
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9TdW5ibGFkZT4gPGh0dHA6Ly9leGFtcGxlLm9yZy9tYXRlcmlhbD4gInN1bnN0b25lIiAuCg",
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9TdW5ibGFkZT4gPGh0dHA6Ly9leGFtcGxlLm9yZy9kZXNjcmlwdGlvbj4gIkEgcmFkaWFudCBibGFkZSBmb3JnZWQgZnJvbSBzdW5zdG9uZS4iIC4K"
+    ],
+    "searchEvaluationK": 5,
+    "scoringMode": "code"
+  },
+  {
+    "id": "sq02",
+    "question": "Find organizations associated with frost or ice.",
+    "answer": "",
+    "aliases": [],
+    "questionClass": "retrieval",
+    "expectedTool": "searchWorld",
+    "expectedSearchResultIds": [
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9Gcm9zdGd1YXJkPiA8aHR0cDovL2V4YW1wbGUub3JnL2Rlc2NyaXB0aW9uPiAiVGhlIEZyb3N0Z3VhcmQga2VlcHMgd2F0Y2ggYWNyb3NzIHRoZSBpY2Ugcm9hZHMuIiAuCg"
+    ],
+    "searchEvaluationK": 5,
+    "scoringMode": "code"
+  },
+  {
+    "id": "sq03",
+    "question": "Search for festivals connected to aurora themes.",
+    "answer": "",
+    "aliases": [],
+    "questionClass": "retrieval",
+    "expectedTool": "searchWorld",
+    "expectedSearchResultIds": [
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9Cb3JlYWxpcz4gPGh0dHA6Ly9leGFtcGxlLm9yZy9mZXN0aXZhbD4gIk5pZ2h0IEF1cm9yYSIgLgo"
+    ],
+    "searchEvaluationK": 5,
+    "scoringMode": "code"
+  },
+  {
+    "id": "sq04",
+    "question": "Find a radiant weapon forged from sunstone.",
+    "answer": "",
+    "aliases": [],
+    "questionClass": "retrieval",
+    "expectedTool": "searchWorld",
+    "expectedSearchResultIds": [
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9TdW5ibGFkZT4gPGh0dHA6Ly9leGFtcGxlLm9yZy9kZXNjcmlwdGlvbj4gIkEgcmFkaWFudCBibGFkZSBmb3JnZWQgZnJvbSBzdW5zdG9uZS4iIC4K"
+    ],
+    "searchEvaluationK": 5,
+    "scoringMode": "code"
+  },
+  {
+    "id": "sq05",
+    "question": "Look for groups connected to northern frost patrols.",
+    "answer": "",
+    "aliases": [],
+    "questionClass": "retrieval",
+    "expectedTool": "searchWorld",
+    "expectedSearchResultIds": [
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9Gcm9zdGd1YXJkPiA8aHR0cDovL2V4YW1wbGUub3JnL2Rlc2NyaXB0aW9uPiAiVGhlIEZyb3N0Z3VhcmQga2VlcHMgd2F0Y2ggYWNyb3NzIHRoZSBpY2Ugcm9hZHMuIiAuCg",
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9JY2V3YXRjaD4gPGh0dHA6Ly9leGFtcGxlLm9yZy9kZXNjcmlwdGlvbj4gIkljZXdhdGNoIHN1cnZleXMgdGhlIG5vcnRoZXJuIHBhc3NlcyB3aXRoIGZyb3N0IG1pcnJvcnMuIiAuCg"
+    ],
+    "searchEvaluationK": 5,
+    "scoringMode": "code"
+  },
+  {
+    "id": "sq06",
+    "question": "Search for bright relics that glow like dawn.",
+    "answer": "",
+    "aliases": [],
+    "questionClass": "retrieval",
+    "expectedTool": "searchWorld",
+    "expectedSearchResultIds": [
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9SYWRpYW50UmVsaXF1YXJ5PiA8aHR0cDovL2V4YW1wbGUub3JnL2Rlc2NyaXB0aW9uPiAiQSByZWxpYyB0aGF0IGdsb3dzIHdpdGggd2FybSBkYXduIGxpZ2h0IGJ1dCBpcyBub3QgbWFkZSBvZiBzdW5zdG9uZS4iIC4K"
+    ],
+    "searchEvaluationK": 5,
+    "scoringMode": "code"
+  },
+  {
+    "id": "sq07",
+    "question": "Find city descriptions involving bright water and stone terraces.",
+    "answer": "",
+    "aliases": [],
+    "questionClass": "retrieval",
+    "expectedTool": "searchWorld",
+    "expectedSearchResultIds": [
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9TdW5tZXJlPiA8aHR0cDovL2V4YW1wbGUub3JnL2Rlc2NyaXB0aW9uPiAiU3VubWVyZSBpcyBrbm93biBmb3IgYnJpZ2h0IHdhdGVyIGFuZCBzdG9uZSB0ZXJyYWNlcy4iIC4K"
+    ],
+    "searchEvaluationK": 5,
+    "scoringMode": "code"
+  },
+  {
+    "id": "sq08",
+    "question": "Search for harbor festivals filled with lanterns and cold light.",
+    "answer": "",
+    "aliases": [],
+    "questionClass": "retrieval",
+    "expectedTool": "searchWorld",
+    "expectedSearchResultIds": [
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9BdXJvcmFNYXJrZXQ-IDxodHRwOi8vZXhhbXBsZS5vcmcvZGVzY3JpcHRpb24-ICJBdXJvcmEgTWFya2V0IGZpbGxzIHRoZSBoYXJib3Igd2l0aCBsYW50ZXJucyBhbmQgY29sZCBsaWdodC4iIC4K"
+    ],
+    "searchEvaluationK": 5,
+    "scoringMode": "code"
+  },
+  {
+    "id": "sq09",
+    "question": "Look for quarry patrol organizations.",
+    "answer": "",
+    "aliases": [],
+    "questionClass": "retrieval",
+    "expectedTool": "searchWorld",
+    "expectedSearchResultIds": [
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9TdG9uZXdhcmRlbnM-IDxodHRwOi8vZXhhbXBsZS5vcmcvZGVzY3JpcHRpb24-ICJUaGUgU3RvbmV3YXJkZW5zIHBhdHJvbCBvbGQgcXVhcnJ5IHJvYWRzIGFuZCBwcm90ZWN0IGdyYW5pdGUgdmF1bHRzLiIgLgo"
+    ],
+    "searchEvaluationK": 5,
+    "scoringMode": "code"
+  },
+  {
+    "id": "sq10",
+    "question": "Search for artifacts and organizations related to sunstone.",
+    "answer": "",
+    "aliases": [],
+    "questionClass": "retrieval",
+    "expectedTool": "searchWorld",
+    "expectedSearchResultIds": [
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9TdW5ibGFkZT4gPGh0dHA6Ly9leGFtcGxlLm9yZy9tYXRlcmlhbD4gInN1bnN0b25lIiAuCg",
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9TdW5zdG9uZUd1aWxkPiA8aHR0cDovL2V4YW1wbGUub3JnL2Rlc2NyaXB0aW9uPiAiVGhlIFN1bnN0b25lIEd1aWxkIHByb3RlY3RzIHJhZGlhbnQgYXJ0aWZhY3RzLiIgLgo"
+    ],
+    "searchEvaluationK": 5,
+    "scoringMode": "code"
+  },
+  {
+    "id": "sq11",
+    "question": "Find cold-light events and aurora festivals.",
+    "answer": "",
+    "aliases": [],
+    "questionClass": "retrieval",
+    "expectedTool": "searchWorld",
+    "expectedSearchResultIds": [
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9Cb3JlYWxpcz4gPGh0dHA6Ly9leGFtcGxlLm9yZy9mZXN0aXZhbD4gIk5pZ2h0IEF1cm9yYSIgLgo",
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9BdXJvcmFNYXJrZXQ-IDxodHRwOi8vZXhhbXBsZS5vcmcvZGVzY3JpcHRpb24-ICJBdXJvcmEgTWFya2V0IGZpbGxzIHRoZSBoYXJib3Igd2l0aCBsYW50ZXJucyBhbmQgY29sZCBsaWdodC4iIC4K"
+    ],
+    "searchEvaluationK": 5,
+    "scoringMode": "code"
+  },
+  {
+    "id": "sq12",
+    "question": "Find groups that watch roads or passes in cold regions.",
+    "answer": "",
+    "aliases": [],
+    "questionClass": "retrieval",
+    "expectedTool": "searchWorld",
+    "expectedSearchResultIds": [
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9Gcm9zdGd1YXJkPiA8aHR0cDovL2V4YW1wbGUub3JnL2Rlc2NyaXB0aW9uPiAiVGhlIEZyb3N0Z3VhcmQga2VlcHMgd2F0Y2ggYWNyb3NzIHRoZSBpY2Ugcm9hZHMuIiAuCg",
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9JY2V3YXRjaD4gPGh0dHA6Ly9leGFtcGxlLm9yZy9kZXNjcmlwdGlvbj4gIkljZXdhdGNoIHN1cnZleXMgdGhlIG5vcnRoZXJuIHBhc3NlcyB3aXRoIGZyb3N0IG1pcnJvcnMuIiAuCg"
+    ],
+    "searchEvaluationK": 5,
+    "scoringMode": "code"
+  },
+  {
+    "id": "sq13",
+    "question": "Search for dawn-lit objects that are not necessarily sunstone blades.",
+    "answer": "",
+    "aliases": [],
+    "questionClass": "retrieval",
+    "expectedTool": "searchWorld",
+    "expectedSearchResultIds": [
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9SYWRpYW50UmVsaXF1YXJ5PiA8aHR0cDovL2V4YW1wbGUub3JnL2Rlc2NyaXB0aW9uPiAiQSByZWxpYyB0aGF0IGdsb3dzIHdpdGggd2FybSBkYXduIGxpZ2h0IGJ1dCBpcyBub3QgbWFkZSBvZiBzdW5zdG9uZS4iIC4K"
+    ],
+    "searchEvaluationK": 5,
+    "scoringMode": "code"
+  },
+  {
+    "id": "sq14",
+    "question": "Find places or descriptions that mention both sun and stone.",
+    "answer": "",
+    "aliases": [],
+    "questionClass": "retrieval",
+    "expectedTool": "searchWorld",
+    "expectedSearchResultIds": [
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9TdW5ibGFkZT4gPGh0dHA6Ly9leGFtcGxlLm9yZy9tYXRlcmlhbD4gInN1bnN0b25lIiAuCg",
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9TdW5tZXJlPiA8aHR0cDovL2V4YW1wbGUub3JnL2Rlc2NyaXB0aW9uPiAiU3VubWVyZSBpcyBrbm93biBmb3IgYnJpZ2h0IHdhdGVyIGFuZCBzdG9uZSB0ZXJyYWNlcy4iIC4K"
+    ],
+    "searchEvaluationK": 5,
+    "scoringMode": "code"
+  },
+  {
+    "id": "sq15",
+    "question": "Search for bright artifacts while avoiding unrelated city results.",
+    "answer": "",
+    "aliases": [],
+    "questionClass": "retrieval",
+    "expectedTool": "searchWorld",
+    "expectedSearchResultIds": [
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9TdW5ibGFkZT4gPGh0dHA6Ly9leGFtcGxlLm9yZy9kZXNjcmlwdGlvbj4gIkEgcmFkaWFudCBibGFkZSBmb3JnZWQgZnJvbSBzdW5zdG9uZS4iIC4K",
+      "PGh0dHA6Ly9leGFtcGxlLm9yZy9SYWRpYW50UmVsaXF1YXJ5PiA8aHR0cDovL2V4YW1wbGUub3JnL2Rlc2NyaXB0aW9uPiAiQSByZWxpYyB0aGF0IGdsb3dzIHdpdGggd2FybSBkYXduIGxpZ2h0IGJ1dCBpcyBub3QgbWFkZSBvZiBzdW5zdG9uZS4iIC4K"
+    ],
+    "searchEvaluationK": 5,
+    "scoringMode": "code"
+  }
+]

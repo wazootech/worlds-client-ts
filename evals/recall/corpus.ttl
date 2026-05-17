@@ -1,0 +1,79 @@
+@prefix ex: <urn:bench:atlas#> .
+
+ex:Aurelia ex:capital "Lume" ;
+  ex:currency "sunmark" ;
+  ex:border ex:Borealis, ex:Calyx ;
+  ex:festival "Glass Tide" ;
+  ex:river "Vanta" .
+
+ex:Borealis ex:capital "Frosthall" ;
+  ex:currency "ice crown" ;
+  ex:border ex:Aurelia, ex:Calyx, ex:Thornwick ;
+  ex:festival "Night Aurora" ;
+  ex:river "Silverrun" .
+
+ex:Calyx ex:capital "Morrow" ;
+  ex:currency "tide shell" ;
+  ex:border ex:Aurelia, ex:Borealis, ex:Driftland, ex:Valeholm ;
+  ex:festival "Lantern Wake" ;
+  ex:river "Vanta" .
+
+ex:Driftland ex:capital "Kestrel" ;
+  ex:currency "wind note" ;
+  ex:border ex:Calyx, ex:Moonwell, ex:Valeholm ;
+  ex:festival "Windmarket" ;
+  ex:river "Silverrun" .
+
+ex:Moonwell ex:capital "Palegate" ;
+  ex:currency "moonglass" ;
+  ex:border ex:Driftland, ex:Thornwick, ex:Ashridge ;
+  ex:festival "White Lantern" ;
+  ex:river "Emberflow" .
+
+ex:Thornwick ex:capital "Brackwood" ;
+  ex:currency "iron bit" ;
+  ex:border ex:Borealis, ex:Moonwell, ex:Ashridge ;
+  ex:festival "Ember Nights" ;
+  ex:river "Darkfen" .
+
+ex:Valeholm ex:capital "Stillwater" ;
+  ex:currency "amber buck" ;
+  ex:border ex:Calyx, ex:Driftland, ex:Rosemist ;
+  ex:festival "Quiet Veil" ;
+  ex:river "Gold Current" .
+
+ex:Ashridge ex:capital "Greyfell" ;
+  ex:currency "shale sherd" ;
+  ex:border ex:Moonwell, ex:Thornwick, ex:Rosemist, ex:Ironhallow ;
+  ex:festival "Stone Singing" ;
+  ex:river "Obsidian Flow" .
+
+ex:Rosemist ex:capital "Willowmere" ;
+  ex:currency "rose petal" ;
+  ex:border ex:Valeholm, ex:Ashridge, ex:Ironhallow ;
+  ex:festival "Bloomfall" ;
+  ex:river "Misty Brook" .
+
+ex:Ironhallow ex:capital "Hammerfast" ;
+  ex:currency "bronze nail" ;
+  ex:border ex:Ashridge, ex:Rosemist ;
+  ex:festival "Forge Day" ;
+  ex:river "Ash Creek" .
+
+ex:Goldmoor ex:capital "Sunnhaven" ;
+  ex:currency "golden sovereign" ;
+  ex:border ex:Ashridge ;
+  ex:festival "Sunbright" ;
+  ex:river "Goldrun" .
+
+ex:Crystalvale ex:capital "Glace" ;
+  ex:currency "frost stone" ;
+  ex:border ex:Thornwick ;
+  ex:festival "Ice Shatter" ;
+  ex:river "Frozen Seal" .
+
+ex:Shadowfen ex:capital "Nightwatch" ;
+  ex:currency "black coin" ;
+  ex:border ex:Rosemist ;
+  ex:festival "Dark Veil" ;
+  ex:river "Murkmire" .

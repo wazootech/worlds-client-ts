@@ -1,0 +1,39 @@
+@prefix ex: <http://example.org/> .
+
+ex:Aurelia ex:festival "Glass Tide" ;
+  ex:capital ex:Lume ;
+  ex:river "Vanta" .
+
+ex:Borealis ex:festival "Night Aurora" ;
+  ex:capital ex:Frosthall ;
+  ex:river "Silverrun" .
+
+ex:SunstoneGuild ex:kind "organization" ;
+  ex:holds ex:Sunblade ;
+  ex:description "The Sunstone Guild protects radiant artifacts." .
+
+ex:Sunblade ex:kind "artifact" ;
+  ex:material "sunstone" ;
+  ex:description "A radiant blade forged from sunstone." .
+
+ex:Frostguard ex:kind "organization" ;
+  ex:description "The Frostguard keeps watch across the ice roads." .
+
+ex:Stonewardens ex:kind "organization" ;
+  ex:description "The Stonewardens patrol old quarry roads and protect granite vaults." .
+
+ex:AuroraMarket ex:kind "festival" ;
+  ex:description "Aurora Market fills the harbor with lanterns and cold light." .
+
+ex:RadiantReliquary ex:kind "artifact" ;
+  ex:description "A relic that glows with warm dawn light but is not made of sunstone." .
+
+ex:Icewatch ex:kind "organization" ;
+  ex:description "Icewatch surveys the northern passes with frost mirrors." .
+
+ex:Sunmere ex:kind "city" ;
+  ex:description "Sunmere is known for bright water and stone terraces." .
+
+ex:Lume ex:kind "city" .
+
+ex:Frosthall ex:kind "city" .

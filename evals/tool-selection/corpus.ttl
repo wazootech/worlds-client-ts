@@ -1,0 +1,104 @@
+@prefix ex: <urn:bench:toolsel#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+
+ex:Aurelia rdf:type ex:Country ;
+  ex:capital ex:Lume ;
+  ex:currency "sunmark" ;
+  ex:border ex:Borealis, ex:Calyx ;
+  ex:festival "Glass Tide" ;
+  ex:river "Vanta" .
+
+ex:Borealis rdf:type ex:Country ;
+  ex:capital ex:Frosthall ;
+  ex:currency "ice crown" ;
+  ex:border ex:Aurelia, ex:Calyx, ex:Thornwick ;
+  ex:festival "Night Aurora" ;
+  ex:river "Silverrun" .
+
+ex:Calyx rdf:type ex:Country ;
+  ex:capital ex:Morrow ;
+  ex:currency "tide shell" ;
+  ex:border ex:Aurelia, ex:Borealis, ex:Driftland, ex:Valeholm ;
+  ex:festival "Lantern Wake" ;
+  ex:river "Vanta" .
+
+ex:Driftland rdf:type ex:Country ;
+  ex:capital ex:Kestrel ;
+  ex:currency "wind note" ;
+  ex:border ex:Calyx, ex:Moonwell, ex:Valeholm ;
+  ex:festival "Windmarket" ;
+  ex:river "Silverrun" .
+
+ex:Moonwell rdf:type ex:Country ;
+  ex:capital ex:Palegate ;
+  ex:currency "moonglass" ;
+  ex:border ex:Driftland, ex:Thornwick, ex:Ashridge ;
+  ex:festival "White Lantern" ;
+  ex:river "Emberflow" .
+
+ex:Thornwick rdf:type ex:Country ;
+  ex:capital ex:Brackwood ;
+  ex:currency "iron bit" ;
+  ex:border ex:Borealis, ex:Moonwell, ex:Ashridge ;
+  ex:festival "Ember Nights" ;
+  ex:river "Darkfen" .
+
+ex:Lume rdf:type ex:City ;
+  ex:locatedIn ex:Aurelia ;
+  ex:population "52000" .
+
+ex:Frosthall rdf:type ex:City ;
+  ex:locatedIn ex:Borealis ;
+  ex:population "34000" .
+
+ex:Morrow rdf:type ex:City ;
+  ex:locatedIn ex:Calyx ;
+  ex:population "28000" .
+
+ex:Kestrel rdf:type ex:City ;
+  ex:locatedIn ex:Driftland ;
+  ex:population "19000" .
+
+ex:Palegate rdf:type ex:City ;
+  ex:locatedIn ex:Moonwell ;
+  ex:population "41000" .
+
+ex:Brackwood rdf:type ex:City ;
+  ex:locatedIn ex:Thornwick ;
+  ex:population "22000" .
+
+ex:Elara rdf:type ex:Person ;
+  ex:bornIn ex:Aurelia ;
+  ex:leads ex:SunstoneGuild .
+
+ex:Theron rdf:type ex:Person ;
+  ex:bornIn ex:Borealis ;
+  ex:leads ex:Frostguard .
+
+ex:Mira rdf:type ex:Person ;
+  ex:bornIn ex:Aurelia ;
+  ex:memberOf ex:Frostguard .
+
+ex:Kael rdf:type ex:Person ;
+  ex:bornIn ex:Driftland ;
+  ex:memberOf ex:SunstoneGuild .
+
+ex:SunstoneGuild rdf:type ex:Organization ;
+  ex:basedIn ex:Lume .
+
+ex:Frostguard rdf:type ex:Organization ;
+  ex:basedIn ex:Frosthall .
+
+ex:Sunblade rdf:type ex:Artifact ;
+  ex:locatedAt ex:SunstoneGuild ;
+  ex:material "sunstone" .
+
+ex:IceCrown rdf:type ex:Artifact ;
+  ex:locatedAt ex:Frostguard ;
+  ex:material "frozen quartz" .
+
+ex:GlassTide rdf:type ex:Event ;
+  ex:heldIn ex:Aurelia .
+
+ex:NightAurora rdf:type ex:Event ;
+  ex:heldIn ex:Borealis .

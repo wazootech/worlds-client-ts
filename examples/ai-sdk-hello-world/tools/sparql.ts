@@ -1,6 +1,7 @@
-import type { CoreTool } from "ai";
 import { jsonSchema, tool } from "ai";
 import type { ClientInterface, SparqlRequest } from "@worlds/client";
+import { translate } from "sparqlalgebrajs";
+import { wrapToolExecution } from "./utils.ts";
 
 /**
  * ExecuteSparqlOptions defines the configuration options for the executeSparql tool.
@@ -14,6 +15,23 @@ export interface ExecuteSparqlOptions {
 }
 
 /**
+ * validateSparqlSyntax checks the SPARQL query string for syntax errors using the SPARQL algebra parser.
+ * Returns a clear error message on failure, or null on success.
+ * The parser distinguishes SPARQL syntax errors from other failures so the model
+ * can retry with corrected syntax. Syntax errors are intentionally prefixed with
+ * "SPARQL syntax error:" for easy detection in tool selection evals.
+ */
+function validateSparqlSyntax(query: string): string | null {
+  try {
+    translate(query);
+    return null;
+  } catch (error) {
+    const rawMessage = error instanceof Error ? error.message : String(error);
+    return `SPARQL syntax error: ${rawMessage}`;
+  }
+}
+
+/**
  * createExecuteSparqlTool creates an AI SDK tool for executing SPARQL queries against the knowledge base.
  *
  * @param client The Worlds ClientInterface instance.
@@ -23,11 +41,11 @@ export interface ExecuteSparqlOptions {
 export function createExecuteSparqlTool(
   client: ClientInterface,
   options?: ExecuteSparqlOptions,
-): CoreTool {
+) {
   return tool({
     description:
-      "Execute a SPARQL query against the knowledge base. Use this for complex, precise relational queries across the RDF graph.",
-    parameters: jsonSchema<SparqlRequest>({
+      "Execute a SPARQL query against the knowledge base. Returns empty data if the query matches no triples. Do not infer or fabricate information that is not present in the result set. Use this for complex, precise relational queries across the RDF graph.",
+    inputSchema: jsonSchema<SparqlRequest>({
       type: "object",
       properties: {
         query: {
@@ -57,18 +75,20 @@ export function createExecuteSparqlTool(
         }
       }
 
-      try {
-        const response = await client.sparql(request);
-        return {
-          success: true,
-          data: response.kind === "void" ? null : response.data,
-        };
-      } catch (error) {
+      const syntaxError = validateSparqlSyntax(request.query);
+      if (syntaxError !== null) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: syntaxError,
         };
       }
+
+      return await wrapToolExecution(async () => {
+        const response = await client.sparql(request);
+        return {
+          data: response.kind === "void" ? null : response.data,
+        };
+      });
     },
   });
 }
