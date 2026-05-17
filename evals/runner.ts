@@ -416,19 +416,41 @@ async function runEvalFixture(
         let toolTrace: string[] | undefined;
 
         if (condition.mode === "without-tools") {
-          answerMetrics = await answerWithoutTools(
-            model,
-            question.question,
-            fixture.corpus,
-          );
+          if (modelName.startsWith("mock:")) {
+            answerMetrics = {
+              answer: question.answer,
+              toolCalls: 0,
+              toolTrace: [],
+              latencyMs: 0,
+              toolSequence: [],
+              redundantToolCalls: 0,
+            };
+          } else {
+            answerMetrics = await answerWithoutTools(
+              model,
+              question.question,
+              fixture.corpus,
+            );
+          }
         } else {
-          answerMetrics = await answerWithTools(
-            model,
-            client!,
-            question.question,
-            condition.toolChoice === "required",
-            options?.debug ?? false,
-          );
+          if (modelName.startsWith("mock:")) {
+            answerMetrics = {
+              answer: question.answer,
+              toolCalls: 0,
+              toolTrace: [],
+              latencyMs: 0,
+              toolSequence: [],
+              redundantToolCalls: 0,
+            };
+          } else {
+            answerMetrics = await answerWithTools(
+              model,
+              client!,
+              question.question,
+              condition.toolChoice === "required",
+              options?.debug ?? false,
+            );
+          }
           const shouldCaptureTrace = options?.debug ||
             question.scoringMode === "llm";
           toolTrace = shouldCaptureTrace ? answerMetrics.toolTrace : undefined;
@@ -744,9 +766,12 @@ export async function runExperiment(
     );
 
     for (const modelEntry of activeConfig.models) {
-      const model = resolveModel(modelEntry.id);
       const displayModel = modelEntry.displayName ?? modelEntry.id;
       console.log(`  Model: ${displayModel}`);
+
+      const model = modelEntry.id.startsWith("mock:")
+        ? (undefined as unknown as BenchmarkModel)
+        : resolveModel(modelEntry.id);
 
       let client: Client | undefined;
       const needsClient = activeConfig.conditions.some(

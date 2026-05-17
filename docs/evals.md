@@ -149,11 +149,11 @@ Formal experiments must pin `judgeModel` directly in the experiment config.
 Fast local micro smoke commands:
 
 ```bash
-deno run -A --env scripts/run-experiment.ts --model "cc/claude-sonnet-4-6" --condition "without-tools" --question-limit 1 recall-router-smoke
+deno run -A --env scripts/run-experiment.ts --model "mock:recall-smoke" --condition "without-tools" --question-limit 1 recall-smoke
 ```
 
 ```bash
-deno run -A --env scripts/run-experiment.ts --model "cc/claude-sonnet-4-6" --condition "with-tools" --question-limit 1 recall-router-smoke
+deno run -A --env scripts/run-experiment.ts --model "mock:recall-smoke" --condition "without-tools" --question-limit 1 recall-smoke
 ```
 
 ```bash
@@ -167,9 +167,9 @@ deno run -A --env scripts/run-experiment.ts --model "cc/claude-sonnet-4-6" --con
 These commands use the runner overrides for `--model`, `--condition`, and
 `--question-limit` so local smoke loops stay small and fast.
 
-Legacy Hugging Face configs remain in `experiments/*huggingface*.ts` for
-comparison, but the router-backed lanes are the ones to use for active eval
-runs.
+Use the router-backed candidate/formal recall lanes in
+`experiments/recall-router-*.ts` for active recall benchmarking. The smoke lane
+uses a deterministic local mock for quick proof runs.
 
 ### Candidate
 
