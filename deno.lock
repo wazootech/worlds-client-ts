@@ -4412,6 +4412,7 @@
       "jsr:@std/assert@^1.0.19",
       "jsr:@std/encoding@^1.0.10",
       "jsr:@std/fs@^1.0.23",
+      "jsr:@std/path@^1.1.4",
       "npm:@ai-sdk/google@^0.0.52",
       "npm:@comunica/query-sparql-rdfjs-lite@^5.2.2",
       "npm:@langchain/core@^1.1.46",
