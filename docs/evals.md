@@ -72,7 +72,7 @@ Formal evals are currently local only and quota-constrained.
 
 ## Current provider constraints
 
-Formal evals currently rely on Hugging Face free-tier capacity. That means:
+Formal evals currently rely on 9Router/OpenRouter capacity. That means:
 
 - formal runs are scarce and should be scheduled intentionally
 - rate-limit failures do not count as benchmark results
@@ -80,9 +80,14 @@ Formal evals currently rely on Hugging Face free-tier capacity. That means:
 - interrupted formal runs should be resumed or rerun before numbers are used in
   decision-making
 
-`huggingface:Qwen/Qwen2.5-7B-Instruct` is the default judge model for
-smoke-style local verification, but formal experiments must still set
-`judgeModel` explicitly rather than relying on the default scorer fallback.
+`cc/claude-sonnet-4-6` is the default judge model for smoke-style local
+verification, but formal experiments must still set `judgeModel` explicitly
+rather than relying on the default scorer fallback.
+
+Cloud-hosted tools like Zo Computer cannot reach `localhost`, so when running
+from a remote client use `OPENROUTER_API_KEY` and set
+`OPENROUTER_BASE_URL=https://openrouter.ai/api/v1` instead of the local 9Router
+gateway.
 
 ## Scoring policy
 
@@ -144,27 +149,27 @@ Formal experiments must pin `judgeModel` directly in the experiment config.
 Fast local micro smoke commands:
 
 ```bash
-deno run -A --env scripts/run-experiment.ts --model "huggingface:Qwen/Qwen2.5-7B-Instruct" --condition "without-tools" --question-limit 1 recall-smoke
+deno run -A --env scripts/run-experiment.ts --model "cc/claude-sonnet-4-6" --condition "without-tools" --question-limit 1 recall-router-smoke
 ```
 
 ```bash
-deno run -A --env scripts/run-experiment.ts --model "huggingface:Qwen/Qwen2.5-7B-Instruct" --condition "with-tools" --question-limit 1 recall-smoke
+deno run -A --env scripts/run-experiment.ts --model "cc/claude-sonnet-4-6" --condition "with-tools" --question-limit 1 recall-router-smoke
 ```
 
 ```bash
-deno run -A --env scripts/run-experiment.ts --model "huggingface:Qwen/Qwen2.5-7B-Instruct" --condition "without-tools" --question-limit 1 recall-huggingface-smoke
+deno run -A --env scripts/run-experiment.ts --model "cc/claude-sonnet-4-6" --condition "without-tools" --question-limit 1 recall-router-formal
 ```
 
 ```bash
-deno run -A --env scripts/run-experiment.ts --model "huggingface:Qwen/Qwen2.5-7B-Instruct" --condition "with-tools" --question-limit 1 recall-huggingface-smoke
+deno run -A --env scripts/run-experiment.ts --model "cc/claude-sonnet-4-6" --condition "with-tools" --question-limit 1 recall-router-formal
 ```
 
 These commands use the runner overrides for `--model`, `--condition`, and
 `--question-limit` so local smoke loops stay small and fast.
 
-Google `with-tools` runs may still fail when the current Gemini API key has no
-remaining quota. That is a provider quota issue rather than an eval harness
-compatibility issue.
+Legacy Hugging Face configs remain in `experiments/*huggingface*.ts` for
+comparison, but the router-backed lanes are the ones to use for active eval
+runs.
 
 ### Candidate
 
@@ -179,6 +184,7 @@ compatibility issue.
 - avoid concurrent benchmark sessions against the same provider window
 - preserve artifacts for every completed run
 - do not publish partial or rate-limited runs as official benchmark evidence
+- prefer the router-backed `recall-router-formal` lane for decision-grade runs
 
 ## Pull request guidance
 

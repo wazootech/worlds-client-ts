@@ -3,12 +3,21 @@ import { Client } from "@worlds/client";
 import { provideLibsql } from "@worlds/client/providers/libsql";
 import { createTools } from "./tools.ts";
 import { generateText, stepCountIs } from "ai";
-import { createHuggingFace } from "@ai-sdk/huggingface";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 if (import.meta.main) {
-  const huggingFace = createHuggingFace({
-    apiKey: Deno.env.get("HF_ACCESS_TOKEN") ??
-      Deno.env.get("HUGGINGFACE_API_KEY"),
+  const routerProvider = createOpenAICompatible({
+    name: "9router",
+    baseURL: Deno.env.get("NINE_ROUTER_BASE_URL") ??
+      Deno.env.get("OPENROUTER_BASE_URL") ??
+      "http://localhost:20128/v1",
+    ...(Deno.env.get("NINE_ROUTER_API_KEY") ??
+        Deno.env.get("OPENROUTER_API_KEY")
+      ? {
+        apiKey: Deno.env.get("NINE_ROUTER_API_KEY") ??
+          Deno.env.get("OPENROUTER_API_KEY") ?? "",
+      }
+      : {}),
   });
 
   console.log("Initializing embedded LibSQL knowledge base...");
@@ -42,7 +51,7 @@ if (import.meta.main) {
   console.log("Querying the AI...");
 
   const output = await generateText({
-    model: huggingFace("Qwen/Qwen2.5-7B-Instruct"),
+    model: routerProvider("cc/claude-sonnet-4-6"),
     tools,
     stopWhen: stepCountIs(5),
     prompt:

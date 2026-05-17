@@ -166,7 +166,7 @@ Per-operation lazy hydration running in zero-maintenance edge contexts.
 deno task example:denokv-hello-world
 ```
 
-### AI SDK integration (Gemini + tools)
+### AI SDK integration (9Router + tools)
 
 Wrap the Client as Vercel AI SDK tools for autonomous LLM reasoning.
 

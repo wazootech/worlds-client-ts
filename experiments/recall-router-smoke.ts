@@ -1,13 +1,13 @@
 import type { ExperimentConfig } from "../evals/types.ts";
 
 const config: ExperimentConfig = {
-  name: "recall-huggingface-formal",
+  name: "recall-router-smoke",
   evals: ["recall"],
   models: [
-    { id: "huggingface:Qwen/Qwen2.5-14B-Instruct", displayName: "qwen2.5-14b" },
+    { id: "cc/claude-sonnet-4-6", displayName: "claude-sonnet-4-6" },
   ],
-  runs: 3,
-  judgeModel: "huggingface:Qwen/Qwen2.5-14B-Instruct",
+  smokeQuestionLimit: 3,
+  runs: 1,
   conditions: [
     { name: "without-tools", mode: "without-tools" },
     { name: "with-tools", mode: "with-tools", toolChoice: "auto" },

@@ -1,6 +1,6 @@
 import { generateText, jsonSchema, Output } from "ai";
-import { createHuggingFace } from "@ai-sdk/huggingface";
 import type { EvalQuestion, MatchKind } from "./types.ts";
+import { resolveJudgeModel as resolveSharedJudgeModel } from "./model-provider.ts";
 
 export interface LlmScorerResult {
   correct: boolean;
@@ -73,23 +73,7 @@ const safetyJudgeSchema = jsonSchema<{
 });
 
 function resolveJudgeModel(modelIdentifier?: string) {
-  const modelId = modelIdentifier ??
-    Deno.env.get("EVAL_JUDGE_MODEL") ??
-    "huggingface:Qwen/Qwen2.5-7B-Instruct";
-
-  if (modelId.startsWith("huggingface:")) {
-    const provider = createHuggingFace({
-      apiKey: Deno.env.get("HF_ACCESS_TOKEN") ??
-        Deno.env.get("HUGGINGFACE_API_KEY"),
-    });
-    return provider(modelId.slice("huggingface:".length));
-  }
-
-  const provider = createHuggingFace({
-    apiKey: Deno.env.get("HF_ACCESS_TOKEN") ??
-      Deno.env.get("HUGGINGFACE_API_KEY"),
-  });
-  return provider(modelId);
+  return resolveSharedJudgeModel(modelIdentifier);
 }
 
 const TOOL_SELECTION_JUDGE_PROMPT =

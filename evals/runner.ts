@@ -1,10 +1,10 @@
 import { createClient as createLibsqlClient } from "@libsql/client";
 import { generateText, jsonSchema, stepCountIs, tool } from "ai";
-import { createHuggingFace } from "@ai-sdk/huggingface";
 import { Client } from "@worlds/client";
 import { provideLibsql } from "@worlds/client/providers/libsql";
 import { UniversalSentenceEncoderEmbeddingService } from "@worlds/client/providers/tfjs-universal-sentence-encoder";
 import { evaluateQuestion } from "./evaluators/mod.ts";
+import { resolveBenchmarkModel } from "./model-provider.ts";
 import type {
   EvalFixture,
   EvalRunRow,
@@ -146,20 +146,7 @@ async function robustGenerateText(
 function resolveModel(
   modelIdentifier: string,
 ): BenchmarkModel {
-  if (modelIdentifier.startsWith("huggingface:")) {
-    const huggingFaceProvider = createHuggingFace({
-      apiKey: Deno.env.get("HF_ACCESS_TOKEN") ??
-        Deno.env.get("HUGGINGFACE_API_KEY"),
-    });
-    const cleanModelId = modelIdentifier.slice("huggingface:".length);
-    return huggingFaceProvider(cleanModelId);
-  }
-
-  const huggingFaceProvider = createHuggingFace({
-    apiKey: Deno.env.get("HF_ACCESS_TOKEN") ??
-      Deno.env.get("HUGGINGFACE_API_KEY"),
-  });
-  return huggingFaceProvider(modelIdentifier);
+  return resolveBenchmarkModel(modelIdentifier);
 }
 
 async function buildClient(corpus: string): Promise<Client> {
