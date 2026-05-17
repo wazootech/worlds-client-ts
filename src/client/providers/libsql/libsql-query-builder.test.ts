@@ -79,3 +79,17 @@ Deno.test("buildHexastoreIndexes - indexes are idempotent (CREATE IF NOT EXISTS)
     "idx_quads_spog",
   ]);
 });
+
+Deno.test("sanitizeFtsQuery - strips common stopwords while preserving content words", () => {
+  assertEquals(
+    testLibsqlQueryBuilder.sanitizeFtsQuery("What is the capital of Aurelia?"),
+    `"capital" "aurelia"`,
+  );
+});
+
+Deno.test("sanitizeFtsQuery - preserves original tokens when the query is stopword-only", () => {
+  assertEquals(
+    testLibsqlQueryBuilder.sanitizeFtsQuery("what is the"),
+    `"what" "is" "the"`,
+  );
+});
