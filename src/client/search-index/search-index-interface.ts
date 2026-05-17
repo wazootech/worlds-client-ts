@@ -20,6 +20,9 @@ export interface SearchResponse {
  * SearchResult is a hybrid keyword/vector hit against an RDF literal.
  */
 export interface SearchResult {
+  /** id is the stable deterministic identifier for ranking and evaluation. */
+  id: string;
+
   /** subject is the subject resource of the hit */
   subject: string;
 
