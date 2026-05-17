@@ -6,6 +6,7 @@ import type {
   SearchResponse,
   SearchResult,
 } from "#/client/search-index/search-index-interface.ts";
+import { hashQuad } from "#/client/quad-store/hash-quad.ts";
 import { filterQuads } from "#/client/quad-store/quad-filter.ts";
 import { isTextualLiteral } from "#/client/quad-store/is-textual-literal.ts";
 import { deserializeTerm, type SerializedQuad } from "./denokv-quad-store.ts";
@@ -65,6 +66,7 @@ export class DenokvSearchIndex implements SearchIndexInterface {
         const value = q.object.value;
         if (value.toLowerCase().includes(query)) {
           results.push({
+            id: await hashQuad(q),
             subject: q.subject.value,
             predicate: q.predicate.value,
             graph: q.graph.value,
