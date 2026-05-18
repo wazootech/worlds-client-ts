@@ -85,3 +85,25 @@ documentation files:
   - ✅ **Prefer:** `### AI SDK agent`
 - **Suppression of horizontal rules:** Avoid utilizing `---` divider lines to
   segment documents. Let empty lines establish boundaries cleanly.
+
+## Architectural system map
+
+To maintain absolute alignment and prevent context drift, all development must adhere to the core architectural pillars of the system:
+
+### Ephemeral in-memory execution model
+The active Graph Store runtime is anchored on high-speed, transient in-memory RDF processing using `N3.Store` and native `Comunica` execution. This maximizes edge query execution speeds and eliminates recurrent network hop latency during query execution.
+
+### Decoupled store lifecycle via dependency injection
+To support high-throughput, serverless container warm-starts, the instantiation and hydration of the Graph Store are fully externalized from the generalized `Client` factory. The caller injects an initialized `Store` directly, allowing trivial container-level caching across sequential HTTP invocations.
+
+### Sterile orchestration via provider adapters
+All active instrumentation (proxies, observers, and transactional mutation queues) is isolated strictly inside provider adapters (e.g. `provideLibsql`). The generalized `Client` is kept completely agnostic and sterile, accepting pre-composed adapter options ready for constructor injection.
+
+### Resilient hybrid search with vectorless fallbacks
+The system natively supports three search topologies: Hybrid (Fused), Semantic-Only, and Keyword-Only. If upstream embedding services time out or are completely omitted, the system gracefully degrades to high-speed SQLite FTS5 keyword searching without service interruption.
+
+### Stable reciprocal rank fusion relevance blending
+To combine vector cosine similarity and Okapi BM25 keyword metrics without fragile hyperparameter calibration, the search query assembler standardizes on Reciprocal Rank Fusion (RRF). Relevance scoring is calculated using discrete rank positions blended with a standard smoothing constant ($k = 60$).
+
+### Deterministic quad-based identity
+The system enforces stable, canonical, URL-safe base64 identifiers computed via `hashQuad` for all search results and database synchronizer records. This secures precise, duplicate-free idempotency checks and stable ranking sweeps.
