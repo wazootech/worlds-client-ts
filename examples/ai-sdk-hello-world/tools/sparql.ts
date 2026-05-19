@@ -1,6 +1,6 @@
-import type { CoreTool } from "ai";
-import { jsonSchema, tool } from "ai";
+import { tool } from "ai";
 import type { ClientInterface, SparqlRequest } from "@worlds/client";
+import { z } from "npm:zod";
 
 /**
  * ExecuteSparqlOptions defines the configuration options for the executeSparql tool.
@@ -23,30 +23,22 @@ export interface ExecuteSparqlOptions {
 export function createExecuteSparqlTool(
   client: ClientInterface,
   options?: ExecuteSparqlOptions,
-): CoreTool {
+) {
   return tool({
     description:
       "Execute a SPARQL query against the knowledge base. Use this for complex, precise relational queries across the RDF graph.",
-    parameters: jsonSchema<SparqlRequest>({
-      type: "object",
-      properties: {
-        query: {
-          type: "string",
-          description: "The raw SPARQL query string (SELECT or ASK).",
-        },
-        baseIri: {
-          type: "string",
-          description: "Base IRI for the query execution.",
-        },
-        timeoutMs: {
-          type: "number",
-          description:
-            "Query timeout in milliseconds (defaults to 30 seconds).",
-        },
-      },
-      required: ["query"],
+    inputSchema: z.object({
+      query: z.string().describe(
+        "The raw SPARQL query string (SELECT or ASK).",
+      ),
+      baseIri: z.string().optional().describe(
+        "Base IRI for the query execution.",
+      ),
+      timeoutMs: z.number().optional().describe(
+        "Query timeout in milliseconds (defaults to 30 seconds).",
+      ),
     }),
-    execute: async (request) => {
+    execute: async (request: SparqlRequest) => {
       if (options?.allowUpdates === false) {
         if (/\b(INSERT|DELETE|DROP|CLEAR|LOAD|CREATE)\b/i.test(request.query)) {
           return {

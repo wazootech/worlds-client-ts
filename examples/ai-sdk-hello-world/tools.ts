@@ -1,5 +1,4 @@
 import type { ClientInterface } from "@worlds/client";
-import type { CoreTool } from "ai";
 import {
   createExecuteSparqlTool,
   createExportRdfTool,
@@ -32,12 +31,7 @@ export interface AiSdkToolsOptions {
 export function createTools(
   client: ClientInterface,
   options?: AiSdkToolsOptions,
-): {
-  searchWorld: CoreTool;
-  executeSparql: CoreTool;
-  importRdf: CoreTool;
-  exportRdf: CoreTool;
-} {
+) {
   return {
     searchWorld: createSearchWorldTool(client),
     executeSparql: createExecuteSparqlTool(client, options?.sparql),

@@ -2,7 +2,7 @@ import { createClient } from "@libsql/client";
 import { Client } from "@worlds/client";
 import { provideLibsql } from "@worlds/client/providers/libsql";
 import { createTools } from "./tools.ts";
-import { generateText } from "ai";
+import { generateText, stepCountIs } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
 if (import.meta.main) {
@@ -41,7 +41,7 @@ if (import.meta.main) {
   const output = await generateText({
     model: google("gemini-2.5-flash"),
     tools,
-    maxSteps: 5,
+    stopWhen: stepCountIs(5),
     prompt:
       "Find out what house the protagonist of Harry Potter is in. First, use 'searchWorld' to discover the subject URI for Harry Potter. Then, write an 'executeSparql' query to look up the properties/relations of that URI so you can traverse to the protagonist and find their house.",
   });

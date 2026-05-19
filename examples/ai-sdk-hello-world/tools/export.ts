@@ -1,6 +1,6 @@
-import type { CoreTool } from "ai";
-import { jsonSchema, tool } from "ai";
+import { tool } from "ai";
 import type { ClientInterface, ExportRequest } from "@worlds/client";
+import { z } from "npm:zod";
 
 /**
  * SerializedExportRequest is a discriminated ExportRequest type that only allows "serialized" formats.
@@ -15,33 +15,19 @@ export type SerializedExportRequest = Omit<ExportRequest, "format"> & {
  * @param client The Worlds ClientInterface instance.
  * @returns An AI SDK tool for exporting data from the knowledge base.
  */
-export function createExportRdfTool(client: ClientInterface): CoreTool {
+export function createExportRdfTool(client: ClientInterface) {
   return tool({
     description:
       "Export the entire knowledge base graph as serialized RDF data (like Turtle or N-Triples). Use this as a safety hatch or when a full system dump is explicitly requested.",
-    parameters: jsonSchema<SerializedExportRequest>({
-      type: "object",
-      properties: {
-        format: {
-          type: "object",
-          properties: {
-            kind: {
-              type: "string",
-              enum: ["serialized"],
-              description: "Desired output format.",
-            },
-            contentType: {
-              type: "string",
-              description:
-                "The MIME type of the exported data. Usually 'text/turtle' or 'application/n-triples'.",
-            },
-          },
-          required: ["kind"],
-        },
-      },
-      required: ["format"],
+    inputSchema: z.object({
+      format: z.object({
+        kind: z.literal("serialized").describe("Desired output format."),
+        contentType: z.string().optional().describe(
+          "The MIME type of the exported data. Usually 'text/turtle' or 'application/n-triples'.",
+        ),
+      }),
     }),
-    execute: async (request) => {
+    execute: async (request: SerializedExportRequest) => {
       try {
         if (
           request.format.kind === "serialized" && !request.format.contentType
