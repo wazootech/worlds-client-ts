@@ -64,7 +64,7 @@ function assertStepCountBounded(
 
 /** assertFinalAnswerCorrect validates the seeded happy-path answer. */
 function assertFinalAnswerCorrect(result: EvalCaseResult): EvalAssertionResult {
-  const pass = result.output.includes("Gryffindor");
+  const pass = result.output.toLowerCase().includes("gryffindor");
   return {
     name: "final-answer-correct",
     pass,

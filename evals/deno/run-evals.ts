@@ -204,14 +204,12 @@ function compareGoldenOutput(
     case "ignore":
       return [];
     case "normalized-exact": {
-      const expectedOutput = normalizeOutputText(expected.output);
-      const actualOutput = normalizeOutputText(actual.output);
-      if (expectedOutput === actualOutput) {
+      if (expected.output === actual.output) {
         return [];
       }
       return [{
         field: "output",
-        message: "Normalized final output does not match the committed golden.",
+        message: "Final output does not match the committed golden.",
       }];
     }
     case "contains-substrings": {
