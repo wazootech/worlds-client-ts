@@ -201,7 +201,7 @@ Run the Deno-native eval harness for the AI SDK tool flow against a seeded
 in-memory LibSQL world.
 
 ```bash
-deno task eval:agent
+deno task evals
 ```
 
 The eval runner currently defaults to `gemini-3.1-flash-lite` and can be
@@ -212,21 +212,25 @@ not committed. Curated provider-generated golden snapshots live under
 `evals/deno/goldens/` so tool trajectories, final outputs, and assertion
 outcomes can be reviewed without spending tokens again.
 
+When passing eval-runner flags through `deno task`, use `--` so `deno task`
+forwards the remaining arguments to the eval runner instead of trying to parse
+them itself.
+
 You can target eval cases using a Deno-test-like `--filter` flag:
 
 ```bash
-deno task eval:agent -- --list
-deno task eval:agent -- --filter happy-path
-deno task eval:agent -- --filter "/sparql|loop/i"
-deno task eval:agent -- --filter nonexistent --permit-no-files
+deno task evals -- --list
+deno task evals -- --filter happy-path
+deno task evals -- --filter "/sparql|loop/i"
+deno task evals -- --filter nonexistent --permit-no-files
 ```
 
 Use explicit golden operations when you want to bless or verify committed
 snapshots:
 
 ```bash
-deno task eval:agent -- --filter happy-path --update-goldens
-deno task eval:agent -- --filter happy-path --check-goldens
+deno task evals -- --filter happy-path --update-goldens
+deno task evals -- --filter happy-path --check-goldens
 ```
 
 Current eval case IDs:
@@ -239,13 +243,13 @@ Current eval case IDs:
 
 All CI checks must pass before merging updates.
 
-| Command                | Description                                  |
-| :--------------------- | :------------------------------------------- |
-| `deno fmt`             | Format all code using native Deno formatter. |
-| `deno task lint`       | Run strict static analysis checks.           |
-| `deno task test`       | Execute comprehensive test suites.           |
-| `deno task eval:agent` | Run the agent eval harness.                  |
-| `deno task ci`         | Run complete CI pipeline sequentially.       |
+| Command           | Description                                  |
+| :---------------- | :------------------------------------------- |
+| `deno fmt`        | Format all code using native Deno formatter. |
+| `deno task lint`  | Run strict static analysis checks.           |
+| `deno task test`  | Execute comprehensive test suites.           |
+| `deno task evals` | Run the agent eval harness.                  |
+| `deno task ci`    | Run complete CI pipeline sequentially.       |
 
 ## Quicklinks
 

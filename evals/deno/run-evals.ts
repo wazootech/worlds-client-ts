@@ -54,6 +54,10 @@ function parseCliOptions(args: string[]): EvalCliOptions {
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
 
+    if (argument === "--") {
+      continue;
+    }
+
     if (argument === "--list") {
       list = true;
       continue;
