@@ -6,7 +6,29 @@ import type {
   EvalCaseResult,
   EvalToolRecord,
 } from "./types.ts";
+import type { Client } from "@worlds/client";
 import { createSeededWorldClient } from "./world-fixture.ts";
+import { createSeededScholarWorldClient } from "./world-fixture-scholar.ts";
+
+/** fixtureFactories maps fixtureId to an async factory that returns a seeded world client. */
+const fixtureFactories: Record<string, () => Promise<Client>> = {
+  primary: createSeededWorldClient,
+  scholar: createSeededScholarWorldClient,
+};
+
+/** resolveFixture resolves the world client factory for a given test case. */
+function resolveFixture(testCase: { fixtureId?: string }): () => Promise<Client> {
+  const fixtureId = testCase.fixtureId ?? "primary";
+  const factory = fixtureFactories[fixtureId];
+  if (!factory) {
+    throw new Error(
+      `Unknown fixtureId: "${fixtureId}". Available fixtures: ${
+        Object.keys(fixtureFactories).join(", ")
+      }`,
+    );
+  }
+  return factory;
+}
 
 /** buildTrajectory flattens the AI SDK step history into a tool sequence. */
 export function buildTrajectory(
@@ -52,7 +74,7 @@ export async function runEvalCase(
 
   try {
     const google = createGoogleGenerativeAI();
-    const client = await createSeededWorldClient();
+    const client = await resolveFixture(testCase)();
     const tools = createEvalTools(client);
     const result = await generateText({
       model: google(modelId),

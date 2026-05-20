@@ -55,6 +55,7 @@ export interface EvalCaseDefinition {
   description: string;
   prompt: string;
   maxSteps?: number;
+  fixtureId?: string;
   golden: EvalGoldenOptions;
 }
 

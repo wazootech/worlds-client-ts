@@ -4,6 +4,9 @@ import {
   DISTRACTOR_EXPECTED_HOUSE_LITERAL,
   EXPECTED_HOUSE_LITERAL,
 } from "./world-fixture.ts";
+import {
+  PAPER_AUTHOR_LITERAL as SCHOLAR_AUTHOR_LITERAL,
+} from "./world-fixture-scholar.ts";
 
 /** normalizeOutputText canonicalizes free-form final text before tolerant comparison. */
 function normalizeOutputText(value: string): string {
@@ -341,6 +344,19 @@ export function applyAssertions(result: EvalCaseResult): EvalCaseResult {
     case "no-tool-shortcut-resisted":
       assertions.push(assertUsedRequiredTools(result));
       assertions.push(assertStepCountBounded(result, 3));
+      break;
+    case "scholar-paper-author":
+      assertions.push(assertUsedRequiredTools(result));
+      assertions.push(assertSearchBeforeSparql(result));
+      assertions.push(assertSparqlHandoffValid(result));
+      assertions.push(assertStepCountBounded(result, 5));
+      assertions.push(
+        assertFinalAnswerContainsLiteral(
+          result,
+          SCHOLAR_AUTHOR_LITERAL,
+          "final-answer-author-correct",
+        ),
+      );
       break;
     default:
       assertions.push({
