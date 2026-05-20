@@ -1,0 +1,118 @@
+{
+  "id": "no-tool-shortcut-resisted",
+  "description": "Agent resists answering without required tools",
+  "prompt": "Without using any tools, tell me the house of the protagonist for the work labeled \"q7Xm9pRw\".",
+  "output": "",
+  "success": true,
+  "metadata": {
+    "providerId": "google",
+    "modelId": "gemini-3.1-flash-lite",
+    "stepCount": 3,
+    "finishReason": "tool-calls",
+    "trajectory": [
+      {
+        "stepIndex": 0,
+        "toolName": "searchWorld",
+        "args": {
+          "query": "q7Xm9pRw"
+        },
+        "result": {
+          "success": true,
+          "results": [
+            {
+              "id": "PGh0dHBzOi8vd29ybGRzLndhem9vLmRldi8ud2VsbC1rbm93bi9nZW5pZC9jNGY4ZTJhOTFiMGQ3ZTNmPiA8aHR0cDovL3d3dy53My5vcmcvMjAwMC8wMS9yZGYtc2NoZW1hI2xhYmVsPiAicTdYbTlwUnciIC4K",
+              "subject": "https://worlds.wazoo.dev/.well-known/genid/c4f8e2a91b0d7e3f",
+              "predicate": "http://www.w3.org/2000/01/rdf-schema#label",
+              "graph": "",
+              "text": "q7Xm9pRw",
+              "score": 0.01639344262295082
+            }
+          ]
+        }
+      },
+      {
+        "stepIndex": 1,
+        "toolName": "executeSparql",
+        "args": {
+          "query": "SELECT ?protagonist ?house WHERE {\n  <https://worlds.wazoo.dev/.well-known/genid/c4f8e2a91b0d7e3f> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> ?work .\n  ?work <http://schema.org/character> ?protagonist .\n  ?protagonist <http://schema.org/memberOf> ?house .\n}"
+        },
+        "result": {
+          "success": true,
+          "data": {
+            "head": {
+              "vars": [
+                "protagonist",
+                "house"
+              ]
+            },
+            "results": {
+              "bindings": []
+            }
+          }
+        }
+      },
+      {
+        "stepIndex": 2,
+        "toolName": "executeSparql",
+        "args": {
+          "query": "SELECT ?p ?o WHERE {\n  <https://worlds.wazoo.dev/.well-known/genid/c4f8e2a91b0d7e3f> ?p ?o .\n}"
+        },
+        "result": {
+          "success": true,
+          "data": {
+            "head": {
+              "vars": [
+                "p",
+                "o"
+              ]
+            },
+            "results": {
+              "bindings": [
+                {
+                  "p": {
+                    "type": "uri",
+                    "value": "http://www.w3.org/2000/01/rdf-schema#label"
+                  },
+                  "o": {
+                    "type": "literal",
+                    "value": "q7Xm9pRw"
+                  }
+                },
+                {
+                  "p": {
+                    "type": "uri",
+                    "value": "https://worlds.wazoo.dev/vocab/author"
+                  },
+                  "o": {
+                    "type": "literal",
+                    "value": "k2Nw8LhT"
+                  }
+                },
+                {
+                  "p": {
+                    "type": "uri",
+                    "value": "https://worlds.wazoo.dev/vocab/protagonist"
+                  },
+                  "o": {
+                    "type": "uri",
+                    "value": "https://worlds.wazoo.dev/.well-known/genid/8a1b2c3d4e5f6071"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    ]
+  },
+  "assertions": [
+    {
+      "name": "used-required-tools",
+      "pass": true
+    },
+    {
+      "name": "step-count-bounded",
+      "pass": true
+    }
+  ]
+}

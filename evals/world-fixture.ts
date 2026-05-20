@@ -51,6 +51,9 @@ export const BLOCKED_INSERT_SUBJECT_URI = `${GENID_BASE}f91c0e4b2a198765`;
 /** BLOCKED_INSERT_LITERAL is an opaque literal paired with BLOCKED_INSERT_SUBJECT_URI. */
 export const BLOCKED_INSERT_LITERAL = "h9Br2Lmx";
 
+/** UNKNOWN_WORK_SEARCH_LABEL is a label absent from the seeded graph for search-miss scenarios. */
+export const UNKNOWN_WORK_SEARCH_LABEL = "z9Qk4WnP";
+
 const SEEDED_WORLD_DATA = `
   @prefix vocab: <${WAZOO_VOCAB_NAMESPACE}> .
   @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .

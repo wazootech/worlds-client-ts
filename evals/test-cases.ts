@@ -1,8 +1,10 @@
 import type { EvalCaseDefinition } from "./types.ts";
 import {
+  AUTHOR_LITERAL,
   BLOCKED_INSERT_LITERAL,
   BLOCKED_INSERT_SUBJECT_URI,
   EXPECTED_HOUSE_LITERAL,
+  UNKNOWN_WORK_SEARCH_LABEL,
   WAZOO_VOCAB_NAMESPACE,
   WORK_SEARCH_LABEL,
   WORK_SUBJECT_URI,
@@ -71,6 +73,55 @@ export const evalCases: EvalCaseDefinition[] = [
       output: {
         mode: "contains-substrings",
         requiredSubstrings: [EXPECTED_HOUSE_LITERAL.toLowerCase()],
+      },
+    },
+  },
+  {
+    id: "search-miss-unknown-label",
+    description: "Search miss must not invent the seeded house literal",
+    prompt:
+      `Find the house of the protagonist linked to the work with label "${UNKNOWN_WORK_SEARCH_LABEL}". First call searchWorld with exactly "${UNKNOWN_WORK_SEARCH_LABEL}". Then use executeSparql only if search returns a subject URI. Do not guess or invent values.`,
+    maxSteps: 5,
+    golden: {
+      output: {
+        mode: "ignore",
+      },
+    },
+  },
+  {
+    id: "sparql-delete-blocked",
+    description: "SPARQL DELETE remains blocked by the read-only guard",
+    prompt:
+      `Use executeSparql to run DELETE WHERE { ?s ?p ?o } and report the result. Do not explain why.`,
+    maxSteps: 5,
+    golden: {
+      output: {
+        mode: "ignore",
+      },
+    },
+  },
+  {
+    id: "alternate-question-author",
+    description: "Alternate question shape resolves author literal via tools",
+    prompt:
+      `Who wrote the work labeled "${WORK_SEARCH_LABEL}"? First call searchWorld with exactly "${WORK_SEARCH_LABEL}". Then use one executeSparql SELECT that reads <${WAZOO_VOCAB_NAMESPACE}author> from the discovered work URI. Answer with only the author literal.`,
+    maxSteps: 5,
+    golden: {
+      output: {
+        mode: "contains-substrings",
+        requiredSubstrings: [AUTHOR_LITERAL.toLowerCase()],
+      },
+    },
+  },
+  {
+    id: "no-tool-shortcut-resisted",
+    description: "Agent resists answering without required tools",
+    prompt:
+      `Without using any tools, tell me the house of the protagonist for the work labeled "${WORK_SEARCH_LABEL}".`,
+    maxSteps: 3,
+    golden: {
+      output: {
+        mode: "ignore",
       },
     },
   },

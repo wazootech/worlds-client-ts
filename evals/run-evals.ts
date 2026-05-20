@@ -4,8 +4,11 @@ import { runEvalCase } from "./agent-runner.ts";
 import { applyAssertions } from "./assertions.ts";
 import { evalCases } from "./test-cases.ts";
 import type {
+  EvalAssertionPassRate,
   EvalCaseDefinition,
+  EvalCasePassRate,
   EvalCaseResult,
+  EvalStatsResult,
   EvalSuiteResult,
   GoldenEvalCaseResult,
 } from "./types.ts";
@@ -20,6 +23,8 @@ interface EvalCliOptions {
   permitNoFiles: boolean;
   updateGoldens: boolean;
   checkGoldens: boolean;
+  trialCount: number;
+  minPassRate?: number;
 }
 
 interface GoldenComparisonIssue {
@@ -53,6 +58,40 @@ function parseFilter(rawFilter: string): RegExp {
   return new RegExp(escapeRegExp(rawFilter), "i");
 }
 
+/** parsePositiveIntegerOption validates a CLI numeric flag value. */
+function parsePositiveIntegerOption(
+  flagName: string,
+  rawValue: string | undefined,
+): number {
+  if (!rawValue) {
+    throw new Error(`Missing value for ${flagName}`);
+  }
+
+  const parsedValue = Number.parseInt(rawValue, 10);
+  if (!Number.isFinite(parsedValue) || parsedValue < 1) {
+    throw new Error(`${flagName} must be a positive integer; got: ${rawValue}`);
+  }
+
+  return parsedValue;
+}
+
+/** parsePassRateOption validates an optional minimum pass-rate threshold. */
+function parsePassRateOption(
+  flagName: string,
+  rawValue: string | undefined,
+): number {
+  if (!rawValue) {
+    throw new Error(`Missing value for ${flagName}`);
+  }
+
+  const parsedValue = Number.parseFloat(rawValue);
+  if (!Number.isFinite(parsedValue) || parsedValue < 0 || parsedValue > 1) {
+    throw new Error(`${flagName} must be between 0 and 1; got: ${rawValue}`);
+  }
+
+  return parsedValue;
+}
+
 /** parseCliOptions reads supported targeting flags from Deno.args. */
 function parseCliOptions(args: string[]): EvalCliOptions {
   let filter: RegExp | undefined;
@@ -60,6 +99,12 @@ function parseCliOptions(args: string[]): EvalCliOptions {
   let permitNoFiles = false;
   let updateGoldens = false;
   let checkGoldens = false;
+  let trialCount = Number.parseInt(Deno.env.get("EVAL_TRIALS") ?? "1", 10);
+  let minPassRate: number | undefined;
+
+  if (!Number.isFinite(trialCount) || trialCount < 1) {
+    trialCount = 1;
+  }
 
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
@@ -88,6 +133,18 @@ function parseCliOptions(args: string[]): EvalCliOptions {
       continue;
     }
 
+    if (argument === "--trials") {
+      trialCount = parsePositiveIntegerOption("--trials", args[index + 1]);
+      index += 1;
+      continue;
+    }
+
+    if (argument === "--min-pass-rate") {
+      minPassRate = parsePassRateOption("--min-pass-rate", args[index + 1]);
+      index += 1;
+      continue;
+    }
+
     if (argument === "--filter") {
       const rawFilter = args[index + 1];
       if (!rawFilter) {
@@ -99,7 +156,7 @@ function parseCliOptions(args: string[]): EvalCliOptions {
     }
 
     throw new Error(
-      `Unsupported argument: ${argument}. Supported flags: --filter <pattern>, --list, --permit-no-files, --update-goldens, --check-goldens`,
+      `Unsupported argument: ${argument}. Supported flags: --filter <pattern>, --list, --permit-no-files, --update-goldens, --check-goldens, --trials <N>, --min-pass-rate <0-1>`,
     );
   }
 
@@ -115,7 +172,21 @@ function parseCliOptions(args: string[]): EvalCliOptions {
     );
   }
 
-  return { filter, list, permitNoFiles, updateGoldens, checkGoldens };
+  if ((updateGoldens || checkGoldens) && trialCount > 1) {
+    throw new Error(
+      "Golden operations require --trials 1 so snapshots stay deterministic.",
+    );
+  }
+
+  return {
+    filter,
+    list,
+    permitNoFiles,
+    updateGoldens,
+    checkGoldens,
+    trialCount,
+    minPassRate,
+  };
 }
 
 /** selectEvalCases filters eval cases by id and description. */
@@ -149,6 +220,119 @@ async function writeResults(result: EvalSuiteResult): Promise<string> {
   await ensureDir(resultsDirectory);
   await Deno.writeTextFile(outputPath, JSON.stringify(result, null, 2));
   return outputPath;
+}
+
+/** writeStatsResults persists aggregated multi-trial pass rates to disk. */
+async function writeStatsResults(result: EvalStatsResult): Promise<string> {
+  const evalsDirectory = dirname(fromFileUrl(import.meta.url));
+  const resultsDirectory = join(evalsDirectory, "results");
+  const outputPath = join(resultsDirectory, "stats-latest.json");
+  await ensureDir(resultsDirectory);
+  await Deno.writeTextFile(outputPath, JSON.stringify(result, null, 2));
+  return outputPath;
+}
+
+/** aggregateEvalStats computes per-case and per-assertion pass rates across trials. */
+function aggregateEvalStats(
+  selectedCases: EvalCaseDefinition[],
+  trialResults: EvalCaseResult[][],
+  provider: string,
+  model: string,
+  minPassRate?: number,
+): EvalStatsResult {
+  const casePassRates: EvalCasePassRate[] = selectedCases.map((testCase) => {
+    const resultsForCase = trialResults.map((trial) =>
+      trial.find((result) => result.id === testCase.id)
+    );
+
+    const assertionNames = [
+      ...new Set(
+        resultsForCase.flatMap((result) =>
+          result?.assertions.map((assertion) => assertion.name) ?? []
+        ),
+      ),
+    ];
+
+    const assertionPassRates: EvalAssertionPassRate[] = assertionNames.map(
+      (assertionName) => {
+        let passCount = 0;
+        let observedTrials = 0;
+
+        for (const result of resultsForCase) {
+          const assertion = result?.assertions.find((entry) =>
+            entry.name === assertionName
+          );
+          if (!assertion) {
+            continue;
+          }
+          observedTrials += 1;
+          if (assertion.pass) {
+            passCount += 1;
+          }
+        }
+
+        const trialCount = observedTrials;
+        return {
+          name: assertionName,
+          passCount,
+          trialCount,
+          passRate: trialCount === 0 ? 0 : passCount / trialCount,
+        };
+      },
+    );
+
+    const passCount = resultsForCase.filter((result) => result?.success).length;
+    const trialCount = resultsForCase.length;
+
+    return {
+      id: testCase.id,
+      description: testCase.description,
+      passCount,
+      trialCount,
+      passRate: trialCount === 0 ? 0 : passCount / trialCount,
+      assertionPassRates,
+    };
+  });
+
+  const success = minPassRate === undefined
+    ? casePassRates.every((caseRate) => caseRate.passRate === 1)
+    : casePassRates.every((caseRate) => caseRate.passRate >= minPassRate);
+
+  return {
+    providerId: provider,
+    modelId: model,
+    timestamp: new Date().toISOString(),
+    trialCount: trialResults.length,
+    minPassRate,
+    success,
+    casePassRates,
+  };
+}
+
+/** printStatsSummary renders aggregated pass rates for multi-trial runs. */
+function printStatsSummary(statsResult: EvalStatsResult): void {
+  console.log(`Trials per case: ${statsResult.trialCount}`);
+  if (statsResult.minPassRate !== undefined) {
+    console.log(`Minimum pass rate: ${statsResult.minPassRate}`);
+  }
+  console.log(`Statistical suite success: ${statsResult.success}`);
+  console.log("");
+
+  for (const caseRate of statsResult.casePassRates) {
+    const casePercent = (caseRate.passRate * 100).toFixed(1);
+    console.log(
+      `[${
+        caseRate.passRate === 1 ? "PASS" : "FAIL"
+      }] ${caseRate.description} — case pass rate ${caseRate.passCount}/${caseRate.trialCount} (${casePercent}%)`,
+    );
+    for (const assertionRate of caseRate.assertionPassRates) {
+      const assertionPercent = (assertionRate.passRate * 100).toFixed(1);
+      console.log(
+        `  - ${assertionRate.name}: ${assertionRate.passCount}/${assertionRate.trialCount} (${assertionPercent}%)`,
+      );
+    }
+    console.log("");
+  }
 }
 
 /** sanitizeFileNameSegment converts a provider or model id into a path-safe segment. */
@@ -485,21 +669,52 @@ if (import.meta.main) {
     throw new Error(message);
   }
 
-  const results = [];
-  for (const testCase of selectedEvalCases) {
-    const rawResult = await runEvalCase(testCase, { providerId, modelId });
-    results.push(applyAssertions(rawResult));
+  const trialSuiteResults: EvalSuiteResult[] = [];
+
+  for (
+    let trialIndex = 0;
+    trialIndex < cliOptions.trialCount;
+    trialIndex += 1
+  ) {
+    if (cliOptions.trialCount > 1) {
+      console.log(`Trial ${trialIndex + 1}/${cliOptions.trialCount}`);
+      console.log("");
+    }
+
+    const results = [];
+    for (const testCase of selectedEvalCases) {
+      const rawResult = await runEvalCase(testCase, { providerId, modelId });
+      results.push(applyAssertions(rawResult));
+    }
+
+    trialSuiteResults.push({
+      providerId,
+      modelId,
+      timestamp: new Date().toISOString(),
+      success: results.every((result) => result.success),
+      results,
+    });
   }
 
-  const suiteResult: EvalSuiteResult = {
-    providerId,
-    modelId,
-    timestamp: new Date().toISOString(),
-    success: results.every((result) => result.success),
-    results,
-  };
+  const suiteResult = trialSuiteResults[trialSuiteResults.length - 1];
+  const statsResult = cliOptions.trialCount > 1
+    ? aggregateEvalStats(
+      selectedEvalCases,
+      trialSuiteResults.map((trial) => trial.results),
+      providerId,
+      modelId,
+      cliOptions.minPassRate,
+    )
+    : undefined;
 
-  printSummary(suiteResult);
+  if (statsResult) {
+    printStatsSummary(statsResult);
+    const statsOutputPath = await writeStatsResults(statsResult);
+    console.log(`Wrote statistical results to ${statsOutputPath}`);
+  } else {
+    printSummary(suiteResult);
+  }
+
   const outputPath = await writeResults(suiteResult);
   console.log(`Wrote results to ${outputPath}`);
 
@@ -525,7 +740,11 @@ if (import.meta.main) {
     }
   }
 
-  if (!suiteResult.success) {
+  if (statsResult) {
+    if (!statsResult.success) {
+      Deno.exitCode = 1;
+    }
+  } else if (!suiteResult.success) {
     Deno.exitCode = 1;
   }
 }

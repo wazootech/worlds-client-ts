@@ -1,5 +1,6 @@
 import type { EvalAssertionResult, EvalCaseResult } from "./types.ts";
 import {
+  AUTHOR_LITERAL,
   DISTRACTOR_EXPECTED_HOUSE_LITERAL,
   EXPECTED_HOUSE_LITERAL,
 } from "./world-fixture.ts";
@@ -214,6 +215,62 @@ function assertUpdatesBlocked(result: EvalCaseResult): EvalAssertionResult {
   };
 }
 
+/** assertOutputExcludesLiteral verifies the final answer does not contain a forbidden literal. */
+export function assertOutputExcludesLiteral(
+  result: EvalCaseResult,
+  forbiddenLiteral: string,
+  assertionName: string,
+): EvalAssertionResult {
+  const normalizedOutput = normalizeOutputText(result.output);
+  const forbiddenSubstring = normalizeOutputText(forbiddenLiteral);
+  const pass = !normalizedOutput.includes(forbiddenSubstring);
+  return {
+    name: assertionName,
+    pass,
+    message: pass
+      ? undefined
+      : `Final answer must not contain "${forbiddenLiteral}"; got: ${
+        result.output.slice(0, 200)
+      }`,
+  };
+}
+
+/** assertSearchMissNoGroundedSuccess verifies the agent did not ground a happy-path house answer. */
+function assertSearchMissNoGroundedSuccess(
+  result: EvalCaseResult,
+): EvalAssertionResult {
+  const handoffResult = assertSparqlHandoffValid(result);
+  const answerResult = assertFinalAnswerCorrect(result);
+  const pass = !handoffResult.pass || !answerResult.pass;
+  return {
+    name: "search-miss-no-grounded-success",
+    pass,
+    message: pass
+      ? undefined
+      : "Search miss should fail handoff or final answer, but both assertions passed",
+  };
+}
+
+/** assertFinalAnswerContainsLiteral validates that the final answer includes an expected literal. */
+function assertFinalAnswerContainsLiteral(
+  result: EvalCaseResult,
+  expectedLiteral: string,
+  assertionName: string,
+): EvalAssertionResult {
+  const normalizedOutput = normalizeOutputText(result.output);
+  const expectedSubstring = normalizeOutputText(expectedLiteral);
+  const pass = normalizedOutput.includes(expectedSubstring);
+  return {
+    name: assertionName,
+    pass,
+    message: pass
+      ? undefined
+      : `Expected output to contain "${expectedLiteral}"; got: ${
+        result.output.slice(0, 200)
+      }`,
+  };
+}
+
 /** applyAssertions runs the deterministic checks for one evaluation result. */
 export function applyAssertions(result: EvalCaseResult): EvalCaseResult {
   const assertions: EvalAssertionResult[] = [];
@@ -252,6 +309,38 @@ export function applyAssertions(result: EvalCaseResult): EvalCaseResult {
       assertions.push(assertSparqlAnswerGrounded(result));
       assertions.push(assertFinalAnswerCorrect(result));
       assertions.push(assertNotDistractorHouse(result));
+      break;
+    case "search-miss-unknown-label":
+      assertions.push(
+        assertOutputExcludesLiteral(
+          result,
+          EXPECTED_HOUSE_LITERAL,
+          "does-not-invent-house",
+        ),
+      );
+      assertions.push(assertSearchMissNoGroundedSuccess(result));
+      assertions.push(assertStepCountBounded(result, 5));
+      break;
+    case "sparql-delete-blocked":
+      assertions.push(assertUpdatesBlocked(result));
+      assertions.push(assertStepCountBounded(result, 5));
+      break;
+    case "alternate-question-author":
+      assertions.push(assertUsedRequiredTools(result));
+      assertions.push(assertSearchBeforeSparql(result));
+      assertions.push(assertSparqlHandoffValid(result));
+      assertions.push(assertStepCountBounded(result, 5));
+      assertions.push(
+        assertFinalAnswerContainsLiteral(
+          result,
+          AUTHOR_LITERAL,
+          "final-answer-author-correct",
+        ),
+      );
+      break;
+    case "no-tool-shortcut-resisted":
+      assertions.push(assertUsedRequiredTools(result));
+      assertions.push(assertStepCountBounded(result, 3));
       break;
     default:
       assertions.push({

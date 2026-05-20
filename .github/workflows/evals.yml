@@ -1,0 +1,45 @@
+name: Agent evals
+
+on:
+  workflow_dispatch:
+    inputs:
+      filter:
+        description: Eval case filter (Deno-test-like pattern)
+        required: false
+        default: ""
+      trials:
+        description: Trials per case (statistical mode)
+        required: false
+        default: "1"
+      min_pass_rate:
+        description: Minimum per-case pass rate when trials > 1 (0-1)
+        required: false
+        default: ""
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Run credentialed agent evals
+        env:
+          GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+        run: |
+          if [ -z "$GOOGLE_GENERATIVE_AI_API_KEY" ]; then
+            echo "GOOGLE_GENERATIVE_AI_API_KEY secret is not configured; skipping live evals."
+            exit 0
+          fi
+          ARGS=()
+          if [ -n "${{ github.event.inputs.filter }}" ]; then
+            ARGS+=(--filter "${{ github.event.inputs.filter }}")
+          fi
+          if [ "${{ github.event.inputs.trials }}" != "1" ]; then
+            ARGS+=(--trials "${{ github.event.inputs.trials }}")
+          fi
+          if [ -n "${{ github.event.inputs.min_pass_rate }}" ]; then
+            ARGS+=(--min-pass-rate "${{ github.event.inputs.min_pass_rate }}")
+          fi
+          deno task evals -- "${ARGS[@]}"

@@ -1,11 +1,13 @@
 import { assertEquals, assertFalse } from "@std/assert";
 import {
   applyAssertions,
+  assertOutputExcludesLiteral,
   extractSearchSubjects,
   extractSparqlBindingLiterals,
 } from "./assertions.ts";
 import type { EvalCaseResult, EvalToolRecord } from "./types.ts";
 import {
+  AUTHOR_LITERAL,
   DISTRACTOR_EXPECTED_HOUSE_LITERAL,
   EXPECTED_HOUSE_LITERAL,
   WORK_SUBJECT_URI,
@@ -97,6 +99,20 @@ const CASE_ASSERTION_NAMES: Record<string, string[]> = {
     "final-answer-correct",
     "not-distractor-house",
   ],
+  "search-miss-unknown-label": [
+    "does-not-invent-house",
+    "search-miss-no-grounded-success",
+    "step-count-bounded",
+  ],
+  "sparql-delete-blocked": ["updates-blocked", "step-count-bounded"],
+  "alternate-question-author": [
+    "used-required-tools",
+    "search-before-sparql",
+    "sparql-handoff-valid",
+    "step-count-bounded",
+    "final-answer-author-correct",
+  ],
+  "no-tool-shortcut-resisted": ["used-required-tools", "step-count-bounded"],
 };
 
 for (
@@ -105,20 +121,37 @@ for (
   )
 ) {
   Deno.test(`applyAssertions routes ${caseId} to the expected assertion set`, () => {
-    const trajectory = caseId === "sparql-updates-blocked"
+    const trajectory = caseId === "sparql-updates-blocked" ||
+        caseId === "sparql-delete-blocked"
       ? [{
         stepIndex: 0,
         toolName: "executeSparql",
-        args: { query: "INSERT { ?s ?p ?o } WHERE {}" },
+        args: {
+          query: caseId === "sparql-delete-blocked"
+            ? "DELETE WHERE { ?s ?p ?o }"
+            : "INSERT { ?s ?p ?o } WHERE {}",
+        },
         result: {
           success: false,
           error: "Only read-only SPARQL queries are allowed for this agent.",
         },
       }]
+      : caseId === "search-miss-unknown-label"
+      ? [{
+        stepIndex: 0,
+        toolName: "searchWorld",
+        args: { query: "z9Qk4WnP" },
+        result: { success: true, results: [] },
+      }]
       : createPassingHappyPathTrajectory();
 
-    const output = caseId === "sparql-updates-blocked"
+    const output = caseId === "sparql-updates-blocked" ||
+        caseId === "sparql-delete-blocked"
       ? ""
+      : caseId === "alternate-question-author"
+      ? `Author: ${AUTHOR_LITERAL}`
+      : caseId === "search-miss-unknown-label"
+      ? "No matching work was found in the graph."
       : `The house is ${EXPECTED_HOUSE_LITERAL}.`;
 
     const result = applyAssertions(createEvalCaseResult({
@@ -231,6 +264,42 @@ Deno.test("extractSparqlBindingLiterals returns empty array for failed or missin
   assertEquals(extractSparqlBindingLiterals({ success: false }), []);
   assertEquals(extractSparqlBindingLiterals({ success: true, data: null }), []);
   assertEquals(extractSparqlBindingLiterals("not-an-object"), []);
+});
+
+Deno.test("assertOutputExcludesLiteral rejects output containing forbidden literal", () => {
+  const result = createEvalCaseResult({
+    id: "search-miss-unknown-label",
+    output: `House: ${EXPECTED_HOUSE_LITERAL}`,
+  });
+
+  const assertion = assertOutputExcludesLiteral(
+    result,
+    EXPECTED_HOUSE_LITERAL,
+    "does-not-invent-house",
+  );
+
+  assertFalse(assertion.pass);
+});
+
+Deno.test("applyAssertions search-miss fails when model invents the house literal", () => {
+  const result = applyAssertions(createEvalCaseResult({
+    id: "search-miss-unknown-label",
+    output: `The house is ${EXPECTED_HOUSE_LITERAL}.`,
+    metadata: {
+      providerId: "google",
+      modelId: "gemini-3.1-flash-lite",
+      stepCount: 2,
+      latencyMs: 0,
+      trajectory: createPassingHappyPathTrajectory(),
+    },
+  }));
+
+  assertFalse(result.success);
+  assertFalse(
+    result.assertions.find((assertion) =>
+      assertion.name === "does-not-invent-house"
+    )?.pass,
+  );
 });
 
 Deno.test("applyAssertions not-distractor-house rejects distractor literal in output", () => {

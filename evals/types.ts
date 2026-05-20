@@ -79,6 +79,35 @@ export interface EvalSuiteResult {
   results: EvalCaseResult[];
 }
 
+/** EvalAssertionPassRate summarizes how often one assertion passed across trials. */
+export interface EvalAssertionPassRate {
+  name: string;
+  passCount: number;
+  trialCount: number;
+  passRate: number;
+}
+
+/** EvalCasePassRate summarizes per-case success across trials. */
+export interface EvalCasePassRate {
+  id: string;
+  description: string;
+  passCount: number;
+  trialCount: number;
+  passRate: number;
+  assertionPassRates: EvalAssertionPassRate[];
+}
+
+/** EvalStatsResult aggregates multi-trial behavioral reliability for selected cases. */
+export interface EvalStatsResult {
+  providerId: string;
+  modelId: string;
+  timestamp: string;
+  trialCount: number;
+  minPassRate?: number;
+  success: boolean;
+  casePassRates: EvalCasePassRate[];
+}
+
 /** GoldenEvalRunMetadata captures stable metadata suitable for committed snapshots. */
 export interface GoldenEvalRunMetadata {
   providerId: string;
