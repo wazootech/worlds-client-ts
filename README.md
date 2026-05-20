@@ -31,6 +31,14 @@ engine.
 
 Worlds delivers these features through an open-source TypeScript SDK.
 
+> [!IMPORTANT]
+> Production recommendation: use Turso Cloud through
+> `provideLibsql(...)` for production deployments and scale. The RDFJS-backed
+> and Deno Kv-backed search/index paths, including topologies built around
+> `RdfjsSearchIndex` and `DenokvSearchIndex`, are best suited to local
+> development, tests, and constrained single-process demos. They are not the
+> recommended production topology.
+
 ## Use Worlds
 
 <table>
@@ -53,7 +61,8 @@ ACID-compliant graph syncing.
 
 Enable lightweight, stateless graph execution via Deno Kv on the edge.
 
-Maintenance-free serverless storage.
+Best for prototypes, tests, and constrained single-process deployments rather
+than the primary production recommendation.
 
 [→ View Edge Benchmarks](https://github.com/wazootech/worlds-client-ts/issues/11)
 
@@ -75,6 +84,9 @@ The Worlds Client SDK provides agents with durable semantic context.
 
 Compose your client using optimized persistence providers.
 
+For production-scale deployments, prefer LibSQL-compatible infrastructure such
+as Turso Cloud through `provideLibsql(...)`.
+
 ```typescript
 import { Client } from "@worlds/client";
 import { provideLibsql } from "@worlds/client/providers/libsql";
@@ -84,11 +96,13 @@ import { createClient } from "@libsql/client";
 // 1. In-Memory / Transient Graph (Default)
 const client = new Client();
 
-// 2. Local SQLite Persistence via LibSQL
+// 2. Local SQLite or Turso Persistence via LibSQL (recommended for production)
 const db = createClient({ url: "file:./worlds.db" });
 const sqliteClient = new Client(await provideLibsql({ client: db }));
 
 // 3. Stateless Edge Deployment via Deno Kv
+// Useful for prototyping and constrained edge flows, not the primary
+// production recommendation for search/index workloads.
 const kv = await Deno.openKv();
 const kvClient = new Client(provideDenoKv({ kv }));
 ```
@@ -154,6 +168,9 @@ deno task example:hello-world
 
 Full disk-based synchronization, ACID mutations, and native FTS indexing.
 
+This is the production-recommended path, including Turso Cloud deployments via
+`provideLibsql(...)`.
+
 ```bash
 deno task example:libsql-hello-world
 ```
@@ -161,6 +178,10 @@ deno task example:libsql-hello-world
 ### Stateless Deno Kv
 
 Per-operation lazy hydration running in zero-maintenance edge contexts.
+
+This path is useful for prototypes and constrained edge execution, but it is
+not the recommended production topology when you need the full API surface and
+search/index behavior at scale.
 
 ```bash
 deno task example:denokv-hello-world

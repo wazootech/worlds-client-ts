@@ -140,17 +140,32 @@ documentation files:
 
 ## Development constraints and CI hygiene
 
-To maintain a healthy local development lifecycle and ensure perfect green-passing integration pipeline runs:
+To maintain a healthy local development lifecycle and ensure perfect
+green-passing integration pipeline runs:
 
-- **Unix line endings (LF) enforcement:** All files in the repository MUST use standard Unix line endings (`LF` / `\n`). The use of Windows line endings (`CRLF` / `\r\n`) is strictly prohibited. You MUST run `deno fmt` before staging any changes to auto-format text line endings and keep the CI formatter checks green.
+- **Unix line endings (LF) enforcement:** All files in the repository MUST use
+  standard Unix line endings (`LF` / `\n`). The use of Windows line endings
+  (`CRLF` / `\r\n`) is strictly prohibited. You MUST run `deno fmt` before
+  staging any changes to auto-format text line endings and keep the CI formatter
+  checks green.
 
-- **Mandatory execution flags:** 
-  - **Unstable KV:** Any execution task, example, or test interacting with the Deno KV backend (e.g. `DenokvSearchIndex`, `DenokvQuadStore`) must be executed with the `--unstable-kv` flag.
-  - **Environment variables:** Any execution task requiring remote endpoints or API tokens must be executed with the `--env` flag to cleanly load `.env` variables into the process.
+- **Mandatory execution flags:**
+  - **Unstable KV:** Any execution task, example, or test interacting with the
+    Deno KV backend (e.g. `DenokvSearchIndex`, `DenokvQuadStore`) must be
+    executed with the `--unstable-kv` flag.
+  - **Environment variables:** Any execution task requiring remote endpoints or
+    API tokens must be executed with the `--env` flag to cleanly load `.env`
+    variables into the process.
 
-- **Local embedding model caching:** The system relies on offline model execution via pre-cached TFJS Universal Sentence Encoder artifacts. If changes are made to the embedding or search layers, developers must ensure the offline cache is warmed up by running the `deno task download:tfjs-use` command.
+- **Local embedding model caching:** The system relies on offline model
+  execution via pre-cached TFJS Universal Sentence Encoder artifacts. If changes
+  are made to the embedding or search layers, developers must ensure the offline
+  cache is warmed up by running the `deno task download:tfjs-use` command.
 
-- **Test-driven execution boundaries:** Always run local tests with `deno task ci` or `deno test --allow-all --unstable-kv` to verify that all code compiles, formats, and passes operational invariants without errors prior to opening pull requests.
+- **Test-driven execution boundaries:** Always run local tests with
+  `deno task ci` or `deno test --allow-all --unstable-kv` to verify that all
+  code compiles, formats, and passes operational invariants without errors prior
+  to opening pull requests.
 
 ## Architectural system map
 
@@ -177,6 +192,15 @@ All active instrumentation (proxies, observers, and transactional mutation
 queues) is isolated strictly inside provider adapters (e.g. `provideLibsql`).
 The generalized `Client` is kept completely agnostic and sterile, accepting
 pre-composed adapter options ready for constructor injection.
+
+### Production deployment recommendation
+
+For production deployments and scale, the recommended topology is LibSQL-backed
+infrastructure through `provideLibsql`, especially Turso Cloud. RDFJS-backed
+and Deno KV-backed search/index topologies, including deployments centered on
+`RdfjsSearchIndex` and `DenokvSearchIndex`, are appropriate for local
+development, tests, and constrained single-process demos, but they are not the
+recommended production path.
 
 ### Resilient hybrid search with vectorless fallbacks
 
