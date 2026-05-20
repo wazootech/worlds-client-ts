@@ -32,7 +32,7 @@ export const evalCases: EvalCaseDefinition[] = [
     description: "Agent avoids excessive tool loops",
     prompt:
       "Find Harry Potter's protagonist and house with the fewest tool calls needed. Use the available tools to verify the answer.",
-    maxSteps: 4,
+    maxSteps: 3,
     golden: {
       output: {
         mode: "contains-substrings",
