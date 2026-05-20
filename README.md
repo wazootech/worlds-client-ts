@@ -32,12 +32,12 @@ engine.
 Worlds delivers these features through an open-source TypeScript SDK.
 
 > [!IMPORTANT]
-> Production recommendation: use Turso Cloud through
-> `provideLibsql(...)` for production deployments and scale. The RDFJS-backed
-> and Deno Kv-backed search/index paths, including topologies built around
-> `RdfjsSearchIndex` and `DenokvSearchIndex`, are best suited to local
-> development, tests, and constrained single-process demos. They are not the
-> recommended production topology.
+> Production recommendation: use Turso Cloud through `provideLibsql(...)` for
+> production deployments and scale. The RDFJS-backed and Deno Kv-backed
+> search/index paths, including topologies built around `RdfjsSearchIndex` and
+> `DenokvSearchIndex`, are best suited to local development, tests, and
+> constrained single-process demos. They are not the recommended production
+> topology.
 
 ## Use Worlds
 
@@ -179,8 +179,8 @@ deno task example:libsql-hello-world
 
 Per-operation lazy hydration running in zero-maintenance edge contexts.
 
-This path is useful for prototypes and constrained edge execution, but it is
-not the recommended production topology when you need the full API surface and
+This path is useful for prototypes and constrained edge execution, but it is not
+the recommended production topology when you need the full API surface and
 search/index behavior at scale.
 
 ```bash
@@ -207,6 +207,11 @@ deno task eval:agent
 The eval runner currently defaults to `gemini-3.1-flash-lite` and can be
 overridden with `EVAL_MODEL_ID`.
 
+Rolling local eval output is written to `evals/deno/results/latest.json` and is
+not committed. Curated provider-generated golden snapshots live under
+`evals/deno/goldens/` so tool trajectories, final outputs, and assertion
+outcomes can be reviewed without spending tokens again.
+
 You can target eval cases using a Deno-test-like `--filter` flag:
 
 ```bash
@@ -214,6 +219,14 @@ deno task eval:agent -- --list
 deno task eval:agent -- --filter happy-path
 deno task eval:agent -- --filter "/sparql|loop/i"
 deno task eval:agent -- --filter nonexistent --permit-no-files
+```
+
+Use explicit golden operations when you want to bless or verify committed
+snapshots:
+
+```bash
+deno task eval:agent -- --filter happy-path --update-goldens
+deno task eval:agent -- --filter happy-path --check-goldens
 ```
 
 Current eval case IDs:

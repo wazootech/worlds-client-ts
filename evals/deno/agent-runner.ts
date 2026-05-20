@@ -40,7 +40,7 @@ export async function runEvalCase(
   options?: { providerId?: string; modelId?: string },
 ): Promise<EvalCaseResult> {
   const providerId = options?.providerId ?? "google";
-  const modelId = options?.modelId ?? "gemini-2.5-flash";
+  const modelId = options?.modelId ?? "gemini-3.1-flash-lite";
   const startedAt = Date.now();
   const emptyMetadata = {
     providerId,

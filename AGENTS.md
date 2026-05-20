@@ -196,8 +196,8 @@ pre-composed adapter options ready for constructor injection.
 ### Production deployment recommendation
 
 For production deployments and scale, the recommended topology is LibSQL-backed
-infrastructure through `provideLibsql`, especially Turso Cloud. RDFJS-backed
-and Deno KV-backed search/index topologies, including deployments centered on
+infrastructure through `provideLibsql`, especially Turso Cloud. RDFJS-backed and
+Deno KV-backed search/index topologies, including deployments centered on
 `RdfjsSearchIndex` and `DenokvSearchIndex`, are appropriate for local
 development, tests, and constrained single-process demos, but they are not the
 recommended production path.

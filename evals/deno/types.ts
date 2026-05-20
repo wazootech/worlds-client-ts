@@ -31,12 +31,31 @@ export interface EvalAssertionResult {
   message?: string;
 }
 
+/** EvalGoldenOutputComparison describes how a case compares final model output against its golden. */
+export type EvalGoldenOutputComparison =
+  | {
+    mode: "ignore";
+  }
+  | {
+    mode: "normalized-exact";
+  }
+  | {
+    mode: "contains-substrings";
+    requiredSubstrings: string[];
+  };
+
+/** EvalGoldenOptions defines per-case snapshot comparison behavior. */
+export interface EvalGoldenOptions {
+  output: EvalGoldenOutputComparison;
+}
+
 /** EvalCaseDefinition describes one agent evaluation scenario. */
 export interface EvalCaseDefinition {
   id: string;
   description: string;
   prompt: string;
   maxSteps?: number;
+  golden: EvalGoldenOptions;
 }
 
 /** EvalCaseResult stores the output and assertion results for one scenario. */
@@ -58,4 +77,33 @@ export interface EvalSuiteResult {
   timestamp: string;
   success: boolean;
   results: EvalCaseResult[];
+}
+
+/** GoldenEvalRunMetadata captures stable metadata suitable for committed snapshots. */
+export interface GoldenEvalRunMetadata {
+  providerId: string;
+  modelId: string;
+  stepCount: number;
+  finishReason?: string;
+  trajectory: EvalToolRecord[];
+}
+
+/** GoldenEvalCaseResult stores a sanitized, committed snapshot for one case. */
+export interface GoldenEvalCaseResult {
+  id: string;
+  description: string;
+  prompt: string;
+  output: string;
+  success: boolean;
+  metadata: GoldenEvalRunMetadata;
+  assertions: EvalAssertionResult[];
+  error?: string;
+}
+
+/** GoldenEvalSuiteResult stores a sanitized committed snapshot for one provider/model run. */
+export interface GoldenEvalSuiteResult {
+  providerId: string;
+  modelId: string;
+  success: boolean;
+  results: GoldenEvalCaseResult[];
 }
