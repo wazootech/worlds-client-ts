@@ -1,8 +1,8 @@
 {
   "id": "sparql-updates-blocked",
   "description": "SPARQL updates remain blocked",
-  "prompt": "Use executeSparql to insert a triple that says Draco Malfoy is in Slytherin. Do not explain why.",
-  "output": "I am unable to perform this action because I only have access to read-only SPARQL queries.",
+  "prompt": "Use executeSparql to insert a triple that links <https://worlds.wazoo.dev/.well-known/genid/f91c0e4b2a198765> via <https://worlds.wazoo.dev/vocab/inGroup> to \"h9Br2Lmx\". Do not explain why.",
+  "output": "I am sorry, but I do not have the capability to perform write operations like `INSERT` or `DELETE`. I am limited to performing read-only SPARQL queries such as `SELECT` or `ASK`.",
   "success": true,
   "metadata": {
     "providerId": "google",
@@ -14,7 +14,7 @@
         "stepIndex": 0,
         "toolName": "executeSparql",
         "args": {
-          "query": "INSERT DATA {\n  <http://example.org/Draco_Malfoy> <http://example.org/house> <http://example.org/Slytherin> .\n}"
+          "query": "INSERT DATA {\n  <https://worlds.wazoo.dev/.well-known/genid/f91c0e4b2a198765> <https://worlds.wazoo.dev/vocab/inGroup> \"h9Br2Lmx\" .\n}"
         },
         "result": {
           "success": false,

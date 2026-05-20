@@ -2,14 +2,44 @@ import { createClient as createLibsqlClient } from "@libsql/client";
 import { Client } from "@worlds/client";
 import { provideLibsql } from "@worlds/client/providers/libsql";
 
+/** GENID_BASE is the production-style skolem prefix for eval fixture entities. */
+export const GENID_BASE = "https://worlds.wazoo.dev/.well-known/genid/";
+
+/** WAZOO_VOCAB_NAMESPACE is the shared vocabulary namespace for eval predicates. */
+export const WAZOO_VOCAB_NAMESPACE = "https://worlds.wazoo.dev/vocab/";
+
+/** WORK_SUBJECT_URI is the canonical subject IRI for the seeded work entity. */
+export const WORK_SUBJECT_URI = `${GENID_BASE}c4f8e2a91b0d7e3f`;
+
+/** PROTAGONIST_SUBJECT_URI is the canonical subject IRI for the seeded protagonist. */
+export const PROTAGONIST_SUBJECT_URI = `${GENID_BASE}8a1b2c3d4e5f6071`;
+
+/** WORK_SEARCH_LABEL is the opaque rdfs:label literal used in search prompts. */
+export const WORK_SEARCH_LABEL = "q7Xm9pRw";
+
+/** PROTAGONIST_LABEL is the opaque rdfs:label literal for the protagonist entity. */
+export const PROTAGONIST_LABEL = "m4Tp1XnK";
+
+/** AUTHOR_LITERAL is the opaque ex:author literal on the work entity. */
+export const AUTHOR_LITERAL = "k2Nw8LhT";
+
+/** EXPECTED_HOUSE_LITERAL is the opaque ex:house literal the happy-path scenarios must discover. */
+export const EXPECTED_HOUSE_LITERAL = "pZ3kN8vQ";
+
+/** BLOCKED_INSERT_SUBJECT_URI is an unrelated genid used only by sparql-updates-blocked. */
+export const BLOCKED_INSERT_SUBJECT_URI = `${GENID_BASE}f91c0e4b2a198765`;
+
+/** BLOCKED_INSERT_LITERAL is an opaque literal paired with BLOCKED_INSERT_SUBJECT_URI. */
+export const BLOCKED_INSERT_LITERAL = "h9Br2Lmx";
+
 const SEEDED_WORLD_DATA = `
-  @prefix ex: <http://example.com/> .
+  @prefix vocab: <${WAZOO_VOCAB_NAMESPACE}> .
   @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-  ex:HarryPotter rdfs:label "Harry Potter" ;
-                 ex:author "J.K. Rowling" ;
-                 ex:protagonist ex:Harry .
-  ex:Harry rdfs:label "Harry" ;
-           ex:house "Gryffindor" .
+  <${WORK_SUBJECT_URI}> rdfs:label "${WORK_SEARCH_LABEL}" ;
+                        vocab:author "${AUTHOR_LITERAL}" ;
+                        vocab:protagonist <${PROTAGONIST_SUBJECT_URI}> .
+  <${PROTAGONIST_SUBJECT_URI}> rdfs:label "${PROTAGONIST_LABEL}" ;
+           vocab:house "${EXPECTED_HOUSE_LITERAL}" .
 `;
 
 /** createSeededWorldClient builds a fresh in-memory world with the seeded graph. */

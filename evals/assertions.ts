@@ -1,4 +1,36 @@
 import type { EvalAssertionResult, EvalCaseResult } from "./types.ts";
+import { EXPECTED_HOUSE_LITERAL } from "./world-fixture.ts";
+
+/** normalizeOutputText canonicalizes free-form final text before tolerant comparison. */
+function normalizeOutputText(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+/** extractSearchSubjects collects subject IRIs from a searchWorld tool result. */
+function extractSearchSubjects(searchResult: unknown): string[] {
+  if (
+    typeof searchResult !== "object" || searchResult === null ||
+    !("results" in searchResult)
+  ) {
+    return [];
+  }
+
+  const results = (searchResult as { results?: unknown }).results;
+  if (!Array.isArray(results)) {
+    return [];
+  }
+
+  const subjects: string[] = [];
+  for (const hit of results) {
+    if (
+      typeof hit === "object" && hit !== null && "subject" in hit &&
+      typeof (hit as { subject: unknown }).subject === "string"
+    ) {
+      subjects.push((hit as { subject: string }).subject);
+    }
+  }
+  return subjects;
+}
 
 /** assertUsedRequiredTools verifies that both phase-one tools were called. */
 function assertUsedRequiredTools(result: EvalCaseResult): EvalAssertionResult {
@@ -31,7 +63,7 @@ function assertSearchBeforeSparql(result: EvalCaseResult): EvalAssertionResult {
   };
 }
 
-/** assertSparqlHandoffValid checks that the discovered subject flows into SPARQL. */
+/** assertSparqlHandoffValid checks that a discovered subject URI flows into SPARQL. */
 function assertSparqlHandoffValid(result: EvalCaseResult): EvalAssertionResult {
   const searchStep = result.metadata.trajectory.find((record) =>
     record.toolName === "searchWorld"
@@ -39,13 +71,20 @@ function assertSparqlHandoffValid(result: EvalCaseResult): EvalAssertionResult {
   const sparqlStep = result.metadata.trajectory.find((record) =>
     record.toolName === "executeSparql"
   );
-  const searchResult = JSON.stringify(searchStep?.result ?? {});
+  const discoveredSubjects = extractSearchSubjects(searchStep?.result);
   const sparqlInput = JSON.stringify(sparqlStep?.args ?? {});
-  const pass = searchResult.includes("HarryPotter") &&
-    sparqlInput.includes("HarryPotter");
+  const pass = discoveredSubjects.length > 0 &&
+    discoveredSubjects.some((subject) => sparqlInput.includes(subject));
   return {
     name: "sparql-handoff-valid",
     pass,
+    message: pass
+      ? undefined
+      : discoveredSubjects.length === 0
+      ? "searchWorld returned no subject URIs to hand off into SPARQL"
+      : `Discovered subjects not found in first executeSparql args: ${
+        discoveredSubjects.join(", ")
+      }; SPARQL args: ${sparqlInput.slice(0, 200)}`,
   };
 }
 
@@ -64,10 +103,17 @@ function assertStepCountBounded(
 
 /** assertFinalAnswerCorrect validates the seeded happy-path answer. */
 function assertFinalAnswerCorrect(result: EvalCaseResult): EvalAssertionResult {
-  const pass = result.output.toLowerCase().includes("gryffindor");
+  const normalizedOutput = normalizeOutputText(result.output);
+  const expectedSubstring = normalizeOutputText(EXPECTED_HOUSE_LITERAL);
+  const pass = normalizedOutput.includes(expectedSubstring);
   return {
     name: "final-answer-correct",
     pass,
+    message: pass
+      ? undefined
+      : `Expected output to contain "${EXPECTED_HOUSE_LITERAL}"; got: ${
+        result.output.slice(0, 200)
+      }`,
   };
 }
 
