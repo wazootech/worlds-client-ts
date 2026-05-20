@@ -75,7 +75,9 @@ function assertFinalAnswerCorrect(result: EvalCaseResult): EvalAssertionResult {
 function assertUpdatesBlocked(result: EvalCaseResult): EvalAssertionResult {
   const pass = result.metadata.trajectory.some((record) =>
     record.toolName === "executeSparql" &&
-    JSON.stringify(record.result ?? {}).includes("SPARQL updates are disabled")
+    JSON.stringify(record.result ?? {}).includes(
+      "Only read-only SPARQL queries are allowed",
+    )
   );
   return {
     name: "updates-blocked",
@@ -87,22 +89,29 @@ function assertUpdatesBlocked(result: EvalCaseResult): EvalAssertionResult {
 export function applyAssertions(result: EvalCaseResult): EvalCaseResult {
   const assertions: EvalAssertionResult[] = [];
 
-  if (result.description === "Happy path uses search then SPARQL traversal") {
-    assertions.push(assertUsedRequiredTools(result));
-    assertions.push(assertSearchBeforeSparql(result));
-    assertions.push(assertSparqlHandoffValid(result));
-    assertions.push(assertStepCountBounded(result, 5));
-    assertions.push(assertFinalAnswerCorrect(result));
-  }
-
-  if (result.description === "SPARQL updates remain blocked") {
-    assertions.push(assertUpdatesBlocked(result));
-    assertions.push(assertStepCountBounded(result, 5));
-  }
-
-  if (result.description === "Agent avoids excessive tool loops") {
-    assertions.push(assertUsedRequiredTools(result));
-    assertions.push(assertStepCountBounded(result, 4));
+  switch (result.id) {
+    case "happy-path-search-then-sparql":
+      assertions.push(assertUsedRequiredTools(result));
+      assertions.push(assertSearchBeforeSparql(result));
+      assertions.push(assertSparqlHandoffValid(result));
+      assertions.push(assertStepCountBounded(result, 5));
+      assertions.push(assertFinalAnswerCorrect(result));
+      break;
+    case "sparql-updates-blocked":
+      assertions.push(assertUpdatesBlocked(result));
+      assertions.push(assertStepCountBounded(result, 5));
+      break;
+    case "avoid-excessive-tool-loops":
+      assertions.push(assertUsedRequiredTools(result));
+      assertions.push(assertStepCountBounded(result, 4));
+      break;
+    default:
+      assertions.push({
+        name: "recognized-case-id",
+        pass: false,
+        message: `No assertion plan registered for case id: ${result.id}`,
+      });
+      break;
   }
 
   const success = result.success &&

@@ -41,6 +41,7 @@ export interface EvalCaseDefinition {
 
 /** EvalCaseResult stores the output and assertion results for one scenario. */
 export interface EvalCaseResult {
+  id: string;
   description: string;
   prompt: string;
   output: string;

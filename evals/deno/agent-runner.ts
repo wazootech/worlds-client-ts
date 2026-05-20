@@ -63,6 +63,7 @@ export async function runEvalCase(
     const latencyMs = Date.now() - startedAt;
 
     return {
+      id: testCase.id,
       description: testCase.description,
       prompt: testCase.prompt,
       output: result.text,
@@ -86,6 +87,7 @@ export async function runEvalCase(
     };
   } catch (error) {
     return {
+      id: testCase.id,
       description: testCase.description,
       prompt: testCase.prompt,
       output: "",

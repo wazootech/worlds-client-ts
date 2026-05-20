@@ -2,6 +2,12 @@ import type { Client } from "@worlds/client";
 import { tool } from "ai";
 import { z } from "zod";
 
+/** isReadOnlySparqlQuery reports whether a query begins with an allowed read-only form. */
+function isReadOnlySparqlQuery(query: string): boolean {
+  const normalizedQuery = query.trim().replace(/^(?:#.*\n\s*)+/, "");
+  return /^(SELECT|ASK)\b/i.test(normalizedQuery);
+}
+
 /** createEvalTools creates the isolated tool set used by the Deno eval harness. */
 export function createEvalTools(client: Client) {
   return {
@@ -43,11 +49,11 @@ export function createEvalTools(client: Client) {
       execute: async (
         request: { query: string; baseIri?: string; timeoutMs?: number },
       ) => {
-        if (/\b(INSERT|DELETE|DROP|CLEAR|LOAD|CREATE)\b/i.test(request.query)) {
+        if (!isReadOnlySparqlQuery(request.query)) {
           return {
             success: false,
             error:
-              "SPARQL updates are disabled for this agent. Please only execute SELECT or ASK queries.",
+              "Only read-only SPARQL queries are allowed for this agent. Please use SELECT or ASK.",
           };
         }
 
