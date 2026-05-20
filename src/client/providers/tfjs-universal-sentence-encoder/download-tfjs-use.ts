@@ -1,10 +1,7 @@
 import { ensureDir } from "@std/fs";
 
 /** TARGET_DIR is the provider-local models directory resolved from this script's location. */
-const TARGET_DIR = new URL(
-  "../src/client/providers/tfjs-universal-sentence-encoder/models/",
-  import.meta.url,
-);
+const TARGET_DIR = new URL("./models/", import.meta.url);
 
 const URLS = [
   {

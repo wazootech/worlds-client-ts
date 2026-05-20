@@ -158,9 +158,12 @@ green-passing integration pipeline runs:
     variables into the process.
 
 - **Local embedding model caching:** The system relies on offline model
-  execution via pre-cached TFJS Universal Sentence Encoder artifacts. If changes
-  are made to the embedding or search layers, developers must ensure the offline
-  cache is warmed up by running the `deno task download:tfjs-use` command.
+  execution via pre-cached TFJS Universal Sentence Encoder artifacts. The
+  download script lives at
+  `src/client/providers/tfjs-universal-sentence-encoder/download-tfjs-use.ts`.
+  If changes are made to the embedding or search layers, developers must ensure
+  the offline cache is warmed up by running the `deno task download:tfjs-use`
+  command.
 
 - **Test-driven execution boundaries:** Always run local tests with
   `deno task ci` or `deno test --allow-all --unstable-kv` to verify that all
