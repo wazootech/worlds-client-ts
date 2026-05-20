@@ -45,7 +45,6 @@
     "example:libsql-hello-world": "deno -A ./examples/libsql-hello-world/main.ts",
     "example:denokv-hello-world": "deno -A --unstable-kv ./examples/denokv-hello-world/main.ts",
     "example:ai-sdk-hello-world": "deno -A --env ./examples/ai-sdk-hello-world/main.ts",
-    "evals": "deno run -A --env ./evals/run-evals.ts",
     "fmt": "deno fmt",
     "fmt:check": "deno fmt --check",
     "lint": "deno lint",

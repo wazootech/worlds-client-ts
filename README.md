@@ -197,78 +197,20 @@ deno task example:ai-sdk-hello-world
 
 ### Agent eval harness
 
-Run the Deno-native eval harness for the AI SDK tool flow against a seeded
-in-memory LibSQL world.
-
-```bash
-deno task evals
-```
-
-The eval runner defaults to the `google` provider with `gemini-3.1-flash-lite`.
-`EVAL_MODEL_ID` can select a different Google model, and `EVAL_PROVIDER_ID`
-currently accepts `google`.
-
-Live evals use the Gemini API free tier unless the configured
-`GOOGLE_GENERATIVE_AI_API_KEY` belongs to a paid-tier project. Free-tier quota
-is enforced per Google Cloud project across requests per minute (`RPM`), input
-tokens per minute (`TPM`), and requests per day (`RPD`); `RPD` resets at
-midnight Pacific time. The public Gemini pricing page confirms that
-`gemini-3.1-flash-lite` has free input/output tokens on the free tier, but it
-does not list project-specific `RPM`, `TPM`, or `RPD` values. Those numeric
-limits are visible only in the signed-in
-[AI Studio rate-limit page](https://aistudio.google.com/rate-limit) for the
-owning project. The current recorded `gemini-3.1-flash-lite` limits are
-`15 RPM`, `250K TPM`, and `500 RPD`; see `evals/README.md` before raising
-scheduled frequency or trial counts. Based on the eval cases and goldens
-committed when the eval docs were last updated, a full-suite trial uses 26 model
-requests in committed goldens and has a 38-request worst-case step budget. The
-weekly `--trials 10` baseline should therefore currently be planned as 260
-observed requests and 380 worst-case requests, paced over at least 18 to 26
-minutes to avoid the `15 RPM` limit.
-
-Rolling local eval output is written to `evals/results/latest.json` and is not
-committed. Curated provider-generated golden snapshots live under
-`evals/goldens/` so tool trajectories, final outputs, and assertion outcomes can
-be reviewed without spending tokens again.
-
-You can target eval cases using a Deno-test-like `--filter` flag:
-
-```bash
-deno task evals --list
-deno task evals --filter happy-path
-deno task evals --filter "/sparql|loop/i"
-deno task evals --filter nonexistent --permit-no-files
-```
-
-Use explicit golden operations when you want to bless or verify committed
-snapshots:
-
-```bash
-deno task evals --filter happy-path --update-goldens
-deno task evals --filter happy-path --check-goldens
-```
-
-Golden files are committed once blessed. Run `--update-goldens` first to create
-golden snapshots for a given case, then `--check-goldens` on subsequent runs to
-detect regressions against the committed baseline.
-
-Current eval case IDs:
-
-- `happy-path-search-then-sparql`
-- `sparql-updates-blocked`
-- `avoid-excessive-tool-loops`
+The eval harness has moved to
+[worlds-client-evals](https://github.com/wazootech/worlds-client-evals). It runs
+as a consumer of the published `@worlds/client` package.
 
 ## Development workflow
 
 All CI checks must pass before merging updates.
 
-| Command           | Description                                  |
-| :---------------- | :------------------------------------------- |
-| `deno fmt`        | Format all code using native Deno formatter. |
-| `deno task lint`  | Run strict static analysis checks.           |
-| `deno task test`  | Execute comprehensive test suites.           |
-| `deno task evals` | Run the agent eval harness.                  |
-| `deno task ci`    | Run complete CI pipeline sequentially.       |
+| Command          | Description                                  |
+| :--------------- | :------------------------------------------- |
+| `deno fmt`       | Format all code using native Deno formatter. |
+| `deno task lint` | Run strict static analysis checks.           |
+| `deno task test` | Execute comprehensive test suites.           |
+| `deno task ci`   | Run complete CI pipeline sequentially.       |
 
 ## Quicklinks
 
