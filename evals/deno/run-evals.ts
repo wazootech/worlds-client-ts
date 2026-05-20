@@ -10,7 +10,7 @@ import type {
   GoldenEvalCaseResult,
 } from "./types.ts";
 
-const providerId = "google";
+const providerId = Deno.env.get("EVAL_PROVIDER_ID") ?? "google";
 const modelId = Deno.env.get("EVAL_MODEL_ID") ?? "gemini-3.1-flash-lite";
 
 interface EvalCliOptions {

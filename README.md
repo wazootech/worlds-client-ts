@@ -204,8 +204,9 @@ in-memory LibSQL world.
 deno task evals
 ```
 
-The eval runner currently defaults to `gemini-3.1-flash-lite` and can be
-overridden with `EVAL_MODEL_ID`.
+The eval runner defaults to the `google` provider with `gemini-3.1-flash-lite`
+and can be overridden with `EVAL_PROVIDER_ID` and `EVAL_MODEL_ID` environment
+variables.
 
 Rolling local eval output is written to `evals/deno/results/latest.json` and is
 not committed. Curated provider-generated golden snapshots live under
