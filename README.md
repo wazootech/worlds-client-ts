@@ -197,9 +197,20 @@ deno task example:ai-sdk-hello-world
 
 ### Agent eval harness
 
-The eval harness has moved to
-[worlds-client-evals](https://github.com/wazootech/worlds-client-evals). It runs
-as a consumer of the published `@worlds/client` package.
+The eval harness lives in
+[worlds-client-evals](https://github.com/wazootech/worlds-client-evals). It is a
+separate repository that consumes `@worlds/client` as a published package and
+runs deterministic assertion checks and live model trials against a seeded
+in-memory LibSQL world.
+
+To run evals, clone the evals repo and follow its
+[README](https://github.com/wazootech/worlds-client-evals#readme):
+
+```bash
+git clone https://github.com/wazootech/worlds-client-evals.git
+cd worlds-client-evals
+deno task evals
+```
 
 ## Development workflow
 
