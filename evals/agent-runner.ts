@@ -17,7 +17,9 @@ const fixtureFactories: Record<string, () => Promise<Client>> = {
 };
 
 /** resolveFixture resolves the world client factory for a given test case. */
-function resolveFixture(testCase: { fixtureId?: string }): () => Promise<Client> {
+function resolveFixture(
+  testCase: { fixtureId?: string },
+): () => Promise<Client> {
   const fixtureId = testCase.fixtureId ?? "primary";
   const factory = fixtureFactories[fixtureId];
   if (!factory) {
