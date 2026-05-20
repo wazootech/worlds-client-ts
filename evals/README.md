@@ -40,6 +40,113 @@ trajectories as representative snapshots).
 Unit tests under `evals/*.test.ts` do not use these variables and run without an
 API key.
 
+## Free-tier API limits
+
+Live evals intentionally run on the Gemini API **Free** usage tier by default.
+The default model is `gemini-3.1-flash-lite`, selected through `EVAL_MODEL_ID`
+when no override is provided.
+
+Google applies Gemini API free-tier limits per Google Cloud project, not per API
+key. The public Gemini pricing page confirms free-tier cost and feature
+availability for `gemini-3.1-flash-lite`, but it does **not** list the active
+numeric `RPM`, `TPM`, or `RPD` quota values. Those values are visible only in
+the signed-in
+[AI Studio rate-limit page](https://aistudio.google.com/rate-limit) for the
+project that owns `GOOGLE_GENERATIVE_AI_API_KEY`; they are not exposed in this
+repository, in Google's unauthenticated docs, or in normal Gemini API response
+headers.
+
+The relevant quota dimensions for these evals are:
+
+| Limit dimension | Meaning                 | Reset / window        |
+| :-------------- | :---------------------- | :-------------------- |
+| `RPM`           | Requests per minute     | Rolling minute        |
+| `TPM`           | Input tokens per minute | Rolling minute        |
+| `RPD`           | Requests per day        | Midnight Pacific time |
+
+Exceeding any one of these limits fails the live run with a rate-limit error,
+even when the other dimensions are still below quota.
+
+Record the signed-in AI Studio values here whenever the eval API key changes.
+The values below came from AI Studio's rate-limit table for the project that
+owns the current eval key:
+
+| `gemini-3.1-flash-lite` free-tier limit | Current value                                       | Source / notes                                                   |
+| :-------------------------------------- | :-------------------------------------------------- | :--------------------------------------------------------------- |
+| `RPM`                                   | `15`                                                | Text-out model requests per minute                               |
+| `TPM`                                   | `250K`                                              | Text-out model input tokens per minute                           |
+| `RPD`                                   | `500`                                               | Text-out model requests per day                                  |
+| Last observed usage                     | `18 / 15 RPM`, `10.03K / 250K TPM`, `249 / 500 RPD` | AI Studio showed RPM over limit and other dimensions below limit |
+
+Confirmed free-tier pricing and feature constraints for `gemini-3.1-flash-lite`:
+
+| Feature                                 | Free-tier behavior                                                                                |
+| :-------------------------------------- | :------------------------------------------------------------------------------------------------ |
+| Standard input tokens                   | Free of charge                                                                                    |
+| Standard output / thinking              | Free of charge                                                                                    |
+| Batch input and output                  | Free of charge, but still subject to batch quotas                                                 |
+| Flex input and output                   | Free of charge                                                                                    |
+| Priority input and output               | Free of charge                                                                                    |
+| Context caching                         | Not available                                                                                     |
+| Google Search grounding                 | Not used by this harness; public pricing lists it as unavailable for this model's free tier       |
+| Google Maps grounding                   | Not used by this harness; AI Studio shows a separate 500 RPD tool row for `gemini-3.1-flash-lite` |
+| Content used to improve Google products | Yes                                                                                               |
+
+Batch API limits are separate from interactive eval calls. Google currently
+documents batch limits as 100 concurrent batch requests, 2 GB input file size,
+and 20 GB file storage. This harness does not use the Batch API today.
+
+### Effect on eval runs
+
+Each eval case calls `generateText` once, but AI SDK tool loops can consume one
+model request per step. Count the steps in golden trajectories for the observed
+per-trial total and sum each case's `maxSteps` budget in `evals/test-cases.ts`
+for the worst-case per-trial total. The examples below use 26 observed steps
+and 38 worst-case steps — replace them if cases or budgets change. A
+`--trials 10` full-suite run therefore uses 260 observed requests or 380
+worst-case requests before retries or reruns.
+
+Use these formulas when the active AI Studio quota values change. Replace
+`O` with the observed golden step total and `W` with the worst-case
+`maxSteps` sum:
+
+```text
+observed full-suite trials/day = floor(RPD / O)
+safe full-suite trials/day     = floor(RPD / W)
+
+observed scheduled runs/day = floor(RPD / (O * 10))
+safe scheduled runs/day     = floor(RPD / (W * 10))
+
+minimum observed scheduled runtime = O * 10 / RPM minutes
+minimum safe scheduled runtime     = W * 10 / RPM minutes
+```
+
+With the recorded `500 RPD` quota and the example step totals (O = 26,
+W = 38), the full-suite daily capacity is about 19 observed trials or 13 safe
+worst-case trials. A `--trials 10` full-suite run fits inside the daily quota,
+but it must be paced to stay below `15 RPM`: at least 18 minutes using 26
+observed golden steps, or at least 26 minutes using 38 worst-case steps.
+
+Example planning table, replace `RPD` with the signed-in AI Studio value if the
+project quota changes:
+
+| If `RPD` is | Observed trials/day | Safe trials/day | Observed `--trials 10` runs/day | Safe `--trials 10` runs/day |
+| :---------- | ------------------: | --------------: | ------------------------------: | --------------------------: |
+| `500`       |                  19 |              13 |                               1 |                           1 |
+| `1,000`     |                  38 |              26 |                               3 |                           2 |
+| `1,500`     |                  57 |              39 |                               5 |                           3 |
+
+Operational policy while using the free tier:
+
+- Keep scheduled evals at one weekly `--trials 10` baseline unless the active AI
+  Studio quota has enough headroom for more frequent runs.
+- Prefer `--filter <case>` for local debugging so a single change does not spend
+  the full-suite quota.
+- Treat rate-limited runs as operational signals only; they are not benchmark
+  evidence and should not be used to bless goldens.
+- If reliability work needs larger trial counts, first check the active project
+  `RPM`, `TPM`, and `RPD` in AI Studio or move that run to a paid-tier project.
+
 ## Run
 
 ```bash
