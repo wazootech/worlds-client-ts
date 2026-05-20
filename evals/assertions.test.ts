@@ -31,6 +31,7 @@ function createEvalCaseResult(
       ...overrides.metadata,
     },
     assertions: [],
+    toolSequence: [],
     ...overrides,
   };
 }

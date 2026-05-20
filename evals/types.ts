@@ -67,6 +67,7 @@ export interface EvalCaseResult {
   success: boolean;
   metadata: EvalRunMetadata;
   assertions: EvalAssertionResult[];
+  toolSequence: string[];
   error?: string;
 }
 
@@ -126,5 +127,6 @@ export interface GoldenEvalCaseResult {
   success: boolean;
   metadata: GoldenEvalRunMetadata;
   assertions: EvalAssertionResult[];
+  toolSequence: string[];
   error?: string;
 }
