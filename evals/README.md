@@ -90,6 +90,24 @@ deno task evals --filter "/search-miss|delete-blocked/i" --trials 5 --min-pass-r
 
 Types for results and goldens: `evals/types.ts`.
 
+## Epic status
+
+[Issue #36](https://github.com/wazootech/worlds-client-ts/issues/36) is complete
+for the phase-one scenario expansion scope. The harness now covers discovery
+without embedded work URIs, SPARQL binding-level grounding, distractor
+disambiguation, negative search misses, read-only SPARQL guard cases, alternate
+question shape, unit-tested assertion helpers, committed goldens, and
+multi-trial reliability output.
+
+Remaining open eval work is tracked separately:
+
+- [Issue #28](https://github.com/wazootech/worlds-client-ts/issues/28) — richer
+  assertion diagnostics in result artifacts.
+- [Issue #29](https://github.com/wazootech/worlds-client-ts/issues/29) — second
+  fixture or schema shape to prove harness generality.
+- [Issue #47](https://github.com/wazootech/worlds-client-ts/issues/47) — add the
+  repository secret required for scheduled live evals.
+
 ## CI strategy
 
 | Layer                   | Command                                     | API key                              | When                                 |
@@ -110,10 +128,8 @@ Types for results and goldens: `evals/types.ts`.
 repository secret. Golden snapshot checks are not a CI gate; behavioral
 assertions are.
 
-Follow-ups tracked in
-[issue #36](https://github.com/wazootech/worlds-client-ts/issues/36):
-tool-recovery scenarios, additional guard verbs (`DROP`, `CLEAR`, `WITH`), and
-scheduled trial runs once the scenario set stabilizes.
+The original scenario-expansion epic is closed; use the follow-up issues above
+for post-epic eval work.
 
 ## Permissions
 
