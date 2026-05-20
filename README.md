@@ -174,16 +174,44 @@ Wrap the Client as Vercel AI SDK tools for autonomous LLM reasoning.
 deno task example:ai-sdk-hello-world
 ```
 
+### Agent eval harness
+
+Run the Deno-native eval harness for the AI SDK tool flow against a seeded
+in-memory LibSQL world.
+
+```bash
+deno task eval:agent
+```
+
+The eval runner currently defaults to `gemini-3.1-flash-lite` and can be
+overridden with `EVAL_MODEL_ID`.
+
+You can target eval cases using a Deno-test-like `--filter` flag:
+
+```bash
+deno task eval:agent -- --list
+deno task eval:agent -- --filter happy-path
+deno task eval:agent -- --filter "/sparql|loop/i"
+deno task eval:agent -- --filter nonexistent --permit-no-files
+```
+
+Current eval case IDs:
+
+- `happy-path-search-then-sparql`
+- `sparql-updates-blocked`
+- `avoid-excessive-tool-loops`
+
 ## Development workflow
 
 All CI checks must pass before merging updates.
 
-| Command          | Description                                  |
-| :--------------- | :------------------------------------------- |
-| `deno fmt`       | Format all code using native Deno formatter. |
-| `deno task lint` | Run strict static analysis checks.           |
-| `deno task test` | Execute comprehensive test suites.           |
-| `deno task ci`   | Run complete CI pipeline sequentially.       |
+| Command                | Description                                  |
+| :--------------------- | :------------------------------------------- |
+| `deno fmt`             | Format all code using native Deno formatter. |
+| `deno task lint`       | Run strict static analysis checks.           |
+| `deno task test`       | Execute comprehensive test suites.           |
+| `deno task eval:agent` | Run the agent eval harness.                  |
+| `deno task ci`         | Run complete CI pipeline sequentially.       |
 
 ## Quicklinks
 

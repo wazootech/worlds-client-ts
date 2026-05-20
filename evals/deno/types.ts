@@ -33,6 +33,7 @@ export interface EvalAssertionResult {
 
 /** EvalCaseDefinition describes one agent evaluation scenario. */
 export interface EvalCaseDefinition {
+  id: string;
   description: string;
   prompt: string;
   maxSteps?: number;
