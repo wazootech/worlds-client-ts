@@ -28,7 +28,8 @@
     "n3": "npm:n3@^2.0.3",
     "rdf-canonize": "npm:rdf-canonize@^5.0.0",
     "@langchain/core": "npm:@langchain/core@^1.1.47",
-    "@langchain/textsplitters": "npm:@langchain/textsplitters@^1.0.1"
+    "@langchain/textsplitters": "npm:@langchain/textsplitters@^1.0.1",
+    "zod": "npm:zod@^4.4.3"
   },
   "links": [
     "./vendor/jsonld-context-parser"

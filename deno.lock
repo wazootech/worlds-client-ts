@@ -22,7 +22,8 @@
     "npm:libsql@*": "0.5.29",
     "npm:n3@^2.0.3": "2.0.3",
     "npm:rdf-canonize@5": "5.0.0",
-    "npm:zod@*": "4.4.3"
+    "npm:zod@*": "4.4.3",
+    "npm:zod@^4.4.3": "4.4.3"
   },
   "jsr": {
     "@std/assert@1.0.19": {
@@ -4040,7 +4041,8 @@
       "npm:@types/n3@1.26.1",
       "npm:ai@^6.0.185",
       "npm:n3@^2.0.3",
-      "npm:rdf-canonize@5"
+      "npm:rdf-canonize@5",
+      "npm:zod@^4.4.3"
     ],
     "links": {
       "npm:jsonld-context-parser@2.4.0": {

@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import type { ClientInterface, SparqlRequest } from "@worlds/client";
-import { z } from "npm:zod";
+import { z } from "zod";
 
 /**
  * ExecuteSparqlOptions defines the configuration options for the executeSparql tool.

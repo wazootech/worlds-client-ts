@@ -1,6 +1,6 @@
 import type { Client } from "@worlds/client";
 import { tool } from "ai";
-import { z } from "npm:zod";
+import { z } from "zod";
 
 /** createEvalTools creates the isolated tool set used by the Deno eval harness. */
 export function createEvalTools(client: Client) {

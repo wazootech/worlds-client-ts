@@ -4,7 +4,7 @@ import type {
   SearchRequest,
   SearchResponse,
 } from "@worlds/client";
-import { z } from "npm:zod";
+import { z } from "zod";
 
 /**
  * createSearchWorldTool creates an AI SDK tool for searching the knowledge base.
