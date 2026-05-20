@@ -317,6 +317,8 @@ async function checkGoldenSnapshots(
   suiteResult: EvalSuiteResult,
   selectedCases: EvalCaseDefinition[],
 ): Promise<GoldenComparisonIssue[]> {
+  const goldensDirectory = getGoldensDirectory();
+  await ensureDir(goldensDirectory);
   const issues: GoldenComparisonIssue[] = [];
 
   for (const testCase of selectedCases) {
