@@ -9,6 +9,10 @@ import {
   WORK_SEARCH_LABEL,
   WORK_SUBJECT_URI,
 } from "./world-fixture.ts";
+import {
+  PAPER_AUTHOR_LITERAL as SCHOLAR_AUTHOR_LITERAL,
+  PAPER_SEARCH_LABEL as SCHOLAR_PAPER_SEARCH_LABEL,
+} from "./world-fixture-scholar.ts";
 
 /** evalCases enumerates the phase-one scenarios for the Deno harness. */
 export const evalCases: EvalCaseDefinition[] = [
@@ -122,6 +126,21 @@ export const evalCases: EvalCaseDefinition[] = [
     golden: {
       output: {
         mode: "ignore",
+      },
+    },
+  },
+  {
+    id: "scholar-paper-author",
+    description:
+      "Scholar fixture resolves author literal via search then SPARQL",
+    fixtureId: "scholar",
+    prompt:
+      `Find the author of the paper with label "${SCHOLAR_PAPER_SEARCH_LABEL}". First call searchWorld with exactly "${SCHOLAR_PAPER_SEARCH_LABEL}". Then use one executeSparql SELECT that reads the vocab:author from the discovered paper URI. Answer with only the author literal.`,
+    maxSteps: 5,
+    golden: {
+      output: {
+        mode: "contains-substrings",
+        requiredSubstrings: [SCHOLAR_AUTHOR_LITERAL.toLowerCase()],
       },
     },
   },

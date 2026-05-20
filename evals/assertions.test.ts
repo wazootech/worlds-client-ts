@@ -12,6 +12,9 @@ import {
   EXPECTED_HOUSE_LITERAL,
   WORK_SUBJECT_URI,
 } from "./world-fixture.ts";
+import {
+  PAPER_AUTHOR_LITERAL as SCHOLAR_AUTHOR_LITERAL,
+} from "./world-fixture-scholar.ts";
 
 /** createEvalCaseResult builds a minimal case result for assertion routing tests. */
 function createEvalCaseResult(
@@ -114,6 +117,13 @@ const CASE_ASSERTION_NAMES: Record<string, string[]> = {
     "final-answer-author-correct",
   ],
   "no-tool-shortcut-resisted": ["used-required-tools", "step-count-bounded"],
+  "scholar-paper-author": [
+    "used-required-tools",
+    "search-before-sparql",
+    "sparql-handoff-valid",
+    "step-count-bounded",
+    "final-answer-author-correct",
+  ],
 };
 
 for (
@@ -153,6 +163,8 @@ for (
       ? `Author: ${AUTHOR_LITERAL}`
       : caseId === "search-miss-unknown-label"
       ? "No matching work was found in the graph."
+      : caseId === "scholar-paper-author"
+      ? `Author: ${SCHOLAR_AUTHOR_LITERAL}`
       : `The house is ${EXPECTED_HOUSE_LITERAL}.`;
 
     const result = applyAssertions(createEvalCaseResult({
