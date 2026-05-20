@@ -85,9 +85,10 @@ Types for results and goldens: `evals/types.ts`.
 `evals/assertions.test.ts`, `evals/tools.test.ts`, and
 `evals/agent-runner.test.ts`.
 
-**Credentialed evals** are opt-in: run locally with `.env`, or trigger
+**Credentialed evals** are opt-in: run locally with `.env`, trigger
 [`.github/workflows/evals.yml`](../.github/workflows/evals.yml) via
-`workflow_dispatch` after configuring the `GOOGLE_GENERATIVE_AI_API_KEY`
+`workflow_dispatch`, or rely on the **weekly schedule** (Monday 06:00 UTC,
+`--trials 10` baseline) after configuring the `GOOGLE_GENERATIVE_AI_API_KEY`
 repository secret. Golden snapshot checks are not a CI gate; behavioral
 assertions are.
 

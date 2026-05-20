@@ -1,6 +1,9 @@
 name: Agent evals
 
 on:
+  schedule:
+    # Weekly baseline (Monday 06:00 UTC). Requires GOOGLE_GENERATIVE_AI_API_KEY secret.
+    - cron: "0 6 * * 1"
   workflow_dispatch:
     inputs:
       filter:
@@ -10,7 +13,7 @@ on:
       trials:
         description: Trials per case (statistical mode)
         required: false
-        default: "1"
+        default: "10"
       min_pass_rate:
         description: Minimum per-case pass rate when trials > 1 (0-1)
         required: false
@@ -32,12 +35,16 @@ jobs:
             echo "GOOGLE_GENERATIVE_AI_API_KEY secret is not configured; skipping live evals."
             exit 0
           fi
-          ARGS=()
+          TRIALS="${{ github.event.inputs.trials }}"
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            TRIALS="10"
+          fi
+          if [ -z "$TRIALS" ]; then
+            TRIALS="10"
+          fi
+          ARGS=(--trials "$TRIALS")
           if [ -n "${{ github.event.inputs.filter }}" ]; then
             ARGS+=(--filter "${{ github.event.inputs.filter }}")
-          fi
-          if [ "${{ github.event.inputs.trials }}" != "1" ]; then
-            ARGS+=(--trials "${{ github.event.inputs.trials }}")
           fi
           if [ -n "${{ github.event.inputs.min_pass_rate }}" ]; then
             ARGS+=(--min-pass-rate "${{ github.event.inputs.min_pass_rate }}")
