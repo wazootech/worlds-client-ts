@@ -318,11 +318,12 @@ function printStatsSummary(statsResult: EvalStatsResult): void {
   console.log(`Statistical suite success: ${statsResult.success}`);
   console.log("");
 
+  const requiredPassRate = statsResult.minPassRate ?? 1;
   for (const caseRate of statsResult.casePassRates) {
     const casePercent = (caseRate.passRate * 100).toFixed(1);
     console.log(
       `[${
-        caseRate.passRate === 1 ? "PASS" : "FAIL"
+        caseRate.passRate >= requiredPassRate ? "PASS" : "FAIL"
       }] ${caseRate.description} — case pass rate ${caseRate.passCount}/${caseRate.trialCount} (${casePercent}%)`,
     );
     for (const assertionRate of caseRate.assertionPassRates) {

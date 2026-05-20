@@ -208,6 +208,24 @@ The eval runner defaults to the `google` provider with `gemini-3.1-flash-lite`.
 `EVAL_MODEL_ID` can select a different Google model, and `EVAL_PROVIDER_ID`
 currently accepts `google`.
 
+Live evals use the Gemini API free tier unless the configured
+`GOOGLE_GENERATIVE_AI_API_KEY` belongs to a paid-tier project. Free-tier quota
+is enforced per Google Cloud project across requests per minute (`RPM`), input
+tokens per minute (`TPM`), and requests per day (`RPD`); `RPD` resets at
+midnight Pacific time. The public Gemini pricing page confirms that
+`gemini-3.1-flash-lite` has free input/output tokens on the free tier, but it
+does not list project-specific `RPM`, `TPM`, or `RPD` values. Those numeric
+limits are visible only in the signed-in
+[AI Studio rate-limit page](https://aistudio.google.com/rate-limit) for the
+owning project. The current recorded `gemini-3.1-flash-lite` limits are
+`15 RPM`, `250K TPM`, and `500 RPD`; see `evals/README.md` before raising
+scheduled frequency or trial counts. Based on the eval cases and goldens
+committed when the eval docs were last updated, a full-suite trial uses 26 model
+requests in committed goldens and has a 38-request worst-case step budget. The
+weekly `--trials 10` baseline should therefore currently be planned as 260
+observed requests and 380 worst-case requests, paced over at least 18 to 26
+minutes to avoid the `15 RPM` limit.
+
 Rolling local eval output is written to `evals/results/latest.json` and is not
 committed. Curated provider-generated golden snapshots live under
 `evals/goldens/` so tool trajectories, final outputs, and assertion outcomes can

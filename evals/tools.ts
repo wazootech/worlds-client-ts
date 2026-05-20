@@ -13,9 +13,11 @@ export function createEvalTools(client: Client) {
   return {
     searchWorld: tool({
       description:
-        "Search the knowledge base for semantic statements or documents that match a query. Use this to find information about any entities or subjects in the graph.",
+        "Search the RDF knowledge graph for labels, keywords, and semantic statements. Use this first to discover candidate subject URIs. Pass discovered subject values into executeSparql instead of inventing URIs.",
       inputSchema: z.object({
-        query: z.string().describe("The text query or keywords to search for."),
+        query: z.string().describe(
+          "Exact label, keyword, or natural-language phrase to search for.",
+        ),
       }),
       execute: async (request: { query: string }) => {
         try {
@@ -34,10 +36,10 @@ export function createEvalTools(client: Client) {
     }),
     executeSparql: tool({
       description:
-        "Execute a SPARQL query against the knowledge base. Use this for complex, precise relational queries across the RDF graph.",
+        "Execute a read-only SPARQL SELECT or ASK query against the RDF graph. Use this after searchWorld to traverse exact predicates and return grounded binding values. Final answers should preserve literal binding values exactly.",
       inputSchema: z.object({
         query: z.string().describe(
-          "The raw SPARQL query string (SELECT or ASK).",
+          "The raw read-only SPARQL query string. Only SELECT and ASK are allowed.",
         ),
         baseIri: z.string().optional().describe(
           "Base IRI for the query execution.",

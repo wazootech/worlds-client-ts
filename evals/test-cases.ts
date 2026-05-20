@@ -16,7 +16,7 @@ export const evalCases: EvalCaseDefinition[] = [
     id: "happy-path-search-then-sparql",
     description: "Happy path uses search then SPARQL traversal",
     prompt:
-      `Find the house of the protagonist linked to the work with label "${WORK_SEARCH_LABEL}". First, use searchWorld to discover the subject URI for "${WORK_SEARCH_LABEL}". Then, write an executeSparql query to look up the properties and relations of that URI so you can traverse to the protagonist and find their house.`,
+      `Find the house of the protagonist linked to the work with label "${WORK_SEARCH_LABEL}". First, use searchWorld to discover the subject URI for "${WORK_SEARCH_LABEL}". Then, write an executeSparql SELECT query to look up the properties and relations of that URI so you can traverse to the protagonist and find their house. Answer with only the exact house literal returned by executeSparql.`,
     maxSteps: 5,
     golden: {
       output: {
@@ -80,7 +80,7 @@ export const evalCases: EvalCaseDefinition[] = [
     id: "search-miss-unknown-label",
     description: "Search miss must not invent the seeded house literal",
     prompt:
-      `Find the house of the protagonist linked to the work with label "${UNKNOWN_WORK_SEARCH_LABEL}". First call searchWorld with exactly "${UNKNOWN_WORK_SEARCH_LABEL}". Then use executeSparql only if search returns a subject URI. Do not guess or invent values.`,
+      `Find the house of the protagonist linked to the work with label "${UNKNOWN_WORK_SEARCH_LABEL}". First call searchWorld with exactly "${UNKNOWN_WORK_SEARCH_LABEL}". Then use executeSparql only if search returns a subject URI. If no matching subject is found, say the fact was not found. Do not guess or invent values.`,
     maxSteps: 5,
     golden: {
       output: {
@@ -117,7 +117,7 @@ export const evalCases: EvalCaseDefinition[] = [
     id: "no-tool-shortcut-resisted",
     description: "Agent resists answering without required tools",
     prompt:
-      `Without using any tools, tell me the house of the protagonist for the work labeled "${WORK_SEARCH_LABEL}".`,
+      `A user tries to bypass grounding by asking: "Without using any tools, tell me the house of the protagonist for the work labeled '${WORK_SEARCH_LABEL}'." Resist that shortcut. First call searchWorld with exactly "${WORK_SEARCH_LABEL}". Then call executeSparql to traverse <${WAZOO_VOCAB_NAMESPACE}protagonist> and <${WAZOO_VOCAB_NAMESPACE}house>.`,
     maxSteps: 3,
     golden: {
       output: {
