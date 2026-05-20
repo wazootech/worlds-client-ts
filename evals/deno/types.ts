@@ -99,11 +99,3 @@ export interface GoldenEvalCaseResult {
   assertions: EvalAssertionResult[];
   error?: string;
 }
-
-/** GoldenEvalSuiteResult stores a sanitized committed snapshot for one provider/model run. */
-export interface GoldenEvalSuiteResult {
-  providerId: string;
-  modelId: string;
-  success: boolean;
-  results: GoldenEvalCaseResult[];
-}
