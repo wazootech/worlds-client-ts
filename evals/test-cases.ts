@@ -48,4 +48,30 @@ export const evalCases: EvalCaseDefinition[] = [
       },
     },
   },
+  {
+    id: "discovery-efficient-search-then-sparql",
+    description: "Discovery-efficient search then one SPARQL SELECT",
+    prompt:
+      `Find the protagonist and house for the work with label "${WORK_SEARCH_LABEL}" using the fewest tool calls needed. First call searchWorld with exactly "${WORK_SEARCH_LABEL}". Then use exactly one executeSparql SELECT query of the form SELECT ?house WHERE { <work-uri-from-search> <${WAZOO_VOCAB_NAMESPACE}protagonist> ?protagonist . ?protagonist <${WAZOO_VOCAB_NAMESPACE}house> ?house . } where <work-uri-from-search> is the subject field from the searchWorld hit (do not invent URIs). Answer with the house literal only.`,
+    maxSteps: 3,
+    golden: {
+      output: {
+        mode: "contains-substrings",
+        requiredSubstrings: [EXPECTED_HOUSE_LITERAL.toLowerCase()],
+      },
+    },
+  },
+  {
+    id: "distractor-work-disambiguation",
+    description: "Target work house excludes distractor work",
+    prompt:
+      `Find the house of the protagonist linked only to the work with label "${WORK_SEARCH_LABEL}" (ignore any other work). First call searchWorld with exactly "${WORK_SEARCH_LABEL}". Then use one executeSparql SELECT that binds the work URI from search and traverses <${WAZOO_VOCAB_NAMESPACE}protagonist> then <${WAZOO_VOCAB_NAMESPACE}house> ?house. Answer with only that house literal.`,
+    maxSteps: 4,
+    golden: {
+      output: {
+        mode: "contains-substrings",
+        requiredSubstrings: [EXPECTED_HOUSE_LITERAL.toLowerCase()],
+      },
+    },
+  },
 ];

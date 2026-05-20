@@ -1,5 +1,8 @@
 import type { EvalAssertionResult, EvalCaseResult } from "./types.ts";
-import { EXPECTED_HOUSE_LITERAL } from "./world-fixture.ts";
+import {
+  DISTRACTOR_EXPECTED_HOUSE_LITERAL,
+  EXPECTED_HOUSE_LITERAL,
+} from "./world-fixture.ts";
 
 /** normalizeOutputText canonicalizes free-form final text before tolerant comparison. */
 function normalizeOutputText(value: string): string {
@@ -30,6 +33,47 @@ function extractSearchSubjects(searchResult: unknown): string[] {
     }
   }
   return subjects;
+}
+
+/** extractSparqlBindingLiterals collects literal values from a successful executeSparql result. */
+export function extractSparqlBindingLiterals(sparqlResult: unknown): string[] {
+  if (typeof sparqlResult !== "object" || sparqlResult === null) {
+    return [];
+  }
+
+  const toolResult = sparqlResult as { success?: boolean; data?: unknown };
+  if (!toolResult.success || toolResult.data === null) {
+    return [];
+  }
+
+  if (typeof toolResult.data !== "object" || toolResult.data === null) {
+    return [];
+  }
+
+  const bindings = (toolResult.data as {
+    results?: { bindings?: Array<Record<string, unknown>> };
+  }).results?.bindings;
+
+  if (!Array.isArray(bindings)) {
+    return [];
+  }
+
+  const literals: string[] = [];
+  for (const binding of bindings) {
+    for (const variable of Object.values(binding)) {
+      if (
+        typeof variable !== "object" || variable === null ||
+        !("value" in variable) || typeof variable.value !== "string"
+      ) {
+        continue;
+      }
+      const bindingValue = variable as { type?: string; value: string };
+      if (!bindingValue.type || bindingValue.type === "literal") {
+        literals.push(bindingValue.value);
+      }
+    }
+  }
+  return literals;
 }
 
 /** assertUsedRequiredTools verifies that both phase-one tools were called. */
@@ -117,6 +161,45 @@ function assertFinalAnswerCorrect(result: EvalCaseResult): EvalAssertionResult {
   };
 }
 
+/** assertSparqlAnswerGrounded verifies the expected house literal appears in SPARQL bindings. */
+function assertSparqlAnswerGrounded(
+  result: EvalCaseResult,
+  expectedLiteral: string = EXPECTED_HOUSE_LITERAL,
+): EvalAssertionResult {
+  const bindingLiterals = result.metadata.trajectory
+    .filter((record) => record.toolName === "executeSparql")
+    .flatMap((record) => extractSparqlBindingLiterals(record.result));
+
+  const pass = bindingLiterals.includes(expectedLiteral);
+  return {
+    name: "sparql-answer-grounded",
+    pass,
+    message: pass
+      ? undefined
+      : `Expected executeSparql binding literal "${expectedLiteral}"; observed literals: ${
+        bindingLiterals.length > 0 ? bindingLiterals.join(", ") : "(none)"
+      }`,
+  };
+}
+
+/** assertNotDistractorHouse verifies the final answer does not report the distractor house. */
+function assertNotDistractorHouse(result: EvalCaseResult): EvalAssertionResult {
+  const normalizedOutput = normalizeOutputText(result.output);
+  const distractorSubstring = normalizeOutputText(
+    DISTRACTOR_EXPECTED_HOUSE_LITERAL,
+  );
+  const pass = !normalizedOutput.includes(distractorSubstring);
+  return {
+    name: "not-distractor-house",
+    pass,
+    message: pass
+      ? undefined
+      : `Final answer must not contain distractor house "${DISTRACTOR_EXPECTED_HOUSE_LITERAL}"; got: ${
+        result.output.slice(0, 200)
+      }`,
+  };
+}
+
 /** assertUpdatesBlocked verifies the update guard produced the expected error. */
 function assertUpdatesBlocked(result: EvalCaseResult): EvalAssertionResult {
   const pass = result.metadata.trajectory.some((record) =>
@@ -141,6 +224,7 @@ export function applyAssertions(result: EvalCaseResult): EvalCaseResult {
       assertions.push(assertSearchBeforeSparql(result));
       assertions.push(assertSparqlHandoffValid(result));
       assertions.push(assertStepCountBounded(result, 5));
+      assertions.push(assertSparqlAnswerGrounded(result));
       assertions.push(assertFinalAnswerCorrect(result));
       break;
     case "sparql-updates-blocked":
@@ -150,7 +234,24 @@ export function applyAssertions(result: EvalCaseResult): EvalCaseResult {
     case "avoid-excessive-tool-loops":
       assertions.push(assertUsedRequiredTools(result));
       assertions.push(assertStepCountBounded(result, 3));
+      assertions.push(assertSparqlAnswerGrounded(result));
       assertions.push(assertFinalAnswerCorrect(result));
+      break;
+    case "discovery-efficient-search-then-sparql":
+      assertions.push(assertUsedRequiredTools(result));
+      assertions.push(assertSearchBeforeSparql(result));
+      assertions.push(assertSparqlHandoffValid(result));
+      assertions.push(assertStepCountBounded(result, 3));
+      assertions.push(assertSparqlAnswerGrounded(result));
+      assertions.push(assertFinalAnswerCorrect(result));
+      break;
+    case "distractor-work-disambiguation":
+      assertions.push(assertUsedRequiredTools(result));
+      assertions.push(assertSearchBeforeSparql(result));
+      assertions.push(assertSparqlHandoffValid(result));
+      assertions.push(assertSparqlAnswerGrounded(result));
+      assertions.push(assertFinalAnswerCorrect(result));
+      assertions.push(assertNotDistractorHouse(result));
       break;
     default:
       assertions.push({
