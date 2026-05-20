@@ -1,7 +1,7 @@
 {
-  "id": "avoid-excessive-tool-loops",
-  "description": "Agent avoids excessive tool loops",
-  "prompt": "Find the protagonist and house for the work with label \"q7Xm9pRw\" using the fewest tool calls needed. First call searchWorld with exactly \"q7Xm9pRw\". Then use one executeSparql SELECT query: SELECT ?house WHERE { <https://worlds.wazoo.dev/.well-known/genid/c4f8e2a91b0d7e3f> <https://worlds.wazoo.dev/vocab/protagonist> ?protagonist . ?protagonist <https://worlds.wazoo.dev/vocab/house> ?house . } The house value is a literal. Answer with the house name.",
+  "id": "distractor-work-disambiguation",
+  "description": "Target work house excludes distractor work",
+  "prompt": "Find the house of the protagonist linked only to the work with label \"q7Xm9pRw\" (ignore any other work). First call searchWorld with exactly \"q7Xm9pRw\". Then use one executeSparql SELECT that binds the work URI from search and traverses <https://worlds.wazoo.dev/vocab/protagonist> then <https://worlds.wazoo.dev/vocab/house> ?house. Answer with only that house literal.",
   "output": "pZ3kN8vQ",
   "success": true,
   "metadata": {
@@ -34,7 +34,7 @@
         "stepIndex": 1,
         "toolName": "executeSparql",
         "args": {
-          "query": "SELECT ?house WHERE { <https://worlds.wazoo.dev/.well-known/genid/c4f8e2a91b0d7e3f> <https://worlds.wazoo.dev/vocab/protagonist> ?protagonist . ?protagonist <https://worlds.wazoo.dev/vocab/house> ?house . }"
+          "query": "SELECT ?house WHERE {\n  <https://worlds.wazoo.dev/.well-known/genid/c4f8e2a91b0d7e3f> <https://worlds.wazoo.dev/vocab/protagonist> / <https://worlds.wazoo.dev/vocab/house> ?house .\n}"
         },
         "result": {
           "success": true,
@@ -65,7 +65,11 @@
       "pass": true
     },
     {
-      "name": "step-count-bounded",
+      "name": "search-before-sparql",
+      "pass": true
+    },
+    {
+      "name": "sparql-handoff-valid",
       "pass": true
     },
     {
@@ -74,6 +78,10 @@
     },
     {
       "name": "final-answer-correct",
+      "pass": true
+    },
+    {
+      "name": "not-distractor-house",
       "pass": true
     }
   ]

@@ -2,7 +2,7 @@
   "id": "happy-path-search-then-sparql",
   "description": "Happy path uses search then SPARQL traversal",
   "prompt": "Find the house of the protagonist linked to the work with label \"q7Xm9pRw\". First, use searchWorld to discover the subject URI for \"q7Xm9pRw\". Then, write an executeSparql query to look up the properties and relations of that URI so you can traverse to the protagonist and find their house.",
-  "output": "The protagonist of the work labeled \"q7Xm9pRw\" is associated with the house labeled \"pZ3kN8vQ\".",
+  "output": "The protagonist of the work with the label \"q7Xm9pRw\" is associated with the house labeled \"pZ3kN8vQ\".",
   "success": true,
   "metadata": {
     "providerId": "google",
@@ -141,6 +141,10 @@
     },
     {
       "name": "step-count-bounded",
+      "pass": true
+    },
+    {
+      "name": "sparql-answer-grounded",
       "pass": true
     },
     {

@@ -1,7 +1,7 @@
 {
-  "id": "avoid-excessive-tool-loops",
-  "description": "Agent avoids excessive tool loops",
-  "prompt": "Find the protagonist and house for the work with label \"q7Xm9pRw\" using the fewest tool calls needed. First call searchWorld with exactly \"q7Xm9pRw\". Then use one executeSparql SELECT query: SELECT ?house WHERE { <https://worlds.wazoo.dev/.well-known/genid/c4f8e2a91b0d7e3f> <https://worlds.wazoo.dev/vocab/protagonist> ?protagonist . ?protagonist <https://worlds.wazoo.dev/vocab/house> ?house . } The house value is a literal. Answer with the house name.",
+  "id": "discovery-efficient-search-then-sparql",
+  "description": "Discovery-efficient search then one SPARQL SELECT",
+  "prompt": "Find the protagonist and house for the work with label \"q7Xm9pRw\" using the fewest tool calls needed. First call searchWorld with exactly \"q7Xm9pRw\". Then use exactly one executeSparql SELECT query of the form SELECT ?house WHERE { <work-uri-from-search> <https://worlds.wazoo.dev/vocab/protagonist> ?protagonist . ?protagonist <https://worlds.wazoo.dev/vocab/house> ?house . } where <work-uri-from-search> is the subject field from the searchWorld hit (do not invent URIs). Answer with the house literal only.",
   "output": "pZ3kN8vQ",
   "success": true,
   "metadata": {
@@ -62,6 +62,14 @@
   "assertions": [
     {
       "name": "used-required-tools",
+      "pass": true
+    },
+    {
+      "name": "search-before-sparql",
+      "pass": true
+    },
+    {
+      "name": "sparql-handoff-valid",
       "pass": true
     },
     {
