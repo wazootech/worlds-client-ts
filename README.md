@@ -31,6 +31,14 @@ engine.
 
 Worlds delivers these features through an open-source TypeScript SDK.
 
+> [!IMPORTANT]
+> Production recommendation: use Turso Cloud through `provideLibsql(...)` for
+> production deployments and scale. The RDFJS-backed and Deno Kv-backed
+> search/index paths, including topologies built around `RdfjsSearchIndex` and
+> `DenokvSearchIndex`, are best suited to local development, tests, and
+> constrained single-process demos. They are not the recommended production
+> topology.
+
 ## Use Worlds
 
 <table>
@@ -53,7 +61,8 @@ ACID-compliant graph syncing.
 
 Enable lightweight, stateless graph execution via Deno Kv on the edge.
 
-Maintenance-free serverless storage.
+Best for prototypes, tests, and constrained single-process deployments rather
+than the primary production recommendation.
 
 [→ View Edge Benchmarks](https://github.com/wazootech/worlds-client-ts/issues/11)
 
@@ -75,6 +84,9 @@ The Worlds Client SDK provides agents with durable semantic context.
 
 Compose your client using optimized persistence providers.
 
+For production-scale deployments, prefer LibSQL-compatible infrastructure such
+as Turso Cloud through `provideLibsql(...)`.
+
 ```typescript
 import { Client } from "@worlds/client";
 import { provideLibsql } from "@worlds/client/providers/libsql";
@@ -84,11 +96,13 @@ import { createClient } from "@libsql/client";
 // 1. In-Memory / Transient Graph (Default)
 const client = new Client();
 
-// 2. Local SQLite Persistence via LibSQL
+// 2. Local SQLite or Turso Persistence via LibSQL (recommended for production)
 const db = createClient({ url: "file:./worlds.db" });
 const sqliteClient = new Client(await provideLibsql({ client: db }));
 
 // 3. Stateless Edge Deployment via Deno Kv
+// Useful for prototyping and constrained edge flows, not the primary
+// production recommendation for search/index workloads.
 const kv = await Deno.openKv();
 const kvClient = new Client(provideDenoKv({ kv }));
 ```
@@ -154,6 +168,9 @@ deno task example:hello-world
 
 Full disk-based synchronization, ACID mutations, and native FTS indexing.
 
+This is the production-recommended path, including Turso Cloud deployments via
+`provideLibsql(...)`.
+
 ```bash
 deno task example:libsql-hello-world
 ```
@@ -161,6 +178,10 @@ deno task example:libsql-hello-world
 ### Stateless Deno Kv
 
 Per-operation lazy hydration running in zero-maintenance edge contexts.
+
+This path is useful for prototypes and constrained edge execution, but it is not
+the recommended production topology when you need the full API surface and
+search/index behavior at scale.
 
 ```bash
 deno task example:denokv-hello-world
@@ -174,16 +195,62 @@ Wrap the Client as Vercel AI SDK tools for autonomous LLM reasoning.
 deno task example:ai-sdk-hello-world
 ```
 
+### Agent eval harness
+
+Run the Deno-native eval harness for the AI SDK tool flow against a seeded
+in-memory LibSQL world.
+
+```bash
+deno task evals
+```
+
+The eval runner defaults to the `google` provider with `gemini-3.1-flash-lite`.
+`EVAL_MODEL_ID` can select a different Google model, and `EVAL_PROVIDER_ID`
+currently accepts `google`.
+
+Rolling local eval output is written to `evals/results/latest.json` and is not
+committed. Curated provider-generated golden snapshots live under
+`evals/goldens/` so tool trajectories, final outputs, and assertion outcomes can
+be reviewed without spending tokens again.
+
+You can target eval cases using a Deno-test-like `--filter` flag:
+
+```bash
+deno task evals --list
+deno task evals --filter happy-path
+deno task evals --filter "/sparql|loop/i"
+deno task evals --filter nonexistent --permit-no-files
+```
+
+Use explicit golden operations when you want to bless or verify committed
+snapshots:
+
+```bash
+deno task evals --filter happy-path --update-goldens
+deno task evals --filter happy-path --check-goldens
+```
+
+Golden files are committed once blessed. Run `--update-goldens` first to create
+golden snapshots for a given case, then `--check-goldens` on subsequent runs to
+detect regressions against the committed baseline.
+
+Current eval case IDs:
+
+- `happy-path-search-then-sparql`
+- `sparql-updates-blocked`
+- `avoid-excessive-tool-loops`
+
 ## Development workflow
 
 All CI checks must pass before merging updates.
 
-| Command          | Description                                  |
-| :--------------- | :------------------------------------------- |
-| `deno fmt`       | Format all code using native Deno formatter. |
-| `deno task lint` | Run strict static analysis checks.           |
-| `deno task test` | Execute comprehensive test suites.           |
-| `deno task ci`   | Run complete CI pipeline sequentially.       |
+| Command           | Description                                  |
+| :---------------- | :------------------------------------------- |
+| `deno fmt`        | Format all code using native Deno formatter. |
+| `deno task lint`  | Run strict static analysis checks.           |
+| `deno task test`  | Execute comprehensive test suites.           |
+| `deno task evals` | Run the agent eval harness.                  |
+| `deno task ci`    | Run complete CI pipeline sequentially.       |
 
 ## Quicklinks
 

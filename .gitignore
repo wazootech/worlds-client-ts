@@ -4,3 +4,4 @@ node_modules
 .env
 *.log
 src/client/providers/tfjs-universal-sentence-encoder/models/
+evals/results/

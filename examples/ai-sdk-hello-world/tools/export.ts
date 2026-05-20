@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import type { ClientInterface, ExportRequest } from "@worlds/client";
-import { z } from "npm:zod";
+import { z } from "zod";
 
 /**
  * SerializedExportRequest is a discriminated ExportRequest type that only allows "serialized" formats.

@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import type { ClientInterface, ImportRequest } from "@worlds/client";
-import { z } from "npm:zod";
+import { z } from "zod";
 
 /**
  * SerializedImportRequest is a discriminated ImportRequest type that only allows "serialized" sources.

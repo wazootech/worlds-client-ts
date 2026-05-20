@@ -1,0 +1,76 @@
+{
+  "id": "avoid-excessive-tool-loops",
+  "description": "Agent avoids excessive tool loops",
+  "prompt": "Find Harry Potter's protagonist and house with the fewest tool calls needed. First call searchWorld with exactly \"Harry Potter\". Then use one executeSparql SELECT query: SELECT ?house WHERE { <http://example.com/HarryPotter> <http://example.com/protagonist> ?protagonist . ?protagonist <http://example.com/house> ?house . } The house value is a literal. Answer with the house name.",
+  "output": "Gryffindor",
+  "success": true,
+  "metadata": {
+    "providerId": "google",
+    "modelId": "gemini-3.1-flash-lite",
+    "stepCount": 3,
+    "finishReason": "stop",
+    "trajectory": [
+      {
+        "stepIndex": 0,
+        "toolName": "searchWorld",
+        "args": {
+          "query": "Harry Potter"
+        },
+        "result": {
+          "success": true,
+          "results": [
+            {
+              "id": "PGh0dHA6Ly9leGFtcGxlLmNvbS9IYXJyeVBvdHRlcj4gPGh0dHA6Ly93d3cudzMub3JnLzIwMDAvMDEvcmRmLXNjaGVtYSNsYWJlbD4gIkhhcnJ5IFBvdHRlciIgLgo",
+              "subject": "http://example.com/HarryPotter",
+              "predicate": "http://www.w3.org/2000/01/rdf-schema#label",
+              "graph": "",
+              "text": "Harry Potter",
+              "score": 0.01639344262295082
+            }
+          ]
+        }
+      },
+      {
+        "stepIndex": 1,
+        "toolName": "executeSparql",
+        "args": {
+          "query": "SELECT ?house WHERE { <http://example.com/HarryPotter> <http://example.com/protagonist> ?protagonist . ?protagonist <http://example.com/house> ?house . }"
+        },
+        "result": {
+          "success": true,
+          "data": {
+            "head": {
+              "vars": [
+                "house"
+              ]
+            },
+            "results": {
+              "bindings": [
+                {
+                  "house": {
+                    "type": "literal",
+                    "value": "Gryffindor"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    ]
+  },
+  "assertions": [
+    {
+      "name": "used-required-tools",
+      "pass": true
+    },
+    {
+      "name": "step-count-bounded",
+      "pass": true
+    },
+    {
+      "name": "final-answer-correct",
+      "pass": true
+    }
+  ]
+}
