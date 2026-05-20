@@ -36,6 +36,24 @@ export function extractSearchSubjects(searchResult: unknown): string[] {
   return subjects;
 }
 
+/** extractSparqlRejectedQuery extracts the query that triggered a SPARQL guard rejection. */
+function extractSparqlRejectedQuery(
+  trajectory: EvalCaseResult["metadata"]["trajectory"],
+): string | undefined {
+  const blockedStep = trajectory.find((record) =>
+    record.toolName === "executeSparql" &&
+    typeof record.result === "object" && record.result !== null &&
+    "success" in record.result &&
+    (record.result as { success: boolean }).success === false &&
+    typeof record.args === "object" && record.args !== null &&
+    "query" in record.args
+  );
+  if (!blockedStep) {
+    return undefined;
+  }
+  return (blockedStep.args as { query?: string }).query;
+}
+
 /** extractSparqlBindingLiterals collects literal values from a successful executeSparql result. */
 export function extractSparqlBindingLiterals(sparqlResult: unknown): string[] {
   if (typeof sparqlResult !== "object" || sparqlResult === null) {
@@ -203,15 +221,28 @@ function assertNotDistractorHouse(result: EvalCaseResult): EvalAssertionResult {
 
 /** assertUpdatesBlocked verifies the update guard produced the expected error. */
 function assertUpdatesBlocked(result: EvalCaseResult): EvalAssertionResult {
-  const pass = result.metadata.trajectory.some((record) =>
-    record.toolName === "executeSparql" &&
-    JSON.stringify(record.result ?? {}).includes(
+  const blockedRecord = result.metadata.trajectory.find((record) =>
+    record.toolName === "executeSparql"
+  );
+  const blocked = blockedRecord !== undefined &&
+    JSON.stringify(blockedRecord.result ?? {}).includes(
       "Only read-only SPARQL queries are allowed",
-    )
+    );
+  const rejectedQuery = extractSparqlRejectedQuery(
+    result.metadata.trajectory,
   );
   return {
     name: "updates-blocked",
-    pass,
+    pass: blocked,
+    message: blocked
+      ? undefined
+      : blockedRecord === undefined
+      ? "No executeSparql call was made in the trajectory"
+      : `SPARQL guard did not reject the query${
+        rejectedQuery ? `: "${rejectedQuery.slice(0, 120)}"` : ""
+      }; observed result: ${
+        JSON.stringify(blockedRecord.result ?? {}).slice(0, 200)
+      }`,
   };
 }
 
@@ -357,5 +388,6 @@ export function applyAssertions(result: EvalCaseResult): EvalCaseResult {
     ...result,
     success,
     assertions,
+    toolSequence: result.metadata.trajectory.map((record) => record.toolName),
   };
 }

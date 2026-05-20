@@ -358,6 +358,7 @@ function sanitizeGoldenCaseResult(
       trajectory: result.metadata.trajectory,
     },
     assertions: result.assertions,
+    toolSequence: result.toolSequence,
     error: result.error,
   };
 }

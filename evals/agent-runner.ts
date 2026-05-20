@@ -84,6 +84,7 @@ export async function runEvalCase(
         trajectory: buildTrajectory(result.steps),
       },
       assertions: [],
+      toolSequence: [],
     };
   } catch (error) {
     return {
@@ -97,6 +98,7 @@ export async function runEvalCase(
         latencyMs: Date.now() - startedAt,
       },
       assertions: [],
+      toolSequence: [],
       error: error instanceof Error ? error.message : String(error),
     };
   }
