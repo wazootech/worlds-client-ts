@@ -515,6 +515,9 @@ if (import.meta.main) {
   }
 
   if (cliOptions.checkGoldens) {
+    console.log(
+      "Note: golden trajectories are representative snapshots; assertion results are the behavioral gate.",
+    );
     const issues = await checkGoldenSnapshots(suiteResult, selectedEvalCases);
     printGoldenComparisonIssues(issues);
     if (issues.length > 0) {
