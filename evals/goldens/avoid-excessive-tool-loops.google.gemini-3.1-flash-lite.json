@@ -1,0 +1,67 @@
+{
+  "id": "avoid-excessive-tool-loops",
+  "description": "Agent avoids excessive tool loops",
+  "prompt": "Find Harry Potter's protagonist and house with the fewest tool calls needed. Use the available tools to verify the answer.",
+  "output": "",
+  "success": true,
+  "metadata": {
+    "providerId": "google",
+    "modelId": "gemini-3.1-flash-lite",
+    "stepCount": 3,
+    "finishReason": "tool-calls",
+    "trajectory": [
+      {
+        "stepIndex": 0,
+        "toolName": "searchWorld",
+        "args": {
+          "query": "Harry Potter protagonist and house"
+        },
+        "result": {
+          "success": true,
+          "results": []
+        }
+      },
+      {
+        "stepIndex": 1,
+        "toolName": "executeSparql",
+        "args": {
+          "query": "SELECT ?house WHERE {\n  ?character rdfs:label \"Harry Potter\"@en .\n  ?character <http://example.org/ontology/house> ?house .\n}"
+        },
+        "result": {
+          "success": true,
+          "data": {
+            "head": {
+              "vars": [
+                "house"
+              ]
+            },
+            "results": {
+              "bindings": []
+            }
+          }
+        }
+      },
+      {
+        "stepIndex": 2,
+        "toolName": "searchWorld",
+        "args": {
+          "query": "Harry Potter protagonist"
+        },
+        "result": {
+          "success": true,
+          "results": []
+        }
+      }
+    ]
+  },
+  "assertions": [
+    {
+      "name": "used-required-tools",
+      "pass": true
+    },
+    {
+      "name": "step-count-bounded",
+      "pass": true
+    }
+  ]
+}

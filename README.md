@@ -208,10 +208,10 @@ The eval runner defaults to the `google` provider with `gemini-3.1-flash-lite`
 and can be overridden with `EVAL_PROVIDER_ID` and `EVAL_MODEL_ID` environment
 variables.
 
-Rolling local eval output is written to `evals/deno/results/latest.json` and is
-not committed. Curated provider-generated golden snapshots live under
-`evals/deno/goldens/` so tool trajectories, final outputs, and assertion
-outcomes can be reviewed without spending tokens again.
+Rolling local eval output is written to `evals/results/latest.json` and is not
+committed. Curated provider-generated golden snapshots live under
+`evals/goldens/` so tool trajectories, final outputs, and assertion outcomes can
+be reviewed without spending tokens again.
 
 You can target eval cases using a Deno-test-like `--filter` flag:
 

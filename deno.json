@@ -8,7 +8,8 @@
     "./providers/tfjs-universal-sentence-encoder": "./src/client/providers/tfjs-universal-sentence-encoder/mod.ts",
     "./providers/comunica": "./src/client/providers/comunica/mod.ts",
     "./providers/rdfjs": "./src/client/providers/rdfjs/mod.ts",
-    "./providers/denokv": "./src/client/providers/denokv/provide-denokv.ts"
+    "./providers/rdfjs/n3": "./src/client/providers/rdfjs/n3/mod.ts",
+    "./providers/denokv": "./src/client/providers/denokv/mod.ts"
   },
   "imports": {
     "#/": "./src/",
@@ -44,7 +45,7 @@
     "example:libsql-hello-world": "deno -A ./examples/libsql-hello-world/main.ts",
     "example:denokv-hello-world": "deno -A --unstable-kv ./examples/denokv-hello-world/main.ts",
     "example:ai-sdk-hello-world": "deno -A --env ./examples/ai-sdk-hello-world/main.ts",
-    "evals": "deno run -A --env ./evals/deno/run-evals.ts",
+    "evals": "deno run -A --env ./evals/run-evals.ts",
     "fmt": "deno fmt",
     "fmt:check": "deno fmt --check",
     "lint": "deno lint",
