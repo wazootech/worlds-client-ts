@@ -31,7 +31,7 @@ export const evalCases: EvalCaseDefinition[] = [
     id: "avoid-excessive-tool-loops",
     description: "Agent avoids excessive tool loops",
     prompt:
-      "Find Harry Potter's protagonist and house with the fewest tool calls needed. Use the available tools to verify the answer.",
+      'Find Harry Potter\'s protagonist and house with the fewest tool calls needed. First call searchWorld with exactly "Harry Potter". Then use one executeSparql SELECT query: SELECT ?house WHERE { <http://example.com/HarryPotter> <http://example.com/protagonist> ?protagonist . ?protagonist <http://example.com/house> ?house . } The house value is a literal. Answer with the house name.',
     maxSteps: 3,
     golden: {
       output: {

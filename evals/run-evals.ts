@@ -12,6 +12,7 @@ import type {
 
 const providerId = Deno.env.get("EVAL_PROVIDER_ID") ?? "google";
 const modelId = Deno.env.get("EVAL_MODEL_ID") ?? "gemini-3.1-flash-lite";
+const supportedProviderIds = new Set(["google"]);
 
 interface EvalCliOptions {
   filter?: RegExp;
@@ -24,6 +25,15 @@ interface EvalCliOptions {
 interface GoldenComparisonIssue {
   field: string;
   message: string;
+}
+
+/** validateProviderId prevents mislabeled provider metadata and golden paths. */
+function validateProviderId(provider: string): void {
+  if (!supportedProviderIds.has(provider)) {
+    throw new Error(
+      `Unsupported EVAL_PROVIDER_ID: ${provider}. Supported providers: google`,
+    );
+  }
 }
 
 /** escapeRegExp escapes a literal string for safe regex matching. */
@@ -303,11 +313,63 @@ async function writeGoldenSnapshots(
       suiteResult.modelId,
     );
     const goldenResult = sanitizeGoldenCaseResult(caseResult);
-    await Deno.writeTextFile(outputPath, JSON.stringify(goldenResult, null, 2));
+    await Deno.writeTextFile(
+      outputPath,
+      `${JSON.stringify(goldenResult, null, 2)}\n`,
+    );
     writtenPaths.push(outputPath);
   }
 
   return writtenPaths;
+}
+
+/** validateGoldenUpdateInputs rejects failed or policy-invalid results before blessing. */
+function validateGoldenUpdateInputs(
+  suiteResult: EvalSuiteResult,
+  selectedCases: EvalCaseDefinition[],
+): void {
+  const invalidCases: string[] = [];
+
+  for (const testCase of selectedCases) {
+    const caseResult = suiteResult.results.find((result) =>
+      result.id === testCase.id
+    );
+
+    if (!caseResult) {
+      invalidCases.push(`${testCase.id}: missing result`);
+      continue;
+    }
+
+    if (!caseResult.success) {
+      const failedAssertions = caseResult.assertions
+        .filter((assertion) => !assertion.pass)
+        .map((assertion) => assertion.name)
+        .join(", ");
+      invalidCases.push(
+        `${testCase.id}: unsuccessful result${
+          failedAssertions ? ` (${failedAssertions})` : ""
+        }`,
+      );
+      continue;
+    }
+
+    const policyIssues = compareGoldenOutput(
+      testCase,
+      sanitizeGoldenCaseResult(caseResult),
+      sanitizeGoldenCaseResult(caseResult),
+    );
+    if (policyIssues.length > 0) {
+      invalidCases.push(`${testCase.id}: ${policyIssues[0].message}`);
+    }
+  }
+
+  if (invalidCases.length > 0) {
+    throw new Error(
+      `Refusing to update golden snapshots for invalid results: ${
+        invalidCases.join("; ")
+      }`,
+    );
+  }
 }
 
 /** checkGoldenSnapshots compares selected cases against committed per-case goldens. */
@@ -403,6 +465,8 @@ function printGoldenComparisonIssues(issues: GoldenComparisonIssue[]): void {
 }
 
 if (import.meta.main) {
+  validateProviderId(providerId);
+
   const cliOptions = parseCliOptions(Deno.args);
   const selectedEvalCases = selectEvalCases(evalCases, cliOptions);
 
@@ -440,6 +504,7 @@ if (import.meta.main) {
   console.log(`Wrote results to ${outputPath}`);
 
   if (cliOptions.updateGoldens) {
+    validateGoldenUpdateInputs(suiteResult, selectedEvalCases);
     const writtenPaths = await writeGoldenSnapshots(
       suiteResult,
       selectedEvalCases,

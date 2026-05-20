@@ -104,6 +104,7 @@ export function applyAssertions(result: EvalCaseResult): EvalCaseResult {
     case "avoid-excessive-tool-loops":
       assertions.push(assertUsedRequiredTools(result));
       assertions.push(assertStepCountBounded(result, 3));
+      assertions.push(assertFinalAnswerCorrect(result));
       break;
     default:
       assertions.push({
