@@ -3,7 +3,7 @@ import { tool } from "ai";
 import { z } from "zod";
 
 /** isReadOnlySparqlQuery reports whether a query begins with an allowed read-only form. */
-function isReadOnlySparqlQuery(query: string): boolean {
+export function isReadOnlySparqlQuery(query: string): boolean {
   const normalizedQuery = query.trim().replace(/^(?:#.*\n\s*)+/, "");
   return /^(SELECT|ASK)\b/i.test(normalizedQuery);
 }

@@ -10,7 +10,7 @@ function normalizeOutputText(value: string): string {
 }
 
 /** extractSearchSubjects collects subject IRIs from a searchWorld tool result. */
-function extractSearchSubjects(searchResult: unknown): string[] {
+export function extractSearchSubjects(searchResult: unknown): string[] {
   if (
     typeof searchResult !== "object" || searchResult === null ||
     !("results" in searchResult)

@@ -9,7 +9,7 @@ import type {
 import { createSeededWorldClient } from "./world-fixture.ts";
 
 /** buildTrajectory flattens the AI SDK step history into a tool sequence. */
-function buildTrajectory(
+export function buildTrajectory(
   steps: Array<{
     toolCalls: Array<{
       toolName: string;
