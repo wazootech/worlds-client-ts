@@ -230,6 +230,10 @@ deno task evals --filter happy-path --update-goldens
 deno task evals --filter happy-path --check-goldens
 ```
 
+Golden files are committed once blessed. Run `--update-goldens` first to create
+golden snapshots for a given case, then `--check-goldens` on subsequent runs to
+detect regressions against the committed baseline.
+
 Current eval case IDs:
 
 - `happy-path-search-then-sparql`
