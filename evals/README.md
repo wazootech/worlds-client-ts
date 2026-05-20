@@ -11,6 +11,24 @@ framework. See
 recorded decision (opaque genid fixture, fixture-specific assertions, golden
 trajectories as representative snapshots).
 
+## Evaluation policy
+
+- Behavior-changing pull requests should include eval evidence appropriate to
+  their risk: unit tests for deterministic harness logic, live smoke output for
+  agent behavior changes, and multi-trial output when reliability is the claim.
+- Deterministic assertions are the pass/fail gate. Prefer code checks over LLM
+  judging for tool use, SPARQL handoff, grounding, guard behavior, and step
+  budgets.
+- Golden trajectories are review artifacts, not the primary correctness signal.
+  Re-bless them only after the deterministic assertions pass.
+- Incomplete, rate-limited, or credential-skipped live runs are operational
+  signals only; do not cite them as benchmark evidence.
+- Add real dogfooding failures back into `evals/test-cases.ts` and
+  `evals/assertions.ts` so important regressions stay caught.
+- Keep the current lane narrow: smoke harness now, candidate-style reliability
+  checks with `--trials` when useful, and no formal benchmark claims until the
+  scenario set and metrics are stable.
+
 ## Environment
 
 | Variable                       |    Required     | Default                 | Purpose                                         |
