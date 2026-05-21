@@ -28,7 +28,10 @@ deno bench --allow-all benchmarks/sparql-hexastore-crossover.bench.ts
 
 Compares **hydrate+N3** (`createLibsqlN3ClientOptions` from
 `@worlds/client/adapters/libsql/n3`) vs **libsqlStore**
-(`createLibsqlClientOptions` from `@worlds/client/adapters/libsql`). See
+(`createLibsqlClientOptions` from `@worlds/client/adapters/libsql`). Canonical
+post-preload crossover write-up:
+[discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69).
+Earlier context:
 [discussion #45](https://github.com/wazootech/worlds-client-ts/discussions/45).
 
 ## Measurement notes
@@ -151,8 +154,8 @@ chunked hydration (`DEFAULT_HYDRATION_BATCH_SIZE = 1000`).
 ## SPARQL crossover results template
 
 Paste into
-[discussion #45](https://github.com/wazootech/worlds-client-ts/discussions/45)
-or release notes:
+[discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69)
+(post-preload) or release notes:
 
 | Quads | Query shape | Backend     | Avg |
 | :---- | :---------- | :---------- | :-- |
