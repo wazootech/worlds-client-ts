@@ -12,5 +12,8 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v6
+      - uses: denoland/setup-deno@v2
+      - name: Run CI checks
+        run: deno task ci
       - name: Publish package
         run: npx jsr publish

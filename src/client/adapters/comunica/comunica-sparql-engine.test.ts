@@ -206,8 +206,9 @@ Deno.test(
     const sparqlEngine = new ComunicaSparqlEngine({
       queryEngine,
       store,
-      onVoid: async () => {
+      onVoid: () => {
         voidInvoked = true;
+        return Promise.resolve();
       },
     });
 
@@ -328,39 +329,45 @@ function createTimeoutEngine(): ComunicaQueryEngine {
 
 function createUnsupportedResultEngine(): ComunicaQueryEngine {
   return {
-    query: async () => ({
-      resultType: "quads",
-      execute: async () => [],
-    }),
+    query: () =>
+      Promise.resolve({
+        resultType: "quads",
+        execute: () => Promise.resolve([]),
+      }),
   };
 }
 
 function createBindingsWithoutMetadataEngine(): ComunicaQueryEngine {
   return {
-    query: async () => ({
-      resultType: "bindings",
-      execute: async () => createImmediateEndStream<ComunicaBinding>(),
-    }),
+    query: () =>
+      Promise.resolve({
+        resultType: "bindings",
+        execute: () =>
+          Promise.resolve(createImmediateEndStream<ComunicaBinding>()),
+      }),
   };
 }
 
 function createBindingsErrorStreamEngine(): ComunicaQueryEngine {
   return {
-    query: async () => ({
-      resultType: "bindings",
-      metadata: async () => ({
-        variables: [DataFactory.variable("s")],
+    query: () =>
+      Promise.resolve({
+        resultType: "bindings",
+        metadata: () =>
+          Promise.resolve({
+            variables: [DataFactory.variable("s")],
+          }),
+        execute: () => Promise.resolve(createErrorBindingsStream()),
       }),
-      execute: async () => createErrorBindingsStream(),
-    }),
   };
 }
 
 function createNonBooleanAskEngine(): ComunicaQueryEngine {
   return {
-    query: async () => ({
-      resultType: "boolean",
-      execute: async () => "not-a-boolean",
-    }),
+    query: () =>
+      Promise.resolve({
+        resultType: "boolean",
+        execute: () => Promise.resolve("not-a-boolean"),
+      }),
   };
 }

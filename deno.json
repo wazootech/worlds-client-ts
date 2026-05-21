@@ -1,6 +1,6 @@
 {
   "name": "@worlds/client",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "nodeModulesDir": "auto",
   "exports": {
     ".": "./src/mod.ts",
@@ -17,8 +17,20 @@
     "./adapters/denokv": "./src/client/adapters/denokv/mod.ts"
   },
   "imports": {
-    "ai": "npm:ai@^6.0.185",
-    "@ai-sdk/google": "npm:@ai-sdk/google@^3.0.75",
+    "@worlds/client": "./src/mod.ts",
+    "@worlds/client/quad-store": "./src/client/quad-store/mod.ts",
+    "@worlds/client/search-index": "./src/client/search-index/mod.ts",
+    "@worlds/client/search-index/embedding-service": "./src/client/search-index/embedding-service/mod.ts",
+    "@worlds/client/search-index/quad-chunker": "./src/client/search-index/quad-chunker/mod.ts",
+    "@worlds/client/sparql-engine": "./src/client/sparql-engine/mod.ts",
+    "@worlds/client/adapters/libsql": "./src/client/adapters/libsql/mod.ts",
+    "@worlds/client/adapters/tfjs-universal-sentence-encoder": "./src/client/adapters/tfjs-universal-sentence-encoder/mod.ts",
+    "@worlds/client/adapters/comunica": "./src/client/adapters/comunica/mod.ts",
+    "@worlds/client/adapters/rdfjs": "./src/client/adapters/rdfjs/mod.ts",
+    "@worlds/client/adapters/rdfjs/n3": "./src/client/adapters/rdfjs/n3/mod.ts",
+    "@worlds/client/adapters/denokv": "./src/client/adapters/denokv/mod.ts",
+    "ai": "npm:ai@^6.0.188",
+    "@ai-sdk/google": "npm:@ai-sdk/google@^3.0.78",
     "@comunica/query-sparql-rdfjs-lite": "npm:@comunica/query-sparql-rdfjs-lite@^5.2.2",
     "@rdfjs/types": "npm:@rdfjs/types@^2.0.1",
     "@libsql/client": "npm:@libsql/client@^0.17.3",

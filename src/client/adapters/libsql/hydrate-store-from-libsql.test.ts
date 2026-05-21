@@ -236,7 +236,7 @@ Deno.test(
   "hydrateStoreFromLibsql - skips corrupt rows without aborting hydration",
   async () => {
     const client = {
-      execute: async () => ({
+      execute: () => ({
         columns: [],
         rows: [
           {

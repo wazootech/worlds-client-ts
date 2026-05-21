@@ -813,8 +813,9 @@ Deno.test("LibsqlStore.flush - is a no-op when both buffers are empty", async ()
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
   let flushHandlerCalls = 0;
-  const store = new LibsqlStore(db, testBuilder, async () => {
+  const store = new LibsqlStore(db, testBuilder, () => {
     flushHandlerCalls++;
+    return Promise.resolve();
   });
 
   await store.flush();
