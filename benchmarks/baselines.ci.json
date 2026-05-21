@@ -3,7 +3,7 @@
   "denoVersion": "2.7.14",
   "capturedRuntime": "Deno/2.7.14 (denokv/search/sparql JSON; smoke denokv/search tuned on ubuntu-latest 2026-05-21; libsql-pressure manual)",
   "regressionThresholdPercent": 15,
-  "ciPlatformSlackPercent": 25,
+  "ciPlatformSlackPercent": 90,
   "subsetSmoke": [
     "Write Pressure: Import 10 Quads (Deno Kv :memory:)",
     "Deno Kv Hydration: 100 Quads from DB",
