@@ -1,5 +1,5 @@
 import { assertEquals, assertExists } from "@std/assert";
-import { createClient as createLibsqlDatabaseClient } from "@libsql/client";
+import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory, Store } from "n3";
 import { Client } from "@worlds/client";
@@ -12,7 +12,7 @@ const queryEngine = new QueryEngine();
 
 Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availability", async (t) => {
   // 1. Initialize ephemeral environment
-  const db = createLibsqlDatabaseClient({ url: ":memory:" });
+  const db = createClient({ url: ":memory:" });
   const embeddingService = new FakeEmbeddingService();
 
   const client = new Client(
@@ -194,7 +194,7 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
   await t.step(
     "Scenario 5: dataset replace removes stale rows and keeps survivor",
     async () => {
-      const db = createLibsqlDatabaseClient({ url: ":memory:" });
+      const db = createClient({ url: ":memory:" });
       const embeddingService = new FakeEmbeddingService();
       const client = new Client(
         await createLibsqlClientOptions({ client: db, embeddingService }),
@@ -260,7 +260,7 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
   await t.step(
     "Scenario 6: serialized replace removes stale rows and keeps survivor",
     async () => {
-      const db = createLibsqlDatabaseClient({ url: ":memory:" });
+      const db = createClient({ url: ":memory:" });
       const embeddingService = new FakeEmbeddingService();
       const client = new Client(
         await createLibsqlClientOptions({ client: db, embeddingService }),
@@ -325,7 +325,7 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
 });
 
 Deno.test("QuadFilter Integration: enables hybrid partitioning persisting specific graphs while keeping others ephemeral", async () => {
-  const db = createLibsqlDatabaseClient({ url: ":memory:" });
+  const db = createClient({ url: ":memory:" });
   const embeddingService = new FakeEmbeddingService();
 
   const PERSISTENT_GRAPH = "http://worlds.wazoo.dev/.well-known/durable";

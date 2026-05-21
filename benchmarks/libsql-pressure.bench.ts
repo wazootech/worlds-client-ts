@@ -1,4 +1,4 @@
-import { createClient as createLibsqlClient } from "@libsql/client";
+import { createClient } from "@libsql/client";
 import { Store } from "n3";
 import { Client } from "@worlds/client";
 import { createLibsqlClientOptions } from "@worlds/client/adapters/libsql";
@@ -17,9 +17,9 @@ const payloadLarge = generateSyntheticQuads(1000);
  */
 async function setupIsolatedClient(): Promise<{
   client: Client;
-  db: ReturnType<typeof createLibsqlClient>;
+  db: ReturnType<typeof createClient>;
 }> {
-  const db = createLibsqlClient({ url: ":memory:" });
+  const db = createClient({ url: ":memory:" });
   const embeddingService = new FakeEmbeddingService();
   const clientOptions = await createLibsqlClientOptions({
     client: db,
@@ -34,7 +34,7 @@ async function setupIsolatedClient(): Promise<{
  */
 async function createPreloadedDatabase(count: number): Promise<{
   client: Client;
-  db: ReturnType<typeof createLibsqlClient>;
+  db: ReturnType<typeof createClient>;
 }> {
   const { client, db } = await setupIsolatedClient();
   const testQuads = generateSyntheticQuads(count);

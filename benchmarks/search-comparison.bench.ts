@@ -1,4 +1,4 @@
-import { createClient as createLibsqlClient } from "@libsql/client";
+import { createClient } from "@libsql/client";
 import { Store } from "n3";
 import { RdfjsSearchIndex } from "@worlds/client/adapters/rdfjs";
 import { LibsqlSearchIndex } from "@worlds/client/adapters/libsql";
@@ -13,7 +13,7 @@ import { generateSyntheticQuads } from "./synthetic-data.ts";
 // -----------------------------------------------------------------------------
 
 async function prepareLibsqlSearchIndex(count: number) {
-  const db = createLibsqlClient({ url: ":memory:" });
+  const db = createClient({ url: ":memory:" });
   const client = new Client(
     await createLibsqlClientOptions({ client: db }), // No embedding service -> Pure Keyword FTS Mode
   );
