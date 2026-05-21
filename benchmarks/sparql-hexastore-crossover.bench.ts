@@ -78,6 +78,19 @@ async function createLibsqlHexastoreSparqlEngine(
 type SparqlQueryShape = "selective" | "fullScan";
 type SparqlBackend = "hydrate+N3" | "libsqlStore";
 
+/** PreloadedSparqlFixture holds a warmed SPARQL engine and its database handle. */
+interface PreloadedSparqlFixture {
+  databaseClient: ReturnType<typeof createClient>;
+  sparqlEngine: SparqlEngineInterface;
+}
+
+function sparqlEngineCacheKey(
+  backend: SparqlBackend,
+  quadCount: number,
+): string {
+  return `${backend}:${quadCount}`;
+}
+
 function sparqlQueryForShape(queryShape: SparqlQueryShape): string {
   return queryShape === "selective"
     ? selectiveSparqlQuery
@@ -87,32 +100,52 @@ function sparqlQueryForShape(queryShape: SparqlQueryShape): string {
 async function createSparqlEngineForBackend(
   backend: SparqlBackend,
   quadCount: number,
-): Promise<{
-  databaseClient: ReturnType<typeof createClient>;
-  sparqlEngine: SparqlEngineInterface;
-}> {
+): Promise<PreloadedSparqlFixture> {
   return backend === "hydrate+N3"
     ? await createHydrateN3SparqlEngine(quadCount)
     : await createLibsqlHexastoreSparqlEngine(quadCount);
 }
 
+console.log("Pre-populating SPARQL crossover engines...");
+
+const preloadedSparqlEngines = new Map<string, PreloadedSparqlFixture>();
+
+for (const quadCount of crossoverScales) {
+  for (const backend of ["hydrate+N3", "libsqlStore"] as const) {
+    const fixture = await createSparqlEngineForBackend(backend, quadCount);
+    preloadedSparqlEngines.set(
+      sparqlEngineCacheKey(backend, quadCount),
+      fixture,
+    );
+  }
+}
+
+console.log("SPARQL crossover engines ready.");
+
+globalThis.addEventListener("unload", () => {
+  for (const fixture of preloadedSparqlEngines.values()) {
+    fixture.databaseClient.close();
+  }
+});
+
 for (const quadCount of crossoverScales) {
   for (const queryShape of ["selective", "fullScan"] as const) {
     for (const backend of ["hydrate+N3", "libsqlStore"] as const) {
       const query = sparqlQueryForShape(queryShape);
+      const cacheKey = sparqlEngineCacheKey(backend, quadCount);
       Deno.bench({
         name:
           `SPARQL Crossover: ${quadCount} quads | ${queryShape} | ${backend}`,
         group: `SPARQL Crossover (${quadCount})`,
         async fn(benchContext) {
-          const { databaseClient, sparqlEngine } =
-            await createSparqlEngineForBackend(backend, quadCount);
+          const fixture = preloadedSparqlEngines.get(cacheKey);
+          if (!fixture) {
+            throw new Error(`Missing preloaded SPARQL fixture: ${cacheKey}`);
+          }
 
           benchContext.start();
-          await sparqlEngine.execute({ query });
+          await fixture.sparqlEngine.execute({ query });
           benchContext.end();
-
-          databaseClient.close();
         },
       });
     }
