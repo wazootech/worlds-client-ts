@@ -11,6 +11,10 @@ const payloadSmall = generateSyntheticQuads(10);
 const payloadMedium = generateSyntheticQuads(100);
 const payloadLarge = generateSyntheticQuads(1000);
 
+/** writeBenchIterations stabilizes write-pressure timings across GC between cold DB setups. */
+const writeBenchWarmup = 5;
+const writeBenchIterations = 50;
+
 /**
  * setupIsolatedClient establishes an ephemeral database and initializes the core schema.
  * This prepares a clean testing boundary without contaminating timing measurements.
@@ -30,19 +34,47 @@ async function setupIsolatedClient(): Promise<{
 }
 
 /**
- * createPreloadedDatabase persists a specified number of quads prior to timing trials.
+ * preloadDatabaseOnly imports quads into LibSQL and returns the database handle for hydration benches.
  */
-async function createPreloadedDatabase(count: number): Promise<{
+async function preloadDatabaseOnly(
+  count: number,
+): Promise<ReturnType<typeof createClient>> {
+  const { client, db } = await setupIsolatedClient();
+  await client.import({
+    source: { kind: "quads", quads: generateSyntheticQuads(count) },
+  });
+  return db;
+}
+
+/**
+ * createPreloadedClient persists a specified number of quads and returns a ready search client.
+ */
+async function createPreloadedClient(count: number): Promise<{
   client: Client;
   db: ReturnType<typeof createClient>;
 }> {
   const { client, db } = await setupIsolatedClient();
-  const testQuads = generateSyntheticQuads(count);
   await client.import({
-    source: { kind: "quads", quads: testQuads },
+    source: { kind: "quads", quads: generateSyntheticQuads(count) },
   });
   return { client, db };
 }
+
+console.log("Pre-populating libsql benchmark datasets...");
+
+const hydrationDatabase100 = await preloadDatabaseOnly(100);
+const hydrationDatabase1000 = await preloadDatabaseOnly(1000);
+const hydrationDatabase5000 = await preloadDatabaseOnly(5000);
+const searchCorpus = await createPreloadedClient(2000);
+
+console.log("Libsql benchmark datasets ready.");
+
+globalThis.addEventListener("unload", () => {
+  hydrationDatabase100.close();
+  hydrationDatabase1000.close();
+  hydrationDatabase5000.close();
+  searchCorpus.db.close();
+});
 
 // -----------------------------------------------------------------------------
 // BENCHMARK GROUP 1: Write Pressure (Transactions and Replication)
@@ -52,6 +84,8 @@ async function createPreloadedDatabase(count: number): Promise<{
 Deno.bench({
   name: "Write Pressure: Import 10 Quads (:memory:)",
   group: "Write Pressure",
+  warmup: writeBenchWarmup,
+  n: writeBenchIterations,
   async fn(benchContext) {
     const { client, db } = await setupIsolatedClient();
 
@@ -68,6 +102,8 @@ Deno.bench({
 Deno.bench({
   name: "Write Pressure: Import 100 Quads (:memory:)",
   group: "Write Pressure",
+  warmup: writeBenchWarmup,
+  n: writeBenchIterations,
   async fn(benchContext) {
     const { client, db } = await setupIsolatedClient();
 
@@ -84,6 +120,8 @@ Deno.bench({
 Deno.bench({
   name: "Write Pressure: Import 1000 Quads (:memory:)",
   group: "Write Pressure",
+  warmup: writeBenchWarmup,
+  n: writeBenchIterations,
   async fn(benchContext) {
     const { client, db } = await setupIsolatedClient();
 
@@ -106,14 +144,11 @@ Deno.bench({
   name: "Hydration Scale: 100 Quads from DB",
   group: "Hydration Scale",
   async fn(benchContext) {
-    const { db } = await createPreloadedDatabase(100);
     const targetStore = new Store();
 
     benchContext.start();
-    await hydrateStoreFromLibsql(db, targetStore);
+    await hydrateStoreFromLibsql(hydrationDatabase100, targetStore);
     benchContext.end();
-
-    db.close();
   },
 });
 
@@ -121,14 +156,11 @@ Deno.bench({
   name: "Hydration Scale: 1,000 Quads from DB",
   group: "Hydration Scale",
   async fn(benchContext) {
-    const { db } = await createPreloadedDatabase(1000);
     const targetStore = new Store();
 
     benchContext.start();
-    await hydrateStoreFromLibsql(db, targetStore);
+    await hydrateStoreFromLibsql(hydrationDatabase1000, targetStore);
     benchContext.end();
-
-    db.close();
   },
 });
 
@@ -136,14 +168,11 @@ Deno.bench({
   name: "Hydration Scale: 5,000 Quads from DB",
   group: "Hydration Scale",
   async fn(benchContext) {
-    const { db } = await createPreloadedDatabase(5000);
     const targetStore = new Store();
 
     benchContext.start();
-    await hydrateStoreFromLibsql(db, targetStore);
+    await hydrateStoreFromLibsql(hydrationDatabase5000, targetStore);
     benchContext.end();
-
-    db.close();
   },
 });
 
@@ -156,18 +185,17 @@ Deno.bench({
   name: "Search Queries: Specific Unique Keyword (Single Match)",
   group: "Search Speed",
   async fn(benchContext) {
-    const { client, db } = await createPreloadedDatabase(2000);
     const targetKeyword = "SYNT-1500";
 
     benchContext.start();
-    const response = await client.search({ query: targetKeyword });
+    const response = await searchCorpus.client.search({
+      query: targetKeyword,
+    });
     benchContext.end();
 
     if (!response.results || response.results.length === 0) {
       throw new Error("Search expected a result match for verification token.");
     }
-
-    db.close();
   },
 });
 
@@ -175,14 +203,11 @@ Deno.bench({
   name: "Search Queries: High Occurrence Word (Multi-Match)",
   group: "Search Speed",
   async fn(benchContext) {
-    const { client, db } = await createPreloadedDatabase(2000);
     const commonKeyword = "synthetic";
 
     benchContext.start();
-    await client.search({ query: commonKeyword });
+    await searchCorpus.client.search({ query: commonKeyword });
     benchContext.end();
-
-    db.close();
   },
 });
 
@@ -190,14 +215,11 @@ Deno.bench({
   name: "Search Queries: Miss Target (Zero Matches)",
   group: "Search Speed",
   async fn(benchContext) {
-    const { client, db } = await createPreloadedDatabase(2000);
     const nonExistentWord =
       "nonexistentwordthatcharacteristicallymisseseverything";
 
     benchContext.start();
-    await client.search({ query: nonExistentWord });
+    await searchCorpus.client.search({ query: nonExistentWord });
     benchContext.end();
-
-    db.close();
   },
 });

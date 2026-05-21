@@ -7,6 +7,10 @@ const payloadSmall = generateSyntheticQuads(10);
 const payloadMedium = generateSyntheticQuads(100);
 const payloadLarge = generateSyntheticQuads(1000);
 
+/** writeBenchIterations stabilizes write-pressure timings across GC between cold KV setups. */
+const writeBenchWarmup = 5;
+const writeBenchIterations = 50;
+
 /**
  * setupIsolatedClient establishes an ephemeral in-memory Deno.Kv and returns a client.
  */
@@ -21,19 +25,34 @@ async function setupIsolatedClient(): Promise<{
 }
 
 /**
- * createPreloadedDatabase persists a specified number of quads prior to timing trials.
+ * createPreloadedClient persists a specified number of quads prior to timing trials.
  */
-async function createPreloadedDatabase(count: number): Promise<{
+async function createPreloadedClient(count: number): Promise<{
   client: Client;
   kv: Deno.Kv;
 }> {
   const { client, kv } = await setupIsolatedClient();
-  const testQuads = generateSyntheticQuads(count);
   await client.import({
-    source: { kind: "quads", quads: testQuads },
+    source: { kind: "quads", quads: generateSyntheticQuads(count) },
   });
   return { client, kv };
 }
+
+console.log("Pre-populating Deno Kv benchmark datasets...");
+
+const hydrationCorpus100 = await createPreloadedClient(100);
+const hydrationCorpus1000 = await createPreloadedClient(1000);
+const hydrationCorpus5000 = await createPreloadedClient(5000);
+const searchCorpus = await createPreloadedClient(2000);
+
+console.log("Deno Kv benchmark datasets ready.");
+
+globalThis.addEventListener("unload", () => {
+  hydrationCorpus100.kv.close();
+  hydrationCorpus1000.kv.close();
+  hydrationCorpus5000.kv.close();
+  searchCorpus.kv.close();
+});
 
 // -----------------------------------------------------------------------------
 // BENCHMARK GROUP 1: Write Pressure (Deno Kv Batched Commits)
@@ -43,6 +62,8 @@ async function createPreloadedDatabase(count: number): Promise<{
 Deno.bench({
   name: "Write Pressure: Import 10 Quads (Deno Kv :memory:)",
   group: "Write Pressure",
+  warmup: writeBenchWarmup,
+  n: writeBenchIterations,
   async fn(benchContext) {
     const { client, kv } = await setupIsolatedClient();
 
@@ -59,6 +80,8 @@ Deno.bench({
 Deno.bench({
   name: "Write Pressure: Import 100 Quads (Deno Kv :memory:)",
   group: "Write Pressure",
+  warmup: writeBenchWarmup,
+  n: writeBenchIterations,
   async fn(benchContext) {
     const { client, kv } = await setupIsolatedClient();
 
@@ -75,6 +98,8 @@ Deno.bench({
 Deno.bench({
   name: "Write Pressure: Import 1000 Quads (Deno Kv :memory:)",
   group: "Write Pressure",
+  warmup: writeBenchWarmup,
+  n: writeBenchIterations,
   async fn(benchContext) {
     const { client, kv } = await setupIsolatedClient();
 
@@ -97,13 +122,9 @@ Deno.bench({
   name: "Deno Kv Hydration: 100 Quads from DB",
   group: "Hydration Scale",
   async fn(benchContext) {
-    const { client, kv } = await createPreloadedDatabase(100);
-
     benchContext.start();
-    await client.export({ format: { kind: "quads" } });
+    await hydrationCorpus100.client.export({ format: { kind: "quads" } });
     benchContext.end();
-
-    kv.close();
   },
 });
 
@@ -111,13 +132,9 @@ Deno.bench({
   name: "Deno Kv Hydration: 1,000 Quads from DB",
   group: "Hydration Scale",
   async fn(benchContext) {
-    const { client, kv } = await createPreloadedDatabase(1000);
-
     benchContext.start();
-    await client.export({ format: { kind: "quads" } });
+    await hydrationCorpus1000.client.export({ format: { kind: "quads" } });
     benchContext.end();
-
-    kv.close();
   },
 });
 
@@ -125,13 +142,9 @@ Deno.bench({
   name: "Deno Kv Hydration: 5,000 Quads from DB",
   group: "Hydration Scale",
   async fn(benchContext) {
-    const { client, kv } = await createPreloadedDatabase(5000);
-
     benchContext.start();
-    await client.export({ format: { kind: "quads" } });
+    await hydrationCorpus5000.client.export({ format: { kind: "quads" } });
     benchContext.end();
-
-    kv.close();
   },
 });
 
@@ -147,18 +160,17 @@ Deno.bench({
   name: "Search: hit after full 2k KV scan (SYNT-1500)",
   group: "Search Speed",
   async fn(benchContext) {
-    const { client, kv } = await createPreloadedDatabase(2000);
     const targetKeyword = "SYNT-1500";
 
     benchContext.start();
-    const response = await client.search({ query: targetKeyword });
+    const response = await searchCorpus.client.search({
+      query: targetKeyword,
+    });
     benchContext.end();
 
     if (!response.results || response.results.length === 0) {
       throw new Error("Search expected a result match.");
     }
-
-    kv.close();
   },
 });
 
@@ -166,14 +178,11 @@ Deno.bench({
   name: "Search: miss after full 2k KV scan (no matches)",
   group: "Search Speed",
   async fn(benchContext) {
-    const { client, kv } = await createPreloadedDatabase(2000);
     const nonExistentWord =
       "nonexistentwordthatcharacteristicallymisseseverything";
 
     benchContext.start();
-    await client.search({ query: nonExistentWord });
+    await searchCorpus.client.search({ query: nonExistentWord });
     benchContext.end();
-
-    kv.close();
   },
 });

@@ -278,3 +278,35 @@ Deno.test(
     );
   },
 );
+
+Deno.test(
+  "hydrateStoreFromLibsql - hydrates more than one internal batch without losing quads",
+  async () => {
+    const client = createClient({ url: ":memory:" });
+    await client.execute(defaultLibsqlQueryBuilder.buildLibsqlQuadsTable());
+
+    const rowCount = 1500;
+    for (let index = 0; index < rowCount; index++) {
+      await client.execute({
+        sql:
+          `INSERT INTO quads (id, s, s_type, p, o, o_type, g, g_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          `batch-hash-${index}`,
+          `urn:entity:${index}`,
+          "NamedNode",
+          "urn:p",
+          `value-${index}`,
+          "Literal",
+          "",
+          "DefaultGraph",
+        ],
+      });
+    }
+
+    const targetStore = new Store();
+    const count = await hydrateStoreFromLibsql(client, targetStore);
+
+    assertEquals(count, rowCount);
+    assertEquals(targetStore.size, rowCount);
+  },
+);

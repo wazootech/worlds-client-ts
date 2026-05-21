@@ -7,6 +7,9 @@ import { defaultLibsqlQueryBuilder } from "./libsql-query-builder.ts";
 
 const { namedNode, literal, blankNode, defaultGraph, quad } = DataFactory;
 
+/** DEFAULT_HYDRATION_BATCH_SIZE caps peak heap during hydration by flushing quads into the N3 store in chunks. */
+const DEFAULT_HYDRATION_BATCH_SIZE = 1000;
+
 /**
  * hydrateStoreFromLibsql reconstructs full in-memory state at lightning speeds by deserializing
  * relational tuples directly into Graph nodes, avoiding costly string parsing compute overhead.
@@ -22,6 +25,8 @@ export async function hydrateStoreFromLibsql(
   if (!resultSet.rows.length) return 0;
 
   const batchQuads: rdfjs.Quad[] = [];
+  let hydratedCount = 0;
+
   for (const row of resultSet.rows) {
     try {
       const subject = reconstructSubject(row);
@@ -30,6 +35,12 @@ export async function hydrateStoreFromLibsql(
       const graph = reconstructGraph(row);
 
       batchQuads.push(quad(subject, predicate, object, graph));
+      hydratedCount++;
+
+      if (batchQuads.length >= DEFAULT_HYDRATION_BATCH_SIZE) {
+        target.addQuads(batchQuads);
+        batchQuads.length = 0;
+      }
     } catch (err) {
       console.warn(
         `hydrateStoreFromLibsql: skipping corrupt row s="${row.s}"`,
@@ -42,7 +53,7 @@ export async function hydrateStoreFromLibsql(
     target.addQuads(batchQuads);
   }
 
-  return batchQuads.length;
+  return hydratedCount;
 }
 
 function reconstructSubject(row: Row): rdfjs.Quad_Subject {
