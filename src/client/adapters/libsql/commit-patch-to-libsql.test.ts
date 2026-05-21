@@ -109,7 +109,7 @@ Deno.test("commitPatchToLibsql - supports synchronization when embeddingService 
   assertEquals(
     chunkRows.rows[0].vector,
     null,
-    "The vector data should remain null due to omitted provider",
+    "The vector data should remain null due to omitted adapter",
   );
 
   // Confirm parent quad still inserted

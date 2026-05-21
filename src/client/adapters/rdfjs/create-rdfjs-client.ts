@@ -1,0 +1,56 @@
+import { Store } from "n3";
+import { Client, type ClientOptions } from "@worlds/client";
+import type { SparqlEngineInterface } from "@worlds/client";
+import { RdfjsQuadStore } from "./rdfjs-quad-store.ts";
+import { RdfjsSearchIndex } from "./rdfjs-search-index.ts";
+
+/**
+ * RdfjsSparqlEngineOptions supplies the per-adapter N3 Store for SPARQL engine construction.
+ */
+export interface RdfjsSparqlEngineOptions {
+  store: Store;
+}
+
+/**
+ * RdfjsOptions specifies optional configuration for an in-memory RDFJS client context.
+ */
+export interface RdfjsOptions {
+  /**
+   * store is an optional pre-initialized N3 Store. When omitted, a fresh Store is created.
+   */
+  store?: Store;
+
+  /**
+   * createSparqlEngine optionally attaches a caller-provided SPARQL engine over the adapter-managed store.
+   */
+  createSparqlEngine?: (
+    options: RdfjsSparqlEngineOptions,
+  ) => SparqlEngineInterface;
+}
+
+/**
+ * createRdfjsClientOptions synthesizes a lightweight, in-memory client gateway context backed entirely by
+ * local RDFJS primitives. It is the fastest path to a working Client for development, tests,
+ * and single-process demos where no external persistence is needed.
+ *
+ * Unlike createLibsqlClientOptions and createDenokvClientOptions, there is no synchronization layer — all data exists
+ * transiently in the N3 Store and is lost when the process exits.
+ */
+export function createRdfjsClientOptions(
+  options?: RdfjsOptions,
+): ClientOptions {
+  const store = options?.store ?? new Store();
+
+  return {
+    quadStore: new RdfjsQuadStore(store),
+    searchIndex: new RdfjsSearchIndex(store),
+    sparqlEngine: options?.createSparqlEngine?.({ store }),
+  };
+}
+
+/**
+ * createRdfjsClient wires in-memory RDFJS storage, search, and optional SPARQL into a ready Client.
+ */
+export function createRdfjsClient(options?: RdfjsOptions): Client {
+  return new Client(createRdfjsClientOptions(options));
+}

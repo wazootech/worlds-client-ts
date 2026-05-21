@@ -1,5 +1,5 @@
 /**
- * SparqlEngineInterface executes raw SPARQL queries/updates against a data provider.
+ * SparqlEngineInterface executes raw SPARQL queries/updates against a data adapter.
  */
 export interface SparqlEngineInterface {
   /**

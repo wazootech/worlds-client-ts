@@ -58,7 +58,7 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
         }
         vectorJson = JSON.stringify(Array.from(vector));
       } catch (error) {
-        // Gracefully degrade to keyword-only search if the embedding provider fails.
+        // Gracefully degrade to keyword-only search if the embedding service fails.
         console.warn(
           `[Search Warning] Embedding service failure. Degrading to keyword-only search fallback. Reason: ${
             (error as Error).message

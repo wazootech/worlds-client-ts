@@ -1,10 +1,10 @@
 import { assertEquals, assertExists } from "@std/assert";
-import { createClient as createLibsqlClient } from "@libsql/client";
+import { createClient as createLibsqlDatabaseClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory, Store } from "n3";
 import { Client } from "@worlds/client";
-import { ComunicaSparqlEngine } from "@worlds/client/providers/comunica";
-import { provideLibsql } from "./provide-libsql.ts";
+import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import { createLibsqlClientOptions } from "./create-libsql-client.ts";
 import { FakeEmbeddingService } from "@worlds/client/search-index/embedding-service";
 
 const { quad, namedNode, literal } = DataFactory;
@@ -12,11 +12,11 @@ const queryEngine = new QueryEngine();
 
 Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availability", async (t) => {
   // 1. Initialize ephemeral environment
-  const db = createLibsqlClient({ url: ":memory:" });
+  const db = createLibsqlDatabaseClient({ url: ":memory:" });
   const embeddingService = new FakeEmbeddingService();
 
   const client = new Client(
-    await provideLibsql({
+    await createLibsqlClientOptions({
       client: db,
       embeddingService,
       createSparqlEngine: ({ store }) =>
@@ -98,7 +98,7 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
       // Destroy active memory references and simulate a software crash/reboot.
       // Create a fresh client reusing the SAME physical :memory: database.
       const refreshedClient = new Client(
-        await provideLibsql({ client: db, embeddingService }),
+        await createLibsqlClientOptions({ client: db, embeddingService }),
       );
 
       // Perform a search directly on the new client.
@@ -194,10 +194,10 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
   await t.step(
     "Scenario 5: dataset replace removes stale rows and keeps survivor",
     async () => {
-      const db = createLibsqlClient({ url: ":memory:" });
+      const db = createLibsqlDatabaseClient({ url: ":memory:" });
       const embeddingService = new FakeEmbeddingService();
       const client = new Client(
-        await provideLibsql({ client: db, embeddingService }),
+        await createLibsqlClientOptions({ client: db, embeddingService }),
       );
 
       const staleQuad = quad(
@@ -260,10 +260,10 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
   await t.step(
     "Scenario 6: serialized replace removes stale rows and keeps survivor",
     async () => {
-      const db = createLibsqlClient({ url: ":memory:" });
+      const db = createLibsqlDatabaseClient({ url: ":memory:" });
       const embeddingService = new FakeEmbeddingService();
       const client = new Client(
-        await provideLibsql({ client: db, embeddingService }),
+        await createLibsqlClientOptions({ client: db, embeddingService }),
       );
 
       const staleQuad = quad(
@@ -325,7 +325,7 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
 });
 
 Deno.test("QuadFilter Integration: enables hybrid partitioning persisting specific graphs while keeping others ephemeral", async () => {
-  const db = createLibsqlClient({ url: ":memory:" });
+  const db = createLibsqlDatabaseClient({ url: ":memory:" });
   const embeddingService = new FakeEmbeddingService();
 
   const PERSISTENT_GRAPH = "http://worlds.wazoo.dev/.well-known/durable";
@@ -333,7 +333,7 @@ Deno.test("QuadFilter Integration: enables hybrid partitioning persisting specif
 
   // Initialize client with filter restricting SQL writes exclusively to the persistent graph
   const client = new Client(
-    await provideLibsql({
+    await createLibsqlClientOptions({
       client: db,
       embeddingService,
       quadFilter: {
@@ -394,7 +394,7 @@ Deno.test("QuadFilter Integration: enables hybrid partitioning persisting specif
   // 4. ASSERT: Verify Hydration boundary on reboot
   // Restart client pointing to the same DB with identical filtering bounds
   const restartedClient = new Client(
-    await provideLibsql({
+    await createLibsqlClientOptions({
       client: db,
       embeddingService,
       quadFilter: {

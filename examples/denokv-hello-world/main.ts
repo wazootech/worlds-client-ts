@@ -1,28 +1,22 @@
-import { Client } from "@worlds/client";
-import { ComunicaSparqlEngine } from "@worlds/client/providers/comunica";
-import { provideDenoKv } from "@worlds/client/providers/denokv";
+import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import { createDenoKvClient } from "@worlds/client/adapters/denokv";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
 /**
- * This example demonstrates how to leverage the `provideDenokv` synthesis engine
- * for persistent, durable storage of RDF graph context, combined
- * with stateless serverless search and query execution.
+ * This example demonstrates how to use `createDenoKvClient` for persistent, durable
+ * storage of RDF graph context, combined with stateless serverless search and query execution.
  */
 if (import.meta.main) {
   console.log("🚀 Initializing in-memory Deno Kv context...");
   const kv = await Deno.openKv(":memory:");
   const queryEngine = new QueryEngine();
 
-  // 1. Synthesize stateless, just-in-time hydrating provider options
   console.log("🧠 Provisioning unified Deno Kv sync engine...");
-  const providerOptions = provideDenoKv({
+  const client = createDenoKvClient({
     kv,
     createSparqlEngine: ({ store }) =>
       new ComunicaSparqlEngine({ queryEngine, store }),
   });
-
-  // 2. Construct the universal client gateway
-  const client = new Client(providerOptions);
   console.log("💡 Stateless gateway operational!");
 
   // 3. Inject initial data if Deno Kv is empty

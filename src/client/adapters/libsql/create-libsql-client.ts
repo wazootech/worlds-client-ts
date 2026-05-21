@@ -2,15 +2,15 @@ import type { Client as LibsqlClient } from "@libsql/client";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { Store } from "n3";
 
-import type { ClientOptions } from "@worlds/client";
+import { Client, type ClientOptions } from "@worlds/client";
 import type { Patch } from "@worlds/client";
 import type { EmbeddingService } from "@worlds/client/search-index/embedding-service";
 import type { TextSplitterInterface } from "@worlds/client/search-index/quad-chunker";
 import type { QuadFilter } from "@worlds/client";
 import type { SparqlEngineInterface } from "@worlds/client";
 
-import { proxyStore } from "@worlds/client/providers/rdfjs/n3";
-import { RdfjsQuadStore } from "@worlds/client/providers/rdfjs";
+import { proxyStore } from "@worlds/client/adapters/rdfjs/n3";
+import { RdfjsQuadStore } from "@worlds/client/adapters/rdfjs";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import { hydrateStoreFromLibsql } from "./hydrate-store-from-libsql.ts";
@@ -41,7 +41,7 @@ export interface LibsqlOptions {
   /** store is an optional starting store, useful for serverless environments where the store is already initialized. */
   store?: Store;
 
-  /** createSparqlEngine optionally attaches a caller-provided SPARQL engine over the provider-managed store. */
+  /** createSparqlEngine optionally attaches a caller-provided SPARQL engine over the adapter-managed store. */
   createSparqlEngine?: (
     options: LibsqlSparqlEngineOptions,
   ) => SparqlEngineInterface;
@@ -76,7 +76,7 @@ async function initializeSchema(
 }
 
 /**
- * provideLibsql synthesizes the high-order transactional orchestration machinery
+ * createLibsqlClientOptions synthesizes the high-order transactional orchestration machinery
  * dedicated explicitly to maintaining LibSQL replication integrity.
  * It bundles schema initialization, incremental memory monitoring, and cascading
  * text search hydration into standard, non-specialized core components.
@@ -84,7 +84,7 @@ async function initializeSchema(
  * @param options Target database, embeddings drivers, and optional component overrides.
  * @returns Uncoupled ClientOptions ready for instant ingestion by the universal constructor.
  */
-export async function provideLibsql(
+export async function createLibsqlClientOptions(
   options: LibsqlOptions,
 ): Promise<ClientOptions> {
   const vectorDimensions = options.vectorDimensions ?? 32;
@@ -164,4 +164,13 @@ export async function provideLibsql(
       : undefined,
     searchIndex,
   };
+}
+
+/**
+ * createLibsqlClient wires LibSQL persistence, hybrid search, and optional SPARQL into a ready Client.
+ */
+export async function createLibsqlClient(
+  options: LibsqlOptions,
+): Promise<Client> {
+  return new Client(await createLibsqlClientOptions(options));
 }
