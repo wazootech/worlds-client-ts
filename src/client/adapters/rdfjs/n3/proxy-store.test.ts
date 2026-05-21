@@ -120,3 +120,129 @@ Deno.test("Slice 2: bridge automatically transparently captures implicit Comunic
   // Also explicitly check memory presence
   assertEquals(baseStore.size, 1, "Memory failed to write");
 });
+
+Deno.test(
+  "proxyStore - duplicate addQuad does not enqueue redundant patches",
+  () => {
+    const baseStore = new Store();
+    const { store, drainPatches } = proxyStore(baseStore);
+    const testQuad = quad(
+      namedNode("urn:sub"),
+      namedNode("urn:pred"),
+      literal("once"),
+    );
+
+    store.addQuad(testQuad);
+    drainPatches();
+    store.addQuad(testQuad);
+
+    assertEquals(drainPatches().length, 0);
+    assertEquals(baseStore.size, 1);
+  },
+);
+
+Deno.test("proxyStore - removeQuad on absent quad emits no patch", () => {
+  const baseStore = new Store();
+  const testQuad = quad(namedNode("u:s"), namedNode("u:p"), literal("v"));
+  const { store, drainPatches } = proxyStore(baseStore);
+
+  store.removeQuad(testQuad);
+
+  assertEquals(drainPatches().length, 0);
+});
+
+Deno.test(
+  "proxyStore - addQuads records only novel quads in the patch",
+  () => {
+    const baseStore = new Store();
+    const existingQuad = quad(
+      namedNode("u:s1"),
+      namedNode("u:p"),
+      literal("existing"),
+    );
+    const novelQuad = quad(
+      namedNode("u:s2"),
+      namedNode("u:p"),
+      literal("novel"),
+    );
+    baseStore.addQuad(existingQuad);
+
+    const { store, drainPatches } = proxyStore(baseStore);
+    store.addQuads([existingQuad, novelQuad]);
+
+    const pending = drainPatches();
+    assertEquals(pending.length, 1);
+    assertEquals(pending[0].insertions.length, 1);
+    assertEquals(pending[0].insertions[0].object.value, "novel");
+    assertEquals(baseStore.size, 2);
+  },
+);
+
+Deno.test(
+  "proxyStore - removeQuads records only quads that existed in the store",
+  () => {
+    const baseStore = new Store();
+    const presentQuad = quad(
+      namedNode("u:s1"),
+      namedNode("u:p"),
+      literal("present"),
+    );
+    const absentQuad = quad(
+      namedNode("u:s2"),
+      namedNode("u:p"),
+      literal("absent"),
+    );
+    baseStore.addQuad(presentQuad);
+
+    const { store, drainPatches } = proxyStore(baseStore);
+    store.removeQuads([presentQuad, absentQuad]);
+
+    const pending = drainPatches();
+    assertEquals(pending.length, 1);
+    assertEquals(pending[0].deletions.length, 1);
+    assertEquals(pending[0].deletions[0].object.value, "present");
+    assertEquals(baseStore.size, 0);
+  },
+);
+
+Deno.test("proxyStore - drainPatches clears the pending queue", () => {
+  const baseStore = new Store();
+  const { store, drainPatches } = proxyStore(baseStore);
+  const testQuad = quad(namedNode("u:s"), namedNode("u:p"), literal("v"));
+
+  store.addQuad(testQuad);
+  assertEquals(drainPatches().length, 1);
+  assertEquals(drainPatches().length, 0);
+});
+
+Deno.test(
+  "proxyStore - import stream captures novel quads from an N3 match stream",
+  async () => {
+    const baseStore = new Store();
+    const { store, drainPatches } = proxyStore(baseStore);
+
+    const donorStore = new Store();
+    const firstQuad = quad(namedNode("u:s1"), namedNode("u:p"), literal("a"));
+    const secondQuad = quad(namedNode("u:s2"), namedNode("u:p"), literal("b"));
+    donorStore.addQuad(firstQuad);
+    donorStore.addQuad(secondQuad);
+
+    const stream = donorStore.match();
+    await new Promise<void>((resolve, reject) => {
+      store.import(stream);
+      // deno-lint-ignore no-explicit-any
+      (stream as any).on("end", resolve);
+      // deno-lint-ignore no-explicit-any
+      (stream as any).on("error", reject);
+    });
+
+    const pending = drainPatches();
+    const totalInsertions = pending.reduce(
+      (accumulator, patch) => accumulator + patch.insertions.length,
+      0,
+    );
+
+    assertEquals(totalInsertions, 2);
+    assertEquals(baseStore.size, 2);
+  },
+);

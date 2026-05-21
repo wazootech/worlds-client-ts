@@ -1,10 +1,16 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals, assertRejects } from "@std/assert";
 import type { Quad } from "n3";
 import { DataFactory, Parser, Store } from "n3";
 import { canonize } from "rdf-canonize";
 import { encodeBase64Url } from "@std/encoding/base64url";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
-import { executeSparql } from "./comunica-sparql-engine.ts";
+import {
+  type ComunicaBinding,
+  type ComunicaEventStream,
+  type ComunicaQueryEngine,
+  ComunicaSparqlEngine,
+  executeSparql,
+} from "./comunica-sparql-engine.ts";
 
 const queryEngine = new QueryEngine();
 
@@ -131,3 +137,201 @@ Deno.test("Same SPARQL query works on bnodes vs processed (canonicalized + subje
     },
   );
 });
+
+Deno.test("executeSparql - ASK returns boolean results", async () => {
+  const store = new Store();
+  store.addQuad(
+    DataFactory.namedNode("https://example.com/s"),
+    DataFactory.namedNode("https://example.com/p"),
+    DataFactory.namedNode("https://example.com/o"),
+  );
+
+  const response = await executeSparql(queryEngine, store, {
+    query:
+      "ASK WHERE { <https://example.com/s> <https://example.com/p> <https://example.com/o> }",
+  });
+
+  if (response.kind !== "ask") {
+    throw new Error("Expected ask response kind");
+  }
+  assertEquals(response.data.boolean, true);
+});
+
+Deno.test("executeSparql - UPDATE returns void and mutates the store", async () => {
+  const store = new Store();
+
+  const response = await executeSparql(queryEngine, store, {
+    query: `INSERT DATA { <urn:test> <urn:label> "written" . }`,
+  });
+
+  assertEquals(response.kind, "void");
+  assertEquals(store.size, 1);
+});
+
+Deno.test(
+  "ComunicaSparqlEngine - onVoid runs after a successful UPDATE",
+  async () => {
+    const store = new Store();
+    let voidInvoked = false;
+
+    const sparqlEngine = new ComunicaSparqlEngine({
+      queryEngine,
+      store,
+      onVoid: async () => {
+        voidInvoked = true;
+      },
+    });
+
+    const response = await sparqlEngine.execute({
+      query: `INSERT DATA { <urn:onvoid> <urn:flag> "set" . }`,
+    });
+
+    assertEquals(response.kind, "void");
+    assertEquals(voidInvoked, true);
+  },
+);
+
+Deno.test("executeSparql - rejects when the query times out", async () => {
+  const store = new Store();
+
+  await assertRejects(
+    () =>
+      executeSparql(createTimeoutEngine(), store, {
+        query: "SELECT ?s WHERE { ?s ?p ?o }",
+        timeoutMs: 1,
+      }),
+    Error,
+    "SPARQL query timed out",
+  );
+});
+
+Deno.test(
+  "executeSparql - rejects unsupported Comunica result types",
+  async () => {
+    const store = new Store();
+
+    await assertRejects(
+      () =>
+        executeSparql(createUnsupportedResultEngine(), store, {
+          query: "CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }",
+        }),
+      Error,
+      "not supported currently",
+    );
+  },
+);
+
+Deno.test(
+  "executeSparql - rejects bindings results without metadata",
+  async () => {
+    const store = new Store();
+
+    await assertRejects(
+      () =>
+        executeSparql(createBindingsWithoutMetadataEngine(), store, {
+          query: "SELECT ?s WHERE { ?s ?p ?o }",
+        }),
+      Error,
+      "missing metadata",
+    );
+  },
+);
+
+Deno.test(
+  "executeSparql - rejects when the bindings stream emits an error",
+  async () => {
+    const store = new Store();
+
+    await assertRejects(
+      () =>
+        executeSparql(createBindingsErrorStreamEngine(), store, {
+          query: "SELECT ?s WHERE { ?s ?p ?o }",
+        }),
+      Error,
+      "stream failed",
+    );
+  },
+);
+
+Deno.test(
+  "executeSparql - rejects non-boolean payloads for ASK results",
+  async () => {
+    const store = new Store();
+
+    await assertRejects(
+      () =>
+        executeSparql(createNonBooleanAskEngine(), store, {
+          query: "ASK WHERE { ?s ?p ?o }",
+        }),
+      Error,
+      "non-boolean payload",
+    );
+  },
+);
+
+function createImmediateEndStream<T>(): ComunicaEventStream<T> {
+  return {
+    on(event: string, listener: (...args: unknown[]) => void) {
+      if (event === "end") {
+        queueMicrotask(() => listener());
+      }
+      return this;
+    },
+  } as ComunicaEventStream<T>;
+}
+
+function createErrorBindingsStream(): ComunicaEventStream<ComunicaBinding> {
+  return {
+    on(event: string, listener: (...args: unknown[]) => void) {
+      if (event === "error") {
+        queueMicrotask(() => listener(new Error("stream failed")));
+      }
+      return this;
+    },
+  } as ComunicaEventStream<ComunicaBinding>;
+}
+
+function createTimeoutEngine(): ComunicaQueryEngine {
+  return {
+    query: () => new Promise(() => {}),
+  };
+}
+
+function createUnsupportedResultEngine(): ComunicaQueryEngine {
+  return {
+    query: async () => ({
+      resultType: "quads",
+      execute: async () => [],
+    }),
+  };
+}
+
+function createBindingsWithoutMetadataEngine(): ComunicaQueryEngine {
+  return {
+    query: async () => ({
+      resultType: "bindings",
+      execute: async () => createImmediateEndStream<ComunicaBinding>(),
+    }),
+  };
+}
+
+function createBindingsErrorStreamEngine(): ComunicaQueryEngine {
+  return {
+    query: async () => ({
+      resultType: "bindings",
+      metadata: async () => ({
+        variables: [DataFactory.variable("s")],
+      }),
+      execute: async () => createErrorBindingsStream(),
+    }),
+  };
+}
+
+function createNonBooleanAskEngine(): ComunicaQueryEngine {
+  return {
+    query: async () => ({
+      resultType: "boolean",
+      execute: async () => "not-a-boolean",
+    }),
+  };
+}
