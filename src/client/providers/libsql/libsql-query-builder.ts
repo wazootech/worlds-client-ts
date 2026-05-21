@@ -1,5 +1,4 @@
-import type { SearchRequest } from "#/client/search-index/search-index-interface.ts";
-import type { QuadFilter } from "#/client/quad-store/quad-filter.ts";
+import type { QuadFilter, SearchRequest } from "@worlds/client";
 
 /** Maximum embedding dimensions accepted by LibsqlQueryBuilder (LibSQL / resource guardrail). */
 const LIBSQL_QUERY_BUILDER_MAX_VECTOR_DIMENSIONS = 8192;
@@ -502,7 +501,10 @@ export class LibsqlQueryBuilder {
 /**
  * defaultLibsqlQueryBuilder is the default 32-dimensional builder for callers that do not vary embedding width.
  */
-export const defaultLibsqlQueryBuilder = new LibsqlQueryBuilder(32);
+export const defaultLibsqlQueryBuilder: LibsqlQueryBuilder =
+  new LibsqlQueryBuilder(
+    32,
+  );
 
 /**
  * sanitizeFtsQuery defends SQLite against internal parsing crash vectors

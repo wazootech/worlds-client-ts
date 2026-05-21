@@ -3,7 +3,7 @@ import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
-import { FakeEmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
+import { FakeEmbeddingService } from "@worlds/client";
 import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 
 const { quad, namedNode, literal } = DataFactory;

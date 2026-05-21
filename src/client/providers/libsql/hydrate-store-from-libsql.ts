@@ -1,7 +1,7 @@
 import type { Client, Row } from "@libsql/client";
 import { DataFactory, type Store } from "n3";
 import type * as rdfjs from "@rdfjs/types";
-import type { QuadFilter } from "#/client/quad-store/quad-filter.ts";
+import type { QuadFilter } from "@worlds/client";
 import { defaultLibsqlQueryBuilder } from "./libsql-query-builder.ts";
 
 const { namedNode, literal, blankNode, defaultGraph, quad } = DataFactory;

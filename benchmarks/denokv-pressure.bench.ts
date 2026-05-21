@@ -1,5 +1,5 @@
-import { Client } from "#/client/client.ts";
-import { provideDenoKv } from "#/client/providers/denokv/provide-denokv.ts";
+import { Client } from "@worlds/client";
+import { provideDenoKv } from "@worlds/client/providers/denokv";
 import { generateSyntheticQuads } from "./synthetic-data.ts";
 
 // Pre-allocated payloads for strict repeatable boundaries

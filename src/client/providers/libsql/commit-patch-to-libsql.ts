@@ -1,18 +1,12 @@
 import type { Client, InStatement } from "@libsql/client";
-import type { Patch } from "#/client/quad-store/patch.ts";
-import type {
-  ChunkRowPayload,
-  TextSplitterInterface,
-} from "#/client/search-index/quad-chunker/chunk-quads.ts";
-import { chunkQuads } from "#/client/search-index/quad-chunker/chunk-quads.ts";
-import { hashQuad } from "#/client/quad-store/hash-quad.ts";
+import type { Patch } from "@worlds/client";
+import type { ChunkRowPayload, TextSplitterInterface } from "@worlds/client";
+import { chunkQuads } from "@worlds/client";
+import { hashQuad } from "@worlds/client";
 import type * as rdfjs from "@rdfjs/types";
-import {
-  filterQuads,
-  type QuadFilter,
-} from "#/client/quad-store/quad-filter.ts";
+import { filterQuads, type QuadFilter } from "@worlds/client";
 import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
-import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
+import type { EmbeddingService } from "@worlds/client";
 
 /**
  * CommitPatchToLibsqlOptions provides configurations for executing updates against LibSQL durable stores.

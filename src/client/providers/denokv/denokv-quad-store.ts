@@ -6,8 +6,8 @@ import type {
   ImportRequest,
   ImportResponse,
   QuadStoreInterface,
-} from "#/client/quad-store/quad-store-interface.ts";
-import { hashQuad } from "#/client/quad-store/hash-quad.ts";
+} from "@worlds/client";
+import { hashQuad } from "@worlds/client";
 
 const { namedNode, blankNode, literal, defaultGraph, quad } = DataFactory;
 

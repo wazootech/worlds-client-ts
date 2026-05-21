@@ -4,7 +4,10 @@
   "nodeModulesDir": "auto",
   "exports": {
     ".": "./src/mod.ts",
-    "./providers/libsql": "./src/client/providers/libsql/provide-libsql.ts",
+    "./quad-store": "./src/client/quad-store/mod.ts",
+    "./search-index": "./src/client/search-index/mod.ts",
+    "./sparql-engine": "./src/client/sparql-engine/mod.ts",
+    "./providers/libsql": "./src/client/providers/libsql/mod.ts",
     "./providers/tfjs-universal-sentence-encoder": "./src/client/providers/tfjs-universal-sentence-encoder/mod.ts",
     "./providers/comunica": "./src/client/providers/comunica/mod.ts",
     "./providers/rdfjs": "./src/client/providers/rdfjs/mod.ts",
@@ -12,7 +15,6 @@
     "./providers/denokv": "./src/client/providers/denokv/mod.ts"
   },
   "imports": {
-    "#/": "./src/",
     "ai": "npm:ai@^6.0.185",
     "@ai-sdk/google": "npm:@ai-sdk/google@^3.0.75",
     "@comunica/query-sparql-rdfjs-lite": "npm:@comunica/query-sparql-rdfjs-lite@^5.2.2",

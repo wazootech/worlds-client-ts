@@ -2,10 +2,10 @@ import { assertEquals, assertExists } from "@std/assert";
 import { createClient as createLibsqlClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory, Store } from "n3";
-import { Client } from "#/client/client.ts";
-import { ComunicaSparqlEngine } from "#/client/providers/comunica/mod.ts";
+import { Client } from "@worlds/client";
+import { ComunicaSparqlEngine } from "@worlds/client/providers/comunica";
 import { provideLibsql } from "./provide-libsql.ts";
-import { FakeEmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
+import { FakeEmbeddingService } from "@worlds/client";
 
 const { quad, namedNode, literal } = DataFactory;
 const queryEngine = new QueryEngine();
