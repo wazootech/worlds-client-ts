@@ -18,7 +18,9 @@ network hop penalties.
 
 The bootstrapping process that reconstructs the Graph Store's ephemeral state by
 deserializing master relational tuples from stable external persistence
-(currently LibSQL) into reactive memory nodes.
+(currently LibSQL) into reactive memory nodes. LibSQL hydration uses batched
+`addQuads` (`DEFAULT_HYDRATION_BATCH_SIZE = 1000` in
+`hydrate-store-from-libsql.ts`) to limit peak memory during large graph loads.
 
 ### Synchronization
 
@@ -214,6 +216,15 @@ green-passing integration pipeline runs:
   code compiles, formats, and passes operational invariants without errors prior
   to opening pull requests.
 
+- **Local benchmarks only:** Run `deno task bench` for performance captures.
+  There is no CI benchmark regression gate. Document methodology and results in
+  `benchmarks/README.md` and
+  [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69);
+  do not add committed `baselines.ci.json` or workflow-based bench checks.
+
+- **`deno.json` imports:** In-repo `@worlds/client/...` resolution uses the
+  package `exports` map only. Do not duplicate those paths under `imports`.
+
 ## Architectural system map
 
 To maintain absolute alignment and prevent context drift, all development must
@@ -240,9 +251,14 @@ separate modules so hexastore deployments do not import N3 hydration:
   `createSparqlEngine({ store })` receives proxied N3. Not re-exported from
   `@worlds/client/adapters/libsql` (keeps hexastore-only imports free of N3).
 
-Use `benchmarks/sparql-hexastore-crossover.bench.ts` and
-[discussion #45](https://github.com/wazootech/worlds-client-ts/discussions/45)
-to compare paths before choosing a factory.
+Use `benchmarks/sparql-hexastore-crossover.bench.ts`,
+[`benchmarks/README.md`](benchmarks/README.md), and
+[discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69)
+(post-preload crossover) to compare paths before choosing a factory. Earlier
+context:
+[discussion #45](https://github.com/wazootech/worlds-client-ts/discussions/45).
+Scale guidance for very large graphs:
+[#68](https://github.com/wazootech/worlds-client-ts/issues/68).
 
 ### Decoupled store lifecycle via dependency injection
 

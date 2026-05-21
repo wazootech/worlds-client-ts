@@ -32,12 +32,16 @@ engine.
 Worlds delivers these features through an open-source TypeScript SDK.
 
 > [!IMPORTANT]
-> Production recommendation: use Turso Cloud through `createLibsqlClient(...)`
-> for production deployments and scale. The RDFJS-backed and Deno Kv-backed
-> search/index paths, including topologies built around `RdfjsSearchIndex` and
-> `DenokvSearchIndex`, are best suited to local development, tests, and
-> constrained single-process demos. They are not the recommended production
-> topology.
+> **JSR:** [`@worlds/client@0.0.5`](https://jsr.io/@worlds/client) is the
+> current published release. `main` may include later improvements (benchmark
+> preload, batched LibSQL hydration) until the next version is published.
+>
+> **Production:** use Turso Cloud through `createLibsqlClient(...)` for scale.
+> Prefer hexastore SPARQL on LibSQL without mirroring the full graph into N3.
+> The RDFJS-backed and Deno Kv-backed search/index paths, including topologies
+> built around `RdfjsSearchIndex` and `DenokvSearchIndex`, are best suited to
+> local development, tests, and constrained single-process demos. They are not
+> the recommended production topology.
 
 ## Use Worlds
 
@@ -64,7 +68,7 @@ Enable lightweight, stateless graph execution via Deno Kv on the edge.
 Best for prototypes, tests, and constrained single-process deployments rather
 than the primary production recommendation.
 
-[→ View Edge Benchmarks](https://github.com/wazootech/worlds-client-ts/issues/11)
+[→ Benchmarks](benchmarks/README.md)
 
 <br>
 </td>
@@ -130,6 +134,32 @@ import { createDenokvClientOptions } from "@worlds/client/adapters/denokv";
 
 const client = new Client(await createLibsqlClientOptions({ client: db }));
 const inMemoryOptions = createRdfjsClientOptions({ store: warmedStore });
+```
+
+### Choosing a LibSQL client
+
+Both factories provision hexastore indexes at schema init. Pick by how much
+graph you mirror in memory and how you run SPARQL.
+
+| Factory                | Module                              | When to use                                                                                                                  |
+| :--------------------- | :---------------------------------- | :--------------------------------------------------------------------------------------------------------------------------- |
+| `createLibsqlClient`   | `@worlds/client/adapters/libsql`    | **Production and large graphs.** SPARQL runs on `LibsqlStore` (hexastore). No full N3 hydration per request.                 |
+| `createLibsqlN3Client` | `@worlds/client/adapters/libsql/n3` | **Selective workloads** where hydrating into N3 is acceptable. Reuse one warmed `store` per container, not per HTTP request. |
+
+Post-preload benchmarks (1k–50k quads) show **hydrate+N3** can win **selective**
+queries when the graph is already in memory; **libsqlStore** avoids full
+hydration cost and is the better default as graphs grow. Avoid unbound
+full-graph scans at production scale.
+
+- Canonical crossover write-up:
+  [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69)
+- Local numbers and methodology: [`benchmarks/README.md`](benchmarks/README.md)
+- Scale roadmap (millions of quads):
+  [#68](https://github.com/wazootech/worlds-client-ts/issues/68)
+
+```typescript
+import { createLibsqlClient } from "@worlds/client/adapters/libsql";
+import { createLibsqlN3Client } from "@worlds/client/adapters/libsql/n3";
 ```
 
 ## Build with Worlds SDK
@@ -229,14 +259,17 @@ deno task evals
 
 ## Development workflow
 
-All CI checks must pass before merging updates.
+All CI checks must pass before merging updates. Performance benchmarks are
+**local only** (no CI regression gate); see
+[`benchmarks/README.md`](benchmarks/README.md).
 
-| Command          | Description                                  |
-| :--------------- | :------------------------------------------- |
-| `deno fmt`       | Format all code using native Deno formatter. |
-| `deno task lint` | Run strict static analysis checks.           |
-| `deno task test` | Execute comprehensive test suites.           |
-| `deno task ci`   | Run complete CI pipeline sequentially.       |
+| Command           | Description                                  |
+| :---------------- | :------------------------------------------- |
+| `deno fmt`        | Format all code using native Deno formatter. |
+| `deno task lint`  | Run strict static analysis checks.           |
+| `deno task test`  | Execute comprehensive test suites.           |
+| `deno task bench` | Run performance benchmarks locally.          |
+| `deno task ci`    | Run complete CI pipeline sequentially.       |
 
 ## Quicklinks
 
