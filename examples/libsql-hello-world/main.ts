@@ -1,11 +1,10 @@
 import { createClient } from "@libsql/client";
-import { Client } from "@worlds/client";
-import { ComunicaSparqlEngine } from "@worlds/client/providers/comunica";
-import { provideLibsql } from "@worlds/client/providers/libsql";
+import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import { createLibsqlClient } from "@worlds/client/adapters/libsql";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
 /**
- * This example demonstrates how to use `provideLibsql` to instantly wire up a complete
+ * This example demonstrates how to use `createLibsqlClient` to instantly wire up a complete
  * AI-powered hybrid search platform over an embedded or remote LibSQL database.
  *
  * It transparently handles:
@@ -18,16 +17,12 @@ if (import.meta.main) {
   const db = createClient({ url: ":memory:" });
   const queryEngine = new QueryEngine();
 
-  // 1. Synthesize unified provider options for the client gateway
   console.log("🧠 Provisioning unified LibSQL sync engine...");
-  const providerOptions = await provideLibsql({
+  const client = await createLibsqlClient({
     client: db,
     createSparqlEngine: ({ store }) =>
       new ComunicaSparqlEngine({ queryEngine, store }),
   });
-
-  // 2. Construct the universal client gateway
-  const client = new Client(providerOptions);
   console.log("💡 Gateway operational!");
 
   // 3. Standard data entry ingestion
@@ -35,36 +30,20 @@ if (import.meta.main) {
   await client.import({
     source: {
       kind: "serialized",
-      data: `
-        <http://example.com/explorer/alice> <http://example.com/predicate/bio> "Alice explores new frontiers." .
-      `,
+      data:
+        `<http://example.com/subject> <http://example.com/predicate> "Hello, World!" .`,
       contentType: "text/turtle",
     },
+    mode: "merge",
   });
 
-  // 4. Fire an indirect SPARQL update statement!
-  // The client automatically intercepts internal mutations and replicates them into LibSQL.
-  console.log(
-    "⚙️ Executing declarative SPARQL UPDATE (transparent replication)...",
-  );
-  await client.sparql({
-    query: `
-      INSERT DATA {
-        <http://example.com/explorer/bob> <http://example.com/predicate/bio> "Bob is an experienced deep-sea oceanographer." .
-      }
-    `,
+  console.log("\n🔍 Executing hybrid search...");
+  const response = await client.search({ query: "Hello" });
+  console.log(JSON.stringify(response, null, 2));
+
+  console.log("\n🧠 Executing SPARQL query...");
+  const sparqlResponse = await client.sparql({
+    query: "SELECT ?s ?p ?o WHERE { ?s ?p ?o }",
   });
-
-  // 5. Verify the replication and hybrid FTS index are fully active!
-  console.log(
-    "\n🔍 Executing unified Hybrid Vector and Textual search query for 'deep sea oceanographer'...",
-  );
-  const searchResponse = await client.search({ query: "deep sea" });
-
-  console.log("\n🏆 Result Set Retrieved:");
-  console.log(JSON.stringify(searchResponse, null, 2));
-
-  console.log(
-    "\n🏁 Demo concluded successfully! Full persistence loop closed cleanly.",
-  );
+  console.log(JSON.stringify(sparqlResponse, null, 2));
 }

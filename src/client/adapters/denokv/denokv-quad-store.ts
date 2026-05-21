@@ -12,7 +12,7 @@ import { hashQuad } from "@worlds/client";
 const { namedNode, blankNode, literal, defaultGraph, quad } = DataFactory;
 
 /**
- * DenokvQuadStoreOptions specifies the configuration for the Deno Kv provider.
+ * DenokvQuadStoreOptions specifies the configuration for the Deno Kv adapter.
  */
 export interface DenokvQuadStoreOptions {
   /** kv is the underlying Deno Kv database instance. */

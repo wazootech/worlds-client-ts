@@ -22,7 +22,7 @@ engine.
 
 - **Reasoning:** Built-in SPARQL engine for declarative knowledge discovery.
 - **Edge-Native:** Support for local SQLite (LibSQL) and stateless Deno Kv
-  providers.
+  adapters.
 - **Hybrid Search:** Combines keyword FTS5 with vector embeddings for flexible
   recall.
 - **Consistency:** Dual-layer sync and transactional mutation queue
@@ -32,8 +32,8 @@ engine.
 Worlds delivers these features through an open-source TypeScript SDK.
 
 > [!IMPORTANT]
-> Production recommendation: use Turso Cloud through `provideLibsql(...)` for
-> production deployments and scale. The RDFJS-backed and Deno Kv-backed
+> Production recommendation: use Turso Cloud through `createLibsqlClient(...)`
+> for production deployments and scale. The RDFJS-backed and Deno Kv-backed
 > search/index paths, including topologies built around `RdfjsSearchIndex` and
 > `DenokvSearchIndex`, are best suited to local development, tests, and
 > constrained single-process demos. They are not the recommended production
@@ -82,37 +82,56 @@ The Worlds Client SDK provides agents with durable semantic context.
 
 ### Instantiation
 
-Compose your client using optimized persistence providers.
+Compose your client using optimized persistence adapters.
 
 For production-scale deployments, prefer LibSQL-compatible infrastructure such
-as Turso Cloud through `provideLibsql(...)`.
+as Turso Cloud through `createLibsqlClient(...)`.
 
-\`\`\`typescript import { Client } from "@worlds/client"; import { provideRdfjs
-} from "@worlds/client/providers/rdfjs"; import { ComunicaSparqlEngine } from
-"@worlds/client/providers/comunica"; import { provideLibsql } from
-"@worlds/client/providers/libsql"; import { provideDenoKv } from
-"@worlds/client/providers/denokv"; import { createClient } from
-"@libsql/client"; import { QueryEngine } from
-"@comunica/query-sparql-rdfjs-lite";
+```typescript
+import { createRdfjsClient } from "@worlds/client/adapters/rdfjs";
+import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import { createLibsqlClient } from "@worlds/client/adapters/libsql";
+import { createDenokvClient } from "@worlds/client/adapters/denokv";
+import { createClient } from "@libsql/client";
+import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
-// 1. In-Memory / Transient Graph (Default) const client = new
-Client(provideRdfjs());
+// 1. In-Memory / Transient Graph (Default)
+const client = createRdfjsClient();
 
 // 2. Local SQLite or Turso Persistence via LibSQL (recommended for production)
-const db = createClient({ url: "file:./worlds.db" }); const sqliteClient = new
-Client(await provideLibsql({ client: db }));
+const db = createClient({ url: "file:./worlds.db" });
+const sqliteClient = await createLibsqlClient({ client: db });
 
-// 2b. Attach SPARQL explicitly when needed const queryEngine = new
-QueryEngine(); const sqliteClientWithSparql = new Client( await provideLibsql({
-client: db, createSparqlEngine: ({ store }) => new ComunicaSparqlEngine({
-queryEngine, store }), }), );
+// 2b. Attach SPARQL explicitly when needed
+const queryEngine = new QueryEngine();
+const sqliteClientWithSparql = await createLibsqlClient({
+  client: db,
+  createSparqlEngine: ({ store }) =>
+    new ComunicaSparqlEngine({ queryEngine, store }),
+});
 
-// 3. Stateless Edge Deployment via Deno Kv // Useful for prototyping and
-constrained edge flows, not the primary // production recommendation for
-search/index workloads. const kv = await Deno.openKv(); const kvClient = new
-Client(provideDenoKv({ kv }));
+// 3. Stateless Edge Deployment via Deno Kv
+// Useful for prototyping and constrained edge flows, not the primary
+// production recommendation for search/index workloads.
+const kv = await Deno.openKv();
+const kvClient = createDenokvClient({ kv });
+```
 
-````
+#### Advanced composition
+
+Use `*ClientOptions` builders when you need `ClientOptions` without constructing
+`Client` (for example, rebuilding a client from the same wiring in tests):
+
+```typescript
+import { Client } from "@worlds/client";
+import { createLibsqlClientOptions } from "@worlds/client/adapters/libsql";
+import { createRdfjsClientOptions } from "@worlds/client/adapters/rdfjs";
+import { createDenokvClientOptions } from "@worlds/client/adapters/denokv";
+
+const client = new Client(await createLibsqlClientOptions({ client: db }));
+const inMemoryOptions = createRdfjsClientOptions({ store: warmedStore });
+```
+
 ## Build with Worlds SDK
 
 Include Worlds as your semantic context layer.
@@ -121,24 +140,29 @@ Include Worlds as your semantic context layer.
 
 ```bash
 deno add jsr:@worlds/client
-````
+```
 
 ### Quickstart
 
-\`\`\`typescript import { Client } from "@worlds/client"; import { provideRdfjs
-} from "@worlds/client/providers/rdfjs";
+```typescript
+import { createRdfjsClient } from "@worlds/client/adapters/rdfjs";
 
-const client = new Client(provideRdfjs());
+const client = createRdfjsClient();
 
-// 1. Ingest structural Turtle data await client.import({ source: { kind:
-"serialized", contentType: "text/turtle", data:
-`@prefix ex: <http://example.org/> .
+// 1. Ingest structural Turtle data
+await client.import({
+  source: {
+    kind: "serialized",
+    contentType: "text/turtle",
+    data: `@prefix ex: <http://example.org/> .
       ex:Alice ex:bio "Alice explores the depths." ;
                ex:location "Underdark" .`,
-}, });
+  },
+});
 
-// 2. Perform hybrid text search over the graph const searchResults = await
-client.search({ query: "explores", }); \`\`\`
+// 2. Perform hybrid text search over the graph
+const searchResults = await client.search({ query: "explores" });
+```
 
 ## Run demonstrations
 
@@ -157,7 +181,7 @@ deno task example:hello-world
 Full disk-based synchronization, ACID mutations, and native FTS indexing.
 
 This is the production-recommended path, including Turso Cloud deployments via
-`provideLibsql(...)`.
+`createLibsqlClient(...)`.
 
 ```bash
 deno task example:libsql-hello-world

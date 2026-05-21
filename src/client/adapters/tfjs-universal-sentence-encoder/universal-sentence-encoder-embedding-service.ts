@@ -54,7 +54,7 @@ export class UniversalSentenceEncoderEmbeddingService
       let modelUrl = this.options.modelUrl;
       let vocabUrl = this.options.vocabUrl;
 
-      // Auto-detect provider-local model artifacts if not explicitly provided
+      // Auto-detect adapter-local model artifacts if not explicitly provided
       if (!modelUrl && !vocabUrl) {
         try {
           const localModelUrl = new URL("./models/model.json", import.meta.url);
@@ -65,11 +65,11 @@ export class UniversalSentenceEncoderEmbeddingService
           modelUrl = localModelUrl.href;
           vocabUrl = localVocabUrl.href;
           console.log(
-            "[UniversalSentenceEncoderEmbeddingService] Auto-detected provider-local model artifacts.",
+            "[UniversalSentenceEncoderEmbeddingService] Auto-detected adapter-local model artifacts.",
           );
         } catch {
           console.warn(
-            "[UniversalSentenceEncoderEmbeddingService] Provider-local model artifacts not found. Defaulting to online download.",
+            "[UniversalSentenceEncoderEmbeddingService] Adapter-local model artifacts not found. Defaulting to online download.",
           );
         }
       }

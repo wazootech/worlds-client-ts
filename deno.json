@@ -1,6 +1,6 @@
 {
   "name": "@worlds/client",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "nodeModulesDir": "auto",
   "exports": {
     ".": "./src/mod.ts",
@@ -9,12 +9,12 @@
     "./search-index/embedding-service": "./src/client/search-index/embedding-service/mod.ts",
     "./search-index/quad-chunker": "./src/client/search-index/quad-chunker/mod.ts",
     "./sparql-engine": "./src/client/sparql-engine/mod.ts",
-    "./providers/libsql": "./src/client/providers/libsql/mod.ts",
-    "./providers/tfjs-universal-sentence-encoder": "./src/client/providers/tfjs-universal-sentence-encoder/mod.ts",
-    "./providers/comunica": "./src/client/providers/comunica/mod.ts",
-    "./providers/rdfjs": "./src/client/providers/rdfjs/mod.ts",
-    "./providers/rdfjs/n3": "./src/client/providers/rdfjs/n3/mod.ts",
-    "./providers/denokv": "./src/client/providers/denokv/mod.ts"
+    "./adapters/libsql": "./src/client/adapters/libsql/mod.ts",
+    "./adapters/tfjs-universal-sentence-encoder": "./src/client/adapters/tfjs-universal-sentence-encoder/mod.ts",
+    "./adapters/comunica": "./src/client/adapters/comunica/mod.ts",
+    "./adapters/rdfjs": "./src/client/adapters/rdfjs/mod.ts",
+    "./adapters/rdfjs/n3": "./src/client/adapters/rdfjs/n3/mod.ts",
+    "./adapters/denokv": "./src/client/adapters/denokv/mod.ts"
   },
   "imports": {
     "ai": "npm:ai@^6.0.185",
@@ -44,7 +44,7 @@
     ".prior-art"
   ],
   "tasks": {
-    "download:tfjs-use": "deno run -A ./src/client/providers/tfjs-universal-sentence-encoder/download-tfjs-use.ts",
+    "download:tfjs-use": "deno run -A ./src/client/adapters/tfjs-universal-sentence-encoder/download-tfjs-use.ts",
     "example:hello-world": "deno -A ./examples/hello-world/main.ts",
     "example:libsql-hello-world": "deno -A ./examples/libsql-hello-world/main.ts",
     "example:denokv-hello-world": "deno -A --unstable-kv ./examples/denokv-hello-world/main.ts",

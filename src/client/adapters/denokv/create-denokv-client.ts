@@ -1,5 +1,5 @@
 import { Store } from "n3";
-import type { ClientOptions } from "@worlds/client";
+import { Client, type ClientOptions } from "@worlds/client";
 import type { SparqlEngineInterface } from "@worlds/client";
 import { DenokvSearchIndex } from "./denokv-search-index.ts";
 import {
@@ -16,7 +16,7 @@ export interface DenokvSparqlEngineOptions {
 }
 
 /**
- * DenokvOptions specifies configuration parameters for provisioning Denokv contexts.
+ * DenokvOptions specifies configuration parameters for Deno Kv adapter contexts.
  */
 export interface DenokvOptions extends DenokvQuadStoreOptions {
   /** createSparqlEngine optionally attaches a caller-provided SPARQL engine over each hydrated workspace. */
@@ -26,15 +26,14 @@ export interface DenokvOptions extends DenokvQuadStoreOptions {
 }
 
 /**
- * provideDenoKv synthesizes a client gateway context designed explicitly for
+ * createDenokvClientOptions synthesizes a client gateway context designed explicitly for
  * stateless, per-operation execution. It leverages a lazy, transient hydration
  * pipeline that fetches fresh durable quads on-demand, providing strong data
  * consistency without requiring long-lived memory store residency.
- *
- * @param options Aggregated Deno Kv configurations and key namespace overrides.
- * @returns Composable ClientOptions ready for direct ingestion by the universal Client.
  */
-export function provideDenoKv(options: DenokvOptions): ClientOptions {
+export function createDenokvClientOptions(
+  options: DenokvOptions,
+): ClientOptions {
   const quadStore = new DenokvQuadStore(options);
 
   /**
@@ -70,4 +69,11 @@ export function provideDenoKv(options: DenokvOptions): ClientOptions {
       }
       : undefined,
   };
+}
+
+/**
+ * createDenokvClient wires Deno KV persistence, search, and optional SPARQL into a ready Client.
+ */
+export function createDenokvClient(options: DenokvOptions): Client {
+  return new Client(createDenokvClientOptions(options));
 }

@@ -105,22 +105,22 @@ Choose import specifiers in this order. Resolution is always through
 - **Never use `../`.** Parent-relative paths are prohibited. Cross-folder
   imports must use a published `@worlds/client/...` export subpath instead.
 - **Same module tree: use `./`.** Files under the same domain folder (e.g.
-  `search-index/`, `providers/libsql/`) import siblings and children with
+  `search-index/`, `adapters/libsql/`) import siblings and children with
   `./file.ts` or `./subfolder/mod.ts`. Barrel `mod.ts` files re-export children
   the same way — not `@worlds/client/...` pointing back into the same folder.
 - **Another domain in this package: use an export subpath.** Examples:
   `@worlds/client/quad-store`, `@worlds/client/search-index`,
   `@worlds/client/search-index/embedding-service`,
-  `@worlds/client/sparql-engine`, `@worlds/client/providers/libsql`. Pick the
+  `@worlds/client/sparql-engine`, `@worlds/client/adapters/libsql`. Pick the
   narrowest subpath that exports what you need.
 - **Full package entry: `@worlds/client`.** Use for the root barrel (e.g.
-  `Client`, `Patch`, `hashQuad`) in providers, tests, benchmarks, and examples.
+  `Client`, `Patch`, `hashQuad`) in adapters, tests, benchmarks, and examples.
   Do **not** import `@worlds/client` from source files that the root barrel
   re-exports (e.g. `search-index/quad-chunker/chunk-quads.ts`) — that can cycle;
   use a domain subpath such as `@worlds/client/quad-store` instead.
 - **External consumers** (apps, other repos) use only documented `exports`
-  entries in `deno.json`, same as in-repo provider code. Do not rely on deep
-  file paths that are not listed under `exports`.
+  entries in `deno.json`, same as in-repo adapter code. Do not rely on deep file
+  paths that are not listed under `exports`.
 
 ## State resilience and dual-layer safety
 
@@ -185,9 +185,9 @@ green-passing integration pipeline runs:
 - **Local embedding model caching:** The system relies on offline model
   execution via pre-cached TFJS Universal Sentence Encoder artifacts. The
   download script lives at
-  `src/client/providers/tfjs-universal-sentence-encoder/download-tfjs-use.ts`.
-  If changes are made to the embedding or search layers, developers must ensure
-  the offline cache is warmed up by running the `deno task download:tfjs-use`
+  `src/client/adapters/tfjs-universal-sentence-encoder/download-tfjs-use.ts`. If
+  changes are made to the embedding or search layers, developers must ensure the
+  offline cache is warmed up by running the `deno task download:tfjs-use`
   command.
 
 - **Vendored jsonld-context-parser workaround:** Comunica's upstream
@@ -222,21 +222,21 @@ and hydration of the Graph Store are fully externalized from the generalized
 `Client` factory. The caller injects an initialized `Store` directly, allowing
 trivial container-level caching across sequential HTTP invocations.
 
-### Sterile orchestration via provider adapters
+### Sterile orchestration via adapters
 
 All active instrumentation (proxies, observers, and transactional mutation
-queues) is isolated strictly inside provider adapters (e.g. `provideLibsql`).
-The generalized `Client` is kept completely agnostic and sterile, accepting
+queues) is isolated strictly inside adapters (e.g. `createLibsqlClient`). The
+generalized `Client` is kept completely agnostic and sterile, accepting
 pre-composed adapter options ready for constructor injection.
 
 ### Production deployment recommendation
 
 For production deployments and scale, the recommended topology is LibSQL-backed
-infrastructure through `provideLibsql`, especially Turso Cloud. RDFJS-backed and
-Deno KV-backed search/index topologies, including deployments centered on
-`RdfjsSearchIndex` and `DenokvSearchIndex`, are appropriate for local
-development, tests, and constrained single-process demos, but they are not the
-recommended production path.
+infrastructure through `createLibsqlClient`, especially Turso Cloud.
+RDFJS-backed and Deno KV-backed search/index topologies, including deployments
+centered on `RdfjsSearchIndex` and `DenokvSearchIndex`, are appropriate for
+local development, tests, and constrained single-process demos, but they are not
+the recommended production path.
 
 ### Resilient hybrid search with vectorless fallbacks
 

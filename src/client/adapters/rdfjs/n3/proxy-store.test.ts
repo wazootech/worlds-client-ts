@@ -2,7 +2,7 @@ import { assertEquals } from "@std/assert";
 import { DataFactory, Store } from "n3";
 import { proxyStore } from "./proxy-store.ts";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
-import { executeSparql } from "@worlds/client/providers/comunica";
+import { executeSparql } from "@worlds/client/adapters/comunica";
 
 const { quad, namedNode, literal } = DataFactory;
 

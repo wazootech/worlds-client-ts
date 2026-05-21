@@ -1,5 +1,5 @@
 import { Client } from "@worlds/client";
-import { provideDenoKv } from "@worlds/client/providers/denokv";
+import { createDenokvClientOptions } from "@worlds/client/adapters/denokv";
 import { generateSyntheticQuads } from "./synthetic-data.ts";
 
 // Pre-allocated payloads for strict repeatable boundaries
@@ -15,7 +15,7 @@ async function setupIsolatedClient(): Promise<{
   kv: Deno.Kv;
 }> {
   const kv = await Deno.openKv(":memory:");
-  const clientOptions = provideDenoKv({ kv });
+  const clientOptions = createDenokvClientOptions({ kv });
   const client = new Client(clientOptions);
   return { client, kv };
 }
@@ -37,7 +37,7 @@ async function createPreloadedDatabase(count: number): Promise<{
 
 // -----------------------------------------------------------------------------
 // BENCHMARK GROUP 1: Write Pressure (Deno Kv Batched Commits)
-// Tests incremental batched ingestion limits for Deno Kv providers.
+// Tests incremental batched ingestion limits for Deno Kv adapters.
 // -----------------------------------------------------------------------------
 
 Deno.bench({
