@@ -178,12 +178,15 @@ deno task example:hello-world
 
 ### LibSQL persistence
 
-Full disk-based synchronization, ACID mutations, and native FTS indexing.
+Full disk-based synchronization, ACID mutations, hybrid FTS + vector search, and
+optional SPARQL. This is the production-recommended path, including Turso Cloud
+deployments via `createLibsqlClient(...)`.
 
-This is the production-recommended path, including Turso Cloud deployments via
-`createLibsqlClient(...)`.
+The LibSQL example wires `UniversalSentenceEncoderEmbeddingService` (USE lite,
+512 dimensions). Download offline model artifacts once, then run the example:
 
 ```bash
+deno task download:tfjs-use
 deno task example:libsql-hello-world
 ```
 
