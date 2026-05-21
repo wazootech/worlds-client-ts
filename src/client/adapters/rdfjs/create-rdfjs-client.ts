@@ -1,6 +1,7 @@
 import { Store } from "n3";
-import { Client, type ClientOptions } from "@worlds/client";
-import type { SparqlEngineInterface } from "@worlds/client";
+import type { ClientOptions } from "@worlds/client";
+import { Client } from "@worlds/client";
+import type { SparqlEngineInterface } from "@worlds/client/sparql-engine";
 import { RdfjsQuadStore } from "./rdfjs-quad-store.ts";
 import { RdfjsSearchIndex } from "./rdfjs-search-index.ts";
 

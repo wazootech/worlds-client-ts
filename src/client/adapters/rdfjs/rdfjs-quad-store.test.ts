@@ -1,5 +1,5 @@
 import { assertEquals, assertRejects } from "@std/assert";
-import type { ExportRequest, ImportRequest } from "@worlds/client";
+import type { ExportRequest, ImportRequest } from "@worlds/client/quad-store";
 import { DataFactory, Store } from "n3";
 import { RdfjsQuadStore } from "./rdfjs-quad-store.ts";
 

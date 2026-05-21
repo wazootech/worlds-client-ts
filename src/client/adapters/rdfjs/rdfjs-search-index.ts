@@ -6,9 +6,11 @@ import type {
   SearchResponse,
   SearchResult,
 } from "@worlds/client/search-index";
-import { hashQuad } from "@worlds/client";
-import { filterQuads } from "@worlds/client";
-import { isTextualLiteral } from "@worlds/client";
+import {
+  filterQuads,
+  hashQuad,
+  isTextualLiteral,
+} from "@worlds/client/quad-store";
 
 const { literal, namedNode, quad: createQuad, defaultGraph } = DataFactory;
 

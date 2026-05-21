@@ -2,12 +2,12 @@ import type { Client as LibsqlClient } from "@libsql/client";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { Store } from "n3";
 
-import { Client, type ClientOptions } from "@worlds/client";
-import type { Patch } from "@worlds/client";
+import type { ClientOptions } from "@worlds/client";
+import { Client } from "@worlds/client";
+import type { Patch, QuadFilter } from "@worlds/client/quad-store";
 import type { EmbeddingService } from "@worlds/client/search-index/embedding-service";
 import type { TextSplitterInterface } from "@worlds/client/search-index/quad-chunker";
-import type { QuadFilter } from "@worlds/client";
-import type { SparqlEngineInterface } from "@worlds/client";
+import type { SparqlEngineInterface } from "@worlds/client/sparql-engine";
 
 import { proxyStore } from "@worlds/client/adapters/rdfjs/n3";
 import { RdfjsQuadStore } from "@worlds/client/adapters/rdfjs";

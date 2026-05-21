@@ -1,11 +1,10 @@
 import { Store } from "n3";
-import { Client, type ClientOptions } from "@worlds/client";
-import type { SparqlEngineInterface } from "@worlds/client";
+import type { ClientOptions } from "@worlds/client";
+import { Client } from "@worlds/client";
+import type { SparqlEngineInterface } from "@worlds/client/sparql-engine";
 import { DenokvSearchIndex } from "./denokv-search-index.ts";
-import {
-  DenokvQuadStore,
-  type DenokvQuadStoreOptions,
-} from "./denokv-quad-store.ts";
+import type { DenokvQuadStoreOptions } from "./denokv-quad-store.ts";
+import { DenokvQuadStore } from "./denokv-quad-store.ts";
 
 /**
  * DenokvSparqlEngineOptions contains the per-query hydrated RDFJS store available to caller-provided SPARQL adapters.

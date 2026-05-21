@@ -6,7 +6,7 @@ import type {
   SearchResponse,
   SearchResult,
 } from "@worlds/client/search-index";
-import { hashQuad } from "@worlds/client";
+import { hashQuad } from "@worlds/client/quad-store";
 import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import type { EmbeddingService } from "@worlds/client/search-index/embedding-service";
 

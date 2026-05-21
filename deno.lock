@@ -7,7 +7,7 @@
     "jsr:@std/internal@^1.0.12": "1.0.13",
     "jsr:@std/path@^1.0.8": "1.1.4",
     "jsr:@std/path@^1.1.4": "1.1.4",
-    "npm:@ai-sdk/google@^3.0.75": "3.0.75_zod@4.4.3",
+    "npm:@ai-sdk/google@^3.0.78": "3.0.78_zod@4.4.3",
     "npm:@comunica/query-sparql-rdfjs-lite@^5.2.2": "5.2.2",
     "npm:@langchain/core@^1.1.47": "1.1.47",
     "npm:@langchain/textsplitters@^1.0.1": "1.0.1_@langchain+core@1.1.47",
@@ -18,7 +18,7 @@
     "npm:@tensorflow/tfjs-backend-wasm@^4.22.0": "4.22.0_@tensorflow+tfjs-core@4.22.0",
     "npm:@tensorflow/tfjs@^4.22.0": "4.22.0_seedrandom@3.0.5",
     "npm:@types/n3@1.26.1": "1.26.1",
-    "npm:ai@^6.0.185": "6.0.185_zod@4.4.3",
+    "npm:ai@^6.0.188": "6.0.188_zod@4.4.3",
     "npm:libsql@*": "0.5.29",
     "npm:n3@^2.0.3": "2.0.3",
     "npm:rdf-canonize@5": "5.0.0",
@@ -53,8 +53,8 @@
     }
   },
   "npm": {
-    "@ai-sdk/gateway@3.0.116_zod@4.4.3": {
-      "integrity": "sha512-k8P17w7Eho5Y4l3tZrYxqQdffkI4xwtl8GCxkZs+JdMWZhyrLLlozqWkKLaWrCSlEYQOeIhEnQLhqQgYYU86Rw==",
+    "@ai-sdk/gateway@3.0.118_zod@4.4.3": {
+      "integrity": "sha512-XYPbVoDo1TDMVLe5Eg42gIjdOyxaizh9H0kiSSnTXr+AdrqZvutk/ypLOiqBXPV3D1K3+BSm/sbFeomZJlM64A==",
       "dependencies": [
         "@ai-sdk/provider",
         "@ai-sdk/provider-utils",
@@ -62,8 +62,8 @@
         "zod"
       ]
     },
-    "@ai-sdk/google@3.0.75_zod@4.4.3": {
-      "integrity": "sha512-XAm31ftiOrzlb8NjDzT7kw0xw+4lmgFdGFn1QKM73nXFFKyN1kWLESBV75UGNfjXP8X1YJ0YydnMVqO0jaPghw==",
+    "@ai-sdk/google@3.0.78_zod@4.4.3": {
+      "integrity": "sha512-iPkZHiaaBNreaVX2fLpc+SAa7OJPV6f7pZRK98lWTI4vf0D546+9eEQ6T2FagJAHO0K0gEyzx5zogCoHbJnhQg==",
       "dependencies": [
         "@ai-sdk/provider",
         "@ai-sdk/provider-utils",
@@ -3114,8 +3114,8 @@
         "event-target-shim"
       ]
     },
-    "ai@6.0.185_zod@4.4.3": {
-      "integrity": "sha512-oGsqscREaTlo75KHZLtwZxRyI+ZBwHV2wRX9B8smHjgOs13WwoCvUyr5aPUWpIBRz406wmIKy1RzoUEq0/WKJw==",
+    "ai@6.0.188_zod@4.4.3": {
+      "integrity": "sha512-kNwIl1MM4ESzeOPDYuN+FidJ2QY5kGWHLtTMru6HHPW/JJ6nPuvHRhJ8tMX/Y2Tijx9DCiv2W7y5IBouuB712g==",
       "dependencies": [
         "@ai-sdk/gateway",
         "@ai-sdk/provider",
@@ -4029,7 +4029,7 @@
       "jsr:@std/encoding@^1.0.10",
       "jsr:@std/fs@^1.0.23",
       "jsr:@std/path@^1.1.4",
-      "npm:@ai-sdk/google@^3.0.75",
+      "npm:@ai-sdk/google@^3.0.78",
       "npm:@comunica/query-sparql-rdfjs-lite@^5.2.2",
       "npm:@langchain/core@^1.1.47",
       "npm:@langchain/textsplitters@^1.0.1",
@@ -4039,7 +4039,7 @@
       "npm:@tensorflow/tfjs-backend-wasm@^4.22.0",
       "npm:@tensorflow/tfjs@^4.22.0",
       "npm:@types/n3@1.26.1",
-      "npm:ai@^6.0.185",
+      "npm:ai@^6.0.188",
       "npm:n3@^2.0.3",
       "npm:rdf-canonize@5",
       "npm:zod@^4.4.3"

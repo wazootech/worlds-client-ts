@@ -4,7 +4,7 @@ import { Client } from "./client.ts";
 import { RdfjsQuadStore, RdfjsSearchIndex } from "./adapters/rdfjs/mod.ts";
 import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
-import { hashQuad } from "@worlds/client";
+import { hashQuad } from "@worlds/client/quad-store";
 
 const queryEngine = new QueryEngine();
 

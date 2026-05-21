@@ -1,9 +1,9 @@
 import { tool } from "ai";
+import type { ClientInterface } from "@worlds/client";
 import type {
-  ClientInterface,
   SearchRequest,
   SearchResponse,
-} from "@worlds/client";
+} from "@worlds/client/search-index";
 import { z } from "zod";
 
 /**

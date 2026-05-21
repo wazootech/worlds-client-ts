@@ -1,5 +1,6 @@
 import { tool } from "ai";
-import type { ClientInterface, ImportRequest } from "@worlds/client";
+import type { ClientInterface } from "@worlds/client";
+import type { ImportRequest } from "@worlds/client/quad-store";
 import { z } from "zod";
 
 /**

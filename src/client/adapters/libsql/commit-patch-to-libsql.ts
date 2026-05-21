@@ -1,13 +1,12 @@
 import type { Client, InStatement } from "@libsql/client";
-import type { Patch } from "@worlds/client";
 import type {
   ChunkRowPayload,
   TextSplitterInterface,
 } from "@worlds/client/search-index/quad-chunker";
 import { chunkQuads } from "@worlds/client/search-index/quad-chunker";
-import { hashQuad } from "@worlds/client";
 import type * as rdfjs from "@rdfjs/types";
-import { filterQuads, type QuadFilter } from "@worlds/client";
+import type { Patch, QuadFilter } from "@worlds/client/quad-store";
+import { filterQuads, hashQuad } from "@worlds/client/quad-store";
 import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import type { EmbeddingService } from "@worlds/client/search-index/embedding-service";
 

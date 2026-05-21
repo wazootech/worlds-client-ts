@@ -1,5 +1,6 @@
 import { tool } from "ai";
-import type { ClientInterface, SparqlRequest } from "@worlds/client";
+import type { ClientInterface } from "@worlds/client";
+import type { SparqlRequest } from "@worlds/client/sparql-engine";
 import { z } from "zod";
 
 /**

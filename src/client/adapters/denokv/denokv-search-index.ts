@@ -6,10 +6,13 @@ import type {
   SearchResponse,
   SearchResult,
 } from "@worlds/client/search-index";
-import { hashQuad } from "@worlds/client";
-import { filterQuads } from "@worlds/client";
-import { isTextualLiteral } from "@worlds/client";
-import { deserializeTerm, type SerializedQuad } from "./denokv-quad-store.ts";
+import {
+  filterQuads,
+  hashQuad,
+  isTextualLiteral,
+} from "@worlds/client/quad-store";
+import type { SerializedQuad } from "./denokv-quad-store.ts";
+import { deserializeTerm } from "./denokv-quad-store.ts";
 
 const { quad } = DataFactory;
 
