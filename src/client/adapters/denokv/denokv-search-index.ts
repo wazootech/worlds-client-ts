@@ -28,9 +28,10 @@ export interface DenokvSearchIndexOptions {
 }
 
 /**
- * DenokvSearchIndex implements full-text search natively across Deno Kv streams.
- * It asynchronously processes records one-by-one, avoiding the O(N) memory overhead
- * of hydration and providing constant space complexity for queries.
+ * DenokvSearchIndex implements keyword search by scanning every quad under a KV prefix.
+ * Each entry is deserialized and matched with a naive case-insensitive includes() check.
+ * This avoids building a full in-memory N3 graph (unlike SPARQL hydration) but is O(N)
+ * per query with no index and no early exit when a match is found.
  */
 export class DenokvSearchIndex implements SearchIndexInterface {
   public constructor(

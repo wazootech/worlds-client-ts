@@ -136,12 +136,15 @@ Deno.bench({
 });
 
 // -----------------------------------------------------------------------------
-// BENCHMARK GROUP 3: Stateless Full-Text Search Performance
-// Includes the combined overhead of lazy hydration + naive in-memory scan.
+// BENCHMARK GROUP 3: DenokvSearchIndex full KV scan (not SPARQL hydration)
+// client.search() calls DenokvSearchIndex.search(), which lists every quad under
+// the KV prefix, deserializes each entry, and runs a naive includes() match.
+// There is no N3 hydration and no early exit — hit and miss both scan the corpus.
+// Preload is 2,000 quads; only the search call is timed.
 // -----------------------------------------------------------------------------
 
 Deno.bench({
-  name: "Search Queries: Specific Unique Keyword (Lazy Hydration)",
+  name: "Search: hit after full 2k KV scan (SYNT-1500)",
   group: "Search Speed",
   async fn(benchContext) {
     const { client, kv } = await createPreloadedDatabase(2000);
@@ -160,7 +163,7 @@ Deno.bench({
 });
 
 Deno.bench({
-  name: "Search Queries: Miss Target (Lazy Hydration)",
+  name: "Search: miss after full 2k KV scan (no matches)",
   group: "Search Speed",
   async fn(benchContext) {
     const { client, kv } = await createPreloadedDatabase(2000);
