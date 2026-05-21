@@ -165,6 +165,14 @@ green-passing integration pipeline runs:
   the offline cache is warmed up by running the `deno task download:tfjs-use`
   command.
 
+- **Vendored jsonld-context-parser workaround:** Comunica's upstream
+  `jsonld-context-parser` has a known JSR compatibility issue. A patched copy
+  lives in `vendor/jsonld-context-parser/`, redirected via
+  `"links": ["./vendor/jsonld-context-parser"]` in `deno.json`. This redirect is
+  local-only — JSR strips `links` and `exclude` during packaging. If you hit
+  `jsonld-context-parser` resolution errors in the local test suite, ensure the
+  vendor directory and `links` config are intact.
+
 - **Test-driven execution boundaries:** Always run local tests with
   `deno task ci` or `deno test --allow-all --unstable-kv` to verify that all
   code compiles, formats, and passes operational invariants without errors prior
@@ -178,9 +186,9 @@ adhere to the core architectural pillars of the system:
 ### Ephemeral in-memory execution model
 
 The active Graph Store runtime is anchored on high-speed, transient in-memory
-RDF processing using `N3.Store` and native `Comunica` execution. This maximizes
-edge query execution speeds and eliminates recurrent network hop latency during
-query execution.
+RDF processing using `N3.Store` with optional SPARQL via an injected Comunica
+adapter. This maximizes edge query execution speeds and eliminates recurrent
+network hop latency during query execution.
 
 ### Decoupled store lifecycle via dependency injection
 

@@ -87,38 +87,32 @@ Compose your client using optimized persistence providers.
 For production-scale deployments, prefer LibSQL-compatible infrastructure such
 as Turso Cloud through `provideLibsql(...)`.
 
-```typescript
-import { Client } from "@worlds/client";
-import { ComunicaSparqlEngine } from "@worlds/client/providers/comunica";
-import { provideLibsql } from "@worlds/client/providers/libsql";
-import { provideDenoKv } from "@worlds/client/providers/denokv";
-import { createClient } from "@libsql/client";
-import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
+\`\`\`typescript import { Client } from "@worlds/client"; import { provideRdfjs
+} from "@worlds/client/providers/rdfjs"; import { ComunicaSparqlEngine } from
+"@worlds/client/providers/comunica"; import { provideLibsql } from
+"@worlds/client/providers/libsql"; import { provideDenoKv } from
+"@worlds/client/providers/denokv"; import { createClient } from
+"@libsql/client"; import { QueryEngine } from
+"@comunica/query-sparql-rdfjs-lite";
 
-// 1. In-Memory / Transient Graph (Default)
-const client = new Client();
+// 1. In-Memory / Transient Graph (Default) const client = new
+Client(provideRdfjs());
 
 // 2. Local SQLite or Turso Persistence via LibSQL (recommended for production)
-const db = createClient({ url: "file:./worlds.db" });
-const sqliteClient = new Client(await provideLibsql({ client: db }));
+const db = createClient({ url: "file:./worlds.db" }); const sqliteClient = new
+Client(await provideLibsql({ client: db }));
 
-// 2b. Attach SPARQL explicitly when needed
-const queryEngine = new QueryEngine();
-const sqliteClientWithSparql = new Client(
-  await provideLibsql({
-    client: db,
-    createSparqlEngine: ({ store }) =>
-      new ComunicaSparqlEngine({ queryEngine, store }),
-  }),
-);
+// 2b. Attach SPARQL explicitly when needed const queryEngine = new
+QueryEngine(); const sqliteClientWithSparql = new Client( await provideLibsql({
+client: db, createSparqlEngine: ({ store }) => new ComunicaSparqlEngine({
+queryEngine, store }), }), );
 
-// 3. Stateless Edge Deployment via Deno Kv
-// Useful for prototyping and constrained edge flows, not the primary
-// production recommendation for search/index workloads.
-const kv = await Deno.openKv();
-const kvClient = new Client(provideDenoKv({ kv }));
-```
+// 3. Stateless Edge Deployment via Deno Kv // Useful for prototyping and
+constrained edge flows, not the primary // production recommendation for
+search/index workloads. const kv = await Deno.openKv(); const kvClient = new
+Client(provideDenoKv({ kv }));
 
+````
 ## Build with Worlds SDK
 
 Include Worlds as your semantic context layer.
@@ -127,42 +121,24 @@ Include Worlds as your semantic context layer.
 
 ```bash
 deno add jsr:@worlds/client
-```
+````
 
 ### Quickstart
 
-```typescript
-import { Client } from "@worlds/client";
+\`\`\`typescript import { Client } from "@worlds/client"; import { provideRdfjs
+} from "@worlds/client/providers/rdfjs";
 
-const client = new Client();
+const client = new Client(provideRdfjs());
 
-// 1. Ingest structural Turtle data
-await client.import({
-  source: {
-    kind: "serialized",
-    contentType: "text/turtle",
-    data: `
-      @prefix ex: <http://example.org/> .
+// 1. Ingest structural Turtle data await client.import({ source: { kind:
+"serialized", contentType: "text/turtle", data:
+`@prefix ex: <http://example.org/> .
       ex:Alice ex:bio "Alice explores the depths." ;
-               ex:location "Underdark" .
-    `,
-  },
-});
+               ex:location "Underdark" .`,
+}, });
 
-// 2. Execute SPARQL query over the dataset
-const response = await client.sparql({
-  query: `
-    SELECT ?bio WHERE {
-      <http://example.org/Alice> <http://example.org/bio> ?bio .
-    }
-  `,
-});
-
-// 3. Perform Hybrid Text Search
-const searchResults = await client.search({
-  query: "explores",
-});
-```
+// 2. Perform hybrid text search over the graph const searchResults = await
+client.search({ query: "explores", }); \`\`\`
 
 ## Run demonstrations
 
