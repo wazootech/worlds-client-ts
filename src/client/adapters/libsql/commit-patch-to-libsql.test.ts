@@ -116,3 +116,35 @@ Deno.test("commitPatchToLibsql - supports synchronization when embeddingService 
   const quadRows = await client.execute("SELECT COUNT(*) as total FROM quads");
   assertEquals(quadRows.rows[0].total, 1);
 });
+
+Deno.test(
+  "commitPatchToLibsql - bulk insertions beyond SQLITE_MAX_VARIABLE_NUMBER do not fail",
+  async () => {
+    const client = createClient({ url: ":memory:" });
+    await setupSchema(client);
+
+    const bulkQuadCount = 2_500;
+    const bulkQuads = Array.from({ length: bulkQuadCount }, (_, index) =>
+      quad(
+        namedNode(`urn:bulk:entity:${index}`),
+        namedNode("urn:bulk:predicate"),
+        literal(`bulk literal ${index}`),
+      ));
+
+    const options = {
+      client,
+      textSplitter: sharedSplitter,
+      libsqlQueryBuilder: testLibsqlQueryBuilder,
+    };
+
+    await commitPatchToLibsql({
+      insertions: bulkQuads,
+      deletions: [],
+    }, options);
+
+    const quadRows = await client.execute(
+      "SELECT COUNT(*) as total FROM quads",
+    );
+    assertEquals(Number(quadRows.rows[0].total), bulkQuadCount);
+  },
+);
