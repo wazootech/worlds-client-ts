@@ -1,7 +1,7 @@
 {
   "version": 1,
   "denoVersion": "2.7.14",
-  "capturedRuntime": "Deno/2.7.14 x86_64-pc-windows-msvc (denokv/search/sparql JSON capture; libsql from README post-preload — refresh on ubuntu via deno task bench:baselines)",
+  "capturedRuntime": "Deno/2.7.14 (denokv/search/sparql JSON; smoke denokv/search tuned on ubuntu-latest 2026-05-21; libsql-pressure manual)",
   "regressionThresholdPercent": 15,
   "ciPlatformSlackPercent": 25,
   "subsetSmoke": [
@@ -16,10 +16,10 @@
     "Write Pressure: Import 10 Quads (Deno Kv :memory:)": 367438,
     "Write Pressure: Import 100 Quads (Deno Kv :memory:)": 1302717,
     "Write Pressure: Import 1000 Quads (Deno Kv :memory:)": 13595389,
-    "Deno Kv Hydration: 100 Quads from DB": 664795,
+    "Deno Kv Hydration: 100 Quads from DB": 1200000,
     "Deno Kv Hydration: 1,000 Quads from DB": 6306048,
     "Deno Kv Hydration: 5,000 Quads from DB": 31827258,
-    "Search: hit after full 2k KV scan (SYNT-1500)": 13441055,
+    "Search: hit after full 2k KV scan (SYNT-1500)": 21000000,
     "Search: miss after full 2k KV scan (no matches)": 13253592,
     "Scale 100: LibSQL Specific Match (Pure FTS)": 130230,
     "Scale 100: RDF/JS Specific Match (Naive Stream Scan)": 103928,

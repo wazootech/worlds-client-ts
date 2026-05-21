@@ -157,19 +157,22 @@ Committed baselines live in [`benchmarks/baselines.ci.json`](baselines.ci.json)
 (avg nanoseconds from `deno bench --json`). CI on **ubuntu-latest** applies an
 extra platform slack until baselines are re-captured on Linux.
 
-| Task                          | Purpose                                                   |
-| :---------------------------- | :-------------------------------------------------------- |
-| `deno task bench`             | Run all benchmarks locally                                |
-| `deno task bench:baselines`   | Refresh `baselines.ci.json` after intentional perf change |
-| `deno task bench:check`       | Full regression check (all benchmarks)                    |
-| `deno task bench:check:smoke` | Fast PR subset (pressure + search + one crossover)        |
+| Task                          | Purpose                                                                         |
+| :---------------------------- | :------------------------------------------------------------------------------ |
+| `deno task bench`             | Run all benchmarks locally                                                      |
+| `deno task bench:baselines`   | Refresh `baselines.ci.json` after intentional perf change                       |
+| `deno task bench:check`       | Full regression check (json-safe files; skips manual libsql-pressure baselines) |
+| `deno task bench:check:smoke` | Fast PR subset (pressure + search + one crossover)                              |
 
 Workflow
 [`.github/workflows/benchmarks.yml`](../.github/workflows/benchmarks.yml):
 
 - **Pull requests** (benchmark-related paths): `bench:check:smoke` (denokv,
-  search-comparison, SPARQL 1k crossover; libsql-pressure on full Linux CI only)
-- **Schedule / manual**: `bench:check` (full suite, all four bench files)
+  search-comparison, SPARQL crossover subset)
+- **Schedule / manual**: `bench:check` (same json-safe capture as smoke, all
+  non-manual baselines in `baselines.ci.json`). `libsql-pressure`
+  write/hydration rows stay README/manual until `deno bench --json` is stable on
+  that file.
 
 Re-capture on Linux when tightening CI slack:
 
