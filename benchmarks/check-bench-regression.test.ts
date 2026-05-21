@@ -58,6 +58,42 @@ Deno.test("checkRegression - fails when avg exceeds regression threshold", () =>
   assertEquals(failures[0].includes("Example Bench"), true);
 });
 
+Deno.test("checkRegression - all subset skips manual-only libsql pressure baselines", () => {
+  const baselines = {
+    version: 1,
+    denoVersion: "2.7.14",
+    capturedRuntime: "test",
+    regressionThresholdPercent: 15,
+    ciPlatformSlackPercent: 0,
+    subsetSmoke: [],
+    benchmarks: {
+      "Write Pressure: Import 10 Quads (:memory:)": 1,
+      "SPARQL Crossover: 1000 quads | selective | hydrate+N3": 100,
+    },
+  };
+  const report = {
+    version: 1,
+    runtime: "test",
+    benches: [{
+      name: "SPARQL Crossover: 1000 quads | selective | hydrate+N3",
+      results: [{
+        ok: {
+          n: 1,
+          min: 0,
+          max: 0,
+          avg: 100,
+          p75: 0,
+          p99: 0,
+          p995: 0,
+          p999: 0,
+        },
+      }],
+    }],
+  };
+  const failures = checkRegression(report, baselines, { subset: "all" });
+  assertEquals(failures.length, 0);
+});
+
 Deno.test("buildBaselinesFromReport - records benchmark avgs in nanoseconds", () => {
   const baselines = buildBaselinesFromReport({
     version: 1,

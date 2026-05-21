@@ -93,7 +93,7 @@ const DEFAULT_BASELINES_PATH = new URL("./baselines.ci.json", import.meta.url);
 const DEFAULT_REGRESSION_THRESHOLD_PERCENT = 15;
 const DEFAULT_CI_PLATFORM_SLACK_PERCENT = 25;
 
-/** allBenchFiles lists benchmark modules captured one at a time for --update-baselines. */
+/** allBenchFiles lists every benchmark module (including libsql-pressure). */
 const allBenchFiles = [
   "benchmarks/denokv-pressure.bench.ts",
   "benchmarks/libsql-pressure.bench.ts",
@@ -102,15 +102,31 @@ const allBenchFiles = [
 ] as const;
 
 /**
- * smokeBenchFiles lists modules run for PR smoke checks (excludes libsql-pressure
- * on hosts where deno bench --json crashes after heavy preload; full CI on Linux
- * runs all files via bench:check).
+ * jsonSafeBenchFiles lists modules safe for `deno bench --json` (per-file capture).
+ * libsql-pressure segfaults (exit 139) after preload on Windows and Linux CI;
+ * its baselines stay manual/README until Deno or the bench harness changes.
  */
-const smokeBenchFiles = [
+const jsonSafeBenchFiles = [
   "benchmarks/denokv-pressure.bench.ts",
   "benchmarks/search-comparison.bench.ts",
   "benchmarks/sparql-hexastore-crossover.bench.ts",
 ] as const;
+
+/**
+ * manualOnlyBaselineNames lists benchmarks checked into baselines.ci.json from
+ * README captures but not re-measured in CI (libsql-pressure --json crash).
+ */
+const manualOnlyBaselineNames = new Set<string>([
+  "Write Pressure: Import 10 Quads (:memory:)",
+  "Write Pressure: Import 100 Quads (:memory:)",
+  "Write Pressure: Import 1000 Quads (:memory:)",
+  "Hydration Scale: 100 Quads from DB",
+  "Hydration Scale: 1,000 Quads from DB",
+  "Hydration Scale: 5,000 Quads from DB",
+  "Search Queries: Specific Unique Keyword (Single Match)",
+  "Search Queries: High Occurrence Word (Multi-Match)",
+  "Search Queries: Miss Target (Zero Matches)",
+]);
 
 /** smokeBenchNamePatterns match fast benches for pull request CI. */
 const smokeBenchNamePatterns: RegExp[] = [
@@ -293,7 +309,9 @@ export function checkRegression(
   const failures: string[] = [];
   const namesToCheck = options.subset === "smoke"
     ? baselines.subsetSmoke
-    : Object.keys(baselines.benchmarks);
+    : Object.keys(baselines.benchmarks).filter((name) =>
+      !manualOnlyBaselineNames.has(name)
+    );
 
   const reportByName = new Map(
     report.benches.map((entry) => [entry.name, entry]),
@@ -366,6 +384,12 @@ if (import.meta.main) {
     let mergedBaselines: BenchBaselinesFile | undefined;
     for (const benchFile of allBenchFiles) {
       console.log(`  - ${benchFile}`);
+      if (benchFile === "benchmarks/libsql-pressure.bench.ts") {
+        console.warn(
+          "    (skipped: deno bench --json segfaults on libsql-pressure; keep manual baselines in baselines.ci.json)",
+        );
+        continue;
+      }
       const stdout = await runDenoBenchJson([benchFile]);
       const report = extractBenchJsonReport(stdout);
       const freshBaselines = buildBaselinesFromReport(report);
@@ -394,12 +418,14 @@ if (import.meta.main) {
   } else if (subset === "smoke") {
     console.log("Running deno bench --json (smoke subset)...");
     stdout = JSON.stringify(
-      await collectBenchReportFromFiles(smokeBenchFiles),
+      await collectBenchReportFromFiles(jsonSafeBenchFiles),
     );
   } else {
-    console.log("Running deno bench --json (all benchmarks)...");
+    console.log(
+      "Running deno bench --json (json-safe files; libsql-pressure manual baselines only)...",
+    );
     stdout = JSON.stringify(
-      await collectBenchReportFromFiles(allBenchFiles),
+      await collectBenchReportFromFiles(jsonSafeBenchFiles),
     );
   }
 
@@ -448,7 +474,8 @@ function namesToCheckCount(
   baselines: BenchBaselinesFile,
   subset: "all" | "smoke",
 ): number {
-  return subset === "smoke"
-    ? baselines.subsetSmoke.length
-    : Object.keys(baselines.benchmarks).length;
+  if (subset === "smoke") return baselines.subsetSmoke.length;
+  return Object.keys(baselines.benchmarks).filter((name) =>
+    !manualOnlyBaselineNames.has(name)
+  ).length;
 }
