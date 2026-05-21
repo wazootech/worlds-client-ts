@@ -145,39 +145,17 @@ chunked hydration (`DEFAULT_HYDRATION_BATCH_SIZE = 1000`).
 
 ## Regression policy
 
+Benchmarks are **local only** (no CI gate). Compare against the post-preload
+tables above on the same OS and Deno version.
+
 - Investigate when a keyed benchmark regresses by **more than ~15%** average vs
-  the post-preload baseline above (same OS/Deno).
-- Open a **new issue** linking
-  [#65](https://github.com/wazootech/worlds-client-ts/issues/65) with pasted
-  before/after `deno bench` output.
-
-## CI regression gate
-
-Committed baselines live in [`benchmarks/baselines.ci.json`](baselines.ci.json)
-(avg nanoseconds from `deno bench --json`). CI on **ubuntu-latest** applies an
-extra platform slack until baselines are re-captured on Linux.
-
-| Task                          | Purpose                                                                         |
-| :---------------------------- | :------------------------------------------------------------------------------ |
-| `deno task bench`             | Run all benchmarks locally                                                      |
-| `deno task bench:baselines`   | Refresh `baselines.ci.json` after intentional perf change                       |
-| `deno task bench:check`       | Full regression check (json-safe files; skips manual libsql-pressure baselines) |
-| `deno task bench:check:smoke` | Fast PR subset (pressure + search + one crossover)                              |
-
-Workflow
-[`.github/workflows/benchmarks.yml`](../.github/workflows/benchmarks.yml):
-
-- **Pull requests** (benchmark-related paths): `bench:check:smoke` (denokv,
-  search-comparison, SPARQL crossover subset)
-- **Schedule / manual**: `bench:check` (same json-safe capture as smoke, all
-  non-manual baselines in `baselines.ci.json`). `libsql-pressure`
-  write/hydration rows stay README/manual until `deno bench --json` is stable on
-  that file.
-
-Re-capture on Linux when tightening CI slack:
+  that baseline.
+- Open a **new issue** with pasted before/after `deno bench` output and link
+  [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69)
+  when SPARQL crossover numbers change.
 
 ```bash
-deno task bench:baselines
+deno task bench
 ```
 
 ## SPARQL crossover results template
