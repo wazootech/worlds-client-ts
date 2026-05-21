@@ -138,3 +138,143 @@ Deno.test("Hydrator - faithfully reconstructs advanced terms (BlankNodes, Dataty
   );
   assertEquals(esLiteral?.object.value, "Hola");
 });
+
+Deno.test("hydrateStoreFromLibsql - returns zero when the quads table is empty", async () => {
+  const client = createClient({ url: ":memory:" });
+  await client.execute(defaultLibsqlQueryBuilder.buildLibsqlQuadsTable());
+
+  const targetStore = new Store();
+  const count = await hydrateStoreFromLibsql(client, targetStore);
+
+  assertEquals(count, 0);
+  assertEquals(targetStore.size, 0);
+});
+
+Deno.test(
+  "hydrateStoreFromLibsql - applies QuadFilter include constraints during hydration",
+  async () => {
+    const client = createClient({ url: ":memory:" });
+    await client.execute(defaultLibsqlQueryBuilder.buildLibsqlQuadsTable());
+
+    await client.execute({
+      sql:
+        `INSERT INTO quads (id, s, s_type, p, o, o_type, g, g_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        "h1",
+        "urn:included",
+        "NamedNode",
+        "urn:p",
+        "included value",
+        "Literal",
+        "",
+        "DefaultGraph",
+      ],
+    });
+    await client.execute({
+      sql:
+        `INSERT INTO quads (id, s, s_type, p, o, o_type, g, g_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        "h2",
+        "urn:excluded",
+        "NamedNode",
+        "urn:p",
+        "excluded value",
+        "Literal",
+        "",
+        "DefaultGraph",
+      ],
+    });
+
+    const targetStore = new Store();
+    const count = await hydrateStoreFromLibsql(client, targetStore, {
+      include: { subjects: ["urn:included"] },
+    });
+
+    assertEquals(count, 1);
+    assertEquals(targetStore.size, 1);
+    assertEquals(
+      targetStore.getQuads(null, null, null, null)[0].subject.value,
+      "urn:included",
+    );
+  },
+);
+
+Deno.test(
+  "hydrateStoreFromLibsql - hydrates NamedNode object terms from stored rows",
+  async () => {
+    const client = createClient({ url: ":memory:" });
+    await client.execute(defaultLibsqlQueryBuilder.buildLibsqlQuadsTable());
+
+    await client.execute({
+      sql:
+        `INSERT INTO quads (id, s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        "obj-node",
+        "urn:s",
+        "NamedNode",
+        "urn:p",
+        "http://example.com/object",
+        "NamedNode",
+        null,
+        null,
+        "",
+        "DefaultGraph",
+      ],
+    });
+
+    const targetStore = new Store();
+    await hydrateStoreFromLibsql(client, targetStore);
+
+    const hydratedQuad = targetStore.getQuads(null, null, null, null)[0];
+    assertEquals(hydratedQuad.object.termType, "NamedNode");
+    assertEquals(hydratedQuad.object.value, "http://example.com/object");
+  },
+);
+
+Deno.test(
+  "hydrateStoreFromLibsql - skips corrupt rows without aborting hydration",
+  async () => {
+    const client = {
+      execute: async () => ({
+        columns: [],
+        rows: [
+          {
+            s: "urn:good",
+            s_type: "NamedNode",
+            p: "urn:p",
+            o: "ok",
+            o_type: "Literal",
+            o_datatype: null,
+            o_lang: null,
+            g: "",
+            g_type: "DefaultGraph",
+          },
+          {
+            s: "urn:bad",
+            s_type: "NamedNode",
+            get p(): string {
+              throw new Error("corrupt predicate column");
+            },
+            o: "bad",
+            o_type: "Literal",
+            o_datatype: null,
+            o_lang: null,
+            g: "",
+            g_type: "DefaultGraph",
+          },
+        ],
+      }),
+    } as unknown as ReturnType<typeof createClient>;
+
+    const targetStore = new Store();
+    const count = await hydrateStoreFromLibsql(client, targetStore);
+
+    assertEquals(count, 1);
+    assertEquals(targetStore.size, 1);
+    assertEquals(
+      targetStore.getQuads(null, null, null, null)[0].subject.value,
+      "urn:good",
+    );
+  },
+);

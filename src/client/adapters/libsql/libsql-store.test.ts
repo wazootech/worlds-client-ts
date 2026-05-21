@@ -1,4 +1,5 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals, assertRejects } from "@std/assert";
+import type { Client } from "@libsql/client";
 import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
 import type * as rdfjs from "@rdfjs/types";
@@ -300,6 +301,142 @@ Deno.test("LibsqlStore.match - DefaultGraph round-trip", async () => {
   assertEquals(results[0].graph.termType, "DefaultGraph");
 });
 
+Deno.test(
+  "LibsqlStore.match - literal object binding includes language constraints",
+  async () => {
+    const db = createClient({ url: ":memory:" });
+    await setupSchema(db);
+    await seedQuad(db, {
+      id: "h1",
+      s: "urn:s",
+      p: "urn:p",
+      o: "hola",
+      o_type: "Literal",
+      o_lang: "es",
+    });
+    await seedQuad(db, {
+      id: "h2",
+      s: "urn:s2",
+      p: "urn:p",
+      o: "hello",
+      o_type: "Literal",
+      o_lang: "en",
+    });
+    const store = new LibsqlStore(db, testBuilder);
+
+    const results = await collectStream(
+      store.match(
+        namedNode("urn:s"),
+        namedNode("urn:p"),
+        literal("hola", "es"),
+        null,
+      ),
+    );
+
+    assertEquals(results.length, 1);
+    assertEquals((results[0].object as rdfjs.Literal).language, "es");
+  },
+);
+
+Deno.test(
+  "LibsqlStore.match - explicit xsd:string datatype uses IS NULL constraint",
+  async () => {
+    const db = createClient({ url: ":memory:" });
+    await setupSchema(db);
+    await seedQuad(db, {
+      id: "h1",
+      s: "urn:s",
+      p: "urn:p",
+      o: "plain",
+      o_type: "Literal",
+      o_datatype: null,
+    });
+    await seedQuad(db, {
+      id: "h2",
+      s: "urn:s",
+      p: "urn:p",
+      o: "42",
+      o_type: "Literal",
+      o_datatype: "http://www.w3.org/2001/XMLSchema#integer",
+    });
+    const store = new LibsqlStore(db, testBuilder);
+
+    const results = await collectStream(
+      store.match(
+        namedNode("urn:s"),
+        namedNode("urn:p"),
+        literal(
+          "plain",
+          namedNode("http://www.w3.org/2001/XMLSchema#string"),
+        ),
+        null,
+      ),
+    );
+
+    assertEquals(results.length, 1);
+    assertEquals(results[0].object.value, "plain");
+  },
+);
+
+Deno.test("LibsqlStore.match - NamedNode object terms round-trip", async () => {
+  const db = createClient({ url: ":memory:" });
+  await setupSchema(db);
+  await seedQuad(db, {
+    id: "h1",
+    s: "urn:s",
+    p: "urn:p",
+    o: "http://example.com/resource",
+    o_type: "NamedNode",
+    o_datatype: null,
+    o_lang: null,
+  });
+  const store = new LibsqlStore(db, testBuilder);
+
+  const results = await collectStream(
+    store.match(null, null, namedNode("http://example.com/resource"), null),
+  );
+
+  assertEquals(results.length, 1);
+  assertEquals(results[0].object.termType, "NamedNode");
+});
+
+Deno.test("LibsqlStore.match - BlankNode graph terms round-trip", async () => {
+  const db = createClient({ url: ":memory:" });
+  await setupSchema(db);
+  await seedQuad(db, {
+    id: "h1",
+    s: "urn:s",
+    p: "urn:p",
+    o: "value",
+    g: "genid-graph",
+    g_type: "BlankNode",
+  });
+  const store = new LibsqlStore(db, testBuilder);
+
+  const results = await collectStream(
+    store.match(null, null, null, blankNode("genid-graph")),
+  );
+
+  assertEquals(results.length, 1);
+  assertEquals(results[0].graph.termType, "BlankNode");
+});
+
+Deno.test(
+  "LibsqlStore.match - propagates database errors through the result stream",
+  async () => {
+    const failingClient = {
+      execute: () => Promise.reject(new Error("database unavailable")),
+    } as unknown as Client;
+    const store = new LibsqlStore(failingClient, testBuilder);
+
+    await assertRejects(
+      () => collectStream(store.match(null, null, null, null)),
+      Error,
+      "database unavailable",
+    );
+  },
+);
+
 Deno.test("LibsqlStore.match - multiple named graphs are isolated", async () => {
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
@@ -544,6 +681,145 @@ Deno.test("LibsqlStore.clearBuffer - discards pending mutations on error", async
     (await collectStream(store.match(null, null, null, null))).length,
     0,
   );
+});
+
+function createErrorQuadStream(
+  message = "stream broke",
+): rdfjs.Stream<rdfjs.Quad> {
+  const stream = new Readable({
+    read() {
+      this.destroy(new Error(message));
+    },
+  });
+  return stream as unknown as rdfjs.Stream<rdfjs.Quad>;
+}
+
+Deno.test("LibsqlStore.import - forwards stream errors to the emitter", async () => {
+  const db = createClient({ url: ":memory:" });
+  await setupSchema(db);
+  const store = new LibsqlStore(db, testBuilder);
+
+  await assertRejects(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const emitter = store.import(createErrorQuadStream());
+        emitter.on("end", resolve);
+        emitter.on("error", reject);
+      }),
+    Error,
+    "stream broke",
+  );
+});
+
+Deno.test("LibsqlStore.remove - stream buffers quads for deletion on flush", async () => {
+  const db = createClient({ url: ":memory:" });
+  await setupSchema(db);
+  const store = new LibsqlStore(
+    db,
+    testBuilder,
+    createFlushHandler(db, testBuilder),
+  );
+
+  const keepQuad = quad(
+    namedNode("urn:keep"),
+    namedNode("urn:p"),
+    literal("stay"),
+  );
+  const removeQuad = quad(
+    namedNode("urn:remove"),
+    namedNode("urn:p"),
+    literal("gone"),
+  );
+  store.add(keepQuad);
+  store.add(removeQuad);
+  await store.flush();
+
+  const stream = Readable.from([removeQuad]) as unknown as rdfjs.Stream<
+    rdfjs.Quad
+  >;
+  await new Promise<void>((resolve, reject) => {
+    const emitter = store.remove(stream);
+    emitter.on("end", resolve);
+    emitter.on("error", reject);
+  });
+  await store.flush();
+
+  const remaining = await collectStream(store.match(null, null, null, null));
+  assertEquals(remaining.length, 1);
+  assertEquals(remaining[0].subject.value, "urn:keep");
+});
+
+Deno.test(
+  "LibsqlStore.removeMatches - forwards match stream errors to the emitter",
+  async () => {
+    const failingClient = {
+      execute: () => Promise.reject(new Error("match query failed")),
+    } as unknown as Client;
+    const store = new LibsqlStore(failingClient, testBuilder);
+
+    await assertRejects(
+      () =>
+        new Promise<void>((resolve, reject) => {
+          const emitter = store.removeMatches(null, null, null, null);
+          emitter.on("end", resolve);
+          emitter.on("error", reject);
+        }),
+      Error,
+      "match query failed",
+    );
+  },
+);
+
+Deno.test("LibsqlStore.deleteGraph - accepts graph IRI strings", async () => {
+  const db = createClient({ url: ":memory:" });
+  await setupSchema(db);
+  const store = new LibsqlStore(
+    db,
+    testBuilder,
+    createFlushHandler(db, testBuilder),
+  );
+
+  store.add(
+    quad(
+      namedNode("urn:s"),
+      namedNode("urn:p"),
+      literal("in graph"),
+      namedNode("urn:target-graph"),
+    ),
+  );
+  store.add(
+    quad(
+      namedNode("urn:s"),
+      namedNode("urn:p"),
+      literal("outside graph"),
+      namedNode("urn:other-graph"),
+    ),
+  );
+  await store.flush();
+
+  await new Promise<void>((resolve, reject) => {
+    const emitter = store.deleteGraph("urn:target-graph");
+    emitter.on("end", resolve);
+    emitter.on("error", reject);
+  });
+  await store.flush();
+
+  const remaining = await collectStream(store.match(null, null, null, null));
+  assertEquals(remaining.length, 1);
+  assertEquals(remaining[0].graph.value, "urn:other-graph");
+});
+
+Deno.test("LibsqlStore.flush - is a no-op when both buffers are empty", async () => {
+  const db = createClient({ url: ":memory:" });
+  await setupSchema(db);
+  let flushHandlerCalls = 0;
+  const store = new LibsqlStore(db, testBuilder, async () => {
+    flushHandlerCalls++;
+  });
+
+  await store.flush();
+
+  assertEquals(flushHandlerCalls, 0);
 });
 
 Deno.test("LibsqlStore.import - stream buffers all quads, flush persists them", async () => {

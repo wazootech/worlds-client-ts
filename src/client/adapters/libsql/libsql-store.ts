@@ -8,6 +8,13 @@ import type { Patch } from "@worlds/client";
 
 const { namedNode, literal, blankNode, defaultGraph, quad } = DataFactory;
 
+/** rdfLangStringIri is the RDF datatype for language-tagged literals in N3/RDF/JS. */
+const rdfLangStringIri =
+  "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
+
+/** xsdStringIri is the XSD string datatype IRI. */
+const xsdStringIri = "http://www.w3.org/2001/XMLSchema#string";
+
 /**
  * FlushHandler is a callback that atomically persists a patch of buffered mutations.
  */
@@ -266,12 +273,16 @@ export class LibsqlStore implements rdfjs.Store {
         args.push(lit.language);
       }
       if (lit.datatype) {
-        const dtValue = lit.datatype.value;
-        if (dtValue !== "http://www.w3.org/2001/XMLSchema#string") {
-          conditions.push(`o_datatype = ?`);
-          args.push(dtValue);
-        } else {
+        const datatypeValue = lit.datatype.value;
+        if (
+          datatypeValue === xsdStringIri ||
+          datatypeValue === rdfLangStringIri
+        ) {
+          // Persisted rows store plain and language-tagged strings with NULL datatype.
           conditions.push(`o_datatype IS NULL`);
+        } else {
+          conditions.push(`o_datatype = ?`);
+          args.push(datatypeValue);
         }
       }
     }
