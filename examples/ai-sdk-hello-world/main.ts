@@ -15,8 +15,8 @@ if (import.meta.main) {
 
   const client = await createLibsqlClient({
     client: database,
-    createSparqlEngine: ({ store }) =>
-      new ComunicaSparqlEngine({ queryEngine, store }),
+    createSparqlEngine: ({ libsqlStore }) =>
+      new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
   });
 
   console.log("Ingesting initial knowledge...");

@@ -23,7 +23,7 @@ async function setupSchema(client: ReturnType<typeof createClient>) {
 
 const sharedSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000 });
 
-Deno.test("commitPatchToLibsql - isolated writes and removals flush correctly to BOTH chunks and quads", async () => {
+Deno.test("commitPatchToLibsql - isolated writes and removals commit correctly to BOTH chunks and quads", async () => {
   const client = createClient({ url: ":memory:" });
   await setupSchema(client);
 

@@ -106,8 +106,8 @@ const sqliteClient = await createLibsqlClient({ client: db });
 const queryEngine = new QueryEngine();
 const sqliteClientWithSparql = await createLibsqlClient({
   client: db,
-  createSparqlEngine: ({ store }) =>
-    new ComunicaSparqlEngine({ queryEngine, store }),
+  createSparqlEngine: ({ libsqlStore }) =>
+    new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
 });
 
 // 3. Stateless Edge Deployment via Deno Kv

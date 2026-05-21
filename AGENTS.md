@@ -102,6 +102,14 @@ mathematical brevity.
 Choose import specifiers in this order. Resolution is always through
 [`deno.json`](deno.json) `exports` — never a private `#/` import map.
 
+- **No inline imports.** Declare every module dependency at the top of the file
+  with `import` / `import type`. Do not use `import("...")` in type positions,
+  return types, or annotations, and do not rely on dynamic `import()` except
+  where lazy loading is an explicit, documented requirement.
+  - ❌ **Avoid:**
+    `Promise<import("@worlds/client/sparql-engine").SparqlResponse>`
+  - ✅ **Prefer:**
+    `import type { SparqlResponse } from "@worlds/client/sparql-engine"`
 - **Never use `../`.** Parent-relative paths are prohibited. Cross-folder
   imports must use a published `@worlds/client/...` export subpath instead.
 - **Same module tree: use `./`.** Files under the same domain folder (e.g.
@@ -111,7 +119,8 @@ Choose import specifiers in this order. Resolution is always through
 - **Another domain in this package: use an export subpath.** Examples:
   `@worlds/client/quad-store`, `@worlds/client/search-index`,
   `@worlds/client/search-index/embedding-service`,
-  `@worlds/client/sparql-engine`, `@worlds/client/adapters/libsql`. Pick the
+  `@worlds/client/sparql-engine`, `@worlds/client/adapters/libsql`,
+  `@worlds/client/adapters/libsql/n3` (hydrated N3 LibSQL client only). Pick the
   narrowest subpath that exports what you need.
 - **Full package entry: `@worlds/client`.** Use for the root barrel (e.g.
   `Client`, `Patch`, `hashQuad`) in adapters, tests, benchmarks, and examples.
@@ -216,6 +225,24 @@ The active Graph Store runtime is anchored on high-speed, transient in-memory
 RDF processing using `N3.Store` with optional SPARQL via an injected Comunica
 adapter. This maximizes edge query execution speeds and eliminates recurrent
 network hop latency during query execution.
+
+### LibSQL client entry points (hexastore vs hydrated N3)
+
+Hexastore indexes are provisioned at schema init for all LibSQL clients. Use
+separate modules so hexastore deployments do not import N3 hydration:
+
+- **`createLibsqlClient`**
+  ([`create-libsql-client.ts`](src/client/adapters/libsql/create-libsql-client.ts))
+  — `LibsqlStore` + hexastore indexes; `createSparqlEngine({ libsqlStore })`.
+- **`createLibsqlN3Client`** — import `@worlds/client/adapters/libsql/n3`
+  ([`n3/create-libsql-n3-client.ts`](src/client/adapters/libsql/n3/create-libsql-n3-client.ts));
+  hydrate → `proxyStore` → sync patches to LibSQL;
+  `createSparqlEngine({ store })` receives proxied N3. Not re-exported from
+  `@worlds/client/adapters/libsql` (keeps hexastore-only imports free of N3).
+
+Use `benchmarks/sparql-hexastore-crossover.bench.ts` and
+[discussion #45](https://github.com/wazootech/worlds-client-ts/discussions/45)
+to compare paths before choosing a factory.
 
 ### Decoupled store lifecycle via dependency injection
 
