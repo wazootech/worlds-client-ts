@@ -2,6 +2,7 @@ import { assertEquals, assertExists } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { FakeEmbeddingService } from "@worlds/client/search-index/embedding-service";
+import type { EmbeddingService } from "@worlds/client/search-index/embedding-service";
 import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 
 // --- Helpers ---
@@ -266,4 +267,122 @@ Deno.test("LibsqlSearchIndex - Stability: executes search safely when query cont
     // Assert that it gracefully completes search without raising SQL exceptions
     assertExists(response.results, `Failed on query: ${query}`);
   }
+});
+
+/** FailingEmbeddingService always rejects embed() to exercise keyword fallback. */
+class FailingEmbeddingService implements EmbeddingService {
+  public embed(_texts: string[]): Promise<Array<Float32Array>> {
+    return Promise.reject(new Error("embedding service unavailable"));
+  }
+}
+
+/** WrongDimensionEmbeddingService returns vectors with an invalid width. */
+class WrongDimensionEmbeddingService implements EmbeddingService {
+  public embed(texts: string[]): Promise<Array<Float32Array>> {
+    return Promise.resolve(texts.map(() => new Float32Array(8)));
+  }
+}
+
+Deno.test(
+  "LibsqlSearchIndex - degrades to keyword-only search when embeddingService throws",
+  async () => {
+    const client = createClient({ url: ":memory:" });
+    await setupSchema(client);
+
+    await client.execute({
+      sql:
+        `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, NULL)`,
+      args: [
+        "id-fts",
+        "urn:fallback",
+        "urn:prop",
+        "urn:g",
+        "Unique fallback keyword phrase",
+        null,
+      ],
+    });
+
+    const searchIndex = new LibsqlSearchIndex({
+      client,
+      embeddingService: new FailingEmbeddingService(),
+      libsqlQueryBuilder: testLibsqlQueryBuilder,
+    });
+
+    const response = await searchIndex.search({ query: "fallback keyword" });
+
+    assertEquals(response.results?.length, 1);
+    assertEquals(response.results?.[0].subject, "urn:fallback");
+  },
+);
+
+Deno.test(
+  "LibsqlSearchIndex - degrades when embedding dimensions do not match schema",
+  async () => {
+    const client = createClient({ url: ":memory:" });
+    await setupSchema(client);
+
+    await client.execute({
+      sql:
+        `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, NULL)`,
+      args: [
+        "id-dim",
+        "urn:dim",
+        "urn:prop",
+        "urn:g",
+        "Dimension mismatch keyword target",
+        null,
+      ],
+    });
+
+    const searchIndex = new LibsqlSearchIndex({
+      client,
+      embeddingService: new WrongDimensionEmbeddingService(),
+      libsqlQueryBuilder: testLibsqlQueryBuilder,
+    });
+
+    const response = await searchIndex.search({
+      query: "dimension mismatch",
+    });
+
+    assertEquals(response.results?.length, 1);
+    assertEquals(response.results?.[0].subject, "urn:dim");
+  },
+);
+
+Deno.test("LibsqlSearchIndex - respects custom result limit option", async () => {
+  const client = createClient({ url: ":memory:" });
+  await setupSchema(client);
+
+  const vecStr = JSON.stringify(new Array(32).fill(0));
+
+  for (let index = 0; index < 5; index++) {
+    await client.execute({
+      sql:
+        `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, vector32(?))`,
+      args: [
+        `id-${index}`,
+        `urn:row:${index}`,
+        "urn:prop",
+        "urn:g",
+        `Shared limit keyword row ${index}`,
+        vecStr,
+      ],
+    });
+  }
+
+  const searchIndex = new LibsqlSearchIndex({
+    client,
+    embeddingService: new FakeEmbeddingService(),
+    libsqlQueryBuilder: testLibsqlQueryBuilder,
+    limit: 2,
+  });
+
+  const response = await searchIndex.search({ query: "limit keyword" });
+
+  assertExists(response.results);
+  assertEquals(
+    response.results.length,
+    2,
+    "Custom limit should cap the number of returned rows",
+  );
 });

@@ -157,6 +157,35 @@ Deno.test("executeSparql - ASK returns boolean results", async () => {
   assertEquals(response.data.boolean, true);
 });
 
+Deno.test(
+  "executeSparql - maps literal language tags into SparqlValue xml:lang",
+  async () => {
+    const store = new Store();
+
+    await executeSparql(queryEngine, store, {
+      query:
+        `INSERT DATA { <http://example.com/s> <http://example.com/p> "hello"@en }`,
+    });
+
+    const response = await executeSparql(queryEngine, store, {
+      query:
+        "SELECT ?text WHERE { <http://example.com/s> <http://example.com/p> ?text }",
+    });
+
+    if (response.kind !== "select") {
+      throw new Error("Expected select response kind");
+    }
+
+    const binding = response.data.results.bindings[0];
+    const textValue = binding.text;
+    if (textValue?.type !== "literal") {
+      throw new Error("Expected literal SparqlValue");
+    }
+    assertEquals(textValue.value, "hello");
+    assertEquals(textValue["xml:lang"], "en");
+  },
+);
+
 Deno.test("executeSparql - UPDATE returns void and mutates the store", async () => {
   const store = new Store();
 

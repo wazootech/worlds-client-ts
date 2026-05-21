@@ -108,6 +108,48 @@ Deno.test(
 );
 
 Deno.test(
+  "createDenokvClient - hydration SPARQL sees quads imported after client construction",
+  async () => {
+    const kv = await Deno.openKv(":memory:");
+    try {
+      const client = createDenokvClient({
+        kv,
+        createSparqlEngine: ({ store }) =>
+          new ComunicaSparqlEngine({ queryEngine, store }),
+      });
+
+      await client.import({
+        source: {
+          kind: "quads",
+          quads: [
+            quad(
+              namedNode("urn:person:carol"),
+              namedNode("urn:bio"),
+              literal("Carol maps desert canyons."),
+            ),
+          ],
+        },
+      });
+
+      const response = await client.sparql({
+        query: "SELECT ?text WHERE { <urn:person:carol> <urn:bio> ?text }",
+      });
+
+      if (response.kind !== "select") {
+        throw new Error("Expected select response kind");
+      }
+      assertEquals(response.data.results.bindings.length, 1);
+      assertEquals(
+        response.data.results.bindings[0].text?.value,
+        "Carol maps desert canyons.",
+      );
+    } finally {
+      kv.close();
+    }
+  },
+);
+
+Deno.test(
   "createDenokvClient - sparql rejects when createSparqlEngine is omitted",
   async () => {
     const kv = await Deno.openKv(":memory:");

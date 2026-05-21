@@ -66,6 +66,62 @@ Deno.test("QuadFilter - restricts matching by negative (exclude) scope", () => {
   assertEquals(matcher(fail), false);
 });
 
+Deno.test(
+  "QuadFilter - restricts matching by positive (include) predicate scope",
+  () => {
+    const matcher = filterQuads({
+      include: {
+        predicates: ["http://p-allowed"],
+      },
+    });
+
+    const pass = quad(
+      namedNode("http://s"),
+      namedNode("http://p-allowed"),
+      namedNode("http://o"),
+      defaultGraph(),
+    );
+
+    const fail = quad(
+      namedNode("http://s"),
+      namedNode("http://p-other"),
+      namedNode("http://o"),
+      defaultGraph(),
+    );
+
+    assertEquals(matcher(pass), true);
+    assertEquals(matcher(fail), false);
+  },
+);
+
+Deno.test(
+  "QuadFilter - restricts matching by negative (exclude) subject scope",
+  () => {
+    const matcher = filterQuads({
+      exclude: {
+        subjects: ["http://s-blocked"],
+      },
+    });
+
+    const pass = quad(
+      namedNode("http://s-allowed"),
+      namedNode("http://p"),
+      namedNode("http://o"),
+      defaultGraph(),
+    );
+
+    const fail = quad(
+      namedNode("http://s-blocked"),
+      namedNode("http://p"),
+      namedNode("http://o"),
+      defaultGraph(),
+    );
+
+    assertEquals(matcher(pass), true);
+    assertEquals(matcher(fail), false);
+  },
+);
+
 Deno.test("QuadFilter - intersects multiple combined inclusion/exclusion criteria", () => {
   const matcher = filterQuads({
     include: {

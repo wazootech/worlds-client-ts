@@ -121,6 +121,33 @@ Deno.test("Slice 2: bridge automatically transparently captures implicit Comunic
   assertEquals(baseStore.size, 1, "Memory failed to write");
 });
 
+Deno.test("proxyStore - add alias captures insertions like addQuad", () => {
+  const baseStore = new Store();
+  const { store, drainPatches } = proxyStore(baseStore);
+  const testQuad = quad(
+    namedNode("urn:sub"),
+    namedNode("urn:pred"),
+    literal("via add"),
+  );
+
+  store.add(testQuad);
+
+  const pending = drainPatches();
+  assertEquals(pending.length, 1);
+  assertEquals(pending[0].insertions[0].object.value, "via add");
+  assertEquals(baseStore.size, 1);
+});
+
+Deno.test(
+  'proxyStore - proxied store exposes removeMatches for Comunica "has" checks',
+  () => {
+    const baseStore = new Store();
+    const { store } = proxyStore(baseStore);
+
+    assertEquals("removeMatches" in store, true);
+  },
+);
+
 Deno.test(
   "proxyStore - duplicate addQuad does not enqueue redundant patches",
   () => {

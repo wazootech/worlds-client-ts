@@ -1,4 +1,5 @@
 import { assertEquals, assertRejects } from "@std/assert";
+import type { ExportRequest, ImportRequest } from "@worlds/client";
 import { DataFactory, Store } from "n3";
 import { RdfjsQuadStore } from "./rdfjs-quad-store.ts";
 
@@ -221,6 +222,37 @@ Deno.test("RdfjsQuadStore.export - returns all store quads directly", async () =
 
   if (response.kind !== "quads") throw new Error("Expected kind quads");
   assertEquals(response.quads.length, 1);
+});
+
+Deno.test("RdfjsQuadStore.export - rejects invalid export format", async () => {
+  const store = new Store();
+  store.add(q1);
+
+  await assertRejects(
+    () =>
+      new RdfjsQuadStore(store).export(
+        {
+          format: { kind: "invalid" },
+        } as unknown as ExportRequest,
+      ),
+    Error,
+    "Invalid format requested",
+  );
+});
+
+Deno.test("RdfjsQuadStore.import - rejects unsupported import source kind", async () => {
+  const store = new Store();
+
+  await assertRejects(
+    () =>
+      new RdfjsQuadStore(store).import(
+        {
+          source: { kind: "unknown" },
+        } as unknown as ImportRequest,
+      ),
+    Error,
+    "Unsupported import source kind",
+  );
 });
 
 Deno.test("RdfjsQuadStore.export - returns serialized dump", async () => {

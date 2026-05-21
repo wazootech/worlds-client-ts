@@ -6,14 +6,18 @@ import { DenokvSearchIndex } from "./denokv-search-index.ts";
 
 const { namedNode, literal, quad } = DataFactory;
 
+/** customKeyPrefix is a non-default Deno Kv namespace used by prefix isolation tests. */
+const customKeyPrefix = ["tenant", "quads"];
+
 /**
  * seedQuads persists quads into an in-memory Deno Kv instance for search tests.
  */
 async function seedQuads(
   kv: Deno.Kv,
   quads: rdfjs.Quad[],
+  options?: { keyPrefix?: Deno.KvKey },
 ): Promise<void> {
-  const quadStore = new DenokvQuadStore({ kv });
+  const quadStore = new DenokvQuadStore({ kv, keyPrefix: options?.keyPrefix });
   await quadStore.import({
     mode: "merge",
     source: { kind: "quads", quads },
@@ -148,6 +152,98 @@ Deno.test(
       assertEquals(
         response.results?.[0].text,
         "The magic number is 42",
+      );
+    } finally {
+      kv.close();
+    }
+  },
+);
+
+Deno.test(
+  "DenokvSearchIndex.search - matches case-insensitively on query and stored text",
+  async () => {
+    const kv = await Deno.openKv(":memory:");
+    try {
+      await seedQuads(kv, [
+        quad(
+          namedNode("http://example.com/s"),
+          namedNode("http://example.com/p"),
+          literal("UPPERCASE KEYWORD inside value"),
+        ),
+      ]);
+
+      const searchIndex = new DenokvSearchIndex({ kv });
+      const response = await searchIndex.search({ query: "keyword" });
+
+      assertEquals(response.results?.length, 1);
+      assertEquals(
+        response.results?.[0].text,
+        "UPPERCASE KEYWORD inside value",
+      );
+    } finally {
+      kv.close();
+    }
+  },
+);
+
+Deno.test(
+  "DenokvSearchIndex.search - skips empty or missing serialized KV values",
+  async () => {
+    const kv = await Deno.openKv(":memory:");
+    try {
+      await seedQuads(kv, [
+        quad(
+          namedNode("http://example.com/s"),
+          namedNode("http://example.com/p"),
+          literal("Valid searchable text"),
+        ),
+      ]);
+
+      await kv.set(["quads", "corrupt-entry"], null);
+
+      const searchIndex = new DenokvSearchIndex({ kv });
+      const response = await searchIndex.search({ query: "searchable" });
+
+      assertEquals(response.results?.length, 1);
+      assertEquals(response.results?.[0].text, "Valid searchable text");
+    } finally {
+      kv.close();
+    }
+  },
+);
+
+Deno.test(
+  "DenokvSearchIndex.search - respects custom keyPrefix when scanning KV",
+  async () => {
+    const kv = await Deno.openKv(":memory:");
+    try {
+      await seedQuads(
+        kv,
+        [
+          quad(
+            namedNode("http://example.com/tenant"),
+            namedNode("http://example.com/p"),
+            literal("Tenant scoped document"),
+          ),
+        ],
+        { keyPrefix: customKeyPrefix },
+      );
+
+      const defaultPrefixIndex = new DenokvSearchIndex({ kv });
+      const defaultResponse = await defaultPrefixIndex.search({
+        query: "tenant",
+      });
+      assertEquals(defaultResponse.results?.length, 0);
+
+      const tenantIndex = new DenokvSearchIndex({
+        kv,
+        keyPrefix: customKeyPrefix,
+      });
+      const tenantResponse = await tenantIndex.search({ query: "tenant" });
+      assertEquals(tenantResponse.results?.length, 1);
+      assertEquals(
+        tenantResponse.results?.[0].text,
+        "Tenant scoped document",
       );
     } finally {
       kv.close();
