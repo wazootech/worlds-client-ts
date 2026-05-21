@@ -1,7 +1,7 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
-import { FakeEmbeddingService } from "@worlds/client";
+import { FakeEmbeddingService } from "@worlds/client/search-index/embedding-service";
 import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 
 // --- Helpers ---

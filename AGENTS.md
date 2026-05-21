@@ -97,6 +97,31 @@ mathematical brevity.
     ) {}
     ```
 
+## Import path conventions
+
+Choose import specifiers in this order. Resolution is always through
+[`deno.json`](deno.json) `exports` — never a private `#/` import map.
+
+- **Never use `../`.** Parent-relative paths are prohibited. Cross-folder
+  imports must use a published `@worlds/client/...` export subpath instead.
+- **Same module tree: use `./`.** Files under the same domain folder (e.g.
+  `search-index/`, `providers/libsql/`) import siblings and children with
+  `./file.ts` or `./subfolder/mod.ts`. Barrel `mod.ts` files re-export children
+  the same way — not `@worlds/client/...` pointing back into the same folder.
+- **Another domain in this package: use an export subpath.** Examples:
+  `@worlds/client/quad-store`, `@worlds/client/search-index`,
+  `@worlds/client/search-index/embedding-service`,
+  `@worlds/client/sparql-engine`, `@worlds/client/providers/libsql`. Pick the
+  narrowest subpath that exports what you need.
+- **Full package entry: `@worlds/client`.** Use for the root barrel (e.g.
+  `Client`, `Patch`, `hashQuad`) in providers, tests, benchmarks, and examples.
+  Do **not** import `@worlds/client` from source files that the root barrel
+  re-exports (e.g. `search-index/quad-chunker/chunk-quads.ts`) — that can cycle;
+  use a domain subpath such as `@worlds/client/quad-store` instead.
+- **External consumers** (apps, other repos) use only documented `exports`
+  entries in `deno.json`, same as in-repo provider code. Do not rely on deep
+  file paths that are not listed under `exports`.
+
 ## State resilience and dual-layer safety
 
 When interacting with replication synchronizers or persistent storage

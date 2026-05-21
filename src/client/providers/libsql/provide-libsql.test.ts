@@ -5,7 +5,7 @@ import { DataFactory, Store } from "n3";
 import { Client } from "@worlds/client";
 import { ComunicaSparqlEngine } from "@worlds/client/providers/comunica";
 import { provideLibsql } from "./provide-libsql.ts";
-import { FakeEmbeddingService } from "@worlds/client";
+import { FakeEmbeddingService } from "@worlds/client/search-index/embedding-service";
 
 const { quad, namedNode, literal } = DataFactory;
 const queryEngine = new QueryEngine();

@@ -5,7 +5,7 @@ import type {
   SearchRequest,
   SearchResponse,
   SearchResult,
-} from "@worlds/client";
+} from "@worlds/client/search-index";
 import { hashQuad } from "@worlds/client";
 import { filterQuads } from "@worlds/client";
 import { isTextualLiteral } from "@worlds/client";

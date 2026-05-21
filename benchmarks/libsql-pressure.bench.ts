@@ -3,7 +3,7 @@ import { Store } from "n3";
 import { Client } from "@worlds/client";
 import { provideLibsql } from "@worlds/client/providers/libsql";
 import { hydrateStoreFromLibsql } from "@worlds/client/providers/libsql";
-import { FakeEmbeddingService } from "@worlds/client";
+import { FakeEmbeddingService } from "@worlds/client/search-index/embedding-service";
 import { generateSyntheticQuads } from "./synthetic-data.ts";
 
 // Pre-allocated payloads for strict repeatable boundaries

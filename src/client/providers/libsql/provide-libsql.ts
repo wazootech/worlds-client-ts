@@ -4,8 +4,8 @@ import { Store } from "n3";
 
 import type { ClientOptions } from "@worlds/client";
 import type { Patch } from "@worlds/client";
-import type { TextSplitterInterface } from "@worlds/client";
-import type { EmbeddingService } from "@worlds/client";
+import type { EmbeddingService } from "@worlds/client/search-index/embedding-service";
+import type { TextSplitterInterface } from "@worlds/client/search-index/quad-chunker";
 import type { QuadFilter } from "@worlds/client";
 import type { SparqlEngineInterface } from "@worlds/client";
 

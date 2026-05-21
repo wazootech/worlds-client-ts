@@ -1,4 +1,5 @@
-import type { QuadFilter, SearchRequest } from "@worlds/client";
+import type { QuadFilter } from "@worlds/client/quad-store";
+import type { SearchRequest } from "@worlds/client/search-index";
 
 /** Maximum embedding dimensions accepted by LibsqlQueryBuilder (LibSQL / resource guardrail). */
 const LIBSQL_QUERY_BUILDER_MAX_VECTOR_DIMENSIONS = 8192;
