@@ -1,11 +1,14 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { createClient as createLibsqlClient } from "@libsql/client";
+import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory, Store } from "n3";
 import { Client } from "#/client/client.ts";
+import { ComunicaSparqlEngine } from "#/client/providers/comunica/mod.ts";
 import { provideLibsql } from "./provide-libsql.ts";
 import { FakeEmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 
 const { quad, namedNode, literal } = DataFactory;
+const queryEngine = new QueryEngine();
 
 Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availability", async (t) => {
   // 1. Initialize ephemeral environment
@@ -13,7 +16,12 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
   const embeddingService = new FakeEmbeddingService();
 
   const client = new Client(
-    await provideLibsql({ client: db, embeddingService }),
+    await provideLibsql({
+      client: db,
+      embeddingService,
+      createSparqlEngine: ({ store }) =>
+        new ComunicaSparqlEngine({ queryEngine, store }),
+    }),
   );
 
   await t.step(

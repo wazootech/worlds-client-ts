@@ -89,9 +89,11 @@ as Turso Cloud through `provideLibsql(...)`.
 
 ```typescript
 import { Client } from "@worlds/client";
+import { ComunicaSparqlEngine } from "@worlds/client/providers/comunica";
 import { provideLibsql } from "@worlds/client/providers/libsql";
 import { provideDenoKv } from "@worlds/client/providers/denokv";
 import { createClient } from "@libsql/client";
+import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
 // 1. In-Memory / Transient Graph (Default)
 const client = new Client();
@@ -99,6 +101,16 @@ const client = new Client();
 // 2. Local SQLite or Turso Persistence via LibSQL (recommended for production)
 const db = createClient({ url: "file:./worlds.db" });
 const sqliteClient = new Client(await provideLibsql({ client: db }));
+
+// 2b. Attach SPARQL explicitly when needed
+const queryEngine = new QueryEngine();
+const sqliteClientWithSparql = new Client(
+  await provideLibsql({
+    client: db,
+    createSparqlEngine: ({ store }) =>
+      new ComunicaSparqlEngine({ queryEngine, store }),
+  }),
+);
 
 // 3. Stateless Edge Deployment via Deno Kv
 // Useful for prototyping and constrained edge flows, not the primary

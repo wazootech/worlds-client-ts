@@ -1,4 +1,4 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals, assertRejects } from "@std/assert";
 import { DataFactory, Store } from "n3";
 import { Client } from "./client.ts";
 import { RdfjsQuadStore, RdfjsSearchIndex } from "./providers/rdfjs/mod.ts";
@@ -57,6 +57,20 @@ Deno.test("Client.sparql delegates to sparqlEngine.execute", async () => {
 
   if (response.kind !== "ask") throw new Error("Should be ask");
   assertEquals(response.data.boolean, false);
+});
+
+Deno.test("Client.sparql rejects when sparqlEngine is not configured", async () => {
+  const store = new Store();
+  const client = new Client({
+    quadStore: new RdfjsQuadStore(store),
+    searchIndex: new RdfjsSearchIndex(store),
+  });
+
+  await assertRejects(
+    () => client.sparql({ query: "ASK WHERE { ?s ?p ?o }" }),
+    Error,
+    "SPARQL engine is not configured.",
+  );
 });
 
 Deno.test("Client.search delegates to searchIndex.search", async () => {

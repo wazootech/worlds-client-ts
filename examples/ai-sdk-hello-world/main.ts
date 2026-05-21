@@ -1,6 +1,8 @@
 import { createClient } from "@libsql/client";
 import { Client } from "@worlds/client";
+import { ComunicaSparqlEngine } from "@worlds/client/providers/comunica";
 import { provideLibsql } from "@worlds/client/providers/libsql";
+import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { createTools } from "./tools.ts";
 import { generateText, stepCountIs } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
@@ -10,8 +12,13 @@ if (import.meta.main) {
 
   console.log("Initializing embedded LibSQL knowledge base...");
   const database = createClient({ url: ":memory:" });
+  const queryEngine = new QueryEngine();
 
-  const providerOptions = await provideLibsql({ client: database });
+  const providerOptions = await provideLibsql({
+    client: database,
+    createSparqlEngine: ({ store }) =>
+      new ComunicaSparqlEngine({ queryEngine, store }),
+  });
   const client = new Client(providerOptions);
 
   console.log("Ingesting initial knowledge...");

@@ -1,5 +1,4 @@
 import type * as rdfjs from "@rdfjs/types";
-import type { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import type {
   SparqlAskResults,
   SparqlBinding,
@@ -11,14 +10,72 @@ import type {
 } from "#/client/sparql-engine/sparql-engine-interface.ts";
 
 /**
+ * ComunicaQueryEngine is the minimal structural query contract needed from a user-provided Comunica engine.
+ */
+export interface ComunicaQueryEngine {
+  /** query executes a raw SPARQL operation against RDFJS-compatible sources. */
+  query(
+    query: string,
+    options: ComunicaQueryOptions,
+  ): Promise<unknown>;
+}
+
+/**
+ * ComunicaQueryOptions contains the RDFJS sources and base IRI passed to a Comunica-compatible engine.
+ */
+export interface ComunicaQueryOptions {
+  /** sources contains the RDFJS stores available to the query engine. */
+  sources: rdfjs.Store[];
+
+  /** baseIRI is the optional base IRI used during SPARQL execution. */
+  baseIRI?: string;
+}
+
+/**
+ * ComunicaQueryResult is the minimal result shape returned by a Comunica-compatible query engine.
+ */
+export interface ComunicaQueryResult {
+  /** resultType identifies the kind of query result returned by the engine. */
+  resultType: string;
+
+  /** execute materializes the query result payload. */
+  execute(): Promise<unknown>;
+
+  /** metadata optionally returns variable metadata for binding result streams. */
+  metadata?: () => Promise<{ variables: rdfjs.Variable[] }>;
+}
+
+/**
+ * ComunicaEventStream is the minimal event stream contract consumed from Comunica result streams.
+ */
+export interface ComunicaEventStream<T> {
+  /** on registers a listener for streamed data items. */
+  on(event: "data", listener: (item: T) => void): this;
+
+  /** on registers a listener for stream completion. */
+  on(event: "end", listener: () => void): this;
+
+  /** on registers a listener for stream failures. */
+  on(event: "error", listener: (error: unknown) => void): this;
+}
+
+/**
+ * ComunicaBinding is the minimal binding shape consumed from Comunica binding streams.
+ */
+export interface ComunicaBinding {
+  /** get optionally resolves a variable binding by name. */
+  get?: (variable: string) => rdfjs.Term | undefined;
+}
+
+/**
  * ComunicaSparqlEngineOptions are the options for ComunicaSparqlEngine.
  */
 export interface ComunicaSparqlEngineOptions {
   /** store is the RDFJS store to execute the query on. */
   store: rdfjs.Store;
 
-  /** queryEngine is the Comunica query engine to use. */
-  queryEngine: QueryEngine;
+  /** queryEngine is the caller-provided Comunica-compatible query engine to use. */
+  queryEngine: ComunicaQueryEngine;
 
   /**
    * onVoid is an optional callback invoked after a successful void (UPDATE)
@@ -62,7 +119,7 @@ const DEFAULT_SPARQL_TIMEOUT_MS = 30_000;
  * @returns The SPARQL query response.
  */
 export async function executeSparql(
-  queryEngine: QueryEngine,
+  queryEngine: ComunicaQueryEngine,
   store: rdfjs.Store,
   request: SparqlRequest,
 ): Promise<SparqlResponse> {
@@ -84,10 +141,11 @@ export async function executeSparql(
     queryEngine.query(request.query, {
       sources: [store],
       baseIRI: request.baseIri,
-    }).then(async (queryType) => {
+    }).then(async (queryResult) => {
       clearTimer();
 
       try {
+        const queryType = queryResult as ComunicaQueryResult;
         switch (queryType.resultType) {
           case "void": {
             // Note: resultType 'void' indicates an Update operation complete
@@ -96,13 +154,13 @@ export async function executeSparql(
           }
           case "bindings": {
             const results = await handleBindings(
-              queryType as Parameters<typeof handleBindings>[0],
+              queryType,
             );
             return resolve({ kind: "select", data: results });
           }
           case "boolean": {
             const results = await handleBoolean(
-              queryType as Parameters<typeof handleBoolean>[0],
+              queryType,
             );
             return resolve({ kind: "ask", data: results });
           }
@@ -124,25 +182,27 @@ export async function executeSparql(
   });
 }
 
-async function handleBindings(queryType: {
-  // deno-lint-ignore no-explicit-any
-  execute(): Promise<rdfjs.Stream<any>>;
-  metadata(): Promise<{ variables: rdfjs.Variable[] }>;
-}): Promise<SparqlSelectResults> {
-  const bindingsStream = await queryType.execute();
+async function handleBindings(
+  queryType: ComunicaQueryResult,
+): Promise<SparqlSelectResults> {
+  if (!queryType.metadata) {
+    throw new Error("SPARQL bindings result is missing metadata.");
+  }
+
+  const bindingsStream = await queryType.execute() as ComunicaEventStream<
+    ComunicaBinding
+  >;
   const vars = (await queryType.metadata()).variables.map((v) => v.value);
 
   const bindings = await new Promise<SparqlBinding[]>((resolve, reject) => {
     const b: SparqlBinding[] = [];
     let finished = false;
 
-    // The incoming bindings from Comunica implement internal get() logic
-    // deno-lint-ignore no-explicit-any
-    const onData = (binding: any) => {
+    const onData = (binding: ComunicaBinding) => {
       if (finished) return;
       const bindingObj: SparqlBinding = {};
       for (const v of vars) {
-        const term = binding.get ? binding.get(v) : binding[v];
+        const term = binding.get?.(v);
         if (term) {
           bindingObj[v] = toSparqlValue(term);
         }
@@ -175,18 +235,21 @@ async function handleBindings(queryType: {
   };
 }
 
-async function handleBoolean(queryType: {
-  execute(): Promise<boolean>;
-}): Promise<SparqlAskResults> {
+async function handleBoolean(
+  queryType: ComunicaQueryResult,
+): Promise<SparqlAskResults> {
   const boolean = await queryType.execute();
+  if (typeof boolean !== "boolean") {
+    throw new Error("SPARQL boolean result returned a non-boolean payload.");
+  }
+
   return {
     head: { link: undefined },
     boolean,
   };
 }
 
-// deno-lint-ignore no-explicit-any
-function toSparqlValue(term: any): SparqlValue {
+function toSparqlValue(term: rdfjs.Term): SparqlValue {
   const type = term.termType;
   const value = term.value;
 
@@ -197,20 +260,32 @@ function toSparqlValue(term: any): SparqlValue {
     return { type: "bnode", value };
   }
 
+  if (type === "Quad") {
+    return {
+      type: "triple",
+      value: {
+        subject: toSparqlValue(term.subject),
+        predicate: toSparqlValue(term.predicate),
+        object: toSparqlValue(term.object),
+      },
+    };
+  }
+
+  const literalTerm = term as rdfjs.Literal;
   const val: SparqlValue = {
     type: "literal",
     value,
   };
 
-  if (term.language) {
-    val["xml:lang"] = term.language;
+  if (literalTerm.language) {
+    val["xml:lang"] = literalTerm.language;
   }
 
   if (
-    term.datatype &&
-    term.datatype.value !== "http://www.w3.org/2001/XMLSchema#string"
+    literalTerm.datatype &&
+    literalTerm.datatype.value !== "http://www.w3.org/2001/XMLSchema#string"
   ) {
-    val.datatype = term.datatype.value;
+    val.datatype = literalTerm.datatype.value;
   }
 
   return val;

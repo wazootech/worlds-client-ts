@@ -1,6 +1,8 @@
 import { createClient } from "@libsql/client";
 import { Client } from "@worlds/client";
+import { ComunicaSparqlEngine } from "@worlds/client/providers/comunica";
 import { provideLibsql } from "@worlds/client/providers/libsql";
+import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
 /**
  * This example demonstrates how to use `provideLibsql` to instantly wire up a complete
@@ -14,11 +16,14 @@ import { provideLibsql } from "@worlds/client/providers/libsql";
 if (import.meta.main) {
   console.log("🚀 Initializing durable LibSQL context...");
   const db = createClient({ url: ":memory:" });
+  const queryEngine = new QueryEngine();
 
   // 1. Synthesize unified provider options for the client gateway
   console.log("🧠 Provisioning unified LibSQL sync engine...");
   const providerOptions = await provideLibsql({
     client: db,
+    createSparqlEngine: ({ store }) =>
+      new ComunicaSparqlEngine({ queryEngine, store }),
   });
 
   // 2. Construct the universal client gateway
