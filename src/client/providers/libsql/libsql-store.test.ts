@@ -377,7 +377,9 @@ function createFlushHandler(
 }
 
 async function computeQuadId(quad: rdfjs.Quad): Promise<string> {
-  const { hashQuad } = await import("#/client/quad-store/hash-quad.ts");
+  const { hashQuad } = await import(
+    "@worlds/client"
+  );
   return await hashQuad(quad);
 }
 

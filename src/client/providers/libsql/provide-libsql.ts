@@ -2,15 +2,15 @@ import type { Client as LibsqlClient } from "@libsql/client";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { Store } from "n3";
 
-import type { ClientOptions } from "#/client/client.ts";
-import type { Patch } from "#/client/quad-store/patch.ts";
-import type { TextSplitterInterface } from "#/client/search-index/quad-chunker/chunk-quads.ts";
-import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
-import type { QuadFilter } from "#/client/quad-store/quad-filter.ts";
-import type { SparqlEngineInterface } from "#/client/sparql-engine/mod.ts";
+import type { ClientOptions } from "@worlds/client";
+import type { Patch } from "@worlds/client";
+import type { TextSplitterInterface } from "@worlds/client";
+import type { EmbeddingService } from "@worlds/client";
+import type { QuadFilter } from "@worlds/client";
+import type { SparqlEngineInterface } from "@worlds/client";
 
-import { proxyStore } from "#/client/providers/rdfjs/n3/proxy-store.ts";
-import { RdfjsQuadStore } from "#/client/providers/rdfjs/rdfjs-quad-store.ts";
+import { proxyStore } from "@worlds/client/providers/rdfjs/n3";
+import { RdfjsQuadStore } from "@worlds/client/providers/rdfjs";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import { hydrateStoreFromLibsql } from "./hydrate-store-from-libsql.ts";

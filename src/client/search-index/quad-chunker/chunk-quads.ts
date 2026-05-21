@@ -1,6 +1,5 @@
 import type { Quad } from "@rdfjs/types";
-import { hashQuad } from "#/client/quad-store/hash-quad.ts";
-import { isTextualLiteral } from "#/client/quad-store/is-textual-literal.ts";
+import { hashQuad, isTextualLiteral } from "@worlds/client/quad-store";
 
 /**
  * ChunkRowPayload is the standardized structure of data that will be inserted into the FTS table.

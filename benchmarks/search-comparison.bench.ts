@@ -1,10 +1,10 @@
 import { createClient as createLibsqlClient } from "@libsql/client";
 import { Store } from "n3";
-import { RdfjsSearchIndex } from "#/client/providers/rdfjs/rdfjs-search-index.ts";
-import { LibsqlSearchIndex } from "#/client/providers/libsql/libsql-search-index.ts";
-import { provideLibsql } from "#/client/providers/libsql/provide-libsql.ts";
-import { defaultLibsqlQueryBuilder } from "#/client/providers/libsql/libsql-query-builder.ts";
-import { Client } from "#/client/client.ts";
+import { RdfjsSearchIndex } from "@worlds/client/providers/rdfjs";
+import { LibsqlSearchIndex } from "@worlds/client/providers/libsql";
+import { provideLibsql } from "@worlds/client/providers/libsql";
+import { defaultLibsqlQueryBuilder } from "@worlds/client/providers/libsql";
+import { Client } from "@worlds/client";
 import { generateSyntheticQuads } from "./synthetic-data.ts";
 
 // -----------------------------------------------------------------------------

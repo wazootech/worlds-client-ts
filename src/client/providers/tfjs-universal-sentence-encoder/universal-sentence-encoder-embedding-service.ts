@@ -2,7 +2,7 @@ import "@tensorflow/tfjs-backend-wasm";
 import { isAbsolute, toFileUrl } from "@std/path";
 import * as tf from "@tensorflow/tfjs";
 import * as use from "@tensorflow-models/universal-sentence-encoder";
-import type { EmbeddingService } from "#/client/search-index/embedding-service/embedding-service.ts";
+import type { EmbeddingService } from "@worlds/client";
 
 /** UniversalSentenceEncoderEmbeddingServiceOptions defines the configuration for local or remote model resources. */
 export interface UniversalSentenceEncoderEmbeddingServiceOptions {

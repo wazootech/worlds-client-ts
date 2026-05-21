@@ -1,9 +1,9 @@
 import { createClient as createLibsqlClient } from "@libsql/client";
 import { Store } from "n3";
-import { Client } from "#/client/client.ts";
-import { provideLibsql } from "#/client/providers/libsql/provide-libsql.ts";
-import { hydrateStoreFromLibsql } from "#/client/providers/libsql/hydrate-store-from-libsql.ts";
-import { FakeEmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
+import { Client } from "@worlds/client";
+import { provideLibsql } from "@worlds/client/providers/libsql";
+import { hydrateStoreFromLibsql } from "@worlds/client/providers/libsql";
+import { FakeEmbeddingService } from "@worlds/client";
 import { generateSyntheticQuads } from "./synthetic-data.ts";
 
 // Pre-allocated payloads for strict repeatable boundaries

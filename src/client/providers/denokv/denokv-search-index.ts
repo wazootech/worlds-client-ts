@@ -5,10 +5,10 @@ import type {
   SearchRequest,
   SearchResponse,
   SearchResult,
-} from "#/client/search-index/search-index-interface.ts";
-import { hashQuad } from "#/client/quad-store/hash-quad.ts";
-import { filterQuads } from "#/client/quad-store/quad-filter.ts";
-import { isTextualLiteral } from "#/client/quad-store/is-textual-literal.ts";
+} from "@worlds/client";
+import { hashQuad } from "@worlds/client";
+import { filterQuads } from "@worlds/client";
+import { isTextualLiteral } from "@worlds/client";
 import { deserializeTerm, type SerializedQuad } from "./denokv-quad-store.ts";
 
 const { quad } = DataFactory;

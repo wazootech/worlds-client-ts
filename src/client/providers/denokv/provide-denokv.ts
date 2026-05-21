@@ -1,6 +1,6 @@
 import { Store } from "n3";
-import type { ClientOptions } from "#/client/client.ts";
-import type { SparqlEngineInterface } from "#/client/sparql-engine/mod.ts";
+import type { ClientOptions } from "@worlds/client";
+import type { SparqlEngineInterface } from "@worlds/client";
 import { DenokvSearchIndex } from "./denokv-search-index.ts";
 import {
   DenokvQuadStore,
