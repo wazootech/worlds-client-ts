@@ -1,19 +1,29 @@
 import { Store } from "n3";
-import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import type { ClientOptions } from "#/client/client.ts";
-import { ComunicaSparqlEngine } from "#/client/providers/comunica/comunica-sparql-engine.ts";
+import type { SparqlEngineInterface } from "#/client/sparql-engine/mod.ts";
 import { DenokvSearchIndex } from "./denokv-search-index.ts";
 import {
   DenokvQuadStore,
   type DenokvQuadStoreOptions,
 } from "./denokv-quad-store.ts";
 
-const queryEngine = new QueryEngine();
+/**
+ * DenokvSparqlEngineOptions contains the per-query hydrated RDFJS store available to caller-provided SPARQL adapters.
+ */
+export interface DenokvSparqlEngineOptions {
+  /** store is the freshly hydrated RDFJS workspace for the current SPARQL operation. */
+  store: Store;
+}
 
 /**
  * DenokvOptions specifies configuration parameters for provisioning Denokv contexts.
  */
-export interface DenokvOptions extends DenokvQuadStoreOptions {}
+export interface DenokvOptions extends DenokvQuadStoreOptions {
+  /** createSparqlEngine optionally attaches a caller-provided SPARQL engine over each hydrated workspace. */
+  createSparqlEngine?: (
+    options: DenokvSparqlEngineOptions,
+  ) => SparqlEngineInterface;
+}
 
 /**
  * provideDenoKv synthesizes a client gateway context designed explicitly for
@@ -47,15 +57,17 @@ export function provideDenoKv(options: DenokvOptions): ClientOptions {
 
     searchIndex: new DenokvSearchIndex(options),
 
-    sparqlEngine: {
-      execute: async (request) => {
-        const workspace = await hydrateWorkspace();
-        const engine = new ComunicaSparqlEngine({
-          queryEngine,
-          store: workspace,
-        });
-        return await engine.execute(request);
-      },
-    },
+    sparqlEngine: options.createSparqlEngine
+      ? {
+        execute: async (request) => {
+          const workspace = await hydrateWorkspace();
+          const engine = options.createSparqlEngine?.({ store: workspace });
+          if (!engine) {
+            throw new Error("SPARQL engine is not configured.");
+          }
+          return await engine.execute(request);
+        },
+      }
+      : undefined,
   };
 }

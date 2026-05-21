@@ -29,7 +29,7 @@ export interface ClientOptions {
   /**
    * sparqlEngine evaluates declarative queries and updates against the graph.
    */
-  sparqlEngine: SparqlEngineInterface;
+  sparqlEngine?: SparqlEngineInterface;
 
   /**
    * searchIndex enables high-performance keyword search across the graph literals.
@@ -54,6 +54,10 @@ export class Client implements ClientInterface {
   }
 
   public async sparql(request: SparqlRequest): Promise<SparqlResponse> {
+    if (!this.options.sparqlEngine) {
+      throw new Error("SPARQL engine is not configured.");
+    }
+
     return await this.options.sparqlEngine.execute(request);
   }
 

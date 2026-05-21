@@ -1,24 +1,29 @@
 import type { Client as LibsqlClient } from "@libsql/client";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { Store } from "n3";
-import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
 import type { ClientOptions } from "#/client/client.ts";
 import type { Patch } from "#/client/quad-store/patch.ts";
 import type { TextSplitterInterface } from "#/client/search-index/quad-chunker/chunk-quads.ts";
 import type { EmbeddingService } from "#/client/search-index/embedding-service/mod.ts";
 import type { QuadFilter } from "#/client/quad-store/quad-filter.ts";
+import type { SparqlEngineInterface } from "#/client/sparql-engine/mod.ts";
 
 import { proxyStore } from "#/client/providers/rdfjs/n3/proxy-store.ts";
 import { RdfjsQuadStore } from "#/client/providers/rdfjs/rdfjs-quad-store.ts";
-import { ComunicaSparqlEngine } from "#/client/providers/comunica/comunica-sparql-engine.ts";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import { hydrateStoreFromLibsql } from "./hydrate-store-from-libsql.ts";
 
 import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 
-const queryEngine = new QueryEngine();
+/**
+ * LibsqlSparqlEngineOptions contains the hydrated RDFJS store available to caller-provided SPARQL adapters.
+ */
+export interface LibsqlSparqlEngineOptions {
+  /** store is the hydrated and proxied RDFJS store used by the LibSQL synchronization layer. */
+  store: Store;
+}
 
 /**
  * LibsqlOptions details the aggregate internal subsystems powering active execution.
@@ -35,6 +40,11 @@ export interface LibsqlOptions {
 
   /** store is an optional starting store, useful for serverless environments where the store is already initialized. */
   store?: Store;
+
+  /** createSparqlEngine optionally attaches a caller-provided SPARQL engine over the provider-managed store. */
+  createSparqlEngine?: (
+    options: LibsqlSparqlEngineOptions,
+  ) => SparqlEngineInterface;
 
   /** maxLookupChunkSize specifies the maximum number of host parameters allowed in cache query IN clauses before split-chunking. Defaults to a conservative 800 (safely below historical SQLite 999 SQLITE_MAX_VARIABLE_NUMBER variable caps with generous headroom). */
   maxLookupChunkSize?: number;
@@ -95,6 +105,7 @@ export async function provideLibsql(
 
   // 3. Instrument memory layer for transparent transaction accumulation.
   const { store, drainPatches } = proxyStore(initialStore);
+  const configuredSparqlEngine = options.createSparqlEngine?.({ store });
 
   // 4. Configure specialized support utilities.
   const textSplitter = options.textSplitter ??
@@ -132,11 +143,6 @@ export async function provideLibsql(
 
   // 5. Synthesize foundational base component drivers.
   const quadStore = new RdfjsQuadStore(store);
-  const sparqlEngine = new ComunicaSparqlEngine({
-    queryEngine,
-    store,
-  });
-
   // 7. Deliver aggregated composite ready for standard instantiation.
   return {
     quadStore: {
@@ -147,13 +153,15 @@ export async function provideLibsql(
         return response;
       },
     },
-    sparqlEngine: {
-      execute: async (request) => {
-        const response = await sparqlEngine.execute(request);
-        await commitChanges();
-        return response;
-      },
-    },
+    sparqlEngine: configuredSparqlEngine
+      ? {
+        execute: async (request) => {
+          const response = await configuredSparqlEngine.execute(request);
+          await commitChanges();
+          return response;
+        },
+      }
+      : undefined,
     searchIndex,
   };
 }

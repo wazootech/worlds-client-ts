@@ -1140,7 +1140,7 @@
         "@comunica/types@5.2.0",
         "@comunica/utils-algebra",
         "@comunica/utils-query-operation",
-        "lru-cache@11.3.6"
+        "lru-cache@11.5.0"
       ]
     },
     "@comunica/actor-optimize-query-operation-query-source-skolemize@5.2.2": {
@@ -1490,7 +1490,7 @@
         "@comunica/utils-algebra",
         "@comunica/utils-query-operation",
         "@rdfjs/types@2.0.1",
-        "lru-cache@11.3.6"
+        "lru-cache@11.5.0"
       ]
     },
     "@comunica/actor-query-operation-slice@5.2.2": {
@@ -2625,7 +2625,7 @@
         "@rdfjs/types@2.0.1",
         "@types/yargs",
         "asynciterator",
-        "lru-cache@11.3.6"
+        "lru-cache@11.5.0"
       ]
     },
     "@comunica/utils-algebra@5.2.0": {
@@ -2668,7 +2668,7 @@
         "@comunica/types@5.2.0",
         "@comunica/utils-algebra",
         "@rdfjs/types@2.0.1",
-        "lru-cache@11.3.6",
+        "lru-cache@11.5.0",
         "rdf-data-factory@2.0.2",
         "rdf-string"
       ]
@@ -2933,16 +2933,16 @@
       ],
       "bin": true
     },
-    "@traqula/algebra-sparql-1-1@1.1.0": {
-      "integrity": "sha512-vCruGGkUUnIDyB2XUbwtAU4lWiYGmJk7z6RRsXYkL0pKZBkrtJwTDj6m1GHJECOpuNi51Iw4TNPZDsfxG0OAWg==",
+    "@traqula/algebra-sparql-1-1@1.1.1": {
+      "integrity": "sha512-Ux/h4lZPqDyC8ogt0enUC56MC0unVTnO4MBKRRo81bTc1DAk82DHHCDS8WQSotGxMbQ3hGBIJPzSRbm3JmRBOw==",
       "dependencies": [
         "@traqula/algebra-transformations-1-1",
         "@traqula/core",
         "@traqula/rules-sparql-1-1"
       ]
     },
-    "@traqula/algebra-sparql-1-2@1.1.0": {
-      "integrity": "sha512-jupP4QhEu2UQ8TTrxzqAkU3zn9/ptKqKtjS5WBqq+ErYvWIPhJsXxRAnd8fI7EiBDFMx78Wt+x3gRc7+sZHfvw==",
+    "@traqula/algebra-sparql-1-2@1.1.1": {
+      "integrity": "sha512-SWqwxOYrMEQil574iscpZ8uD+uI/WNguCmxOnQYAyJ5usqwLmCUBMkR+5KbOY53DFVG1/CMkacopte9xtOTYkw==",
       "dependencies": [
         "@traqula/algebra-sparql-1-1",
         "@traqula/algebra-transformations-1-1",
@@ -2950,8 +2950,8 @@
         "@traqula/core"
       ]
     },
-    "@traqula/algebra-transformations-1-1@1.1.0": {
-      "integrity": "sha512-1n7NFtvGBdBcGo1UnIsUW/i+wROnLlxG9A84uINkCw2BrtoAZ/nY+gSVPSCQ/rlyve/lZryjgVvcnwIxQ+OVKg==",
+    "@traqula/algebra-transformations-1-1@1.1.1": {
+      "integrity": "sha512-nWfZuAsxe2A0qFVpeDMD6mjw33KyecRP0rOlWqh5soy497vXerFmlfxTYj74iHH1yT4wMFBUN30FYUAkkCoVjQ==",
       "dependencies": [
         "@traqula/core",
         "@traqula/rules-sparql-1-1",
@@ -2961,8 +2961,8 @@
         "rdf-string"
       ]
     },
-    "@traqula/algebra-transformations-1-2@1.1.0": {
-      "integrity": "sha512-Qi19pcUvXUYHj8jO0CXiaJwpUH9F1q7p3fRROewqr7Zzm54BCz57v9mwwSCjiS2/M/73driG02w20N9zR120mg==",
+    "@traqula/algebra-transformations-1-2@1.1.1": {
+      "integrity": "sha512-osW3Z9pNie1xCnpuF7EbHw5yFa3BvxTIQCToOIA+4effw0ZpkqRE7kQL4q8JSkEWZbBdB9FcyTRBojxSmTuAlA==",
       "dependencies": [
         "@traqula/algebra-transformations-1-1",
         "@traqula/rules-sparql-1-2",
@@ -2972,21 +2972,21 @@
     "@traqula/chevrotain@1.1.0": {
       "integrity": "sha512-VpcoQKb2ZnsOQPlPO2mE9hfR0Aidp7drwTCtaXfpdRHGkXeQ5Nv4rnxmxwUoEDRzu6b/3z4n8oTd+sYhe4fAaA=="
     },
-    "@traqula/core@1.1.0": {
-      "integrity": "sha512-PxK3P/Go7KjNpEaN/mXHAEiDWLxh3u5D6MfOTXI6Lz0eq9iRduUAXGnWnCuZ7VygxEHSSxpO0ZDYLPa4OIeBYQ==",
+    "@traqula/core@1.1.1": {
+      "integrity": "sha512-v7EcEaBXv+3PtXac1SoeMQz0iq/xzwb3RxWAbrK/6oRAa8mrqYsf5fZesPNcKwnyALw0NVUeVPWFTQxOhawOSA==",
       "dependencies": [
         "@traqula/chevrotain"
       ]
     },
-    "@traqula/parser-sparql-1-1@1.1.0": {
-      "integrity": "sha512-HLWuQv/Z+0POkWPCocT7mEOtbQ4QT+G71w4YH/srelXdOXGhuchO+aPBkHausIKh2imWu0bz+flmj+ap0IQjDQ==",
+    "@traqula/parser-sparql-1-1@1.1.1": {
+      "integrity": "sha512-U2KJ/mHc14ktyc7QBL9OTrlF2Yzc5IdZv5nqshvgI8DyvI9Op7/vPvHZ9qxooOE9eFyDgB1gOvJDf06vbQzUMg==",
       "dependencies": [
         "@traqula/core",
         "@traqula/rules-sparql-1-1"
       ]
     },
-    "@traqula/parser-sparql-1-2@1.1.0": {
-      "integrity": "sha512-mb2NonXBSkbBmTbd7xj0p37z6F9nek8hhu2W5O9ftLeWMJEP+zLR1wfJ7KW8on/WIRh23sV0KeBwvxqNp64Dzg==",
+    "@traqula/parser-sparql-1-2@1.1.1": {
+      "integrity": "sha512-QSP+zaytyGtxhOX1GkPXfDFqM5TsgNAzO5jOw8Jr8Fpp37qUOUPxUxfGirjEtUh3fGilyYFnKcGju3sD64i28w==",
       "dependencies": [
         "@traqula/core",
         "@traqula/parser-sparql-1-1",
@@ -2995,15 +2995,15 @@
         "rdf-data-factory@2.0.2"
       ]
     },
-    "@traqula/rules-sparql-1-1@1.1.0": {
-      "integrity": "sha512-MKB2oBWKr1+vYxy6tROcNsHxlH5aM8FS9VvfyPKAkbRqKS/zgOMFIigJ0DGlfgfoIm3Hyn+NintFWfRRXiBaGw==",
+    "@traqula/rules-sparql-1-1@1.1.1": {
+      "integrity": "sha512-APMUzpU0+FqxMZT0WoJaZv0O4nGCJbaDbXC5gHuA/zl61jXORx3IdsKD2DgiMAl4MPkd4U1dVDlUO8ufWtHAWg==",
       "dependencies": [
         "@traqula/chevrotain",
         "@traqula/core"
       ]
     },
-    "@traqula/rules-sparql-1-2@1.1.0": {
-      "integrity": "sha512-vFTI8YhkNZw0JdyY+nj0lWwp1TnkfMYf/SM6jxXCM176A7j0qjkuVbFP5tKTC9hgj02VQWV9Edo/mKaVf8C/1A==",
+    "@traqula/rules-sparql-1-2@1.1.1": {
+      "integrity": "sha512-VLKNzW32/DGOk0iOstuKXRwNrosYNJjWQM8ztezeAonhR8h4kugbA3ZjNFOnl/c2YMtSobc2hUXFjBhhbOum5A==",
       "dependencies": [
         "@traqula/core",
         "@traqula/rules-sparql-1-1"
@@ -3567,8 +3567,8 @@
     "lru-cache@10.4.3": {
       "integrity": "sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ=="
     },
-    "lru-cache@11.3.6": {
-      "integrity": "sha512-Gf/KoL3C/MlI7Bt0PGI9I+TeTC/I6r/csU58N4BSNc4lppLBeKsOdFYkK+dX0ABDUMJNfCHTyPpzwwO21Awd3A=="
+    "lru-cache@11.5.0": {
+      "integrity": "sha512-5YgH9UJd7wVb9hIouI2adWpgqrrICkt070Dnj8EUY1+B4B2P9eRLPAkAAo6NICA7CEhOIeBHl46u9zSNpNu7zA=="
     },
     "math-intrinsics@1.1.0": {
       "integrity": "sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g=="
@@ -3833,8 +3833,8 @@
     "seedrandom@3.0.5": {
       "integrity": "sha512-8OwmbklUNzwezjGInmZ+2clQmExQPvomqjL7LFqOYqtmuxRgQYqOD3mHaU+MvZn5FLUeVxVfQjwLZW/n/JFuqg=="
     },
-    "semver@7.7.4": {
-      "integrity": "sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==",
+    "semver@7.8.0": {
+      "integrity": "sha512-AcM7dV/5ul4EekoQ29Agm5vri8JNqRyj39o0qpX6vDF2GZrtutZl5RwgD1XnZjiTAfncsJhMI48QQH3sN87YNA==",
       "bin": true
     },
     "setimmediate@1.0.5": {

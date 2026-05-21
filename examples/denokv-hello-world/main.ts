@@ -1,5 +1,7 @@
 import { Client } from "@worlds/client";
+import { ComunicaSparqlEngine } from "@worlds/client/providers/comunica";
 import { provideDenoKv } from "@worlds/client/providers/denokv";
+import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
 /**
  * This example demonstrates how to leverage the `provideDenokv` synthesis engine
@@ -9,10 +11,15 @@ import { provideDenoKv } from "@worlds/client/providers/denokv";
 if (import.meta.main) {
   console.log("🚀 Initializing in-memory Deno Kv context...");
   const kv = await Deno.openKv(":memory:");
+  const queryEngine = new QueryEngine();
 
   // 1. Synthesize stateless, just-in-time hydrating provider options
   console.log("🧠 Provisioning unified Deno Kv sync engine...");
-  const providerOptions = provideDenoKv({ kv });
+  const providerOptions = provideDenoKv({
+    kv,
+    createSparqlEngine: ({ store }) =>
+      new ComunicaSparqlEngine({ queryEngine, store }),
+  });
 
   // 2. Construct the universal client gateway
   const client = new Client(providerOptions);
