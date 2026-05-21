@@ -1,7 +1,7 @@
 import { createClient } from "@libsql/client";
 import { Store } from "n3";
 import { Client } from "@worlds/client";
-import { createLibsqlClientOptions } from "@worlds/client/adapters/libsql";
+import { createLibsqlN3ClientOptions } from "@worlds/client/adapters/libsql/n3";
 import { hydrateStoreFromLibsql } from "@worlds/client/adapters/libsql";
 import { FakeEmbeddingService } from "@worlds/client/search-index/embedding-service";
 import { generateSyntheticQuads } from "./synthetic-data.ts";
@@ -21,7 +21,7 @@ async function setupIsolatedClient(): Promise<{
 }> {
   const db = createClient({ url: ":memory:" });
   const embeddingService = new FakeEmbeddingService();
-  const clientOptions = await createLibsqlClientOptions({
+  const clientOptions = await createLibsqlN3ClientOptions({
     client: db,
     embeddingService,
   });

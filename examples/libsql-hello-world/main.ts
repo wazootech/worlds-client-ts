@@ -54,8 +54,8 @@ if (import.meta.main) {
     client: databaseClient,
     embeddingService,
     vectorDimensions: USE_LITE_VECTOR_DIMENSIONS,
-    createSparqlEngine: ({ store }) =>
-      new ComunicaSparqlEngine({ queryEngine, store }),
+    createSparqlEngine: ({ libsqlStore }) =>
+      new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
   });
   console.log("Gateway operational.");
 

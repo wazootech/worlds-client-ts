@@ -16,9 +16,9 @@ const rdfLangStringIri =
 const xsdStringIri = "http://www.w3.org/2001/XMLSchema#string";
 
 /**
- * FlushHandler is a callback that atomically persists a patch of buffered mutations.
+ * CommitHandler is a callback that atomically persists a patch of buffered mutations.
  */
-export type FlushHandler = (patch: Patch) => Promise<void>;
+export type CommitHandler = (patch: Patch) => Promise<void>;
 
 /**
  * LibsqlStore is a full RDF/JS Store implementation backed by LibSQL and hexastore covering indexes.
@@ -26,19 +26,19 @@ export type FlushHandler = (patch: Patch) => Promise<void>;
  */
 export class LibsqlStore implements rdfjs.Store {
   /**
-   * insertBuffer collects quads queued for insertion. Flushed atomically via flush().
+   * insertBuffer collects quads queued for insertion. Committed atomically via commit().
    */
   private insertBuffer: rdfjs.Quad[] = [];
 
   /**
-   * deleteBuffer collects quads queued for deletion. Flushed atomically via flush().
+   * deleteBuffer collects quads queued for deletion. Committed atomically via commit().
    */
   private deleteBuffer: rdfjs.Quad[] = [];
 
   public constructor(
     private readonly client: Client,
     private readonly queryBuilder: LibsqlQueryBuilder,
-    private readonly flushHandler?: FlushHandler,
+    private readonly commitHandler?: CommitHandler,
   ) {}
 
   /**
@@ -79,7 +79,7 @@ export class LibsqlStore implements rdfjs.Store {
   }
 
   /**
-   * add buffers a single quad for insertion on the next flush.
+   * add buffers a single quad for insertion on the next commit.
    */
   public add(quad: rdfjs.Quad): this {
     this.insertBuffer.push(quad);
@@ -87,7 +87,14 @@ export class LibsqlStore implements rdfjs.Store {
   }
 
   /**
-   * delete buffers a single quad for deletion on the next flush.
+   * addQuad buffers a single quad for insertion on the next commit (RDF/JS Store alias for add).
+   */
+  public addQuad(quad: rdfjs.Quad): this {
+    return this.add(quad);
+  }
+
+  /**
+   * delete buffers a single quad for deletion on the next commit.
    */
   public delete(quad: rdfjs.Quad): this {
     this.deleteBuffer.push(quad);
@@ -95,7 +102,7 @@ export class LibsqlStore implements rdfjs.Store {
   }
 
   /**
-   * import consumes an RDF/JS Stream, buffering all quads for later flush.
+   * import consumes an RDF/JS Stream, buffering all quads for later commit.
    */
   public import(
     stream: rdfjs.Stream<rdfjs.Quad>,
@@ -114,7 +121,7 @@ export class LibsqlStore implements rdfjs.Store {
   }
 
   /**
-   * remove consumes a stream and buffers all quads from it for deletion on flush.
+   * remove consumes a stream and buffers all quads from it for deletion on commit.
    */
   public remove(stream: rdfjs.Stream<rdfjs.Quad>): EventEmitter {
     const emitter = new EventEmitter();
@@ -131,7 +138,7 @@ export class LibsqlStore implements rdfjs.Store {
   }
 
   /**
-   * removeMatches buffers all quads matching the given SPOG pattern for deletion on flush.
+   * removeMatches buffers all quads matching the given SPOG pattern for deletion on commit.
    */
   public removeMatches(
     subject?: rdfjs.Term | null,
@@ -154,7 +161,7 @@ export class LibsqlStore implements rdfjs.Store {
   }
 
   /**
-   * deleteGraph buffers all quads in the named graph for deletion on flush.
+   * deleteGraph buffers all quads in the named graph for deletion on commit.
    */
   public deleteGraph(graph: rdfjs.Term | string): EventEmitter {
     const graphTerm = typeof graph === "string" ? namedNode(graph) : graph;
@@ -162,17 +169,17 @@ export class LibsqlStore implements rdfjs.Store {
   }
 
   /**
-   * flush atomically persists all buffered insertions and deletions through
-   * the configured FlushHandler. Deduplicates quads that appear in both
+   * commit atomically persists all buffered insertions and deletions through
+   * the configured CommitHandler. Deduplicates quads that appear in both
    * buffers before invoking the handler.
    */
-  public async flush(): Promise<void> {
+  public async commit(): Promise<void> {
     this.deduplicateBuffers();
     if (this.insertBuffer.length === 0 && this.deleteBuffer.length === 0) {
       return;
     }
-    if (this.flushHandler) {
-      await this.flushHandler({
+    if (this.commitHandler) {
+      await this.commitHandler({
         insertions: this.insertBuffer,
         deletions: this.deleteBuffer,
       });
@@ -182,7 +189,7 @@ export class LibsqlStore implements rdfjs.Store {
 
   /**
    * deduplicateBuffers removes entries that appear in both insert and delete
-   * buffers, since adding then deleting the same quad before flush should
+   * buffers, since adding then deleting the same quad before commit should
    * be a semantic no-op.
    */
   private deduplicateBuffers(): void {
@@ -202,7 +209,7 @@ export class LibsqlStore implements rdfjs.Store {
   }
 
   /**
-   * clearBuffer discards any unflushed insertions and deletions.
+   * clearBuffer discards any uncommitted insertions and deletions.
    * Used for error recovery after a failed SPARQL UPDATE.
    */
   public clearBuffer(): void {

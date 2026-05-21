@@ -23,8 +23,11 @@ export interface CommitPatchToLibsqlOptions {
   /** textSplitter is the splitting facility consumed when breaking large strings into search metadata. */
   textSplitter: TextSplitterInterface;
 
-  /** maxLookupChunkSize specifies the batch size threshold used to chunk long IN queries, preventing parameter overflow crashes. Defaults to a conservative 800 (accounting for historical SQLite 999 SQLITE_MAX_VARIABLE_NUMBER cap with headroom). */
+  /** maxLookupChunkSize specifies the maximum bound parameters per SQL statement for IN-clause lookups and deletions. Defaults to 800 (below SQLite SQLITE_MAX_VARIABLE_NUMBER). */
   maxLookupChunkSize?: number;
+
+  /** maxWriteBatchSize caps how many statements are sent per LibSQL write batch. Defaults to 500. */
+  maxWriteBatchSize?: number;
 
   /** quadFilter defines active synchronization inclusion bounds, facilitating hybrid partitioning where only specific facts are persisted. */
   quadFilter?: QuadFilter;
@@ -41,12 +44,25 @@ export interface CommitPatchToLibsqlOptions {
  * @param patch The set of proposed additions/removals extracted from the client store.
  * @param options Required durable handlers, search services and configurations.
  */
+/** DEFAULT_MAX_LOOKUP_CHUNK_SIZE is the default IN-clause and deletion chunk width. */
+const DEFAULT_MAX_LOOKUP_CHUNK_SIZE = 800;
+
+/** DEFAULT_MAX_WRITE_BATCH_SIZE limits statements per LibSQL write batch. */
+const DEFAULT_MAX_WRITE_BATCH_SIZE = 500;
+
 export async function commitPatchToLibsql(
   patch: Patch,
   options: CommitPatchToLibsqlOptions,
 ): Promise<void> {
-  const { client, maxLookupChunkSize, quadFilter, libsqlQueryBuilder } =
-    options;
+  const {
+    client,
+    maxLookupChunkSize,
+    maxWriteBatchSize,
+    quadFilter,
+    libsqlQueryBuilder,
+  } = options;
+  const lookupChunkSize = maxLookupChunkSize ?? DEFAULT_MAX_LOOKUP_CHUNK_SIZE;
+  const writeBatchSize = maxWriteBatchSize ?? DEFAULT_MAX_WRITE_BATCH_SIZE;
   const statements: InStatement[] = [];
 
   // ⚡ Performant Optimizations First: Compile pre-emptive filter gates to support lightning-fast memory partitioning
@@ -64,7 +80,11 @@ export async function commitPatchToLibsql(
     }
     if (computedDeletionQuadIds.length > 0) {
       statements.push(
-        ...buildDeletionStatements(computedDeletionQuadIds, libsqlQueryBuilder),
+        ...buildDeletionStatementsChunked(
+          computedDeletionQuadIds,
+          libsqlQueryBuilder,
+          lookupChunkSize,
+        ),
       );
     }
   }
@@ -75,7 +95,7 @@ export async function commitPatchToLibsql(
     const existingIds = await queryCachePresence(
       client,
       proposedQuadIds,
-      maxLookupChunkSize,
+      lookupChunkSize,
       libsqlQueryBuilder,
     );
 
@@ -93,7 +113,11 @@ export async function commitPatchToLibsql(
     if (novelQuadIds.length > 0) {
       // Ensure relational clean slate for new items
       statements.push(
-        ...buildDeletionStatements(novelQuadIds, libsqlQueryBuilder),
+        ...buildDeletionStatementsChunked(
+          novelQuadIds,
+          libsqlQueryBuilder,
+          lookupChunkSize,
+        ),
       );
 
       // Stage Fact Decompositions (Relational Index)
@@ -115,10 +139,10 @@ export async function commitPatchToLibsql(
     }
   }
 
-  // 3. Atomic ACID Transaction Execution
+  // 3. Atomic ACID Transaction Execution (chunked to respect driver/SQLite limits)
   if (statements.length > 0) {
     try {
-      await client.batch(statements, "write");
+      await executeWriteBatches(client, statements, writeBatchSize);
     } catch (cause) {
       throw new Error("failed to execute sync batch", { cause });
     }
@@ -156,19 +180,46 @@ function buildDeletionStatements(
 }
 
 /**
+ * buildDeletionStatementsChunked splits large quad id sets so each IN clause stays within SQLite variable limits.
+ */
+function buildDeletionStatementsChunked(
+  quadIds: string[],
+  queryBuilder: LibsqlQueryBuilder,
+  chunkSize: number,
+): InStatement[] {
+  const statements: InStatement[] = [];
+  for (let index = 0; index < quadIds.length; index += chunkSize) {
+    const quadIdBatch = quadIds.slice(index, index + chunkSize);
+    statements.push(...buildDeletionStatements(quadIdBatch, queryBuilder));
+  }
+  return statements;
+}
+
+/**
+ * executeWriteBatches runs LibSQL write batches in fixed-size slices.
+ */
+async function executeWriteBatches(
+  client: Client,
+  statements: InStatement[],
+  batchSize: number,
+): Promise<void> {
+  for (let index = 0; index < statements.length; index += batchSize) {
+    const statementBatch = statements.slice(index, index + batchSize);
+    await client.batch(statementBatch, "write");
+  }
+}
+
+/**
  * queryCachePresence polls SQLite to check which Quad IDs have already been fully vectorized and indexed.
  */
 async function queryCachePresence(
   client: Client,
   quadIds: string[],
-  maxLookupChunkSize: number | undefined,
+  lookupChunkSize: number,
   queryBuilder: LibsqlQueryBuilder,
 ): Promise<Set<string>> {
   const cachedIds = new Set<string>();
   try {
-    // Defensively chunk lookup queries to respect SQLite's default cap of 999 bound variables (SQLITE_MAX_VARIABLE_NUMBER).
-    // Defaulting to 800 provides nearly 100% of batch performance gains while preserving ~200 variable slots for supplemental criteria.
-    const lookupChunkSize = maxLookupChunkSize ?? 800;
     for (let i = 0; i < quadIds.length; i += lookupChunkSize) {
       const batchIds = quadIds.slice(i, i + lookupChunkSize);
       const query = queryBuilder.buildSelectExistingQuadIds(batchIds);

@@ -2,7 +2,7 @@ import { createClient } from "@libsql/client";
 import { Store } from "n3";
 import { RdfjsSearchIndex } from "@worlds/client/adapters/rdfjs";
 import { LibsqlSearchIndex } from "@worlds/client/adapters/libsql";
-import { createLibsqlClientOptions } from "@worlds/client/adapters/libsql";
+import { createLibsqlN3ClientOptions } from "@worlds/client/adapters/libsql/n3";
 import { defaultLibsqlQueryBuilder } from "@worlds/client/adapters/libsql";
 import { Client } from "@worlds/client";
 import { generateSyntheticQuads } from "./synthetic-data.ts";
@@ -15,7 +15,7 @@ import { generateSyntheticQuads } from "./synthetic-data.ts";
 async function prepareLibsqlSearchIndex(count: number) {
   const db = createClient({ url: ":memory:" });
   const client = new Client(
-    await createLibsqlClientOptions({ client: db }), // No embedding service -> Pure Keyword FTS Mode
+    await createLibsqlN3ClientOptions({ client: db }), // No embedding service -> Pure Keyword FTS Mode
   );
 
   // Batch ingestion in segments to prevent exceeding SQL statement variable caps
