@@ -151,6 +151,32 @@ chunked hydration (`DEFAULT_HYDRATION_BATCH_SIZE = 1000`).
   [#65](https://github.com/wazootech/worlds-client-ts/issues/65) with pasted
   before/after `deno bench` output.
 
+## CI regression gate
+
+Committed baselines live in [`benchmarks/baselines.ci.json`](baselines.ci.json)
+(avg nanoseconds from `deno bench --json`). CI on **ubuntu-latest** applies an
+extra platform slack until baselines are re-captured on Linux.
+
+| Task                          | Purpose                                                   |
+| :---------------------------- | :-------------------------------------------------------- |
+| `deno task bench`             | Run all benchmarks locally                                |
+| `deno task bench:baselines`   | Refresh `baselines.ci.json` after intentional perf change |
+| `deno task bench:check`       | Full regression check (all benchmarks)                    |
+| `deno task bench:check:smoke` | Fast PR subset (pressure + search + one crossover)        |
+
+Workflow
+[`.github/workflows/benchmarks.yml`](../.github/workflows/benchmarks.yml):
+
+- **Pull requests** (benchmark-related paths): `bench:check:smoke` (denokv,
+  search-comparison, SPARQL 1k crossover; libsql-pressure on full Linux CI only)
+- **Schedule / manual**: `bench:check` (full suite, all four bench files)
+
+Re-capture on Linux when tightening CI slack:
+
+```bash
+deno task bench:baselines
+```
+
 ## SPARQL crossover results template
 
 Paste into

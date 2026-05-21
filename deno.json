@@ -68,6 +68,9 @@
     "check": "deno check",
     "test": "deno test --allow-all --unstable-kv",
     "bench": "deno bench --allow-all --unstable-kv benchmarks/",
+    "bench:baselines": "deno run -A benchmarks/check-bench-regression.ts --update-baselines",
+    "bench:check": "deno run -A benchmarks/check-bench-regression.ts",
+    "bench:check:smoke": "deno run -A benchmarks/check-bench-regression.ts --subset smoke",
     "publish:dry": "deno publish --dry-run --allow-dirty",
     "ci": {
       "description": "Formats, lints, checks, and tests the code",
