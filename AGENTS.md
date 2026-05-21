@@ -185,10 +185,12 @@ green-passing integration pipeline runs:
 - **Local embedding model caching:** The system relies on offline model
   execution via pre-cached TFJS Universal Sentence Encoder artifacts. The
   download script lives at
-  `src/client/adapters/tfjs-universal-sentence-encoder/download-tfjs-use.ts`. If
-  changes are made to the embedding or search layers, developers must ensure the
-  offline cache is warmed up by running the `deno task download:tfjs-use`
-  command.
+  `src/client/adapters/tfjs-universal-sentence-encoder/download-tfjs-use.ts`.
+  USE lite loading and tokenization are vendored in that adapter (not
+  `@tensorflow-models/universal-sentence-encoder`) so TF.js 4.x peers stay
+  aligned. If changes are made to the embedding or search layers, developers
+  must ensure the offline cache is warmed up by running the
+  `deno task download:tfjs-use` command.
 
 - **Vendored jsonld-context-parser workaround:** Comunica's upstream
   `jsonld-context-parser` has a known JSR compatibility issue. A patched copy
