@@ -91,7 +91,7 @@ as Turso Cloud through `createLibsqlClient(...)`.
 import { createRdfjsClient } from "@worlds/client/adapters/rdfjs";
 import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
 import { createLibsqlClient } from "@worlds/client/adapters/libsql";
-import { createDenoKvClient } from "@worlds/client/adapters/denokv";
+import { createDenokvClient } from "@worlds/client/adapters/denokv";
 import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
@@ -114,7 +114,7 @@ const sqliteClientWithSparql = await createLibsqlClient({
 // Useful for prototyping and constrained edge flows, not the primary
 // production recommendation for search/index workloads.
 const kv = await Deno.openKv();
-const kvClient = createDenoKvClient({ kv });
+const kvClient = createDenokvClient({ kv });
 ```
 
 #### Advanced composition

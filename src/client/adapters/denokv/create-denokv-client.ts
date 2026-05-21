@@ -72,8 +72,8 @@ export function createDenokvClientOptions(
 }
 
 /**
- * createDenoKvClient wires Deno Kv persistence, search, and optional SPARQL into a ready Client.
+ * createDenokvClient wires Deno KV persistence, search, and optional SPARQL into a ready Client.
  */
-export function createDenoKvClient(options: DenokvOptions): Client {
+export function createDenokvClient(options: DenokvOptions): Client {
   return new Client(createDenokvClientOptions(options));
 }
