@@ -5,12 +5,12 @@ import type {
   SearchRequest,
   SearchResponse,
   SearchResult,
-} from "../../search-index/mod.ts";
+} from "@worlds/client/search-index";
 import {
   filterQuads,
   hashQuad,
   isTextualLiteral,
-} from "../../quad-store/mod.ts";
+} from "@worlds/client/quad-store";
 import type { SerializedQuad } from "./denokv-quad-store.ts";
 import { deserializeTerm } from "./denokv-quad-store.ts";
 

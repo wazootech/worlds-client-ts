@@ -15,7 +15,7 @@
  * =============================================================================
  */
 
-import { stringToChars } from "../string-to-chars.ts";
+import { stringToChars } from "./string-to-chars.ts";
 
 /** OutputNode is a trie match tuple of token, score, and index. */
 type OutputNode = [string[], number, number];

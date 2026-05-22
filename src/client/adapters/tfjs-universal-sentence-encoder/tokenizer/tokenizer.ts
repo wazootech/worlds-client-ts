@@ -23,7 +23,7 @@
  */
 
 import * as tf from "@tensorflow/tfjs";
-import { stringToChars } from "../string-to-chars.ts";
+import { stringToChars } from "./string-to-chars.ts";
 import { Trie } from "./trie.ts";
 
 const separator = "\u2581"; // This is the unicode character 'lower one eighth block'.

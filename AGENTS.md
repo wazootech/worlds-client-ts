@@ -101,43 +101,81 @@ mathematical brevity.
 
 ## Import path conventions
 
-Choose import specifiers in this order:
+All `@worlds/client` resolution goes through the package `name` and the
+[`deno.json`](deno.json) `exports` map only. Do **not** add `@worlds/client` or
+`@worlds/client/*` entries under `imports` (that map is for third-party aliases:
+npm, jsr, `@std/*`). Do not use private `#/` import maps.
 
-- **Within `src/`.** Use relative paths to the target domain's `mod.ts` (or
-  `./file.ts` for same-domain siblings). Parent-relative paths (`../`) are
-  allowed within `src/client/` for cross-domain imports. Do **not** use
-  `@worlds/client` or `@worlds/client/...` anywhere under `src/`.
-  - ✅ **From `src/client/adapters/libsql/`:** `../../quad-store/mod.ts`,
-    `../../sparql-engine/mod.ts`, `../../search-index/mod.ts`,
-    `../rdfjs/mod.ts`, `../comunica/mod.ts`
-  - ✅ **From `src/client/search-index/quad-chunker/`:**
-    `../../quad-store/mod.ts`
-  - ✅ **From `src/client/client.test.ts`:** `./quad-store/mod.ts`,
-    `./adapters/comunica/mod.ts`
-  - ✅ **Adapter factories (`Client`, `ClientOptions`):** `../../client.ts` (not
-    `../../mod.ts` — avoids pulling the client barrel)
-- **Outside `src/` (examples, benchmarks, external apps).** Use documented
-  `@worlds/client/...` export subpaths from [`deno.json`](deno.json) `exports`.
-  Never use private `#/` import maps or deep file paths not listed under
-  `exports`.
-- **No inline imports.** Declare every module dependency at the top of the file
-  with `import` / `import type`. Do not use `import("...")` in type positions,
-  return types, or annotations, and do not rely on dynamic `import()` except
-  where lazy loading is an explicit, documented requirement.
-  - ❌ **Avoid:** `Promise<import("../../sparql-engine/mod.ts").SparqlResponse>`
-  - ✅ **Prefer:**
-    `import type { SparqlResponse } from "../../sparql-engine/mod.ts"`
-- **Same module tree: use `./`.** Files under the same domain folder (e.g.
-  `search-index/`, `adapters/libsql/`) import siblings and children with
-  `./file.ts` or `./subfolder/mod.ts`. Barrel `mod.ts` files re-export children
-  the same way.
-- **Root barrel cycles.** Do **not** import `../../mod.ts` from source files
-  that the root barrel re-exports (e.g.
-  `search-index/quad-chunker/chunk-quads.ts`) — that can cycle; use a
-  domain-relative path such as `../../quad-store/mod.ts` instead.
-- **External consumers** (apps, other repos) use only documented `exports`
-  entries in `deno.json`. Do not rely on deep file paths that are not listed
-  under `exports`.
+### Resolution order
+
+1. **Cross-domain (any folder → another domain).** Use the narrowest documented
+   `@worlds/client/...` export subpath — in `src/`, in examples, in benchmarks,
+   and in external apps.
+2. **Same domain folder.** Use `./file.ts` or `./subfolder/mod.ts` for siblings
+   and children. Barrel `mod.ts` files re-export with `./` the same way.
+3. **Nested folder, parent symbols on the public barrel.** Import from the
+   parent's export subpath instead of `../` (e.g. `libsql/n3/` uses
+   `@worlds/client/adapters/libsql`, not `../libsql-store.ts`).
+
+Never use parent-relative `../` to reach another file. Never import deep file
+paths that are not listed under `exports`.
+
+### Examples
+
+- ✅ `import type { SparqlEngineInterface } from "@worlds/client/sparql-engine"`
+  (from `adapters/comunica/`)
+- ✅ `@worlds/client/quad-store`, `@worlds/client/sparql-engine`,
+  `@worlds/client/adapters/rdfjs` (from `adapters/libsql/`)
+- ✅ `@worlds/client/quad-store` (from `search-index/quad-chunker/`)
+- ✅ `import { Client, type ClientOptions } from "@worlds/client"` (adapter
+  factories: `create-libsql-client.ts`, `create-rdfjs-client.ts`, etc.)
+- ✅ `@worlds/client/adapters/libsql` (from `adapters/libsql/n3/` for
+  `LibsqlSearchIndex`, `commitPatchToLibsql`, …)
+- ✅ `./string-to-chars.ts` (from `tokenizer/tokenizer.ts`)
+- ✅ `./client.ts`, `./adapters/rdfjs/mod.ts` (from `src/client/client.test.ts`
+  — same `src/client/` tree)
+- ❌ `../../quad-store/mod.ts`, `../libsql-search-index.ts`
+- ❌ `Promise<import("@worlds/client/sparql-engine").SparqlResponse>` — use a
+  top-level `import type` instead
+
+### Root barrel cycles
+
+Do **not** import `@worlds/client` (the `.` export) from modules the root barrel
+re-exports when that would cycle — e.g.
+`search-index/quad-chunker/chunk-quads.ts` must use `@worlds/client/quad-store`,
+not `@worlds/client`. Adapter factories may import `@worlds/client` because they
+are not pulled in through a cyclic re-export path from `chunk-quads.ts`.
+
+### Public surface changes
+
+When adding a new importable subpath, add it to `exports` in `deno.json` before
+using `@worlds/client/...` anywhere. Keep `adapters/libsql/n3` separate from
+`@worlds/client/adapters/libsql` so hexastore-only consumers stay free of N3
+hydration (see architectural map below).
+
+### Documented `exports` subpaths
+
+| Subpath                                                   | Entry                               |
+| :-------------------------------------------------------- | :---------------------------------- |
+| `@worlds/client`                                          | `./src/mod.ts`                      |
+| `@worlds/client/quad-store`                               | `./src/client/quad-store/mod.ts`    |
+| `@worlds/client/search-index`                             | `./src/client/search-index/mod.ts`  |
+| `@worlds/client/search-index/embedding-service`           | embedding-service `mod.ts`          |
+| `@worlds/client/search-index/quad-chunker`                | quad-chunker `mod.ts`               |
+| `@worlds/client/sparql-engine`                            | `./src/client/sparql-engine/mod.ts` |
+| `@worlds/client/adapters/libsql`                          | libsql `mod.ts`                     |
+| `@worlds/client/adapters/libsql/n3`                       | libsql `n3/mod.ts`                  |
+| `@worlds/client/adapters/comunica`                        | comunica `mod.ts`                   |
+| `@worlds/client/adapters/rdfjs`                           | rdfjs `mod.ts`                      |
+| `@worlds/client/adapters/rdfjs/n3`                        | rdfjs `n3/mod.ts`                   |
+| `@worlds/client/adapters/denokv`                          | denokv `mod.ts`                     |
+| `@worlds/client/adapters/tfjs-universal-sentence-encoder` | TFJS adapter `mod.ts`               |
+
+### No inline imports
+
+Declare every module dependency at the top with `import` / `import type`. Do not
+use `import("...")` in type positions or rely on dynamic `import()` except where
+lazy loading is an explicit, documented requirement.
 
 ## State resilience and dual-layer safety
 
@@ -227,6 +265,31 @@ green-passing integration pipeline runs:
   `benchmarks/README.md` and
   [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69);
   do not add committed `baselines.ci.json` or workflow-based bench checks.
+
+- **JSR publish (`deno publish`):** The package is `@worlds/client` on JSR.
+  Pushes to `main` run
+  [`.github/workflows/publish.yml`](.github/workflows/publish.yml):
+  `deno task ci` → `deno task publish:dry` → `deno publish`. Before any release
+  or import/`exports` refactor, run the same sequence locally.
+  - **Version:** Bump `"version"` in `deno.json` for each JSR release (CI does
+    not auto-bump).
+  - **`exports` only for self-imports:** In-repo `@worlds/client/...` must
+    resolve through `name` + `exports`. Never mirror those paths under
+    `imports`.
+  - **Dry-run smoke:** `deno task publish:dry`
+    (`deno publish --dry-run
+    --allow-dirty`) is required in CI but has
+    historically **not** caught every real-publish graph failure. Treat a green
+    dry-run as necessary, not sufficient — watch the Publish workflow after
+    merge.
+  - **If publish fails** with `export '…' not found in jsr:@worlds/client` on
+    files that already use `@worlds/client/...`, that is a known Deno/JSR
+    self-package graph edge case
+    ([denoland/deno#25191](https://github.com/denoland/deno/issues/25191)). Do
+    not reintroduce duplicate `@worlds/client/*` `imports` without an explicit
+    maintainer decision; prefer fixing upstream or adjusting the module graph.
+  - **Packaging:** JSR strips `links` and `exclude` from `deno.json`; the
+    vendored `jsonld-context-parser` redirect is local-only (see below).
 
 ## Architectural system map
 

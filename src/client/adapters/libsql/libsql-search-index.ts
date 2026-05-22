@@ -5,10 +5,10 @@ import type {
   SearchRequest,
   SearchResponse,
   SearchResult,
-} from "../../search-index/mod.ts";
-import { hashQuad } from "../../quad-store/mod.ts";
+} from "@worlds/client/search-index";
+import { hashQuad } from "@worlds/client/quad-store";
 import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
-import type { EmbeddingService } from "../../search-index/embedding-service/mod.ts";
+import type { EmbeddingService } from "@worlds/client/search-index/embedding-service";
 
 const { literal, namedNode, quad: createQuad, defaultGraph } = DataFactory;
 
