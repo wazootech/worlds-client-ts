@@ -258,7 +258,10 @@ Use `benchmarks/sparql-hexastore-crossover.bench.ts`,
 context:
 [discussion #45](https://github.com/wazootech/worlds-client-ts/discussions/45).
 Scale guidance for very large graphs:
-[#68](https://github.com/wazootech/worlds-client-ts/issues/68).
+[#68](https://github.com/wazootech/worlds-client-ts/issues/68). SPARQL
+query-shape helpers live in
+[`libsql-sparql-query-patterns.ts`](src/client/adapters/libsql/libsql-sparql-query-patterns.ts);
+see README **Scale and SPARQL query shape** and `examples/libsql-sparql-scale`.
 
 ### Decoupled store lifecycle via dependency injection
 

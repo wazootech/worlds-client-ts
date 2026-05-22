@@ -1,6 +1,6 @@
 {
   "name": "@worlds/client",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "nodeModulesDir": "auto",
   "exports": {
     ".": "./src/mod.ts",
@@ -40,13 +40,14 @@
     "./vendor/jsonld-context-parser"
   ],
   "exclude": [
-    "vendor/jsonld-context-parser/**",
-    ".prior-art"
+    "vendor/jsonld-context-parser/**"
   ],
   "tasks": {
     "download:tfjs-use": "deno run -A ./src/client/adapters/tfjs-universal-sentence-encoder/download-tfjs-use.ts",
     "example:hello-world": "deno -A ./examples/hello-world/main.ts",
     "example:libsql-hello-world": "deno -A ./examples/libsql-hello-world/main.ts",
+    "example:libsql-sparql-scale": "deno -A ./examples/libsql-sparql-scale/main.ts",
+    "example:libsql-n3-warm-container": "deno -A ./examples/libsql-n3-warm-container/main.ts",
     "example:denokv-hello-world": "deno -A --unstable-kv ./examples/denokv-hello-world/main.ts",
     "example:ai-sdk-hello-world": "deno -A --env ./examples/ai-sdk-hello-world/main.ts",
     "fmt": "deno fmt",
