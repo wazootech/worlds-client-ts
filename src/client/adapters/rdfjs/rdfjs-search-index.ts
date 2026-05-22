@@ -5,12 +5,12 @@ import type {
   SearchRequest,
   SearchResponse,
   SearchResult,
-} from "@worlds/client/search-index";
+} from "@/client/search-index/mod.ts";
 import {
   filterQuads,
   hashQuad,
   isTextualLiteral,
-} from "@worlds/client/quad-store";
+} from "@/client/quad-store/mod.ts";
 
 const { literal, namedNode, quad: createQuad, defaultGraph } = DataFactory;
 

@@ -1,20 +1,20 @@
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { Store } from "n3";
 
-import type { ClientOptions } from "@worlds/client";
-import { Client } from "@worlds/client";
-import type { Patch } from "@worlds/client/quad-store";
-import type { SparqlEngineInterface } from "@worlds/client/sparql-engine";
-import { proxyStore } from "@worlds/client/adapters/rdfjs/n3";
-import { RdfjsQuadStore } from "@worlds/client/adapters/rdfjs";
-import type { LibsqlClientBaseOptions } from "@worlds/client/adapters/libsql";
+import type { ClientOptions } from "@/client/client.ts";
+import { Client } from "@/client/client.ts";
+import type { Patch } from "@/client/quad-store/mod.ts";
+import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
+import { proxyStore } from "@/client/adapters/rdfjs/n3/mod.ts";
+import { RdfjsQuadStore } from "@/client/adapters/rdfjs/mod.ts";
+import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/mod.ts";
 import {
   commitPatchToLibsql,
   hydrateStoreFromLibsql,
   initializeLibsqlSchema,
   LibsqlQueryBuilder,
   LibsqlSearchIndex,
-} from "@worlds/client/adapters/libsql";
+} from "@/client/adapters/libsql/mod.ts";
 
 /**
  * LibsqlN3SparqlEngineOptions contains the hydrated proxied N3 store for SPARQL adapters.

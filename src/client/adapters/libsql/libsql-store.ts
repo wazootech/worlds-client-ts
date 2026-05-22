@@ -4,7 +4,7 @@ import { DataFactory } from "n3";
 import { Readable } from "node:stream";
 import { EventEmitter } from "node:events";
 import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
-import type { Patch } from "@worlds/client/quad-store";
+import type { Patch } from "@/client/quad-store/mod.ts";
 
 const { namedNode, literal, blankNode, defaultGraph, quad } = DataFactory;
 
