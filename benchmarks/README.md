@@ -98,9 +98,9 @@ Historical reference only.
 | 1k    | 3.1 ms          | 327 µs              |
 | 10k   | 18.3 ms         | 300 µs              |
 
-## Baseline table (post-preload, 2026-05-21)
+## Baseline table (post-preload, 2026-05-22)
 
-Captured on **Deno 2.7.14 (Windows x86_64)** with module-level preload and
+Captured on **Deno 2.8.0 (Windows x86_64)** with module-level preload and
 batched LibSQL hydration (`DEFAULT_HYDRATION_BATCH_SIZE = 1000`). Use this table
 for local regression checks.
 
@@ -108,50 +108,50 @@ for local regression checks.
 
 | Benchmark                                      | Avg                        |
 | :--------------------------------------------- | :------------------------- |
-| Import 10 / 100 / 1000 quads                   | 3.2 ms / 46.0 ms / 485 ms  |
-| Hydration 100 / 1k / 5k                        | 994 µs / 10.0 ms / 46.3 ms |
-| FTS search (2k corpus) specific / multi / miss | 726 µs / 5.2 ms / 720 µs   |
+| Import 10 / 100 / 1000 quads                   | 4.3 ms / 60.5 ms / 615 ms  |
+| Hydration 100 / 1k / 5k                        | 1.4 ms / 14.1 ms / 73.0 ms |
+| FTS search (2k corpus) specific / multi / miss | 997 µs / 7.3 ms / 948 µs   |
 
 ### `denokv-pressure.bench.ts`
 
-| Benchmark                           | Avg                       |
-| :---------------------------------- | :------------------------ |
-| Import 10 / 100 / 1000              | 278 µs / 1.5 ms / 16.7 ms |
-| Hydration 100 / 1k / 5k             | 717 µs / 7.2 ms / 37.5 ms |
-| Search hit / miss (full 2k KV scan) | 16.0 ms / 15.2 ms         |
+| Benchmark                           | Avg                        |
+| :---------------------------------- | :------------------------- |
+| Import 10 / 100 / 1000              | 734 µs / 3.3 ms / 24.7 ms  |
+| Hydration 100 / 1k / 5k             | 1.4 ms / 11.9 ms / 58.1 ms |
+| Search hit / miss (full 2k KV scan) | 24.0 ms / 25.8 ms          |
 
 ### `search-comparison.bench.ts` (LibSQL FTS vs RDF/JS naive)
 
 | Scale | RDF/JS specific | LibSQL FTS specific |
 | :---- | :-------------- | :------------------ |
-| 100   | 150 µs          | 238 µs              |
-| 1k    | 2.0 ms          | 198 µs              |
-| 10k   | 13.3 ms         | 198 µs              |
+| 100   | 151 µs          | 199 µs              |
+| 1k    | 2.0 ms          | 287 µs              |
+| 10k   | 13.0 ms         | 182 µs              |
 
 ### `sparql-hexastore-crossover.bench.ts` (execute only, preloaded)
 
 | Quads | Query shape | Backend     | Avg     |
 | :---- | :---------- | :---------- | :------ |
-| 1000  | selective   | hydrate+N3  | 511 µs  |
-| 1000  | selective   | libsqlStore | 1.0 ms  |
-| 1000  | fullScan    | hydrate+N3  | 3.0 ms  |
-| 1000  | fullScan    | libsqlStore | 20.1 ms |
-| 5000  | selective   | hydrate+N3  | 362 µs  |
-| 5000  | selective   | libsqlStore | 2.3 ms  |
-| 5000  | fullScan    | hydrate+N3  | 4.0 ms  |
-| 5000  | fullScan    | libsqlStore | 87.2 ms |
-| 10000 | selective   | hydrate+N3  | 274 µs  |
-| 10000 | selective   | libsqlStore | 3.1 ms  |
-| 10000 | fullScan    | hydrate+N3  | 5.5 ms  |
-| 10000 | fullScan    | libsqlStore | 211 ms  |
-| 25000 | selective   | hydrate+N3  | 462 µs  |
-| 25000 | selective   | libsqlStore | 9.5 ms  |
-| 25000 | fullScan    | hydrate+N3  | 12.3 ms |
-| 25000 | fullScan    | libsqlStore | 509 ms  |
-| 50000 | selective   | hydrate+N3  | 357 µs  |
-| 50000 | selective   | libsqlStore | 15.2 ms |
-| 50000 | fullScan    | hydrate+N3  | 24.4 ms |
-| 50000 | fullScan    | libsqlStore | 1.1 s   |
+| 1000  | selective   | hydrate+N3  | 1.4 ms  |
+| 1000  | selective   | libsqlStore | 2.5 ms  |
+| 1000  | fullScan    | hydrate+N3  | 5.3 ms  |
+| 1000  | fullScan    | libsqlStore | 27.5 ms |
+| 5000  | selective   | hydrate+N3  | 806 µs  |
+| 5000  | selective   | libsqlStore | 4.5 ms  |
+| 5000  | fullScan    | hydrate+N3  | 7.8 ms  |
+| 5000  | fullScan    | libsqlStore | 50.1 ms |
+| 10000 | selective   | hydrate+N3  | 683 µs  |
+| 10000 | selective   | libsqlStore | 7.5 ms  |
+| 10000 | fullScan    | hydrate+N3  | 11.9 ms |
+| 10000 | fullScan    | libsqlStore | 68.1 ms |
+| 25000 | selective   | hydrate+N3  | 671 µs  |
+| 25000 | selective   | libsqlStore | 19.1 ms |
+| 25000 | fullScan    | hydrate+N3  | 23.6 ms |
+| 25000 | fullScan    | libsqlStore | 123 ms  |
+| 50000 | selective   | hydrate+N3  | 638 µs  |
+| 50000 | selective   | libsqlStore | 39.4 ms |
+| 50000 | fullScan    | hydrate+N3  | 44.3 ms |
+| 50000 | fullScan    | libsqlStore | 215 ms  |
 
 ## Regression policy
 
