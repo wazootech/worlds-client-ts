@@ -2,7 +2,7 @@ import { assertEquals, assertExists, assertRejects } from "@std/assert";
 import type * as rdfjs from "@rdfjs/types";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory } from "n3";
-import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import { ComunicaSparqlEngine } from "../comunica/mod.ts";
 import { DenokvQuadStore } from "./denokv-quad-store.ts";
 import { createDenokvClient } from "./create-denokv-client.ts";
 

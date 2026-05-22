@@ -515,7 +515,7 @@ function createCommitHandler(
 
 async function computeQuadId(quad: rdfjs.Quad): Promise<string> {
   const { hashQuad } = await import(
-    "@worlds/client"
+    "../../quad-store/mod.ts"
   );
   return await hashQuad(quad);
 }

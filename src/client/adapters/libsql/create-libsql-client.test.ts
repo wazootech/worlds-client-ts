@@ -2,8 +2,8 @@ import { assertEquals, assertExists } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory } from "n3";
-import { Client } from "@worlds/client";
-import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import { Client } from "../../client.ts";
+import { ComunicaSparqlEngine } from "../comunica/mod.ts";
 import { createLibsqlClientOptions } from "./create-libsql-client.ts";
 import type { LibsqlStore } from "./libsql-store.ts";
 

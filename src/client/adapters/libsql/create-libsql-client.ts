@@ -1,10 +1,10 @@
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
-import type { ClientOptions } from "@worlds/client";
-import { Client } from "@worlds/client";
-import type { Patch } from "@worlds/client/quad-store";
-import type { SparqlEngineInterface } from "@worlds/client/sparql-engine";
-import { RdfjsQuadStore } from "@worlds/client/adapters/rdfjs";
+import type { ClientOptions } from "../../client.ts";
+import { Client } from "../../client.ts";
+import type { Patch } from "../../quad-store/mod.ts";
+import type { SparqlEngineInterface } from "../../sparql-engine/mod.ts";
+import { RdfjsQuadStore } from "../rdfjs/mod.ts";
 
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";

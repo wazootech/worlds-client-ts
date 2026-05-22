@@ -2,7 +2,7 @@ import "@tensorflow/tfjs-backend-wasm";
 import { isAbsolute, toFileUrl } from "@std/path";
 import * as tf from "@tensorflow/tfjs";
 import type { GraphModel } from "@tensorflow/tfjs";
-import type { EmbeddingService } from "@worlds/client/search-index/embedding-service";
+import type { EmbeddingService } from "../../search-index/embedding-service/mod.ts";
 import { loadVocabulary, Tokenizer } from "./tokenizer/mod.ts";
 
 /** BASE_PATH is the default remote path for USE lite vocabulary. */

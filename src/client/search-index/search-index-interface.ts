@@ -1,4 +1,4 @@
-import type { QuadFilter } from "@worlds/client/quad-store";
+import type { QuadFilter } from "../quad-store/mod.ts";
 
 /**
  * SearchRequest defines the parameters for executing a keyword search, extending central QuadFilter rules.

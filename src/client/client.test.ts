@@ -2,9 +2,9 @@ import { assertEquals, assertRejects } from "@std/assert";
 import { DataFactory, Store } from "n3";
 import { Client } from "./client.ts";
 import { RdfjsQuadStore, RdfjsSearchIndex } from "./adapters/rdfjs/mod.ts";
-import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import { ComunicaSparqlEngine } from "./adapters/comunica/mod.ts";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
-import { hashQuad } from "@worlds/client/quad-store";
+import { hashQuad } from "./quad-store/mod.ts";
 
 const queryEngine = new QueryEngine();
 

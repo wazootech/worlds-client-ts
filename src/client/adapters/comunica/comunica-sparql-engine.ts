@@ -7,7 +7,7 @@ import type {
   SparqlResponse,
   SparqlSelectResults,
   SparqlValue,
-} from "@worlds/client/sparql-engine";
+} from "../../sparql-engine/mod.ts";
 
 /**
  * ComunicaQueryEngine is the minimal structural query contract needed from a user-provided Comunica engine.

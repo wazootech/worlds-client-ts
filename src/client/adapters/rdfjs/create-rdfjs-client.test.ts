@@ -1,7 +1,7 @@
 import { assertEquals, assertRejects } from "@std/assert";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory, Store } from "n3";
-import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import { ComunicaSparqlEngine } from "../comunica/mod.ts";
 import { createRdfjsClient } from "./create-rdfjs-client.ts";
 
 const { quad, namedNode, literal } = DataFactory;
