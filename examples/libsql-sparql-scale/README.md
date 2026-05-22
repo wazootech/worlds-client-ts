@@ -20,5 +20,5 @@ Crossover numbers and methodology:
 [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69),
 [`benchmarks/README.md`](../../benchmarks/README.md).
 
-**JSR:** `@worlds/client@0.0.6` ships batched hydration, query-shape helpers,
-and scale guidance.
+**JSR:** [`@worlds/client@0.0.9`](https://jsr.io/@worlds/client) ships batched
+hydration, query-shape helpers, and scale guidance.

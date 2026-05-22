@@ -16,7 +16,7 @@ Do not comment on closed perf threads
 [#11](https://github.com/wazootech/worlds-client-ts/issues/11)). File a new
 issue with before/after `deno bench` output instead.
 
-**JSR:** [`@worlds/client@0.0.6`](https://jsr.io/@worlds/client) is published.
+**JSR:** [`@worlds/client@0.0.9`](https://jsr.io/@worlds/client) is published.
 Tables below reflect **main** branch methodology (module preload, batched
 hydration); they are not a substitute for re-running on your machine.
 
