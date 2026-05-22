@@ -15,9 +15,18 @@ const { namedNode, literal, blankNode, defaultGraph, quad } = DataFactory;
 export type CommitHandler = (patch: Patch) => Promise<void>;
 
 /**
- * LibsqlStoreOptions configures optional LibsqlStore read behavior.
+ * LibsqlStoreOptions configures LibsqlStore dependencies and read behavior.
  */
 export interface LibsqlStoreOptions {
+  /** client is the LibSQL client. */
+  client: Client;
+
+  /** queryBuilder is the LibsqlQueryBuilder. */
+  queryBuilder: LibsqlQueryBuilder;
+
+  /** commitHandler atomically persists buffered patches on commit(). */
+  commitHandler?: CommitHandler;
+
   /** matchPageSize limits rows per hexastore match SQL round-trip (default 1000). */
   matchPageSize?: number;
 }
@@ -40,12 +49,9 @@ export class LibsqlStore implements rdfjs.Store {
   private readonly matchPageSize: number;
 
   public constructor(
-    private readonly client: Client,
-    private readonly queryBuilder: LibsqlQueryBuilder,
-    private readonly commitHandler?: CommitHandler,
-    storeOptions?: LibsqlStoreOptions,
+    private readonly options: LibsqlStoreOptions,
   ) {
-    const configuredPageSize = storeOptions?.matchPageSize ??
+    const configuredPageSize = options.matchPageSize ??
       DEFAULT_LIBSQL_MATCH_PAGE_SIZE;
     this.matchPageSize = Math.max(1, Math.floor(configuredPageSize));
   }
@@ -79,14 +85,14 @@ export class LibsqlStore implements rdfjs.Store {
         }
 
         try {
-          const { sql, args } = this.queryBuilder.buildMatchQuadsQuery(
+          const { sql, args } = this.options.queryBuilder.buildMatchQuadsQuery(
             pattern,
             {
               afterQuadId,
               limit: this.matchPageSize,
             },
           );
-          const resultSet = await this.client.execute({ sql, args });
+          const resultSet = await this.options.client.execute({ sql, args });
 
           if (resultSet.rows.length === 0) {
             rowStream.push(null);
@@ -122,13 +128,13 @@ export class LibsqlStore implements rdfjs.Store {
     object?: rdfjs.Term | null,
     graph?: rdfjs.Term | null,
   ): Promise<number> {
-    const { sql, args } = this.queryBuilder.buildCountQuadsQuery({
+    const { sql, args } = this.options.queryBuilder.buildCountQuadsQuery({
       subject: subject ?? null,
       predicate: predicate ?? null,
       object: object ?? null,
       graph: graph ?? null,
     });
-    const resultSet = await this.client.execute({ sql, args });
+    const resultSet = await this.options.client.execute({ sql, args });
     const firstRow = resultSet.rows[0];
     if (!firstRow) {
       return 0;
@@ -237,8 +243,8 @@ export class LibsqlStore implements rdfjs.Store {
     if (this.insertBuffer.length === 0 && this.deleteBuffer.length === 0) {
       return;
     }
-    if (this.commitHandler) {
-      await this.commitHandler({
+    if (this.options.commitHandler) {
+      await this.options.commitHandler({
         insertions: this.insertBuffer,
         deletions: this.deleteBuffer,
       });
