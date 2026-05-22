@@ -367,6 +367,11 @@ Semantic-Only, and Keyword-Only. If upstream embedding services time out or are
 completely omitted, the system gracefully degrades to high-speed SQLite FTS5
 keyword searching without service interruption.
 
+Opt-in semantic chunk enrichment: wrap an `EmbeddingService` with
+`TripletContextEmbeddingService` so index-time FTS/vector text includes
+subject/predicate context (`formatChunkText`); default `chunkQuads` behavior is
+unchanged.
+
 ### Stable reciprocal rank fusion relevance blending
 
 To combine vector cosine similarity and Okapi BM25 keyword metrics without

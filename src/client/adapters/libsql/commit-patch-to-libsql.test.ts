@@ -3,7 +3,10 @@ import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
-import { FakeEmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
+import {
+  FakeEmbeddingService,
+  TripletContextEmbeddingService,
+} from "@/client/search-index/embedding-service/mod.ts";
 import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 
 const { quad, namedNode, literal } = DataFactory;
@@ -115,6 +118,38 @@ Deno.test("commitPatchToLibsql - supports synchronization when embeddingService 
   // Confirm parent quad still inserted
   const quadRows = await client.execute("SELECT COUNT(*) as total FROM quads");
   assertEquals(quadRows.rows[0].total, 1);
+});
+
+Deno.test("commitPatchToLibsql - TripletContextEmbeddingService stores enriched chunk text", async () => {
+  const client = createClient({ url: ":memory:" });
+  await setupSchema(client);
+
+  const options = {
+    client,
+    embeddingService: new TripletContextEmbeddingService({
+      inner: new FakeEmbeddingService(),
+    }),
+    textSplitter: sharedSplitter,
+    libsqlQueryBuilder: testLibsqlQueryBuilder,
+  };
+
+  const testQuad = quad(
+    namedNode("http://example.org/Aurelia"),
+    namedNode("http://example.org/hasCapital"),
+    literal("Lume"),
+  );
+
+  await commitPatchToLibsql({
+    insertions: [testQuad],
+    deletions: [],
+  }, options);
+
+  const chunkRows = await client.execute("SELECT value FROM chunks");
+  assertEquals(chunkRows.rows.length, 1);
+  assertEquals(
+    chunkRows.rows[0].value,
+    "Factual context about Aurelia: Aurelia has capital Lume.",
+  );
 });
 
 Deno.test(
