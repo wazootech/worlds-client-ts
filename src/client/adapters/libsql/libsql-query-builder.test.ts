@@ -8,9 +8,11 @@ Deno.test("buildHexastoreIndexes - returns 7 covering index DDL statements", () 
   const indexes = testLibsqlQueryBuilder.buildHexastoreIndexes();
   assertEquals(indexes.length, 7);
 
-  const spogIndex = indexes.find((s: string) => s.includes("idx_quads_spog"));
+  const subjectFirstQuadPatternIndex = indexes.find((s: string) =>
+    s.includes("idx_quads_spog")
+  );
   assertEquals(
-    spogIndex,
+    subjectFirstQuadPatternIndex,
     "CREATE INDEX IF NOT EXISTS idx_quads_spog ON quads(s, p, o, g)",
   );
 

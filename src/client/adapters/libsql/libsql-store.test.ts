@@ -5,11 +5,26 @@ import { DataFactory } from "n3";
 import type * as rdfjs from "@rdfjs/types";
 import { Readable } from "node:stream";
 import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import type { CommitHandler } from "./libsql-store.ts";
 import { LibsqlStore } from "./libsql-store.ts";
 
 const { namedNode, literal, blankNode, quad } = DataFactory;
 
 const testBuilder = new LibsqlQueryBuilder(32);
+
+function createTestLibsqlStore(
+  client: ReturnType<typeof createClient>,
+  queryBuilder: LibsqlQueryBuilder,
+  commitHandler?: CommitHandler,
+  matchPageSize?: number,
+): LibsqlStore {
+  return new LibsqlStore({
+    client,
+    queryBuilder,
+    commitHandler,
+    matchPageSize,
+  });
+}
 
 async function setupSchema(db: ReturnType<typeof createClient>): Promise<void> {
   await db.execute(testBuilder.buildLibsqlQuadsTable());
@@ -72,7 +87,7 @@ function collectStream(
 Deno.test("LibsqlStore.match - empty store returns empty stream", async () => {
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
-  const store = new LibsqlStore(db, testBuilder);
+  const store = createTestLibsqlStore(db, testBuilder);
 
   const results = await collectStream(store.match(null, null, null, null));
   assertEquals(results.length, 0);
@@ -91,7 +106,7 @@ Deno.test("LibsqlStore.match - all four terms bound returns exact quad", async (
     g: "urn:graph1",
     g_type: "NamedNode",
   });
-  const store = new LibsqlStore(db, testBuilder);
+  const store = createTestLibsqlStore(db, testBuilder);
 
   const results = await collectStream(store.match(
     namedNode("urn:alice"),
@@ -114,7 +129,7 @@ Deno.test("LibsqlStore.match - by subject only returns matching quads", async ()
   await seedQuad(db, { id: "h1", s: "urn:a", p: "urn:p1", o: "o1" });
   await seedQuad(db, { id: "h2", s: "urn:b", p: "urn:p2", o: "o2" });
   await seedQuad(db, { id: "h3", s: "urn:a", p: "urn:p3", o: "o3" });
-  const store = new LibsqlStore(db, testBuilder);
+  const store = createTestLibsqlStore(db, testBuilder);
 
   const results = await collectStream(
     store.match(namedNode("urn:a"), null, null, null),
@@ -132,7 +147,7 @@ Deno.test("LibsqlStore.match - by predicate only uses PSO index", async () => {
   await seedQuad(db, { id: "h1", s: "urn:a", p: "urn:target", o: "o1" });
   await seedQuad(db, { id: "h2", s: "urn:b", p: "urn:other", o: "o2" });
   await seedQuad(db, { id: "h3", s: "urn:c", p: "urn:target", o: "o3" });
-  const store = new LibsqlStore(db, testBuilder);
+  const store = createTestLibsqlStore(db, testBuilder);
 
   const results = await collectStream(
     store.match(null, namedNode("urn:target"), null, null),
@@ -163,7 +178,7 @@ Deno.test("LibsqlStore.match - by graph only uses GPSO index", async () => {
     g: "urn:g2",
     g_type: "NamedNode",
   });
-  const store = new LibsqlStore(db, testBuilder);
+  const store = createTestLibsqlStore(db, testBuilder);
 
   const results = await collectStream(
     store.match(null, null, null, namedNode("urn:g1")),
@@ -190,7 +205,7 @@ Deno.test("LibsqlStore.match - by object only uses OPSG index", async () => {
     o: "other",
     o_type: "Literal",
   });
-  const store = new LibsqlStore(db, testBuilder);
+  const store = createTestLibsqlStore(db, testBuilder);
 
   const results = await collectStream(
     store.match(null, null, literal("target"), null),
@@ -217,7 +232,7 @@ Deno.test("LibsqlStore.match - disambiguates NamedNode vs BlankNode with same va
     p: "urn:p",
     o: "o2",
   });
-  const store = new LibsqlStore(db, testBuilder);
+  const store = createTestLibsqlStore(db, testBuilder);
 
   const namedResults = await collectStream(
     store.match(namedNode("b1"), null, null, null),
@@ -243,7 +258,7 @@ Deno.test("LibsqlStore.match - literal with language tag", async () => {
     o_type: "Literal",
     o_lang: "es",
   });
-  const store = new LibsqlStore(db, testBuilder);
+  const store = createTestLibsqlStore(db, testBuilder);
 
   // Match by subject+p, then check the literal
   const results = await collectStream(
@@ -268,7 +283,7 @@ Deno.test("LibsqlStore.match - literal with datatype", async () => {
     o_type: "Literal",
     o_datatype: "http://www.w3.org/2001/XMLSchema#integer",
   });
-  const store = new LibsqlStore(db, testBuilder);
+  const store = createTestLibsqlStore(db, testBuilder);
 
   const results = await collectStream(
     store.match(namedNode("urn:s"), namedNode("urn:p"), null, null),
@@ -291,7 +306,7 @@ Deno.test("LibsqlStore.match - DefaultGraph round-trip", async () => {
     g: "",
     g_type: "DefaultGraph",
   });
-  const store = new LibsqlStore(db, testBuilder);
+  const store = createTestLibsqlStore(db, testBuilder);
 
   const results = await collectStream(
     store.match(namedNode("urn:s"), null, null, null),
@@ -322,7 +337,7 @@ Deno.test(
       o_type: "Literal",
       o_lang: "en",
     });
-    const store = new LibsqlStore(db, testBuilder);
+    const store = createTestLibsqlStore(db, testBuilder);
 
     const results = await collectStream(
       store.match(
@@ -359,7 +374,7 @@ Deno.test(
       o_type: "Literal",
       o_datatype: "http://www.w3.org/2001/XMLSchema#integer",
     });
-    const store = new LibsqlStore(db, testBuilder);
+    const store = createTestLibsqlStore(db, testBuilder);
 
     const results = await collectStream(
       store.match(
@@ -390,7 +405,7 @@ Deno.test("LibsqlStore.match - NamedNode object terms round-trip", async () => {
     o_datatype: null,
     o_lang: null,
   });
-  const store = new LibsqlStore(db, testBuilder);
+  const store = createTestLibsqlStore(db, testBuilder);
 
   const results = await collectStream(
     store.match(null, null, namedNode("http://example.com/resource"), null),
@@ -411,7 +426,7 @@ Deno.test("LibsqlStore.match - BlankNode graph terms round-trip", async () => {
     g: "genid-graph",
     g_type: "BlankNode",
   });
-  const store = new LibsqlStore(db, testBuilder);
+  const store = createTestLibsqlStore(db, testBuilder);
 
   const results = await collectStream(
     store.match(null, null, null, blankNode("genid-graph")),
@@ -427,7 +442,7 @@ Deno.test(
     const failingClient = {
       execute: () => Promise.reject(new Error("database unavailable")),
     } as unknown as Client;
-    const store = new LibsqlStore(failingClient, testBuilder);
+    const store = createTestLibsqlStore(failingClient, testBuilder);
 
     await assertRejects(
       () => collectStream(store.match(null, null, null, null)),
@@ -456,7 +471,7 @@ Deno.test("LibsqlStore.match - multiple named graphs are isolated", async () => 
     g: "urn:g2",
     g_type: "NamedNode",
   });
-  const store = new LibsqlStore(db, testBuilder);
+  const store = createTestLibsqlStore(db, testBuilder);
 
   const g1Results = await collectStream(
     store.match(null, null, null, namedNode("urn:g1")),
@@ -523,7 +538,7 @@ async function computeQuadId(quad: rdfjs.Quad): Promise<string> {
 Deno.test("LibsqlStore.add - buffered quad not visible before commit", async () => {
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
-  const store = new LibsqlStore(db, testBuilder);
+  const store = createTestLibsqlStore(db, testBuilder);
 
   store.add(quad(namedNode("urn:s"), namedNode("urn:p"), literal("v1")));
 
@@ -535,7 +550,7 @@ Deno.test("LibsqlStore.add - buffered quad not visible before commit", async () 
 Deno.test("LibsqlStore.add - commit persists quad, match finds it", async () => {
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
-  const store = new LibsqlStore(
+  const store = createTestLibsqlStore(
     db,
     testBuilder,
     createCommitHandler(db, testBuilder),
@@ -554,7 +569,7 @@ Deno.test("LibsqlStore.add - commit persists quad, match finds it", async () => 
 Deno.test("LibsqlStore.add - commit once, then add+commit again accumulates", async () => {
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
-  const store = new LibsqlStore(
+  const store = createTestLibsqlStore(
     db,
     testBuilder,
     createCommitHandler(db, testBuilder),
@@ -578,7 +593,7 @@ Deno.test("LibsqlStore.add - commit once, then add+commit again accumulates", as
 Deno.test("LibsqlStore.delete - buffered quad still visible before commit", async () => {
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
-  const store = new LibsqlStore(
+  const store = createTestLibsqlStore(
     db,
     testBuilder,
     createCommitHandler(db, testBuilder),
@@ -606,7 +621,7 @@ Deno.test("LibsqlStore.delete - buffered quad still visible before commit", asyn
 Deno.test("LibsqlStore.delete - add then delete same quad before commit is net zero", async () => {
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
-  const store = new LibsqlStore(
+  const store = createTestLibsqlStore(
     db,
     testBuilder,
     createCommitHandler(db, testBuilder),
@@ -626,7 +641,7 @@ Deno.test("LibsqlStore.delete - add then delete same quad before commit is net z
 Deno.test("LibsqlStore.removeMatches - buffers matching quads for deletion", async () => {
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
-  const store = new LibsqlStore(
+  const store = createTestLibsqlStore(
     db,
     testBuilder,
     createCommitHandler(db, testBuilder),
@@ -665,7 +680,7 @@ Deno.test("LibsqlStore.removeMatches - buffers matching quads for deletion", asy
 Deno.test("LibsqlStore.clearBuffer - discards pending mutations on error", async () => {
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
-  const store = new LibsqlStore(
+  const store = createTestLibsqlStore(
     db,
     testBuilder,
     createCommitHandler(db, testBuilder),
@@ -697,7 +712,7 @@ function createErrorQuadStream(
 Deno.test("LibsqlStore.import - forwards stream errors to the emitter", async () => {
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
-  const store = new LibsqlStore(db, testBuilder);
+  const store = createTestLibsqlStore(db, testBuilder);
 
   await assertRejects(
     () =>
@@ -714,7 +729,7 @@ Deno.test("LibsqlStore.import - forwards stream errors to the emitter", async ()
 Deno.test("LibsqlStore.remove - stream buffers quads for deletion on commit", async () => {
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
-  const store = new LibsqlStore(
+  const store = createTestLibsqlStore(
     db,
     testBuilder,
     createCommitHandler(db, testBuilder),
@@ -755,7 +770,7 @@ Deno.test(
     const failingClient = {
       execute: () => Promise.reject(new Error("match query failed")),
     } as unknown as Client;
-    const store = new LibsqlStore(failingClient, testBuilder);
+    const store = createTestLibsqlStore(failingClient, testBuilder);
 
     await assertRejects(
       () =>
@@ -773,7 +788,7 @@ Deno.test(
 Deno.test("LibsqlStore.deleteGraph - accepts graph IRI strings", async () => {
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
-  const store = new LibsqlStore(
+  const store = createTestLibsqlStore(
     db,
     testBuilder,
     createCommitHandler(db, testBuilder),
@@ -813,7 +828,7 @@ Deno.test("LibsqlStore.commit - is a no-op when both buffers are empty", async (
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
   let commitHandlerCalls = 0;
-  const store = new LibsqlStore(db, testBuilder, () => {
+  const store = createTestLibsqlStore(db, testBuilder, () => {
     commitHandlerCalls++;
     return Promise.resolve();
   });
@@ -826,7 +841,7 @@ Deno.test("LibsqlStore.commit - is a no-op when both buffers are empty", async (
 Deno.test("LibsqlStore.import - stream buffers all quads, commit persists them", async () => {
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
-  const store = new LibsqlStore(
+  const store = createTestLibsqlStore(
     db,
     testBuilder,
     createCommitHandler(db, testBuilder),
@@ -846,5 +861,72 @@ Deno.test("LibsqlStore.import - stream buffers all quads, commit persists them",
   assertEquals(
     (await collectStream(store.match(null, null, null, null))).length,
     2,
+  );
+});
+
+Deno.test("LibsqlStore.match - keyset pages return the full result set", async () => {
+  const db = createClient({ url: ":memory:" });
+  await setupSchema(db);
+  for (let index = 0; index < 5; index++) {
+    await seedQuad(db, {
+      id: `id-${String(index).padStart(4, "0")}`,
+      s: `urn:subject-${index}`,
+      p: "urn:predicate",
+      o: `value-${index}`,
+    });
+  }
+
+  const store = createTestLibsqlStore(db, testBuilder, undefined, 2);
+  const results = await collectStream(store.match(null, null, null, null));
+  assertEquals(results.length, 5);
+});
+
+Deno.test("LibsqlStore.countQuads - returns exact counts for bound patterns", async () => {
+  const db = createClient({ url: ":memory:" });
+  await setupSchema(db);
+  await seedQuad(db, {
+    id: "hash-a",
+    s: "urn:alice",
+    p: "urn:knows",
+    o: "urn:bob",
+    o_type: "NamedNode",
+  });
+  await seedQuad(db, {
+    id: "hash-b",
+    s: "urn:alice",
+    p: "urn:age",
+    o: "30",
+  });
+  await seedQuad(db, {
+    id: "hash-c",
+    s: "urn:carol",
+    p: "urn:knows",
+    o: "urn:dave",
+    o_type: "NamedNode",
+  });
+
+  const store = createTestLibsqlStore(db, testBuilder);
+
+  assertEquals(await store.countQuads(null, null, null, null), 3);
+  assertEquals(
+    await store.countQuads(namedNode("urn:alice"), null, null, null),
+    2,
+  );
+  assertEquals(
+    await store.countQuads(
+      namedNode("urn:alice"),
+      namedNode("urn:knows"),
+      null,
+      null,
+    ),
+    1,
+  );
+
+  const streamCount = (await collectStream(
+    store.match(namedNode("urn:alice"), null, null, null),
+  )).length;
+  assertEquals(
+    await store.countQuads(namedNode("urn:alice"), null, null, null),
+    streamCount,
   );
 });

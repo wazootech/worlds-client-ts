@@ -62,11 +62,12 @@ export async function createLibsqlClientOptions(
     });
   };
 
-  const libsqlStore = new LibsqlStore(
-    options.client,
+  const libsqlStore = new LibsqlStore({
+    client: options.client,
     queryBuilder,
-    persistPatch,
-  );
+    commitHandler: persistPatch,
+    matchPageSize: options.matchPageSize,
+  });
 
   const configuredSparqlEngine = options.createSparqlEngine?.({ libsqlStore });
 
