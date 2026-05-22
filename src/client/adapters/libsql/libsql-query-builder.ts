@@ -1,9 +1,9 @@
 import type { QuadFilter } from "@/client/quad-store/mod.ts";
 import type { SearchRequest } from "@/client/search-index/mod.ts";
 import {
-  buildLibsqlSpogWhereClause,
-  type LibsqlSpogPattern,
-} from "./libsql-spog-pattern-sql.ts";
+  buildLibsqlQuadPatternWhereClause,
+  type LibsqlQuadPattern,
+} from "./libsql-quad-pattern-sql.ts";
 
 /** DEFAULT_LIBSQL_MATCH_PAGE_SIZE caps rows per hexastore match SQL round-trip. */
 export const DEFAULT_LIBSQL_MATCH_PAGE_SIZE = 1000;
@@ -92,7 +92,7 @@ export class LibsqlQueryBuilder {
 
   /**
    * buildHexastoreIndexes returns DDL for 7 covering composite indexes on the quads table
-   * (6 SPOG permutations + 1 GPSO for graph-scoped access) enabling any triple or quad pattern
+   * (six subject-predicate-object-graph index orders + GPSO for graph-scoped access) enabling any quad pattern
    * to be resolved via a single index seek.
    */
   public buildHexastoreIndexes(): string[] {
@@ -231,10 +231,10 @@ export class LibsqlQueryBuilder {
    * buildMatchQuadsQuery returns SQL to read quads for a pattern, optionally keyset-paged by id.
    */
   public buildMatchQuadsQuery(
-    pattern: LibsqlSpogPattern,
+    pattern: LibsqlQuadPattern,
     pageOptions?: { afterQuadId?: string; limit?: number },
   ): { sql: string; args: (string | null)[] } {
-    const { conditions, args } = buildLibsqlSpogWhereClause(pattern);
+    const { conditions, args } = buildLibsqlQuadPatternWhereClause(pattern);
 
     if (pageOptions?.afterQuadId) {
       conditions.push("id > ?");
@@ -262,9 +262,9 @@ export class LibsqlQueryBuilder {
    * buildCountQuadsQuery returns SQL to count quads matching a hexastore pattern.
    */
   public buildCountQuadsQuery(
-    pattern: LibsqlSpogPattern,
+    pattern: LibsqlQuadPattern,
   ): { sql: string; args: (string | null)[] } {
-    const { conditions, args } = buildLibsqlSpogWhereClause(pattern);
+    const { conditions, args } = buildLibsqlQuadPatternWhereClause(pattern);
     const whereClause = conditions.length > 0
       ? `WHERE ${conditions.join(" AND ")}`
       : "";

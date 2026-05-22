@@ -51,7 +51,7 @@ export class LibsqlStore implements rdfjs.Store {
   }
 
   /**
-   * match returns a stream of quads matching the given SPOG pattern.
+   * match returns a stream of quads matching the given quad pattern.
    * Automatically selects the optimal hexastore covering index based on
    * which pattern positions are bound. Reads are keyset-paged by quad id.
    */
@@ -114,7 +114,7 @@ export class LibsqlStore implements rdfjs.Store {
   }
 
   /**
-   * countQuads returns the number of quads matching the given SPOG pattern (Comunica cardinality hint).
+   * countQuads returns the number of quads matching the given quad pattern (Comunica cardinality hint).
    */
   public async countQuads(
     subject?: rdfjs.Term | null,
@@ -197,7 +197,7 @@ export class LibsqlStore implements rdfjs.Store {
   }
 
   /**
-   * removeMatches buffers all quads matching the given SPOG pattern for deletion on commit.
+   * removeMatches buffers all quads matching the given quad pattern for deletion on commit.
    */
   public removeMatches(
     subject?: rdfjs.Term | null,

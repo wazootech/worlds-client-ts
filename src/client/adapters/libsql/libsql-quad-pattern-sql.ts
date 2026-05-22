@@ -8,9 +8,9 @@ const rdfLangStringIri =
 const xsdStringIri = "http://www.w3.org/2001/XMLSchema#string";
 
 /**
- * LibsqlSpogPattern holds optional bound RDF/JS terms for hexastore quad pattern matching.
+ * LibsqlQuadPattern holds optional bound RDF/JS terms for hexastore quad pattern matching.
  */
-export interface LibsqlSpogPattern {
+export interface LibsqlQuadPattern {
   /** subject is the optional bound subject term. */
   subject: rdfjs.Term | null;
   /** predicate is the optional bound predicate term. */
@@ -22,9 +22,9 @@ export interface LibsqlSpogPattern {
 }
 
 /**
- * LibsqlSpogWhereClause is the SQL fragment and bound args for a quad pattern filter.
+ * LibsqlQuadPatternWhereClause is the SQL fragment and bound args for a quad pattern filter.
  */
-export interface LibsqlSpogWhereClause {
+export interface LibsqlQuadPatternWhereClause {
   /** conditions are AND-joined predicates without a leading WHERE. */
   conditions: string[];
   /** args are bound parameters in statement order. */
@@ -32,11 +32,11 @@ export interface LibsqlSpogWhereClause {
 }
 
 /**
- * buildLibsqlSpogWhereClause constructs WHERE conditions and args for a hexastore SPOG pattern.
+ * buildLibsqlQuadPatternWhereClause constructs WHERE conditions and args for a hexastore quad pattern.
  */
-export function buildLibsqlSpogWhereClause(
-  pattern: LibsqlSpogPattern,
-): LibsqlSpogWhereClause {
+export function buildLibsqlQuadPatternWhereClause(
+  pattern: LibsqlQuadPattern,
+): LibsqlQuadPatternWhereClause {
   const conditions: string[] = [];
   const args: (string | null)[] = [];
 
