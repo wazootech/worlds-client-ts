@@ -101,10 +101,13 @@ mathematical brevity.
 
 ## Import path conventions
 
-All `@worlds/client` resolution goes through the package `name` and the
-[`deno.json`](deno.json) `exports` map only. Do **not** add `@worlds/client` or
-`@worlds/client/*` entries under `imports` (that map is for third-party aliases:
-npm, jsr, `@std/*`). Do not use private `#/` import maps.
+All `@worlds/client` resolution goes through the package `name`, the
+[`deno.json`](deno.json) `exports` map, and a **mirrored** `@worlds/client/*`
+block under `imports` (same paths as `exports`). The mirror is required today so
+`deno publish` can build the JSR module graph
+([denoland/deno#25191](https://github.com/denoland/deno/issues/25191)); keep
+`imports` and `exports` in sync when adding subpaths. Do not use private `#/`
+import maps.
 
 ### Resolution order
 
@@ -273,21 +276,19 @@ green-passing integration pipeline runs:
   or import/`exports` refactor, run the same sequence locally.
   - **Version:** Bump `"version"` in `deno.json` for each JSR release (CI does
     not auto-bump).
-  - **`exports` only for self-imports:** In-repo `@worlds/client/...` must
-    resolve through `name` + `exports`. Never mirror those paths under
-    `imports`.
+  - **Self-imports:** In-repo `@worlds/client/...` use `exports`; duplicate the
+    same paths under `imports` (see import conventions above) so CI
+    `deno publish` resolves the graph.
   - **Dry-run smoke:** `deno task publish:dry`
     (`deno publish --dry-run
     --allow-dirty`) is required in CI but has
     historically **not** caught every real-publish graph failure. Treat a green
     dry-run as necessary, not sufficient — watch the Publish workflow after
     merge.
-  - **If publish fails** with `export '…' not found in jsr:@worlds/client` on
-    files that already use `@worlds/client/...`, that is a known Deno/JSR
-    self-package graph edge case
-    ([denoland/deno#25191](https://github.com/denoland/deno/issues/25191)). Do
-    not reintroduce duplicate `@worlds/client/*` `imports` without an explicit
-    maintainer decision; prefer fixing upstream or adjusting the module graph.
+  - **If publish fails** with `export '…' not found in jsr:@worlds/client`,
+    ensure every `@worlds/client/*` subpath used in `src/` exists in both
+    `exports` and the mirrored `imports` block, then re-run
+    `deno task publish:dry` and push.
   - **Packaging:** JSR strips `links` and `exclude` from `deno.json`; the
     vendored `jsonld-context-parser` redirect is local-only (see below).
 
