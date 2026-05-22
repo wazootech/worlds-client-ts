@@ -4,19 +4,14 @@ import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { FakeEmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
 import type { EmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
 import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import { initializeLibsqlSchema } from "./initialize-libsql-schema.ts";
 
 // --- Helpers ---
 
 const testLibsqlQueryBuilder = new LibsqlQueryBuilder(32);
 
 async function setupSchema(client: ReturnType<typeof createClient>) {
-  await client.execute(testLibsqlQueryBuilder.buildLibsqlChunksTable());
-  await client.execute(testLibsqlQueryBuilder.buildLibsqlChunksQuadIdIndex());
-  await client.execute(testLibsqlQueryBuilder.buildLibsqlChunksFtsTable());
-  await client.execute(testLibsqlQueryBuilder.buildLibsqlChunksIndex());
-  for (const triggerSql of testLibsqlQueryBuilder.buildLibsqlChunksTriggers()) {
-    await client.execute(triggerSql);
-  }
+  await initializeLibsqlSchema(client, testLibsqlQueryBuilder);
 }
 
 // --- Tests ---
@@ -31,12 +26,13 @@ Deno.test("LibsqlSearchIndex - Tracer Bullet: performs basic hybrid search and m
 
   await client.execute({
     sql:
-      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, vector32(?))`,
+      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, fts_value, vector) VALUES (?, ?, ?, ?, ?, ?, vector32(?))`,
     args: [
       "f1",
       "urn:alice",
       "urn:name",
       "urn:graph",
+      "Alice is the explorer",
       "Alice is the explorer",
       vecStr,
     ],
@@ -48,12 +44,13 @@ Deno.test("LibsqlSearchIndex - Tracer Bullet: performs basic hybrid search and m
 
   await client.execute({
     sql:
-      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, vector32(?))`,
+      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, fts_value, vector) VALUES (?, ?, ?, ?, ?, ?, vector32(?))`,
     args: [
       "f2",
       "urn:bob",
       "urn:name",
       "urn:graph",
+      "Bob stays back",
       "Bob stays back",
       otherVecStr,
     ],
@@ -86,24 +83,26 @@ Deno.test("LibsqlSearchIndex - Scope Inclusion: limits matches only to included 
 
   await client.execute({
     sql:
-      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, vector32(?))`,
+      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, fts_value, vector) VALUES (?, ?, ?, ?, ?, ?, vector32(?))`,
     args: [
       "f1",
       "urn:person:1",
       "urn:bio",
       "urn:g1",
       "Loves coding and data",
+      "Loves coding and data",
       vecStr,
     ],
   });
   await client.execute({
     sql:
-      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, vector32(?))`,
+      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, fts_value, vector) VALUES (?, ?, ?, ?, ?, ?, vector32(?))`,
     args: [
       "f2",
       "urn:person:2",
       "urn:bio",
       "urn:g1",
+      "Loves coding and gardening",
       "Loves coding and gardening",
       vecStr,
     ],
@@ -147,13 +146,29 @@ Deno.test("LibsqlSearchIndex - Scope Exclusion: suppresses explicitly excluded p
 
   await client.execute({
     sql:
-      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, vector32(?))`,
-    args: ["f1", "urn:e1", "urn:allowed", "urn:g", "Match text", vecStr],
+      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, fts_value, vector) VALUES (?, ?, ?, ?, ?, ?, vector32(?))`,
+    args: [
+      "f1",
+      "urn:e1",
+      "urn:allowed",
+      "urn:g",
+      "Match text",
+      "Match text",
+      vecStr,
+    ],
   });
   await client.execute({
     sql:
-      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, vector32(?))`,
-    args: ["f2", "urn:e1", "urn:forbidden", "urn:g", "Match text", vecStr],
+      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, fts_value, vector) VALUES (?, ?, ?, ?, ?, ?, vector32(?))`,
+    args: [
+      "f2",
+      "urn:e1",
+      "urn:forbidden",
+      "urn:g",
+      "Match text",
+      "Match text",
+      vecStr,
+    ],
   });
 
   const searchIndex = new LibsqlSearchIndex({
@@ -184,26 +199,26 @@ Deno.test("LibsqlSearchIndex - Vectorless Mode: gracefully degrades to keyword-o
   // Insert chunk rows with NULL vectors (Vectorless mode)
   await client.execute({
     sql:
-      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, NULL)`,
+      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, fts_value, vector) VALUES (?, ?, ?, ?, ?, ?, NULL)`,
     args: [
       "id-1",
       "urn:target",
       "urn:prop",
       "urn:g",
       "Specific search term inside target document",
-      null,
+      "Specific search term inside target document",
     ],
   });
   await client.execute({
     sql:
-      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, NULL)`,
+      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, fts_value, vector) VALUES (?, ?, ?, ?, ?, ?, NULL)`,
     args: [
       "id-2",
       "urn:other",
       "urn:prop",
       "urn:g",
       "Completely unrelated keywords",
-      null,
+      "Completely unrelated keywords",
     ],
   });
 
@@ -235,14 +250,14 @@ Deno.test("LibsqlSearchIndex - Stability: executes search safely when query cont
   // Insert a document we can try to find
   await client.execute({
     sql:
-      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, NULL)`,
+      `INSERT INTO chunks (quad_id, subject, predicate, graph, value, fts_value, vector) VALUES (?, ?, ?, ?, ?, ?, NULL)`,
     args: [
       "id-1",
       "urn:subject",
       "urn:prop",
       "urn:g",
       'The magic phrase with "quotes"',
-      null,
+      'The magic phrase with "quotes"',
     ],
   });
 
@@ -291,14 +306,14 @@ Deno.test(
 
     await client.execute({
       sql:
-        `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, NULL)`,
+        `INSERT INTO chunks (quad_id, subject, predicate, graph, value, fts_value, vector) VALUES (?, ?, ?, ?, ?, ?, NULL)`,
       args: [
         "id-fts",
         "urn:fallback",
         "urn:prop",
         "urn:g",
         "Unique fallback keyword phrase",
-        null,
+        "Unique fallback keyword phrase",
       ],
     });
 
@@ -323,14 +338,14 @@ Deno.test(
 
     await client.execute({
       sql:
-        `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, NULL)`,
+        `INSERT INTO chunks (quad_id, subject, predicate, graph, value, fts_value, vector) VALUES (?, ?, ?, ?, ?, ?, NULL)`,
       args: [
         "id-dim",
         "urn:dim",
         "urn:prop",
         "urn:g",
         "Dimension mismatch keyword target",
-        null,
+        "Dimension mismatch keyword target",
       ],
     });
 
@@ -358,12 +373,13 @@ Deno.test("LibsqlSearchIndex - respects custom result limit option", async () =>
   for (let index = 0; index < 5; index++) {
     await client.execute({
       sql:
-        `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector) VALUES (?, ?, ?, ?, ?, vector32(?))`,
+        `INSERT INTO chunks (quad_id, subject, predicate, graph, value, fts_value, vector) VALUES (?, ?, ?, ?, ?, ?, vector32(?))`,
       args: [
         `id-${index}`,
         `urn:row:${index}`,
         "urn:prop",
         "urn:g",
+        `Shared limit keyword row ${index}`,
         `Shared limit keyword row ${index}`,
         vecStr,
       ],

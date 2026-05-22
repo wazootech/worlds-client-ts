@@ -130,6 +130,7 @@ export class LibsqlQueryBuilder {
     predicate TEXT NOT NULL,
     graph TEXT NOT NULL,
     value TEXT NOT NULL,
+    fts_value TEXT NOT NULL,
     vector F32_BLOB(${this.vectorDimensions})
   )`;
   }
@@ -140,7 +141,7 @@ export class LibsqlQueryBuilder {
 
   public buildLibsqlChunksFtsTable(): string {
     return `CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
-    value,
+    fts_value,
     content='chunks',
     content_rowid='id'
   )`;
@@ -155,12 +156,50 @@ export class LibsqlQueryBuilder {
   public buildLibsqlChunksTriggers(): string[] {
     return [
       `CREATE TRIGGER IF NOT EXISTS chunks_ai AFTER INSERT ON chunks BEGIN
-      INSERT INTO chunks_fts(rowid, value) VALUES (new.id, new.value);
+      INSERT INTO chunks_fts(rowid, fts_value) VALUES (new.id, new.fts_value);
     END;`,
       `CREATE TRIGGER IF NOT EXISTS chunks_ad AFTER DELETE ON chunks BEGIN
-      INSERT INTO chunks_fts(chunks_fts, rowid, value) VALUES('delete', old.id, old.value);
+      INSERT INTO chunks_fts(chunks_fts, rowid, fts_value) VALUES('delete', old.id, old.fts_value);
     END;`,
     ];
+  }
+
+  /**
+   * buildMigrateChunksFtsValueColumn returns DDL to add fts_value when upgrading legacy databases.
+   */
+  public buildMigrateChunksFtsValueColumn(): string {
+    return "ALTER TABLE chunks ADD COLUMN fts_value TEXT";
+  }
+
+  /**
+   * buildBackfillChunksFtsValueFromValue copies literal value into fts_value for rows missing discovery text.
+   */
+  public buildBackfillChunksFtsValueFromValue(): string {
+    return "UPDATE chunks SET fts_value = value WHERE fts_value IS NULL OR fts_value = ''";
+  }
+
+  /**
+   * buildDropChunksFtsTriggers returns statements that remove legacy FTS sync triggers before recreation.
+   */
+  public buildDropChunksFtsTriggers(): string[] {
+    return [
+      "DROP TRIGGER IF EXISTS chunks_ai",
+      "DROP TRIGGER IF EXISTS chunks_ad",
+    ];
+  }
+
+  /**
+   * buildDropChunksFtsTable drops the FTS5 virtual table so it can be recreated with fts_value indexing.
+   */
+  public buildDropChunksFtsTable(): string {
+    return "DROP TABLE IF EXISTS chunks_fts";
+  }
+
+  /**
+   * buildRebuildChunksFtsIndex rebuilds the external FTS index from the chunks content table.
+   */
+  public buildRebuildChunksFtsIndex(): string {
+    return "INSERT INTO chunks_fts(chunks_fts) VALUES('rebuild')";
   }
 
   public buildInsertChunk(insertOptions: {
@@ -169,6 +208,7 @@ export class LibsqlQueryBuilder {
     predicate: string;
     graph: string;
     value: string;
+    fts_value: string;
     vectorJson?: string | null;
   }): { sql: string; args: (string | number)[] } {
     const hasVector = !!insertOptions.vectorJson;
@@ -179,15 +219,46 @@ export class LibsqlQueryBuilder {
       insertOptions.predicate,
       insertOptions.graph,
       insertOptions.value,
+      insertOptions.fts_value,
     ];
     if (hasVector) {
       args.push(insertOptions.vectorJson!);
     }
     return {
       sql:
-        `INSERT INTO chunks (quad_id, subject, predicate, graph, value, vector)
-          VALUES (?, ?, ?, ?, ?, ${vectorExpr})`,
+        `INSERT INTO chunks (quad_id, subject, predicate, graph, value, fts_value, vector)
+          VALUES (?, ?, ?, ?, ?, ?, ${vectorExpr})`,
       args,
+    };
+  }
+
+  /**
+   * buildSelectLabelLiteralsForSubjects returns label predicate object values grouped by subject IRI.
+   */
+  public buildSelectLabelLiteralsForSubjects(
+    subjects: string[],
+    labelPredicates: string[],
+  ): { sql: string; args: string[] } {
+    const subjectPlaceholders = generatePlaceholders(subjects.length);
+    const predicatePlaceholders = generatePlaceholders(labelPredicates.length);
+    return {
+      sql:
+        `SELECT s, o FROM quads WHERE s IN (${subjectPlaceholders}) AND p IN (${predicatePlaceholders}) AND o_type = 'Literal' ORDER BY s, o`,
+      args: [...subjects, ...labelPredicates],
+    };
+  }
+
+  /**
+   * buildSelectTextualLiteralQuadsForSubjects returns durable quads with textual objects for the given subjects.
+   */
+  public buildSelectTextualLiteralQuadsForSubjects(
+    subjects: string[],
+  ): { sql: string; args: string[] } {
+    const subjectPlaceholders = generatePlaceholders(subjects.length);
+    return {
+      sql:
+        `SELECT id, s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type FROM quads WHERE s IN (${subjectPlaceholders}) AND o_type = 'Literal' AND (o_datatype IS NULL OR o_datatype = '' OR o_datatype = 'http://www.w3.org/2001/XMLSchema#string' OR o_lang IS NOT NULL AND o_lang != '') ORDER BY id ASC`,
+      args: subjects,
     };
   }
 

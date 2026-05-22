@@ -15,7 +15,7 @@ import { z } from "zod";
 export function createSearchWorldTool(client: ClientInterface) {
   return tool({
     description:
-      "Search the knowledge base for semantic statements or documents that match a query. Use this to find information about any entities or subjects in the graph.",
+      "Discovery search: find subject IRIs and matching predicate/graph context for a natural-language query. Results expose subject and predicate for follow-up SPARQL disambiguation — do not treat search text alone as ground-truth facts.",
     inputSchema: z.object({
       query: z.string().describe("The text query or keywords to search for."),
       include: z.object({

@@ -31,4 +31,9 @@ export interface LibsqlClientBaseOptions {
    * matchPageSize limits rows per LibsqlStore.match SQL round-trip on hexastore reads (default 1000).
    */
   matchPageSize?: number;
+
+  /**
+   * labelPredicates extends built-in label IRIs used for subject alias discovery (union, deduped).
+   */
+  labelPredicates?: string[];
 }

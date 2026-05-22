@@ -6,12 +6,19 @@ import type {
 import { chunkQuads } from "@/client/search-index/quad-chunker/mod.ts";
 import type * as rdfjs from "@rdfjs/types";
 import type { Patch, QuadFilter } from "@/client/quad-store/mod.ts";
-import { filterQuads, hashQuad } from "@/client/quad-store/mod.ts";
-import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import {
-  type EmbeddingService,
-  isChunkTextEmbeddingService,
-} from "@/client/search-index/embedding-service/mod.ts";
+  filterQuads,
+  hashQuad,
+  isTextualLiteral,
+} from "@/client/quad-store/mod.ts";
+import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import type { EmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
+import { buildChunkFtsValue } from "./build-chunk-fts-value.ts";
+import { quadFromLibsqlRow } from "./libsql-quad-row.ts";
+import {
+  DEFAULT_LABEL_PREDICATES,
+  resolveLabelPredicates,
+} from "./label-predicates.ts";
 
 /**
  * CommitPatchToLibsqlOptions provides configurations for executing updates against LibSQL durable stores.
@@ -39,6 +46,21 @@ export interface CommitPatchToLibsqlOptions {
    * libsqlQueryBuilder supplies dimension-aware SQL used for deletions, inserts, and chunk replication.
    */
   libsqlQueryBuilder: LibsqlQueryBuilder;
+
+  /**
+   * labelPredicates extends built-in label IRIs used for subject alias discovery at index time (union, deduped).
+   */
+  labelPredicates?: string[];
+}
+
+/**
+ * RefreshSearchChunksForSubjectsResult reports subject-scoped search index refresh counts.
+ */
+export interface RefreshSearchChunksForSubjectsResult {
+  /** subjectCount is the number of distinct subject IRIs refreshed. */
+  subjectCount: number;
+  /** chunkRowCount is the number of chunk rows written. */
+  chunkRowCount: number;
 }
 
 /**
@@ -66,6 +88,9 @@ export async function commitPatchToLibsql(
   } = options;
   const lookupChunkSize = maxLookupChunkSize ?? DEFAULT_MAX_LOOKUP_CHUNK_SIZE;
   const writeBatchSize = maxWriteBatchSize ?? DEFAULT_MAX_WRITE_BATCH_SIZE;
+  const resolvedLabelPredicates = resolveLabelPredicates(
+    options.labelPredicates,
+  );
   const statements: InStatement[] = [];
 
   // ⚡ Performant Optimizations First: Compile pre-emptive filter gates to support lightning-fast memory partitioning
@@ -137,6 +162,7 @@ export async function commitPatchToLibsql(
         novelInsertions,
         novelQuadIds,
         options,
+        resolvedLabelPredicates,
       );
       statements.push(...chunkStatements);
     }
@@ -150,11 +176,126 @@ export async function commitPatchToLibsql(
       throw new Error("failed to execute sync batch", { cause });
     }
   }
+
+  const labelTouchedSubjects = collectLabelPredicateSubjects(
+    targetedInsertions,
+    targetedDeletions,
+    resolvedLabelPredicates,
+  );
+  if (labelTouchedSubjects.length > 0) {
+    await refreshSearchChunksForSubjects(labelTouchedSubjects, options);
+  }
 }
 
-// ==========================================
-// PRIVATE REVOLVING PIPELINE HELPERS
-// ==========================================
+/**
+ * refreshSearchChunksForQuads deletes existing chunk rows for the given quads and rebuilds FTS/vector projections.
+ *
+ * Durable `quads` rows are not modified. Returns the number of chunk rows written.
+ */
+export async function refreshSearchChunksForQuads(
+  quads: rdfjs.Quad[],
+  options: CommitPatchToLibsqlOptions,
+): Promise<number> {
+  if (quads.length === 0) {
+    return 0;
+  }
+
+  const lookupChunkSize = options.maxLookupChunkSize ??
+    DEFAULT_MAX_LOOKUP_CHUNK_SIZE;
+  const writeBatchSize = options.maxWriteBatchSize ??
+    DEFAULT_MAX_WRITE_BATCH_SIZE;
+  const resolvedLabelPredicates = resolveLabelPredicates(
+    options.labelPredicates,
+  );
+
+  const quadIds = await computeQuadIds(quads);
+  const chunkInsertStatements = await buildVectorChunkStatements(
+    quads,
+    quadIds,
+    options,
+    resolvedLabelPredicates,
+  );
+  const statements: InStatement[] = [
+    ...buildChunkDeletionStatementsChunked(
+      quadIds,
+      options.libsqlQueryBuilder,
+      lookupChunkSize,
+    ),
+    ...chunkInsertStatements,
+  ];
+
+  if (statements.length === 0) {
+    return 0;
+  }
+
+  try {
+    await executeWriteBatches(options.client, statements, writeBatchSize);
+  } catch (cause) {
+    throw new Error("failed to refresh search chunks", { cause });
+  }
+
+  return chunkInsertStatements.length;
+}
+
+/**
+ * refreshSearchChunksForSubjects rebuilds FTS/vector rows for all textual-literal quads of the given subjects.
+ */
+export async function refreshSearchChunksForSubjects(
+  subjects: string[],
+  options: CommitPatchToLibsqlOptions,
+): Promise<RefreshSearchChunksForSubjectsResult> {
+  const uniqueSubjects = Array.from(new Set(subjects));
+  if (uniqueSubjects.length === 0) {
+    return { subjectCount: 0, chunkRowCount: 0 };
+  }
+
+  const lookupChunkSize = options.maxLookupChunkSize ??
+    DEFAULT_MAX_LOOKUP_CHUNK_SIZE;
+  const quads: rdfjs.Quad[] = [];
+
+  for (let index = 0; index < uniqueSubjects.length; index += lookupChunkSize) {
+    const subjectBatch = uniqueSubjects.slice(index, index + lookupChunkSize);
+    const query = options.libsqlQueryBuilder
+      .buildSelectTextualLiteralQuadsForSubjects(subjectBatch);
+    const resultSet = await options.client.execute(query);
+    for (const row of resultSet.rows) {
+      try {
+        const reconstructedQuad = quadFromLibsqlRow(row);
+        if (isTextualLiteral(reconstructedQuad.object)) {
+          quads.push(reconstructedQuad);
+        }
+      } catch (cause) {
+        throw new Error("failed to load textual quads for subject refresh", {
+          cause,
+        });
+      }
+    }
+  }
+
+  const chunkRowCount = await refreshSearchChunksForQuads(quads, options);
+  return {
+    subjectCount: uniqueSubjects.length,
+    chunkRowCount,
+  };
+}
+
+/**
+ * collectLabelPredicateSubjects returns subject IRIs touched by label-predicate quad mutations.
+ */
+function collectLabelPredicateSubjects(
+  insertions: rdfjs.Quad[],
+  deletions: rdfjs.Quad[],
+  labelPredicates: string[],
+): string[] {
+  const labelPredicateSet = new Set(labelPredicates);
+  const subjects = new Set<string>();
+  for (const quad of [...insertions, ...deletions]) {
+    if (labelPredicateSet.has(quad.predicate.value)) {
+      subjects.add(quad.subject.value);
+    }
+  }
+  return Array.from(subjects);
+}
 
 /**
  * computeQuadIds computes deterministic base64 URL-safe content hashes for raw Graph quads.
@@ -194,6 +335,22 @@ function buildDeletionStatementsChunked(
   for (let index = 0; index < quadIds.length; index += chunkSize) {
     const quadIdBatch = quadIds.slice(index, index + chunkSize);
     statements.push(...buildDeletionStatements(quadIdBatch, queryBuilder));
+  }
+  return statements;
+}
+
+/**
+ * buildChunkDeletionStatementsChunked deletes only search chunk rows for the given quad ids.
+ */
+function buildChunkDeletionStatementsChunked(
+  quadIds: string[],
+  queryBuilder: LibsqlQueryBuilder,
+  chunkSize: number,
+): InStatement[] {
+  const statements: InStatement[] = [];
+  for (let index = 0; index < quadIds.length; index += chunkSize) {
+    const quadIdBatch = quadIds.slice(index, index + chunkSize);
+    statements.push(queryBuilder.buildDeleteByQuadIds(quadIdBatch));
   }
   return statements;
 }
@@ -276,12 +433,48 @@ function buildRelationalStatements(
 }
 
 /**
+ * loadLabelLiteralsBySubject queries configured label predicates and groups object literals by subject IRI.
+ */
+async function loadLabelLiteralsBySubject(
+  client: Client,
+  subjects: string[],
+  labelPredicates: string[],
+  lookupChunkSize: number,
+  queryBuilder: LibsqlQueryBuilder,
+): Promise<Map<string, string[]>> {
+  const labelLiteralsBySubject = new Map<string, string[]>();
+  if (subjects.length === 0 || labelPredicates.length === 0) {
+    return labelLiteralsBySubject;
+  }
+
+  const uniqueSubjects = Array.from(new Set(subjects));
+  for (let index = 0; index < uniqueSubjects.length; index += lookupChunkSize) {
+    const subjectBatch = uniqueSubjects.slice(index, index + lookupChunkSize);
+    const query = queryBuilder.buildSelectLabelLiteralsForSubjects(
+      subjectBatch,
+      labelPredicates,
+    );
+    const resultSet = await client.execute(query);
+    for (const row of resultSet.rows) {
+      const subject = String(row.s);
+      const literalValue = String(row.o);
+      const existing = labelLiteralsBySubject.get(subject) ?? [];
+      existing.push(literalValue);
+      labelLiteralsBySubject.set(subject, existing);
+    }
+  }
+
+  return labelLiteralsBySubject;
+}
+
+/**
  * buildVectorChunkStatements decomposes, chunks, and embeds textual facts, producing projected SQL inserts.
  */
 async function buildVectorChunkStatements(
   quads: rdfjs.Quad[],
   quadIds: string[],
   options: CommitPatchToLibsqlOptions,
+  resolvedLabelPredicates: string[],
 ): Promise<InStatement[]> {
   const statements: InStatement[] = [];
 
@@ -297,19 +490,39 @@ async function buildVectorChunkStatements(
     return [];
   }
 
-  const embeddingService = options.embeddingService;
-  if (embeddingService && isChunkTextEmbeddingService(embeddingService)) {
-    for (const chunk of chunks) {
-      chunk.value = embeddingService.formatChunkText(chunk);
-    }
-  }
+  const lookupChunkSize = options.maxLookupChunkSize ??
+    DEFAULT_MAX_LOOKUP_CHUNK_SIZE;
+  const uniqueSubjects = Array.from(
+    new Set(chunks.map((chunk) => chunk.subject)),
+  );
+  const labelLiteralsBySubject = await loadLabelLiteralsBySubject(
+    options.client,
+    uniqueSubjects,
+    resolvedLabelPredicates,
+    lookupChunkSize,
+    options.libsqlQueryBuilder,
+  );
 
-  // Step B: Execute Deduplicated External Embedding Sweep (if service available)
-  let uniqueVectors: Array<Float32Array | number[]> | undefined;
+  const chunksWithFtsValue = chunks.map((chunk) => ({
+    chunk,
+    fts_value: buildChunkFtsValue(chunk, {
+      labelLiteralsForSubject: labelLiteralsBySubject.get(chunk.subject) ?? [],
+    }),
+  }));
+
+  // Step B: Execute deduplicated external embedding sweep (if service available)
   let vectorLookupMap: Map<string, Float32Array | number[]> | undefined;
 
   if (options.embeddingService) {
-    const uniqueTexts = Array.from(new Set(chunks.map((c) => c.value)));
+    const uniqueTexts = Array.from(
+      new Set(
+        chunksWithFtsValue.flatMap(({ chunk, fts_value }) => [
+          fts_value,
+          chunk.value,
+        ]),
+      ),
+    );
+    let uniqueVectors: Array<Float32Array | number[]>;
     try {
       uniqueVectors = await options.embeddingService.embed(uniqueTexts);
       for (
@@ -329,25 +542,25 @@ async function buildVectorChunkStatements(
       throw new Error("failed to vectorize literal chunk blocks", { cause });
     }
 
-    // Step C: Synthesize lookup mapping back to original source payloads
     vectorLookupMap = new Map<string, Float32Array | number[]>();
     for (let textIndex = 0; textIndex < uniqueTexts.length; textIndex++) {
       vectorLookupMap.set(uniqueTexts[textIndex], uniqueVectors[textIndex]!);
     }
   }
 
-  // Step D: Generate relational chunk insertions with optional JSON vector projections
-  for (const payload of chunks) {
-    const vector = vectorLookupMap?.get(payload.value);
+  // Step C: Generate relational chunk insertions with optional JSON vector projections
+  for (const { chunk, fts_value } of chunksWithFtsValue) {
+    const vector = vectorLookupMap?.get(fts_value);
     const vectorJson = vector ? JSON.stringify(Array.from(vector)) : undefined;
 
     statements.push(
       options.libsqlQueryBuilder.buildInsertChunk({
-        quad_id: payload.quad_id,
-        subject: payload.subject,
-        predicate: payload.predicate,
-        graph: payload.graph,
-        value: payload.value,
+        quad_id: chunk.quad_id,
+        subject: chunk.subject,
+        predicate: chunk.predicate,
+        graph: chunk.graph,
+        value: chunk.value,
+        fts_value,
         vectorJson,
       }),
     );
@@ -355,3 +568,5 @@ async function buildVectorChunkStatements(
 
   return statements;
 }
+
+export { DEFAULT_LABEL_PREDICATES, resolveLabelPredicates };
