@@ -848,3 +848,72 @@ Deno.test("LibsqlStore.import - stream buffers all quads, commit persists them",
     2,
   );
 });
+
+Deno.test("LibsqlStore.match - keyset pages return the full result set", async () => {
+  const db = createClient({ url: ":memory:" });
+  await setupSchema(db);
+  for (let index = 0; index < 5; index++) {
+    await seedQuad(db, {
+      id: `id-${String(index).padStart(4, "0")}`,
+      s: `urn:subject-${index}`,
+      p: "urn:predicate",
+      o: `value-${index}`,
+    });
+  }
+
+  const store = new LibsqlStore(db, testBuilder, undefined, {
+    matchPageSize: 2,
+  });
+  const results = await collectStream(store.match(null, null, null, null));
+  assertEquals(results.length, 5);
+});
+
+Deno.test("LibsqlStore.countQuads - returns exact counts for bound patterns", async () => {
+  const db = createClient({ url: ":memory:" });
+  await setupSchema(db);
+  await seedQuad(db, {
+    id: "hash-a",
+    s: "urn:alice",
+    p: "urn:knows",
+    o: "urn:bob",
+    o_type: "NamedNode",
+  });
+  await seedQuad(db, {
+    id: "hash-b",
+    s: "urn:alice",
+    p: "urn:age",
+    o: "30",
+  });
+  await seedQuad(db, {
+    id: "hash-c",
+    s: "urn:carol",
+    p: "urn:knows",
+    o: "urn:dave",
+    o_type: "NamedNode",
+  });
+
+  const store = new LibsqlStore(db, testBuilder);
+
+  assertEquals(await store.countQuads(null, null, null, null), 3);
+  assertEquals(
+    await store.countQuads(namedNode("urn:alice"), null, null, null),
+    2,
+  );
+  assertEquals(
+    await store.countQuads(
+      namedNode("urn:alice"),
+      namedNode("urn:knows"),
+      null,
+      null,
+    ),
+    1,
+  );
+
+  const streamCount = (await collectStream(
+    store.match(namedNode("urn:alice"), null, null, null),
+  )).length;
+  assertEquals(
+    await store.countQuads(namedNode("urn:alice"), null, null, null),
+    streamCount,
+  );
+});

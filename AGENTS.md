@@ -317,6 +317,8 @@ separate modules so hexastore deployments do not import N3 hydration:
 - **`createLibsqlClient`**
   ([`create-libsql-client.ts`](src/client/adapters/libsql/create-libsql-client.ts))
   — `LibsqlStore` + hexastore indexes; `createSparqlEngine({ libsqlStore })`.
+  `LibsqlStore.match` keyset-pages by `quads.id` (`matchPageSize`, default 1000).
+  Optional `countQuads` supplies Comunica join cardinality hints.
 - **`createLibsqlN3Client`** — import `@worlds/client/adapters/libsql/n3`
   ([`n3/create-libsql-n3-client.ts`](src/client/adapters/libsql/n3/create-libsql-n3-client.ts));
   hydrate → `proxyStore` → sync patches to LibSQL;

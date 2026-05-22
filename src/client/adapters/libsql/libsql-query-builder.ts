@@ -1,5 +1,12 @@
 import type { QuadFilter } from "@/client/quad-store/mod.ts";
 import type { SearchRequest } from "@/client/search-index/mod.ts";
+import {
+  buildLibsqlSpogWhereClause,
+  type LibsqlSpogPattern,
+} from "./libsql-spog-pattern-sql.ts";
+
+/** DEFAULT_LIBSQL_MATCH_PAGE_SIZE caps rows per hexastore match SQL round-trip. */
+export const DEFAULT_LIBSQL_MATCH_PAGE_SIZE = 1000;
 
 /** Maximum embedding dimensions accepted by LibsqlQueryBuilder (LibSQL / resource guardrail). */
 const LIBSQL_QUERY_BUILDER_MAX_VECTOR_DIMENSIONS = 8192;
@@ -217,58 +224,86 @@ export class LibsqlQueryBuilder {
   public buildHydrateQuery(
     filter?: QuadFilter,
   ): { sql: string; args: string[] } {
-    const whereClauses: string[] = [];
-    const filterArgs: string[] = [];
+    return this.buildHydrateQuadsPageQuery(filter, {});
+  }
 
-    const filterConfigurations = [
-      {
-        values: filter?.exclude?.subjects,
-        column: "s",
-        operator: "NOT IN",
-      },
-      {
-        values: filter?.exclude?.predicates,
-        column: "p",
-        operator: "NOT IN",
-      },
-      {
-        values: filter?.exclude?.graphs,
-        column: "g",
-        operator: "NOT IN",
-      },
-      {
-        values: filter?.include?.subjects,
-        column: "s",
-        operator: "IN",
-      },
-      {
-        values: filter?.include?.predicates,
-        column: "p",
-        operator: "IN",
-      },
-      {
-        values: filter?.include?.graphs,
-        column: "g",
-        operator: "IN",
-      },
-    ] as const;
+  /**
+   * buildMatchQuadsQuery returns SQL to read quads for a pattern, optionally keyset-paged by id.
+   */
+  public buildMatchQuadsQuery(
+    pattern: LibsqlSpogPattern,
+    pageOptions?: { afterQuadId?: string; limit?: number },
+  ): { sql: string; args: (string | null)[] } {
+    const { conditions, args } = buildLibsqlSpogWhereClause(pattern);
 
-    for (const { values, column, operator } of filterConfigurations) {
-      if (values?.length) {
-        const placeholders = generatePlaceholders(values.length);
-        whereClauses.push(`${column} ${operator} (${placeholders})`);
-        filterArgs.push(...values);
-      }
+    if (pageOptions?.afterQuadId) {
+      conditions.push("id > ?");
+      args.push(pageOptions.afterQuadId);
+    }
+
+    const whereClause = conditions.length > 0
+      ? `WHERE ${conditions.join(" AND ")}`
+      : "";
+
+    let limitClause = "";
+    if (pageOptions?.limit != null) {
+      limitClause = " LIMIT ?";
+      args.push(String(Math.max(1, Math.floor(pageOptions.limit))));
+    }
+
+    return {
+      sql:
+        `SELECT id, s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type FROM quads ${whereClause} ORDER BY id ASC${limitClause}`,
+      args,
+    };
+  }
+
+  /**
+   * buildCountQuadsQuery returns SQL to count quads matching a hexastore pattern.
+   */
+  public buildCountQuadsQuery(
+    pattern: LibsqlSpogPattern,
+  ): { sql: string; args: (string | null)[] } {
+    const { conditions, args } = buildLibsqlSpogWhereClause(pattern);
+    const whereClause = conditions.length > 0
+      ? `WHERE ${conditions.join(" AND ")}`
+      : "";
+
+    return {
+      sql: `SELECT COUNT(*) AS count FROM quads ${whereClause}`,
+      args,
+    };
+  }
+
+  /**
+   * buildHydrateQuadsPageQuery returns a keyset page of quads for N3 hydration.
+   */
+  public buildHydrateQuadsPageQuery(
+    filter: QuadFilter | undefined,
+    pageOptions: { afterQuadId?: string; limit?: number },
+  ): { sql: string; args: string[] } {
+    const { whereClauses, filterArgs } = buildHydrateFilterClauses(filter);
+    const args = [...filterArgs];
+
+    if (pageOptions.afterQuadId) {
+      whereClauses.push("id > ?");
+      args.push(pageOptions.afterQuadId);
     }
 
     const whereFilter = whereClauses.length > 0
       ? `WHERE ${whereClauses.join(" AND ")}`
       : "";
 
+    let limitClause = "";
+    if (pageOptions.limit != null) {
+      limitClause = " LIMIT ?";
+      args.push(String(Math.max(1, Math.floor(pageOptions.limit))));
+    }
+
     return {
       sql:
-        `SELECT s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type FROM quads ${whereFilter}`,
-      args: filterArgs,
+        `SELECT id, s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type FROM quads ${whereFilter} ORDER BY id ASC${limitClause}`,
+      args,
     };
   }
 
@@ -497,6 +532,60 @@ export class LibsqlQueryBuilder {
       args: [],
     };
   }
+}
+
+/**
+ * buildHydrateFilterClauses builds WHERE fragments for quad-filtered hydration reads.
+ */
+function buildHydrateFilterClauses(filter: QuadFilter | undefined): {
+  whereClauses: string[];
+  filterArgs: string[];
+} {
+  const whereClauses: string[] = [];
+  const filterArgs: string[] = [];
+
+  const filterConfigurations = [
+    {
+      values: filter?.exclude?.subjects,
+      column: "s",
+      operator: "NOT IN",
+    },
+    {
+      values: filter?.exclude?.predicates,
+      column: "p",
+      operator: "NOT IN",
+    },
+    {
+      values: filter?.exclude?.graphs,
+      column: "g",
+      operator: "NOT IN",
+    },
+    {
+      values: filter?.include?.subjects,
+      column: "s",
+      operator: "IN",
+    },
+    {
+      values: filter?.include?.predicates,
+      column: "p",
+      operator: "IN",
+    },
+    {
+      values: filter?.include?.graphs,
+      column: "g",
+      operator: "IN",
+    },
+  ] as const;
+
+  for (const { values, column, operator } of filterConfigurations) {
+    if (values?.length) {
+      const placeholders = generatePlaceholders(values.length);
+      whereClauses.push(`${column} ${operator} (${placeholders})`);
+      filterArgs.push(...values);
+    }
+  }
+
+  return { whereClauses, filterArgs };
 }
 
 /**

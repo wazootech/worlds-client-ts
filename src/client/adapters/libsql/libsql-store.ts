@@ -4,21 +4,23 @@ import { DataFactory } from "n3";
 import { Readable } from "node:stream";
 import { EventEmitter } from "node:events";
 import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import { DEFAULT_LIBSQL_MATCH_PAGE_SIZE } from "./libsql-query-builder.ts";
 import type { Patch } from "@/client/quad-store/mod.ts";
 
 const { namedNode, literal, blankNode, defaultGraph, quad } = DataFactory;
-
-/** rdfLangStringIri is the RDF datatype for language-tagged literals in N3/RDF/JS. */
-const rdfLangStringIri =
-  "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
-
-/** xsdStringIri is the XSD string datatype IRI. */
-const xsdStringIri = "http://www.w3.org/2001/XMLSchema#string";
 
 /**
  * CommitHandler is a callback that atomically persists a patch of buffered mutations.
  */
 export type CommitHandler = (patch: Patch) => Promise<void>;
+
+/**
+ * LibsqlStoreOptions configures optional LibsqlStore read behavior.
+ */
+export interface LibsqlStoreOptions {
+  /** matchPageSize limits rows per hexastore match SQL round-trip (default 1000). */
+  matchPageSize?: number;
+}
 
 /**
  * LibsqlStore is a full RDF/JS Store implementation backed by LibSQL and hexastore covering indexes.
@@ -35,16 +37,23 @@ export class LibsqlStore implements rdfjs.Store {
    */
   private deleteBuffer: rdfjs.Quad[] = [];
 
+  private readonly matchPageSize: number;
+
   public constructor(
     private readonly client: Client,
     private readonly queryBuilder: LibsqlQueryBuilder,
     private readonly commitHandler?: CommitHandler,
-  ) {}
+    storeOptions?: LibsqlStoreOptions,
+  ) {
+    const configuredPageSize = storeOptions?.matchPageSize ??
+      DEFAULT_LIBSQL_MATCH_PAGE_SIZE;
+    this.matchPageSize = Math.max(1, Math.floor(configuredPageSize));
+  }
 
   /**
    * match returns a stream of quads matching the given SPOG pattern.
    * Automatically selects the optimal hexastore covering index based on
-   * which pattern positions are bound.
+   * which pattern positions are bound. Reads are keyset-paged by quad id.
    */
   public match(
     subject?: rdfjs.Term | null,
@@ -52,30 +61,80 @@ export class LibsqlStore implements rdfjs.Store {
     object?: rdfjs.Term | null,
     graph?: rdfjs.Term | null,
   ): rdfjs.Stream<rdfjs.Quad> {
-    const { sql, args } = this.buildMatchQuery({
+    const pattern = {
       subject: subject ?? null,
       predicate: predicate ?? null,
       object: object ?? null,
       graph: graph ?? null,
-    });
+    };
+
+    let afterQuadId: string | undefined;
+    let streamFinished = false;
 
     const rowStream = new Readable({
       objectMode: true,
       read: async () => {
+        if (streamFinished) {
+          return;
+        }
+
         try {
+          const { sql, args } = this.queryBuilder.buildMatchQuadsQuery(
+            pattern,
+            {
+              afterQuadId,
+              limit: this.matchPageSize,
+            },
+          );
           const resultSet = await this.client.execute({ sql, args });
-          for (const row of resultSet.rows) {
-            const q = this.rowToQuad(row);
-            rowStream.push(q);
+
+          if (resultSet.rows.length === 0) {
+            rowStream.push(null);
+            streamFinished = true;
+            return;
           }
-          rowStream.push(null);
+
+          for (const row of resultSet.rows) {
+            afterQuadId = String(row.id);
+            rowStream.push(this.rowToQuad(row));
+          }
+
+          if (resultSet.rows.length < this.matchPageSize) {
+            rowStream.push(null);
+            streamFinished = true;
+          }
         } catch (error) {
           rowStream.destroy(error as Error);
+          streamFinished = true;
         }
       },
     });
 
     return rowStream as unknown as rdfjs.Stream<rdfjs.Quad>;
+  }
+
+  /**
+   * countQuads returns the number of quads matching the given SPOG pattern (Comunica cardinality hint).
+   */
+  public async countQuads(
+    subject?: rdfjs.Term | null,
+    predicate?: rdfjs.Term | null,
+    object?: rdfjs.Term | null,
+    graph?: rdfjs.Term | null,
+  ): Promise<number> {
+    const { sql, args } = this.queryBuilder.buildCountQuadsQuery({
+      subject: subject ?? null,
+      predicate: predicate ?? null,
+      object: object ?? null,
+      graph: graph ?? null,
+    });
+    const resultSet = await this.client.execute({ sql, args });
+    const firstRow = resultSet.rows[0];
+    if (!firstRow) {
+      return 0;
+    }
+    const countValue = firstRow.count ?? firstRow["COUNT(*)"];
+    return Number(countValue ?? 0);
   }
 
   /**
@@ -220,80 +279,6 @@ export class LibsqlStore implements rdfjs.Store {
   // ────────────────────────────────────────────────
   // Private helpers
   // ────────────────────────────────────────────────
-
-  /**
-   * buildMatchQuery constructs the optimal SQL query and parameters for a given SPOG pattern.
-   * Selects the hexastore index with the longest prefix of bound columns.
-   */
-  private buildMatchQuery(pattern: {
-    subject: rdfjs.Term | null;
-    predicate: rdfjs.Term | null;
-    object: rdfjs.Term | null;
-    graph: rdfjs.Term | null;
-  }): { sql: string; args: (string | null)[] } {
-    const conditions: string[] = [];
-    const args: (string | null)[] = [];
-
-    this.appendTermCondition(conditions, args, "s", "s_type", pattern.subject);
-    this.appendTermCondition(conditions, args, "o", "o_type", pattern.object);
-
-    if (pattern.predicate) {
-      conditions.push("p = ?");
-      args.push(pattern.predicate.value);
-    }
-
-    this.appendTermCondition(conditions, args, "g", "g_type", pattern.graph);
-
-    const whereClause = conditions.length > 0
-      ? `WHERE ${conditions.join(" AND ")}`
-      : "";
-
-    return {
-      sql:
-        `SELECT id, s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type FROM quads ${whereClause}`,
-      args,
-    };
-  }
-
-  /**
-   * appendTermCondition adds WHERE clauses and args for a term that may be a NamedNode, BlankNode, or Literal.
-   */
-  private appendTermCondition(
-    conditions: string[],
-    args: (string | null)[],
-    valueColumn: string,
-    typeColumn: string,
-    term: rdfjs.Term | null,
-  ): void {
-    if (!term) return;
-
-    conditions.push(`${valueColumn} = ?`);
-    args.push(term.value);
-
-    conditions.push(`${typeColumn} = ?`);
-    args.push(term.termType);
-
-    if (term.termType === "Literal") {
-      const lit = term as rdfjs.Literal;
-      if (lit.language) {
-        conditions.push(`o_lang = ?`);
-        args.push(lit.language);
-      }
-      if (lit.datatype) {
-        const datatypeValue = lit.datatype.value;
-        if (
-          datatypeValue === xsdStringIri ||
-          datatypeValue === rdfLangStringIri
-        ) {
-          // Persisted rows store plain and language-tagged strings with NULL datatype.
-          conditions.push(`o_datatype IS NULL`);
-        } else {
-          conditions.push(`o_datatype = ?`);
-          args.push(datatypeValue);
-        }
-      }
-    }
-  }
 
   /**
    * rowToQuad reconstructs an RDF/JS Quad from a LibSQL result row.

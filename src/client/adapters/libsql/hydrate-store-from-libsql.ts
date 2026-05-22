@@ -3,7 +3,10 @@ import type { Store } from "n3";
 import { DataFactory } from "n3";
 import type * as rdfjs from "@rdfjs/types";
 import type { QuadFilter } from "@/client/quad-store/mod.ts";
-import { defaultLibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import {
+  DEFAULT_LIBSQL_MATCH_PAGE_SIZE,
+  defaultLibsqlQueryBuilder,
+} from "./libsql-query-builder.ts";
 
 const { namedNode, literal, blankNode, defaultGraph, quad } = DataFactory;
 
@@ -19,33 +22,47 @@ export async function hydrateStoreFromLibsql(
   target: Store,
   filter?: QuadFilter,
 ): Promise<number> {
-  const query = defaultLibsqlQueryBuilder.buildHydrateQuery(filter);
-  const resultSet = await client.execute(query);
-
-  if (!resultSet.rows.length) return 0;
-
+  const pageSize = DEFAULT_LIBSQL_MATCH_PAGE_SIZE;
   const batchQuads: rdfjs.Quad[] = [];
   let hydratedCount = 0;
+  let afterQuadId: string | undefined;
 
-  for (const row of resultSet.rows) {
-    try {
-      const subject = reconstructSubject(row);
-      const predicate = namedNode(String(row.p));
-      const object = reconstructObject(row);
-      const graph = reconstructGraph(row);
+  for (;;) {
+    const query = defaultLibsqlQueryBuilder.buildHydrateQuadsPageQuery(filter, {
+      afterQuadId,
+      limit: pageSize,
+    });
+    const resultSet = await client.execute(query);
 
-      batchQuads.push(quad(subject, predicate, object, graph));
-      hydratedCount++;
+    if (resultSet.rows.length === 0) {
+      break;
+    }
 
-      if (batchQuads.length >= DEFAULT_HYDRATION_BATCH_SIZE) {
-        target.addQuads(batchQuads);
-        batchQuads.length = 0;
+    for (const row of resultSet.rows) {
+      afterQuadId = String(row.id);
+      try {
+        const subject = reconstructSubject(row);
+        const predicate = namedNode(String(row.p));
+        const object = reconstructObject(row);
+        const graph = reconstructGraph(row);
+
+        batchQuads.push(quad(subject, predicate, object, graph));
+        hydratedCount++;
+
+        if (batchQuads.length >= DEFAULT_HYDRATION_BATCH_SIZE) {
+          target.addQuads(batchQuads);
+          batchQuads.length = 0;
+        }
+      } catch (err) {
+        console.warn(
+          `hydrateStoreFromLibsql: skipping corrupt row s="${row.s}"`,
+          err,
+        );
       }
-    } catch (err) {
-      console.warn(
-        `hydrateStoreFromLibsql: skipping corrupt row s="${row.s}"`,
-        err,
-      );
+    }
+
+    if (resultSet.rows.length < pageSize) {
+      break;
     }
   }
 

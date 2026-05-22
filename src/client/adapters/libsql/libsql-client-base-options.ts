@@ -26,4 +26,9 @@ export interface LibsqlClientBaseOptions {
    * vectorDimensions pins F32_BLOB width for chunk vectors and must match every embedding produced when embeddingService is set (default 32).
    */
   vectorDimensions?: number;
+
+  /**
+   * matchPageSize limits rows per LibsqlStore.match SQL round-trip on hexastore reads (default 1000).
+   */
+  matchPageSize?: number;
 }

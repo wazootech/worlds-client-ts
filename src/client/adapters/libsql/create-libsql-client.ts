@@ -66,6 +66,7 @@ export async function createLibsqlClientOptions(
     options.client,
     queryBuilder,
     persistPatch,
+    { matchPageSize: options.matchPageSize },
   );
 
   const configuredSparqlEngine = options.createSparqlEngine?.({ libsqlStore });
