@@ -59,6 +59,7 @@ export async function createLibsqlClientOptions(
       maxLookupChunkSize: options.maxLookupChunkSize,
       quadFilter: options.quadFilter,
       libsqlQueryBuilder: queryBuilder,
+      labelPredicates: options.labelPredicates,
     });
   };
 

@@ -136,6 +136,83 @@ const client = new Client(await createLibsqlClientOptions({ client: db }));
 const inMemoryOptions = createRdfjsClientOptions({ store: warmedStore });
 ```
 
+#### Discovery search and SPARQL reasoning
+
+Use **search** to discover subject IRIs from natural-language queries, then run
+**SPARQL** on those IRIs to disambiguate and reason over facts. The AI SDK hello
+world example follows this two-hop pattern.
+
+**Agent prompt contract** (aligned with
+[worlds-client-evals](https://github.com/wazootech/worlds-client-evals) tools
+and system prompt):
+
+- Call **search** first with an exact label or keyword; use **`subject`** (and
+  **`predicate`** when helpful) from results — not **`text`** alone — for
+  SPARQL.
+- **`SearchResult.text`** is the object literal; discovery tokens live in the
+  FTS index only.
+- Call **SPARQL** for traversal; use `SELECT ?p ?o WHERE { <uri> ?p ?o }` to
+  inspect a resource before targeted queries.
+- Final answers use **exact literals from SPARQL bindings**; say “not found”
+  instead of guessing.
+- Stop tooling once the requested literal appears in bindings.
+
+Canonical strings live in
+[`examples/ai-sdk-hello-world/agent-prompts.ts`](examples/ai-sdk-hello-world/agent-prompts.ts)
+and
+[`examples/ai-sdk-hello-world/tools/agent-tool-descriptions.ts`](examples/ai-sdk-hello-world/tools/agent-tool-descriptions.ts).
+
+LibSQL indexes split literal ground truth from discovery text:
+
+- `chunks.value` — object literal returned as `SearchResult.text`
+- `chunks.fts_value` — subject local name, predicate phrase, literal, and label
+  aliases for FTS/vectors
+
+Configure extra label predicates (union with built-in `rdfs:label`,
+`skos:prefLabel`, `schema:name`):
+
+```typescript
+const client = await createLibsqlClient({
+  client: db,
+  labelPredicates: ["http://example.org/customLabel"],
+});
+```
+
+After a schema upgrade or bulk ontology import, rebuild all search chunks from
+durable `quads`:
+
+```typescript
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+import {
+  LibsqlQueryBuilder,
+  rebuildLibsqlSearchIndexFromQuads,
+} from "@worlds/client/adapters/libsql";
+
+await rebuildLibsqlSearchIndexFromQuads({
+  client: db,
+  libsqlQueryBuilder: new LibsqlQueryBuilder(vectorDimensions),
+  textSplitter,
+  embeddingService,
+  labelPredicates: ["http://example.org/customLabel"],
+});
+```
+
+After renaming an entity, refresh every chunk for affected subjects:
+
+```typescript
+import { refreshSearchChunksForSubjects } from "@worlds/client/adapters/libsql";
+
+await refreshSearchChunksForSubjects(["http://example.org/Aurelia"], {
+  client: db,
+  textSplitter,
+  libsqlQueryBuilder,
+  embeddingService,
+});
+```
+
+Label predicate commits fan out automatically; sibling fact rows pick up new
+alias tokens in `fts_value`.
+
 ### Choosing a LibSQL client
 
 Both factories provision hexastore indexes at schema init. Pick by how much

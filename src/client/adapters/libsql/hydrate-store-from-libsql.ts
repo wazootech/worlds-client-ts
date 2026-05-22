@@ -1,14 +1,12 @@
-import type { Client, Row } from "@libsql/client";
+import type { Client } from "@libsql/client";
 import type { Store } from "n3";
-import { DataFactory } from "n3";
 import type * as rdfjs from "@rdfjs/types";
 import type { QuadFilter } from "@/client/quad-store/mod.ts";
+import { quadFromLibsqlRow } from "./libsql-quad-row.ts";
 import {
   DEFAULT_LIBSQL_MATCH_PAGE_SIZE,
   defaultLibsqlQueryBuilder,
 } from "./libsql-query-builder.ts";
-
-const { namedNode, literal, blankNode, defaultGraph, quad } = DataFactory;
 
 /** DEFAULT_HYDRATION_BATCH_SIZE caps peak heap during hydration by flushing quads into the N3 store in chunks. */
 const DEFAULT_HYDRATION_BATCH_SIZE = 1000;
@@ -41,12 +39,7 @@ export async function hydrateStoreFromLibsql(
     for (const row of resultSet.rows) {
       afterQuadId = String(row.id);
       try {
-        const subject = reconstructSubject(row);
-        const predicate = namedNode(String(row.p));
-        const object = reconstructObject(row);
-        const graph = reconstructGraph(row);
-
-        batchQuads.push(quad(subject, predicate, object, graph));
+        batchQuads.push(quadFromLibsqlRow(row));
         hydratedCount++;
 
         if (batchQuads.length >= DEFAULT_HYDRATION_BATCH_SIZE) {
@@ -71,41 +64,4 @@ export async function hydrateStoreFromLibsql(
   }
 
   return hydratedCount;
-}
-
-function reconstructSubject(row: Row): rdfjs.Quad_Subject {
-  const type = String(row.s_type);
-  const val = String(row.s);
-  if (type === "BlankNode") return blankNode(val);
-  return namedNode(val);
-}
-
-function reconstructObject(row: Row): rdfjs.Quad_Object {
-  const type = String(row.o_type);
-  const val = String(row.o);
-
-  if (type === "Literal") {
-    const dt = row.o_datatype ? String(row.o_datatype) : undefined;
-    const lang = row.o_lang ? String(row.o_lang) : undefined;
-
-    if (lang && lang.trim().length > 0) {
-      return literal(val, lang);
-    }
-    if (dt && dt !== "http://www.w3.org/2001/XMLSchema#string") {
-      return literal(val, namedNode(dt));
-    }
-    return literal(val);
-  }
-
-  if (type === "BlankNode") return blankNode(val);
-  return namedNode(val);
-}
-
-function reconstructGraph(row: Row): rdfjs.Quad_Graph {
-  const type = String(row.g_type);
-  const val = String(row.g);
-
-  if (type === "DefaultGraph") return defaultGraph();
-  if (type === "BlankNode") return blankNode(val);
-  return namedNode(val);
 }

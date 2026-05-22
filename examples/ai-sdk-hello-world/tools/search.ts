@@ -5,6 +5,7 @@ import type {
   SearchResponse,
 } from "@worlds/client/search-index";
 import { z } from "zod";
+import { SEARCH_WORLD_TOOL_DESCRIPTION } from "./agent-tool-descriptions.ts";
 
 /**
  * createSearchWorldTool creates an AI SDK tool for searching the knowledge base.
@@ -14,10 +15,11 @@ import { z } from "zod";
  */
 export function createSearchWorldTool(client: ClientInterface) {
   return tool({
-    description:
-      "Search the knowledge base for semantic statements or documents that match a query. Use this to find information about any entities or subjects in the graph.",
+    description: SEARCH_WORLD_TOOL_DESCRIPTION,
     inputSchema: z.object({
-      query: z.string().describe("The text query or keywords to search for."),
+      query: z.string().describe(
+        "Exact label, keyword, or natural-language phrase to search for.",
+      ),
       include: z.object({
         subjects: z.array(z.string()).optional().describe(
           "Restricts matching to specific subject IRIs.",

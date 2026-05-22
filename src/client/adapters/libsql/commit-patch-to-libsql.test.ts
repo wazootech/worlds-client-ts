@@ -3,25 +3,17 @@ import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
-import {
-  FakeEmbeddingService,
-  TripletContextEmbeddingService,
-} from "@/client/search-index/embedding-service/mod.ts";
+import { FakeEmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
 import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import { initializeLibsqlSchema } from "./initialize-libsql-schema.ts";
+import { buildChunkFtsValue } from "./build-chunk-fts-value.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 
 const testLibsqlQueryBuilder = new LibsqlQueryBuilder(32);
 
 async function setupSchema(client: ReturnType<typeof createClient>) {
-  await client.execute(testLibsqlQueryBuilder.buildLibsqlQuadsTable()); // <--- Demand Quads Table exist
-  await client.execute(testLibsqlQueryBuilder.buildLibsqlChunksTable());
-  await client.execute(testLibsqlQueryBuilder.buildLibsqlChunksQuadIdIndex());
-  await client.execute(testLibsqlQueryBuilder.buildLibsqlChunksFtsTable());
-  await client.execute(testLibsqlQueryBuilder.buildLibsqlChunksIndex());
-  for (const triggerSql of testLibsqlQueryBuilder.buildLibsqlChunksTriggers()) {
-    await client.execute(triggerSql);
-  }
+  await initializeLibsqlSchema(client, testLibsqlQueryBuilder);
 }
 
 const sharedSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000 });
@@ -120,15 +112,13 @@ Deno.test("commitPatchToLibsql - supports synchronization when embeddingService 
   assertEquals(quadRows.rows[0].total, 1);
 });
 
-Deno.test("commitPatchToLibsql - TripletContextEmbeddingService stores enriched chunk text", async () => {
+Deno.test("commitPatchToLibsql - stores literal value and discovery fts_value", async () => {
   const client = createClient({ url: ":memory:" });
   await setupSchema(client);
 
   const options = {
     client,
-    embeddingService: new TripletContextEmbeddingService({
-      inner: new FakeEmbeddingService(),
-    }),
+    embeddingService: new FakeEmbeddingService(),
     textSplitter: sharedSplitter,
     libsqlQueryBuilder: testLibsqlQueryBuilder,
   };
@@ -144,11 +134,20 @@ Deno.test("commitPatchToLibsql - TripletContextEmbeddingService stores enriched 
     deletions: [],
   }, options);
 
-  const chunkRows = await client.execute("SELECT value FROM chunks");
+  const chunkRows = await client.execute(
+    "SELECT value, fts_value FROM chunks",
+  );
   assertEquals(chunkRows.rows.length, 1);
+  assertEquals(chunkRows.rows[0].value, "Lume");
   assertEquals(
-    chunkRows.rows[0].value,
-    "Factual context about Aurelia: Aurelia has capital Lume.",
+    chunkRows.rows[0].fts_value,
+    buildChunkFtsValue({
+      quad_id: "unused",
+      subject: "http://example.org/Aurelia",
+      predicate: "http://example.org/hasCapital",
+      graph: "",
+      value: "Lume",
+    }, { labelLiteralsForSubject: [] }),
   );
 });
 

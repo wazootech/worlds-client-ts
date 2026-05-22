@@ -85,6 +85,7 @@ export async function createLibsqlN3ClientOptions(
       maxLookupChunkSize: options.maxLookupChunkSize,
       quadFilter: options.quadFilter,
       libsqlQueryBuilder: queryBuilder,
+      labelPredicates: options.labelPredicates,
     });
   };
 

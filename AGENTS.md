@@ -367,10 +367,17 @@ Semantic-Only, and Keyword-Only. If upstream embedding services time out or are
 completely omitted, the system gracefully degrades to high-speed SQLite FTS5
 keyword searching without service interruption.
 
-Opt-in semantic chunk enrichment: wrap an `EmbeddingService` with
-`TripletContextEmbeddingService` so index-time FTS/vector text includes
-subject/predicate context (`formatChunkText`); default `chunkQuads` behavior is
-unchanged.
+LibSQL discovery indexing: `chunks.value` stores literal API text;
+`chunks.fts_value` stores subject local name, predicate phrase, literal, and
+configured label aliases (`labelPredicates` extends defaults). Vectors embed a
+deduplicated union of `fts_value` and `value` per chunk, keyed by `fts_value`.
+Search discovers subject IRIs; SPARQL disambiguates (Discovery@k vs SPARQL evals
+are separate). After schema upgrades call `rebuildLibsqlSearchIndexFromQuads`;
+after entity renames call `refreshSearchChunksForSubjects` (label commits fan
+out automatically). Keep AI tool descriptions and system prompts aligned with
+[worlds-client-evals](https://github.com/wazootech/worlds-client-evals)
+(`src/tools/create-eval-tools.ts`, `eval-agent-system-prompt.ts`) and
+`examples/ai-sdk-hello-world/agent-prompts.ts`.
 
 ### Stable reciprocal rank fusion relevance blending
 

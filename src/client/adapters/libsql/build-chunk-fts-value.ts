@@ -1,12 +1,27 @@
-import type { ChunkRowPayload } from "./chunk-quads.ts";
+import type { ChunkRowPayload } from "@/client/search-index/quad-chunker/mod.ts";
 
 /**
- * formatQuadChunkText builds a natural-language fact string for embedding and FTS indexing.
+ * BuildChunkFtsValueOptions supplies subject label literals looked up from durable quads.
  */
-export function formatQuadChunkText(chunk: ChunkRowPayload): string {
-  const subjectLabel = extractRdfLocalLabel(chunk.subject);
-  const predicatePhrase = formatPredicatePhrase(chunk.predicate);
-  return `Factual context about ${subjectLabel}: ${subjectLabel} ${predicatePhrase} ${chunk.value}.`;
+export interface BuildChunkFtsValueOptions {
+  /** labelLiteralsForSubject lists configured label predicate object values for the chunk subject. */
+  labelLiteralsForSubject: string[];
+}
+
+/**
+ * buildChunkFtsValue composes space-separated discovery tokens for FTS and semantic indexing.
+ */
+export function buildChunkFtsValue(
+  chunk: ChunkRowPayload,
+  options: BuildChunkFtsValueOptions,
+): string {
+  const tokens: string[] = [
+    extractRdfLocalLabel(chunk.subject),
+    formatPredicatePhrase(chunk.predicate),
+    chunk.value,
+    ...options.labelLiteralsForSubject,
+  ];
+  return tokens.filter((token) => token.length > 0).join(" ");
 }
 
 /**
