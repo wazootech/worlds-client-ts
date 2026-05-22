@@ -222,8 +222,8 @@ documentation files:
   segment documents. Let empty lines establish boundaries cleanly.
 - **No pinned JSR versions in docs:** Link and refer to `@worlds/client` (or
   `jsr:@worlds/client`) without `@x.y.z` suffixes in README, examples,
-  benchmarks, and AGENTS. Version lives only in `deno.json` for publish; consumers
-  pin via `deno add jsr:@worlds/client` or their own lockfile.
+  benchmarks, and AGENTS. Version lives only in `deno.json` for publish;
+  consumers pin via `deno add jsr:@worlds/client` or their own lockfile.
 
 ## Development constraints and CI hygiene
 

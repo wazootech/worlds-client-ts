@@ -32,8 +32,8 @@ engine.
 Worlds delivers these features through an open-source TypeScript SDK.
 
 > [!IMPORTANT]
-> **JSR:** [`@worlds/client`](https://jsr.io/@worlds/client) includes
-> batched LibSQL hydration, post-preload benchmark methodology, and scale SPARQL
+> **JSR:** [`@worlds/client`](https://jsr.io/@worlds/client) includes batched
+> LibSQL hydration, post-preload benchmark methodology, and scale SPARQL
 > query-shape helpers.
 >
 > **Production:** use Turso Cloud through `createLibsqlClient(...)` for scale.
@@ -194,9 +194,9 @@ const devScanQuery = createCappedUnboundTriplePatternSparqlQuery(100);
 Runnable walkthrough: `deno task example:libsql-sparql-scale`
 ([`examples/libsql-sparql-scale`](examples/libsql-sparql-scale)).
 
-**JSR:** [`@worlds/client`](https://jsr.io/@worlds/client) ships batched
-LibSQL hydration (`DEFAULT_HYDRATION_BATCH_SIZE = 1000`), SPARQL query-shape
-helpers, and production scale guidance
+**JSR:** [`@worlds/client`](https://jsr.io/@worlds/client) ships batched LibSQL
+hydration (`DEFAULT_HYDRATION_BATCH_SIZE = 1000`), SPARQL query-shape helpers,
+and production scale guidance
 ([#68](https://github.com/wazootech/worlds-client-ts/issues/68)). Warm N3
 containers: `deno task example:libsql-n3-warm-container`.
 
