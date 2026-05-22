@@ -125,7 +125,7 @@ export async function executeSparql(
 ): Promise<SparqlResponse> {
   const timeoutMs = request.timeoutMs ?? DEFAULT_SPARQL_TIMEOUT_MS;
   return await new Promise((resolve, reject) => {
-    let timer: number | undefined = undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined = undefined;
     const clearTimer = () => {
       if (timer !== undefined) {
         clearTimeout(timer);
