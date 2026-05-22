@@ -6,3 +6,4 @@ export * from "./hydrate-store-from-libsql.ts";
 export * from "./commit-patch-to-libsql.ts";
 export * from "./libsql-query-builder.ts";
 export * from "./libsql-store.ts";
+export * from "./libsql-sparql-query-patterns.ts";

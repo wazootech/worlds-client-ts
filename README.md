@@ -32,9 +32,9 @@ engine.
 Worlds delivers these features through an open-source TypeScript SDK.
 
 > [!IMPORTANT]
-> **JSR:** [`@worlds/client@0.0.5`](https://jsr.io/@worlds/client) is the
-> current published release. `main` may include later improvements (benchmark
-> preload, batched LibSQL hydration) until the next version is published.
+> **JSR:** [`@worlds/client@0.0.6`](https://jsr.io/@worlds/client) includes
+> batched LibSQL hydration, post-preload benchmark methodology, and scale SPARQL
+> query-shape helpers.
 >
 > **Production:** use Turso Cloud through `createLibsqlClient(...)` for scale.
 > Prefer hexastore SPARQL on LibSQL without mirroring the full graph into N3.
@@ -162,6 +162,44 @@ import { createLibsqlClient } from "@worlds/client/adapters/libsql";
 import { createLibsqlN3Client } from "@worlds/client/adapters/libsql/n3";
 ```
 
+### Scale and SPARQL query shape
+
+At millions of quads, pick the factory at integration time — there is no runtime
+SPARQL router ([#63](https://github.com/wazootech/worlds-client-ts/issues/63)).
+
+| Concern         | Production default                                                                                                                                                                                      |
+| :-------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Client factory  | `createLibsqlClient` — hexastore `LibsqlStore`, no full N3 mirror per request                                                                                                                           |
+| Hot-path SPARQL | Bind at least one term (subject, predicate, or object). Subject-bound property lookups match crossover **selective** shapes and stay index-friendly                                                     |
+| Avoid at scale  | Unbound `?s ?p ?o` (even with `LIMIT`) on `libsqlStore` — crossover **fullScan** degrades to hundreds of ms–seconds as quads grow ([#69](https://github.com/wazootech/worlds-client-ts/discussions/69)) |
+| N3 + Comunica   | `createLibsqlN3Client` only when you need in-memory N3; pass a warmed `store` hydrated **once per container**, not per HTTP request                                                                     |
+| Local crossover | `deno task bench` → `sparql-hexastore-crossover.bench.ts`; methodology in [`benchmarks/README.md`](benchmarks/README.md)                                                                                |
+
+Query helpers (same shapes as benchmarks):
+
+```typescript
+import {
+  createCappedUnboundTriplePatternSparqlQuery,
+  createLibsqlClient,
+  createSubjectBoundPropertiesSparqlQuery,
+} from "@worlds/client/adapters/libsql";
+
+const selectiveQuery = createSubjectBoundPropertiesSparqlQuery("urn:entity:0");
+// SELECT ?property ?object WHERE { <urn:entity:0> ?property ?object }
+
+const devScanQuery = createCappedUnboundTriplePatternSparqlQuery(100);
+// SELECT ?subject ?property ?object WHERE { ?subject ?property ?object } LIMIT 100
+```
+
+Runnable walkthrough: `deno task example:libsql-sparql-scale`
+([`examples/libsql-sparql-scale`](examples/libsql-sparql-scale)).
+
+**JSR:** [`@worlds/client@0.0.6`](https://jsr.io/@worlds/client) ships batched
+LibSQL hydration (`DEFAULT_HYDRATION_BATCH_SIZE = 1000`), SPARQL query-shape
+helpers, and production scale guidance
+([#68](https://github.com/wazootech/worlds-client-ts/issues/68)). Warm N3
+containers: `deno task example:libsql-n3-warm-container`.
+
 ## Build with Worlds SDK
 
 Include Worlds as your semantic context layer.
@@ -211,6 +249,24 @@ deno task example:hello-world
 Full disk-based synchronization, ACID mutations, hybrid FTS + vector search, and
 optional SPARQL. This is the production-recommended path, including Turso Cloud
 deployments via `createLibsqlClient(...)`.
+
+### LibSQL SPARQL at scale
+
+Subject-bound vs capped-scan query shapes for large graphs
+([#68](https://github.com/wazootech/worlds-client-ts/issues/68)).
+
+```bash
+deno task example:libsql-sparql-scale
+```
+
+### LibSQL N3 warm container
+
+Reuse one hydrated `store` per process — not per HTTP request
+([#68](https://github.com/wazootech/worlds-client-ts/issues/68)).
+
+```bash
+deno task example:libsql-n3-warm-container
+```
 
 The LibSQL example wires `UniversalSentenceEncoderEmbeddingService` (USE lite,
 512 dimensions). Download offline model artifacts once, then run the example:

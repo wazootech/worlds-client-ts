@@ -1,6 +1,9 @@
 import { createClient } from "@libsql/client";
 import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
-import { createLibsqlClient } from "@worlds/client/adapters/libsql";
+import {
+  createLibsqlClient,
+  createSubjectBoundPropertiesSparqlQuery,
+} from "@worlds/client/adapters/libsql";
 import { UniversalSentenceEncoderEmbeddingService } from "@worlds/client/adapters/tfjs-universal-sentence-encoder";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory } from "n3";
@@ -97,9 +100,9 @@ if (import.meta.main) {
   }
   console.log("\nTop match is the garden/cat quad (hybrid vector search OK).");
 
-  console.log("\nExecuting SPARQL query...");
+  console.log("\nExecuting subject-bound SPARQL query...");
   const sparqlResponse = await client.sparql({
-    query: "SELECT ?s ?p ?o WHERE { ?s ?p ?o }",
+    query: createSubjectBoundPropertiesSparqlQuery("urn:animal:cat"),
   });
   console.log(JSON.stringify(sparqlResponse, null, 2));
 }

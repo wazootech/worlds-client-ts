@@ -3,11 +3,11 @@
 Performance benchmarks for `@worlds/client`. **Local only** — there is no CI
 regression gate; compare results manually on the same OS and Deno version.
 
-| Resource                                                                       | Purpose                                             |
-| :----------------------------------------------------------------------------- | :-------------------------------------------------- |
-| [Discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69) | Canonical post-preload SPARQL crossover write-up    |
-| [Discussion #45](https://github.com/wazootech/worlds-client-ts/discussions/45) | Earlier crossover context (pre-preload methodology) |
-| [#68](https://github.com/wazootech/worlds-client-ts/issues/68)                 | Millions-of-quads production guidance (in progress) |
+| Resource                                                                       | Purpose                                                        |
+| :----------------------------------------------------------------------------- | :------------------------------------------------------------- |
+| [Discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69) | Canonical post-preload SPARQL crossover write-up               |
+| [Discussion #45](https://github.com/wazootech/worlds-client-ts/discussions/45) | Earlier crossover context (pre-preload methodology)            |
+| [#68](https://github.com/wazootech/worlds-client-ts/issues/68)                 | Millions-of-quads production guidance (README + query helpers) |
 
 Do not comment on closed perf threads
 ([#2](https://github.com/wazootech/worlds-client-ts/issues/2),
@@ -16,7 +16,7 @@ Do not comment on closed perf threads
 [#11](https://github.com/wazootech/worlds-client-ts/issues/11)). File a new
 issue with before/after `deno bench` output instead.
 
-**JSR:** [`@worlds/client@0.0.5`](https://jsr.io/@worlds/client) is published.
+**JSR:** [`@worlds/client@0.0.6`](https://jsr.io/@worlds/client) is published.
 Tables below reflect **main** branch methodology (module preload, batched
 hydration); they are not a substitute for re-running on your machine.
 

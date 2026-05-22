@@ -1,5 +1,4 @@
 node_modules
-.prior-art
 *.db
 .env
 *.log
