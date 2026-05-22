@@ -2,6 +2,7 @@ import { tool } from "ai";
 import type { ClientInterface } from "@worlds/client";
 import type { SparqlRequest } from "@worlds/client/sparql-engine";
 import { z } from "zod";
+import { EXECUTE_SPARQL_TOOL_DESCRIPTION } from "./agent-tool-descriptions.ts";
 
 /**
  * ExecuteSparqlOptions defines the configuration options for the executeSparql tool.
@@ -26,11 +27,10 @@ export function createExecuteSparqlTool(
   options?: ExecuteSparqlOptions,
 ) {
   return tool({
-    description:
-      "Execute a SPARQL query against the knowledge base. Use this for complex, precise relational queries across the RDF graph.",
+    description: EXECUTE_SPARQL_TOOL_DESCRIPTION,
     inputSchema: z.object({
       query: z.string().describe(
-        "The raw SPARQL query string (SELECT or ASK).",
+        "The raw read-only SPARQL query string. Only SELECT and ASK are allowed when updates are disabled.",
       ),
       baseIri: z.string().optional().describe(
         "Base IRI for the query execution.",

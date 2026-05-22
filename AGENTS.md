@@ -374,7 +374,10 @@ deduplicated union of `fts_value` and `value` per chunk, keyed by `fts_value`.
 Search discovers subject IRIs; SPARQL disambiguates (Discovery@k vs SPARQL evals
 are separate). After schema upgrades call `rebuildLibsqlSearchIndexFromQuads`;
 after entity renames call `refreshSearchChunksForSubjects` (label commits fan
-out automatically).
+out automatically). Keep AI tool descriptions and system prompts aligned with
+[worlds-client-evals](https://github.com/wazootech/worlds-client-evals)
+(`src/tools/create-eval-tools.ts`, `eval-agent-system-prompt.ts`) and
+`examples/ai-sdk-hello-world/agent-prompts.ts`.
 
 ### Stable reciprocal rank fusion relevance blending
 
