@@ -277,8 +277,11 @@ green-passing integration pipeline runs:
   [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69);
   do not add committed `baselines.ci.json` or workflow-based bench checks.
 
+- **GitHub Actions CI:** Pull requests and pushes to `main` run
+  [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (`deno task ci`: fmt,
+  lint, check, test). Open PRs show the **CI** check before merge.
 - **JSR publish (`deno publish`):** The package is `@worlds/client` on JSR.
-  Pushes to `main` run
+  Pushes to `main` also run
   [`.github/workflows/publish.yml`](.github/workflows/publish.yml):
   `deno task ci` → `deno task publish:dry` → `deno publish`. Before any release
   or import/`exports` refactor, run the same sequence locally.
