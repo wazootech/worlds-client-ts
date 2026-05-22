@@ -15,9 +15,8 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           cache: true
-          deno-version-file: .tool-versions
       - name: Install dependencies
-        run: deno ci
+        run: deno install
       - name: Run CI checks
         run: deno task ci
       - name: Publish dry run (smoke)
