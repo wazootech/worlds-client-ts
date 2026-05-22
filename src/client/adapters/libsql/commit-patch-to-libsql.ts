@@ -8,7 +8,10 @@ import type * as rdfjs from "@rdfjs/types";
 import type { Patch, QuadFilter } from "@/client/quad-store/mod.ts";
 import { filterQuads, hashQuad } from "@/client/quad-store/mod.ts";
 import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
-import type { EmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
+import {
+  type EmbeddingService,
+  isChunkTextEmbeddingService,
+} from "@/client/search-index/embedding-service/mod.ts";
 
 /**
  * CommitPatchToLibsqlOptions provides configurations for executing updates against LibSQL durable stores.
@@ -292,6 +295,13 @@ async function buildVectorChunkStatements(
 
   if (chunks.length === 0) {
     return [];
+  }
+
+  const embeddingService = options.embeddingService;
+  if (embeddingService && isChunkTextEmbeddingService(embeddingService)) {
+    for (const chunk of chunks) {
+      chunk.value = embeddingService.formatChunkText(chunk);
+    }
   }
 
   // Step B: Execute Deduplicated External Embedding Sweep (if service available)
