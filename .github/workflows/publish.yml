@@ -19,5 +19,7 @@ jobs:
         run: deno install
       - name: Run CI checks
         run: deno task ci
+      - name: Publish dry run (smoke)
+        run: deno task publish:dry
       - name: Publish package
-        run: npx jsr publish
+        run: deno publish
