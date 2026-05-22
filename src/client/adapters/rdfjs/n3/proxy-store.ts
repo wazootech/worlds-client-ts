@@ -1,6 +1,6 @@
 import type { Store } from "n3";
 import type * as rdfjs from "@rdfjs/types";
-import type { Patch } from "@worlds/client/quad-store";
+import type { Patch } from "@/client/quad-store/mod.ts";
 
 /**
  * proxyStore installs a non-invasive JavaScript Proxy wrapper around a concrete N3 Store.

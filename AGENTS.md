@@ -101,60 +101,64 @@ mathematical brevity.
 
 ## Import path conventions
 
-All `@worlds/client` resolution goes through the package `name`, the
-[`deno.json`](deno.json) `exports` map, and a **mirrored** `@worlds/client/*`
-block under `imports` (same paths as `exports`). The mirror is required today so
-`deno publish` can build the JSR module graph
-([denoland/deno#25191](https://github.com/denoland/deno/issues/25191)); keep
-`imports` and `exports` in sync when adding subpaths. Do not use private `#/`
-import maps.
+[`deno.json`](deno.json) defines two surfaces:
 
-### Resolution order
+- **`@/` (in-repo only):** `"@/": "./src/"` under `imports`. Use `@/client/...`
+  inside `src/` for cross-domain imports. Never use the published package name
+  (`@worlds/client/...`) in `src/` — real `deno publish` resolves that as an
+  external JSR dependency and fails
+  ([denoland/deno#25191](https://github.com/denoland/deno/issues/25191),
+  [maintainer guidance](https://github.com/denoland/deno/issues/25191#issuecomment-2308790000)).
+- **`@worlds/client/...` (public):** `exports` only. Examples, benchmarks, and
+  external apps use documented export subpaths — not `@/` and not deep file
+  paths.
 
-1. **Cross-domain (any folder → another domain).** Use the narrowest documented
-   `@worlds/client/...` export subpath — in `src/`, in examples, in benchmarks,
-   and in external apps.
-2. **Same domain folder.** Use `./file.ts` or `./subfolder/mod.ts` for siblings
-   and children. Barrel `mod.ts` files re-export with `./` the same way.
-3. **Nested folder, parent symbols on the public barrel.** Import from the
-   parent's export subpath instead of `../` (e.g. `libsql/n3/` uses
-   `@worlds/client/adapters/libsql`, not `../libsql-store.ts`).
+### Resolution order (under `src/`)
 
-Never use parent-relative `../` to reach another file. Never import deep file
-paths that are not listed under `exports`.
+1. **Cross-domain.** `@/client/<domain>/mod.ts` (or a deeper `mod.ts` when the
+   domain has sub-exports), e.g. `@/client/quad-store/mod.ts`,
+   `@/client/adapters/libsql/mod.ts`.
+2. **Same domain folder.** `./file.ts` or `./subfolder/mod.ts` for siblings and
+   children.
+3. **Nested folder, parent barrel.** `@/client/adapters/libsql/mod.ts` from
+   `libsql/n3/` — not `../` and not `@worlds/client/...`.
+
+Never use parent-relative `../` to reach another domain. Never import
+`@worlds/client/...` anywhere under `src/`.
 
 ### Examples
 
-- ✅ `import type { SparqlEngineInterface } from "@worlds/client/sparql-engine"`
+- ✅
+  `import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts"`
   (from `adapters/comunica/`)
-- ✅ `@worlds/client/quad-store`, `@worlds/client/sparql-engine`,
-  `@worlds/client/adapters/rdfjs` (from `adapters/libsql/`)
-- ✅ `@worlds/client/quad-store` (from `search-index/quad-chunker/`)
-- ✅ `import { Client, type ClientOptions } from "@worlds/client"` (adapter
-  factories: `create-libsql-client.ts`, `create-rdfjs-client.ts`, etc.)
-- ✅ `@worlds/client/adapters/libsql` (from `adapters/libsql/n3/` for
-  `LibsqlSearchIndex`, `commitPatchToLibsql`, …)
+- ✅ `@/client/quad-store/mod.ts`, `@/client/sparql-engine/mod.ts`,
+  `@/client/adapters/rdfjs/mod.ts` (from `adapters/libsql/`)
+- ✅ `@/client/quad-store/mod.ts` (from `search-index/quad-chunker/`)
+- ✅ `import { Client, type ClientOptions } from "@/client/client.ts"` (adapter
+  factories — not `@/mod.ts`, avoids root barrel cycles)
+- ✅ `@/client/adapters/libsql/mod.ts` (from `adapters/libsql/n3/`)
 - ✅ `./string-to-chars.ts` (from `tokenizer/tokenizer.ts`)
-- ✅ `./client.ts`, `./adapters/rdfjs/mod.ts` (from `src/client/client.test.ts`
-  — same `src/client/` tree)
+- ✅ `./client.ts`, `./adapters/rdfjs/mod.ts` (from `src/client/client.test.ts`)
+- ✅ `@worlds/client/adapters/libsql` (from `examples/`, benchmarks, other
+  repos)
+- ❌ `@worlds/client/sparql-engine` inside `src/`
 - ❌ `../../quad-store/mod.ts`, `../libsql-search-index.ts`
-- ❌ `Promise<import("@worlds/client/sparql-engine").SparqlResponse>` — use a
+- ❌ `Promise<import("@/client/sparql-engine/mod.ts").SparqlResponse>` — use a
   top-level `import type` instead
 
 ### Root barrel cycles
 
-Do **not** import `@worlds/client` (the `.` export) from modules the root barrel
-re-exports when that would cycle — e.g.
-`search-index/quad-chunker/chunk-quads.ts` must use `@worlds/client/quad-store`,
-not `@worlds/client`. Adapter factories may import `@worlds/client` because they
-are not pulled in through a cyclic re-export path from `chunk-quads.ts`.
+Do **not** import `@/mod.ts` from modules the root barrel re-exports when that
+would cycle — e.g. `chunk-quads.ts` uses `@/client/quad-store/mod.ts`, not
+`@/mod.ts`. Adapter factories import `@/client/client.ts` directly.
 
 ### Public surface changes
 
-When adding a new importable subpath, add it to `exports` in `deno.json` before
-using `@worlds/client/...` anywhere. Keep `adapters/libsql/n3` separate from
-`@worlds/client/adapters/libsql` so hexastore-only consumers stay free of N3
-hydration (see architectural map below).
+When adding a new importable subpath, add it to `exports` in `deno.json` for
+`@worlds/client/...` consumers. Mirror the file path under `@/client/...` for
+in-repo imports (no duplicate `@worlds/client/*` entries in `imports`). Keep
+`adapters/libsql/n3` separate from `adapters/libsql` so hexastore-only consumers
+stay free of N3 hydration (see architectural map below).
 
 ### Documented `exports` subpaths
 
@@ -280,19 +284,16 @@ green-passing integration pipeline runs:
   or import/`exports` refactor, run the same sequence locally.
   - **Version:** Bump `"version"` in `deno.json` for each JSR release (CI does
     not auto-bump).
-  - **Self-imports:** In-repo `@worlds/client/...` use `exports`; duplicate the
-    same paths under `imports` (see import conventions above) so CI
-    `deno publish` resolves the graph.
+  - **In-repo imports:** Only `@/` under `src/` (see import conventions). Do not
+    add `@worlds/client/*` to `imports`; `exports` alone defines the public
+    package surface.
   - **Dry-run smoke:** `deno task publish:dry`
     (`deno publish --dry-run
-    --allow-dirty`) is required in CI but has
-    historically **not** caught every real-publish graph failure. Treat a green
-    dry-run as necessary, not sufficient — watch the Publish workflow after
-    merge.
-  - **If publish fails** with `export '…' not found in jsr:@worlds/client`,
-    ensure every `@worlds/client/*` subpath used in `src/` exists in both
-    `exports` and the mirrored `imports` block, then re-run
-    `deno task publish:dry` and push.
+    --allow-dirty`) is required in CI before merge.
+  - **If publish fails** with `export '…' not found in jsr:@worlds/client` or
+    `unresolvable 'jsr:' dependency`, search `src/` for `@worlds/client` imports
+    and replace them with `@/client/...` per
+    [denoland/deno#25191](https://github.com/denoland/deno/issues/25191).
   - **Packaging:** JSR strips `links` and `exclude` from `deno.json`; the
     vendored `jsonld-context-parser` redirect is local-only (see below).
 
