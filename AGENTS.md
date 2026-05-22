@@ -223,7 +223,10 @@ green-passing integration pipeline runs:
   do not add committed `baselines.ci.json` or workflow-based bench checks.
 
 - **`deno.json` imports:** In-repo `@worlds/client/...` resolution uses the
-  package `exports` map only. Do not duplicate those paths under `imports`.
+  package `exports` map for day-to-day dev. Keep matching `@worlds/client/*`
+  entries under `imports` as well (mirroring `exports`) so JSR `deno publish`
+  can build the module graph without resolving self-imports to
+  `jsr:@worlds/client` without subpaths.
 
 ## Architectural system map
 
