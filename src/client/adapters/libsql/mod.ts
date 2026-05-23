@@ -7,6 +7,7 @@ export * from "./commit-patch-to-libsql.ts";
 export * from "./libsql-query-builder.ts";
 export * from "./libsql-store.ts";
 export * from "./libsql-sparql-query-patterns.ts";
+export * from "./libsql-patch-sync.ts";
 export * from "./rebuild-libsql-search-index-from-quads.ts";
 export * from "./build-chunk-fts-value.ts";
 export * from "./label-predicates.ts";

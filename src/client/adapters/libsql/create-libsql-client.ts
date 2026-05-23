@@ -2,14 +2,12 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
 import type { ClientOptions } from "@/client/client.ts";
 import { Client } from "@/client/client.ts";
-import type { Patch } from "@/client/quad-store/mod.ts";
 import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
 import { RdfjsQuadStore } from "@/client/adapters/rdfjs/mod.ts";
 
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
-import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import { initializeLibsqlSchema } from "./initialize-libsql-schema.ts";
-import { rebuildLibsqlSearchIndexFromQuads } from "./rebuild-libsql-search-index-from-quads.ts";
+import { createLibsqlPatchSyncState } from "./libsql-patch-sync.ts";
 import type { LibsqlClientBaseOptions } from "./libsql-client-base-options.ts";
 import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import { LibsqlStore } from "./libsql-store.ts";
@@ -52,26 +50,20 @@ export async function createLibsqlClientOptions(
     libsqlQueryBuilder: queryBuilder,
   });
 
-  let skipSearchIndexForNextCommit = false;
-
-  const persistPatch = async (patch: Patch) => {
-    await commitPatchToLibsql(patch, {
-      client: options.client,
-      embeddingService: options.embeddingService,
-      textSplitter: textSplitter,
-      maxLookupChunkSize: options.maxLookupChunkSize,
-      quadFilter: options.quadFilter,
-      libsqlQueryBuilder: queryBuilder,
-      labelPredicates: options.labelPredicates,
-      skipSearchIndexProjection: skipSearchIndexForNextCommit,
-    });
-    skipSearchIndexForNextCommit = false;
-  };
+  const patchSync = createLibsqlPatchSyncState({
+    client: options.client,
+    embeddingService: options.embeddingService,
+    textSplitter,
+    maxLookupChunkSize: options.maxLookupChunkSize,
+    quadFilter: options.quadFilter,
+    libsqlQueryBuilder: queryBuilder,
+    labelPredicates: options.labelPredicates,
+  });
 
   const libsqlStore = new LibsqlStore({
     client: options.client,
     queryBuilder,
-    commitHandler: persistPatch,
+    commitHandler: patchSync.persistPatch,
     matchPageSize: options.matchPageSize,
   });
 
@@ -83,20 +75,10 @@ export async function createLibsqlClientOptions(
     quadStore: {
       export: (request) => quadStore.export(request),
       import: async (request) => {
-        skipSearchIndexForNextCommit = request.deferSearchIndex === true;
+        patchSync.prepareDeferredImport(request);
         const response = await quadStore.import(request);
         await libsqlStore.commit();
-        if (request.deferSearchIndex) {
-          await rebuildLibsqlSearchIndexFromQuads({
-            client: options.client,
-            embeddingService: options.embeddingService,
-            textSplitter,
-            maxLookupChunkSize: options.maxLookupChunkSize,
-            quadFilter: options.quadFilter,
-            libsqlQueryBuilder: queryBuilder,
-            labelPredicates: options.labelPredicates,
-          });
-        }
+        await patchSync.finalizeDeferredImport(request);
         return response;
       },
     },

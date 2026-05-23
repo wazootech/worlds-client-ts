@@ -19,8 +19,8 @@ export interface ImportRequest {
   source: ImportSource;
 
   /**
-   * deferSearchIndex persists quads to LibSQL first and rebuilds FTS/vector chunks after import completes.
-   * LibSQL adapters only; reduces peak memory and wall clock on very large bulk loads.
+   * deferSearchIndex on LibSQL clients persists quads during import, then rebuilds FTS/vector chunks once.
+   * Use for large bulk loads (single `quads` array + one `import`); normal writes should omit this flag.
    */
   deferSearchIndex?: boolean;
 }

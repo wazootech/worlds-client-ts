@@ -9,12 +9,11 @@ import { proxyStore } from "@/client/adapters/rdfjs/n3/mod.ts";
 import { RdfjsQuadStore } from "@/client/adapters/rdfjs/mod.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/mod.ts";
 import {
-  commitPatchToLibsql,
+  createLibsqlPatchSyncState,
   hydrateStoreFromLibsql,
   initializeLibsqlSchema,
   LibsqlQueryBuilder,
   LibsqlSearchIndex,
-  rebuildLibsqlSearchIndexFromQuads,
 } from "@/client/adapters/libsql/mod.ts";
 
 /**
@@ -70,7 +69,15 @@ export async function createLibsqlN3ClientOptions(
     libsqlQueryBuilder: queryBuilder,
   });
 
-  let skipSearchIndexForNextCommit = false;
+  const patchSync = createLibsqlPatchSyncState({
+    client: options.client,
+    embeddingService: options.embeddingService,
+    textSplitter,
+    maxLookupChunkSize: options.maxLookupChunkSize,
+    quadFilter: options.quadFilter,
+    libsqlQueryBuilder: queryBuilder,
+    labelPredicates: options.labelPredicates,
+  });
 
   const commitChanges = async () => {
     const patches = drainPatches();
@@ -81,17 +88,7 @@ export async function createLibsqlN3ClientOptions(
       deletions: patches.flatMap((patch) => patch.deletions),
     };
 
-    await commitPatchToLibsql(merged, {
-      client: options.client,
-      embeddingService: options.embeddingService,
-      textSplitter: textSplitter,
-      maxLookupChunkSize: options.maxLookupChunkSize,
-      quadFilter: options.quadFilter,
-      libsqlQueryBuilder: queryBuilder,
-      labelPredicates: options.labelPredicates,
-      skipSearchIndexProjection: skipSearchIndexForNextCommit,
-    });
-    skipSearchIndexForNextCommit = false;
+    await patchSync.persistPatch(merged);
   };
 
   const quadStore = new RdfjsQuadStore(store);
@@ -100,20 +97,10 @@ export async function createLibsqlN3ClientOptions(
     quadStore: {
       export: (request) => quadStore.export(request),
       import: async (request) => {
-        skipSearchIndexForNextCommit = request.deferSearchIndex === true;
+        patchSync.prepareDeferredImport(request);
         const response = await quadStore.import(request);
         await commitChanges();
-        if (request.deferSearchIndex) {
-          await rebuildLibsqlSearchIndexFromQuads({
-            client: options.client,
-            embeddingService: options.embeddingService,
-            textSplitter,
-            maxLookupChunkSize: options.maxLookupChunkSize,
-            quadFilter: options.quadFilter,
-            libsqlQueryBuilder: queryBuilder,
-            labelPredicates: options.labelPredicates,
-          });
-        }
+        await patchSync.finalizeDeferredImport(request);
         return response;
       },
     },
