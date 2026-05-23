@@ -51,6 +51,12 @@ export interface CommitPatchToLibsqlOptions {
    * labelPredicates extends built-in label IRIs used for subject alias discovery at index time (union, deduped).
    */
   labelPredicates?: string[];
+
+  /**
+   * skipSearchIndexProjection omits FTS/vector chunk writes for this patch (quads table only).
+   * Pair with `rebuildLibsqlSearchIndexFromQuads` after bulk import when `deferSearchIndexOnImport` is set on the LibSQL client.
+   */
+  skipSearchIndexProjection?: boolean;
 }
 
 /**
@@ -63,18 +69,66 @@ export interface RefreshSearchChunksForSubjectsResult {
   chunkRowCount: number;
 }
 
-/**
- * commitPatchToLibsql atomically commits an arbitrary delta of additions and removals across all logical SQL indices (quads and chunks).
- *
- * @param patch The set of proposed additions/removals extracted from the client store.
- * @param options Required durable handlers, search services and configurations.
- */
 /** DEFAULT_MAX_LOOKUP_CHUNK_SIZE is the default IN-clause and deletion chunk width. */
 const DEFAULT_MAX_LOOKUP_CHUNK_SIZE = 800;
 
 /** DEFAULT_MAX_WRITE_BATCH_SIZE limits statements per LibSQL write batch. */
 const DEFAULT_MAX_WRITE_BATCH_SIZE = 500;
 
+/** STAGING_FLUSH_THRESHOLD flushes staged SQL during large commits to avoid huge in-memory arrays. */
+const STAGING_FLUSH_THRESHOLD = 10_000;
+
+/**
+ * appendInStatements appends statements without spread (large patches overflow the call stack).
+ */
+function appendInStatements(
+  target: InStatement[],
+  source: readonly InStatement[],
+): void {
+  const sourceLength = source.length;
+  for (let index = 0; index < sourceLength; index++) {
+    target.push(source[index]!);
+  }
+}
+
+/**
+ * flushStagedStatements executes and clears staged write statements when the threshold is reached.
+ */
+async function flushStagedStatements(
+  client: Client,
+  statements: InStatement[],
+  writeBatchSize: number,
+): Promise<void> {
+  if (statements.length === 0) {
+    return;
+  }
+  await executeWriteBatches(client, statements, writeBatchSize);
+  statements.length = 0;
+}
+
+/**
+ * stageInStatements appends statements and flushes when the staging buffer grows too large.
+ */
+async function stageInStatements(
+  client: Client,
+  statements: InStatement[],
+  source: readonly InStatement[],
+  writeBatchSize: number,
+): Promise<void> {
+  appendInStatements(statements, source);
+  if (statements.length >= STAGING_FLUSH_THRESHOLD) {
+    await flushStagedStatements(client, statements, writeBatchSize);
+  }
+}
+
+/**
+ * commitPatchToLibsql commits additions and removals across LibSQL quads and optional search chunks.
+ *
+ * Large patches are written in multiple `client.batch` slices (see `STAGING_FLUSH_THRESHOLD`) to avoid
+ * stack overflow and bound peak memory; that is chunked durability, not one atomic SQL transaction across
+ * the entire patch. Use `deferSearchIndexOnImport` on the LibSQL factory plus `rebuildLibsqlSearchIndexFromQuads` when
+ * bulk loading millions of quads.
+ */
 export async function commitPatchToLibsql(
   patch: Patch,
   options: CommitPatchToLibsqlOptions,
@@ -107,12 +161,15 @@ export async function commitPatchToLibsql(
       deletionQuadIds.add(quadId);
     }
     if (computedDeletionQuadIds.length > 0) {
-      statements.push(
-        ...buildDeletionStatementsChunked(
+      await stageInStatements(
+        client,
+        statements,
+        buildDeletionStatementsChunked(
           computedDeletionQuadIds,
           libsqlQueryBuilder,
           lookupChunkSize,
         ),
+        writeBatchSize,
       );
     }
   }
@@ -140,38 +197,51 @@ export async function commitPatchToLibsql(
 
     if (novelQuadIds.length > 0) {
       // Ensure relational clean slate for new items
-      statements.push(
-        ...buildDeletionStatementsChunked(
+      await stageInStatements(
+        client,
+        statements,
+        buildDeletionStatementsChunked(
           novelQuadIds,
           libsqlQueryBuilder,
           lookupChunkSize,
         ),
+        writeBatchSize,
       );
 
       // Stage Fact Decompositions (Relational Index)
-      statements.push(
-        ...buildRelationalStatements(
+      await stageInStatements(
+        client,
+        statements,
+        buildRelationalStatements(
           novelInsertions,
           novelQuadIds,
           libsqlQueryBuilder,
         ),
+        writeBatchSize,
       );
 
       // Stage Projected Literals (Semantic/FTS Index)
-      const chunkStatements = await buildVectorChunkStatements(
-        novelInsertions,
-        novelQuadIds,
-        options,
-        resolvedLabelPredicates,
-      );
-      statements.push(...chunkStatements);
+      if (!options.skipSearchIndexProjection) {
+        const chunkStatements = await buildVectorChunkStatements(
+          novelInsertions,
+          novelQuadIds,
+          options,
+          resolvedLabelPredicates,
+        );
+        await stageInStatements(
+          client,
+          statements,
+          chunkStatements,
+          writeBatchSize,
+        );
+      }
     }
   }
 
-  // 3. Atomic ACID Transaction Execution (chunked to respect driver/SQLite limits)
+  // 3. Flush any remaining staged writes (chunked to respect driver/SQLite limits)
   if (statements.length > 0) {
     try {
-      await executeWriteBatches(client, statements, writeBatchSize);
+      await flushStagedStatements(client, statements, writeBatchSize);
     } catch (cause) {
       throw new Error("failed to execute sync batch", { cause });
     }
@@ -215,21 +285,23 @@ export async function refreshSearchChunksForQuads(
     options,
     resolvedLabelPredicates,
   );
-  const statements: InStatement[] = [
-    ...buildChunkDeletionStatementsChunked(
+  const statements: InStatement[] = [];
+  appendInStatements(
+    statements,
+    buildChunkDeletionStatementsChunked(
       quadIds,
       options.libsqlQueryBuilder,
       lookupChunkSize,
     ),
-    ...chunkInsertStatements,
-  ];
+  );
+  appendInStatements(statements, chunkInsertStatements);
 
   if (statements.length === 0) {
     return 0;
   }
 
   try {
-    await executeWriteBatches(options.client, statements, writeBatchSize);
+    await flushStagedStatements(options.client, statements, writeBatchSize);
   } catch (cause) {
     throw new Error("failed to refresh search chunks", { cause });
   }
@@ -334,7 +406,10 @@ function buildDeletionStatementsChunked(
   const statements: InStatement[] = [];
   for (let index = 0; index < quadIds.length; index += chunkSize) {
     const quadIdBatch = quadIds.slice(index, index + chunkSize);
-    statements.push(...buildDeletionStatements(quadIdBatch, queryBuilder));
+    appendInStatements(
+      statements,
+      buildDeletionStatements(quadIdBatch, queryBuilder),
+    );
   }
   return statements;
 }

@@ -1,6 +1,14 @@
 import { assertEquals, assertRejects } from "@std/assert";
+import { createClient } from "@libsql/client";
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import type { Quad } from "n3";
 import { DataFactory, Parser, Store } from "n3";
+import {
+  commitPatchToLibsql,
+  initializeLibsqlSchema,
+  LibsqlQueryBuilder,
+  LibsqlStore,
+} from "@/client/adapters/libsql/mod.ts";
 import { canonize } from "rdf-canonize";
 import { encodeBase64Url } from "@std/encoding/base64url";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
@@ -373,3 +381,66 @@ function createNonBooleanAskEngine(): ComunicaQueryEngine {
       }),
   };
 }
+
+Deno.test(
+  "ComunicaSparqlEngine - LibsqlStore countQuads supports selective SPARQL",
+  async () => {
+    const databaseClient = createClient({ url: ":memory:" });
+    const libsqlQueryBuilder = new LibsqlQueryBuilder(32);
+    await initializeLibsqlSchema(databaseClient, libsqlQueryBuilder);
+
+    const textSplitter = new RecursiveCharacterTextSplitter({
+      chunkSize: 1000,
+    });
+    const libsqlStore = new LibsqlStore({
+      client: databaseClient,
+      queryBuilder: libsqlQueryBuilder,
+      commitHandler: async (patch) => {
+        await commitPatchToLibsql(patch, {
+          client: databaseClient,
+          textSplitter,
+          libsqlQueryBuilder,
+          skipSearchIndexProjection: true,
+        });
+      },
+    });
+
+    const subjectIri = "urn:libsql:entity:0";
+    libsqlStore.addQuad(
+      DataFactory.quad(
+        DataFactory.namedNode(subjectIri),
+        DataFactory.namedNode("urn:libsql:predicate"),
+        DataFactory.literal("LibsqlStore cardinality hint path"),
+      ),
+    );
+    await libsqlStore.commit();
+
+    assertEquals(
+      await libsqlStore.countQuads(
+        DataFactory.namedNode(subjectIri),
+        null,
+        null,
+        null,
+      ),
+      1,
+    );
+
+    const sparqlEngine = new ComunicaSparqlEngine({
+      queryEngine,
+      store: libsqlStore,
+    });
+    const response = await sparqlEngine.execute({
+      query:
+        `SELECT ?property ?object WHERE { <${subjectIri}> ?property ?object }`,
+    });
+
+    if (response.kind !== "select") {
+      throw new Error("Expected select response kind");
+    }
+    assertEquals(response.data.results.bindings.length, 1);
+    assertEquals(
+      response.data.results.bindings[0]?.object?.value,
+      "LibsqlStore cardinality hint path",
+    );
+  },
+);

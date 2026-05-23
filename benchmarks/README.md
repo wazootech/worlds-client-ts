@@ -20,6 +20,13 @@ issue with before/after `deno bench` output instead.
 Tables below reflect **main** branch methodology (module preload, batched
 hydration); they are not a substitute for re-running on your machine.
 
+## Layout
+
+- `*.bench.ts` — runnable benchmarks (`deno bench` discovers these at the repo
+  root of `benchmarks/`, not under `shared/`).
+- [`shared/`](shared/) — helpers imported by benches (`synthetic-data.ts`,
+  `sparql-hexastore-crossover-shared.ts`).
+
 ## Run all benchmarks
 
 ```bash
@@ -38,9 +45,64 @@ deno bench --allow-all --unstable-kv benchmarks/
 deno bench --allow-all benchmarks/sparql-hexastore-crossover.bench.ts
 ```
 
-Compares **hydrate+N3** (`createLibsqlN3ClientOptions` from
-`@worlds/client/adapters/libsql/n3`) vs **libsqlStore**
+**Standard (1k–50k):** compares **hydrate+N3** (`createLibsqlN3ClientOptions`
+from `@worlds/client/adapters/libsql/n3`) vs **libsqlStore**
 (`createLibsqlClientOptions` from `@worlds/client/adapters/libsql`).
+
+**Large (100k–1M):** **libsqlStore only** — the scalable LibSQL path for hybrid
+search + SPARQL in production
+([#68](https://github.com/wazootech/worlds-client-ts/issues/68)); does not run
+hydrate+N3.
+
+Crossover preload uses `searchIndexOnImport: false` (quads only; the timed slice
+is `execute()`). Apps that need `search()` at scale use normal import with
+inline indexing or `deferSearchIndexOnImport: true`, then `search()`.
+
+### SPARQL crossover at 100k–1M (opt-in, local only)
+
+[#76](https://github.com/wazootech/worlds-client-ts/issues/76). Not part of
+`deno task bench` — preload can take a long time and needs ample RAM (16 GB+ for
+1M libsqlStore preload).
+
+```bash
+deno task bench:crossover-large
+```
+
+Or with a larger V8 heap if preload OOMs:
+
+```bash
+deno bench --allow-all --v8-flags=--max-old-space-size=8192 benchmarks/sparql-hexastore-crossover-large.bench.ts
+```
+
+Module load logs `console.time` lines per scale (`generate`, then each backend).
+Only `sparqlEngine.execute()` is timed inside `Deno.bench`. Paste results into
+[discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69).
+
+For full import + search preload timing (not the crossover execute table), use
+`deferSearchIndexOnImport: true` on a dedicated bulk-load client (quads first,
+search index rebuilt after import).
+
+#### Reusing large fixtures (dev only)
+
+Opt-in file cache for **large libsqlStore** preload (`BENCH_REUSE_DB=1`). The
+first run imports into `benchmarks/.cache/crossover-large/`; later runs open the
+SQLite file and skip import when the manifest checksum matches (corpus version,
+schema version, quad count, quads-only import). `Deno.bench` still measures
+`execute()` only.
+
+```bash
+# shell or .env
+BENCH_REUSE_DB=1
+deno task bench:crossover-large:reuse
+```
+
+Published baselines in the table below use default `:memory:` unless labeled
+**file cache**. File-backed execute can differ slightly from `:memory:` (OS page
+cache). Invalidate cache: delete `benchmarks/.cache/crossover-large/` or bump
+`SYNTHETIC_CORPUS_VERSION` / `BENCH_LIBSQL_SCHEMA_VERSION` in
+[`shared/crossover-db-cache.ts`](shared/crossover-db-cache.ts) and
+[`shared/synthetic-data.ts`](shared/synthetic-data.ts). Override directory:
+`BENCH_DB_CACHE_DIR`.
 
 ## Measurement notes
 
@@ -153,6 +215,31 @@ for local regression checks.
 | 50000 | fullScan    | hydrate+N3  | 44.3 ms |
 | 50000 | fullScan    | libsqlStore | 215 ms  |
 
+### `sparql-hexastore-crossover-large.bench.ts` (execute only, preloaded)
+
+Captured on **Deno 2.8.0 (Windows x86_64)** via
+`deno task bench:crossover-large` (`--v8-flags=--max-old-space-size=8192`).
+**libsqlStore only**, `searchIndexOnImport: false` (quads-only preload; no
+hydrate+N3, no FTS/chunk build during import).
+
+Module preload (`console.time`, not in `Deno.bench`): 100k ~20 s; 250k ~63 s;
+500k ~130 s; 1M ~279 s (single libsqlStore fixture per scale).
+
+| Quads   | Query shape | Backend     | Avg     |
+| :------ | :---------- | :---------- | :------ |
+| 100000  | selective   | libsqlStore | 38.2 ms |
+| 100000  | fullScan    | libsqlStore | 232 ms  |
+| 250000  | selective   | libsqlStore | 101 ms  |
+| 250000  | fullScan    | libsqlStore | 539 ms  |
+| 500000  | selective   | libsqlStore | 179 ms  |
+| 500000  | fullScan    | libsqlStore | 1.1 s   |
+| 1000000 | selective   | libsqlStore | 373 ms  |
+| 1000000 | fullScan    | libsqlStore | 2.2 s   |
+
+Earlier captures (2026-05-22) included hydrate+N3 and inline search indexing;
+preload ~33–39 s/backend at 100k through ~466–509 s/backend at 1M — not
+comparable to the row above.
+
 ## Regression policy
 
 - Investigate when a keyed benchmark regresses by **more than ~15%** average vs
@@ -172,12 +259,15 @@ Paste into
 [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69)
 or release notes:
 
-| Quads | Query shape | Backend     | Avg |
-| :---- | :---------- | :---------- | :-- |
-| 1000  | selective   | hydrate+N3  |     |
-| 1000  | selective   | libsqlStore |     |
-| 1000  | fullScan    | hydrate+N3  |     |
-| 1000  | fullScan    | libsqlStore |     |
-| 5000  | selective   | hydrate+N3  |     |
-| 5000  | selective   | libsqlStore |     |
-| …     | …           | …           |     |
+| Quads   | Query shape | Backend     | Avg |
+| :------ | :---------- | :---------- | :-- |
+| 1000    | selective   | hydrate+N3  |     |
+| 1000    | selective   | libsqlStore |     |
+| 1000    | fullScan    | hydrate+N3  |     |
+| 1000    | fullScan    | libsqlStore |     |
+| 5000    | selective   | hydrate+N3  |     |
+| 5000    | selective   | libsqlStore |     |
+| …       | …           | …           |     |
+| 100000  | selective   | libsqlStore |     |
+| 1000000 | selective   | libsqlStore |     |
+| …       | …           | …           |     |

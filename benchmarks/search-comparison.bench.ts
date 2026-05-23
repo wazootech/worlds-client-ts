@@ -5,7 +5,7 @@ import { LibsqlSearchIndex } from "@worlds/client/adapters/libsql";
 import { createLibsqlN3ClientOptions } from "@worlds/client/adapters/libsql/n3";
 import { defaultLibsqlQueryBuilder } from "@worlds/client/adapters/libsql";
 import { Client } from "@worlds/client";
-import { generateSyntheticQuads } from "./synthetic-data.ts";
+import { generateSyntheticQuads } from "./shared/synthetic-data.ts";
 
 // -----------------------------------------------------------------------------
 // TEST FIXTURE SETUP

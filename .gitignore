@@ -3,5 +3,8 @@ node_modules
 .env
 *.log
 bench-output*.txt
+benchmarks/crossover-large-run.log
+benchmarks/.cache/
+.bench-large.db
 gq-*.txt
 src/client/adapters/tfjs-universal-sentence-encoder/models/

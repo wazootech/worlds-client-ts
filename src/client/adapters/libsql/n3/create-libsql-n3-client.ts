@@ -7,9 +7,12 @@ import type { Patch } from "@/client/quad-store/mod.ts";
 import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
 import { proxyStore } from "@/client/adapters/rdfjs/n3/mod.ts";
 import { RdfjsQuadStore } from "@/client/adapters/rdfjs/mod.ts";
-import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/mod.ts";
 import {
-  commitPatchToLibsql,
+  assertLibsqlClientIndexingOptions,
+  type LibsqlClientBaseOptions,
+} from "@/client/adapters/libsql/mod.ts";
+import {
+  createLibsqlPatchSyncState,
   hydrateStoreFromLibsql,
   initializeLibsqlSchema,
   LibsqlQueryBuilder,
@@ -43,6 +46,8 @@ export interface LibsqlN3Options extends LibsqlClientBaseOptions {
 export async function createLibsqlN3ClientOptions(
   options: LibsqlN3Options,
 ): Promise<ClientOptions> {
+  assertLibsqlClientIndexingOptions(options);
+
   const vectorDimensions = options.vectorDimensions ?? 32;
   const queryBuilder = new LibsqlQueryBuilder(vectorDimensions);
 
@@ -69,6 +74,18 @@ export async function createLibsqlN3ClientOptions(
     libsqlQueryBuilder: queryBuilder,
   });
 
+  const patchSync = createLibsqlPatchSyncState({
+    client: options.client,
+    embeddingService: options.embeddingService,
+    textSplitter,
+    maxLookupChunkSize: options.maxLookupChunkSize,
+    quadFilter: options.quadFilter,
+    libsqlQueryBuilder: queryBuilder,
+    labelPredicates: options.labelPredicates,
+    searchIndexOnImport: options.searchIndexOnImport,
+    deferSearchIndexOnImport: options.deferSearchIndexOnImport,
+  });
+
   const commitChanges = async () => {
     const patches = drainPatches();
     if (patches.length === 0) return;
@@ -78,15 +95,7 @@ export async function createLibsqlN3ClientOptions(
       deletions: patches.flatMap((patch) => patch.deletions),
     };
 
-    await commitPatchToLibsql(merged, {
-      client: options.client,
-      embeddingService: options.embeddingService,
-      textSplitter: textSplitter,
-      maxLookupChunkSize: options.maxLookupChunkSize,
-      quadFilter: options.quadFilter,
-      libsqlQueryBuilder: queryBuilder,
-      labelPredicates: options.labelPredicates,
-    });
+    await patchSync.persistPatch(merged);
   };
 
   const quadStore = new RdfjsQuadStore(store);
@@ -95,8 +104,10 @@ export async function createLibsqlN3ClientOptions(
     quadStore: {
       export: (request) => quadStore.export(request),
       import: async (request) => {
+        patchSync.beforeImport();
         const response = await quadStore.import(request);
         await commitChanges();
+        await patchSync.afterImport();
         return response;
       },
     },

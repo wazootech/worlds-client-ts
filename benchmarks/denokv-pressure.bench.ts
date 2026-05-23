@@ -1,6 +1,6 @@
 import { Client } from "@worlds/client";
 import { createDenokvClientOptions } from "@worlds/client/adapters/denokv";
-import { generateSyntheticQuads } from "./synthetic-data.ts";
+import { generateSyntheticQuads } from "./shared/synthetic-data.ts";
 
 // Pre-allocated payloads for strict repeatable boundaries
 const payloadSmall = generateSyntheticQuads(10);

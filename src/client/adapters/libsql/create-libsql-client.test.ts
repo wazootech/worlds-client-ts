@@ -1,4 +1,4 @@
-import { assertEquals, assertExists } from "@std/assert";
+import { assertEquals, assertExists, assertRejects } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory } from "n3";
@@ -100,6 +100,75 @@ Deno.test(
     }
 
     await createLibsqlClientOptions({ client: databaseClient });
+
+    databaseClient.close();
+  },
+);
+
+Deno.test(
+  "createLibsqlClientOptions - searchIndexOnImport false skips chunks and search stays empty",
+  async () => {
+    const databaseClient = createClient({ url: ":memory:" });
+
+    const client = new Client(
+      await createLibsqlClientOptions({
+        client: databaseClient,
+        searchIndexOnImport: false,
+        createSparqlEngine: ({ libsqlStore }) =>
+          new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
+      }),
+    );
+
+    await client.import({
+      source: {
+        kind: "quads",
+        quads: [
+          quad(
+            namedNode("urn:entity:sparql-only"),
+            namedNode("urn:label"),
+            literal("quads without search index"),
+          ),
+        ],
+      },
+    });
+
+    const chunkRows = await databaseClient.execute(
+      "SELECT COUNT(*) as total FROM chunks",
+    );
+    assertEquals(Number(chunkRows.rows[0].total), 0);
+
+    const sparqlResponse = await client.sparql({
+      query: "SELECT ?o WHERE { <urn:entity:sparql-only> <urn:label> ?o }",
+    });
+    assertEquals(sparqlResponse.kind, "select");
+    if (sparqlResponse.kind === "select") {
+      assertEquals(sparqlResponse.data.results.bindings.length, 1);
+    }
+
+    const searchResponse = await client.search({
+      query: "quads without search",
+    });
+    assertEquals(searchResponse.results?.length ?? 0, 0);
+
+    databaseClient.close();
+  },
+);
+
+Deno.test(
+  "createLibsqlClientOptions - searchIndexOnImport false rejects deferSearchIndexOnImport",
+  async () => {
+    const databaseClient = createClient({ url: ":memory:" });
+
+    await assertRejects(
+      () =>
+        createLibsqlClientOptions({
+          client: databaseClient,
+          searchIndexOnImport: false,
+          deferSearchIndexOnImport: true,
+        }),
+      Error,
+      "searchIndexOnImport: false cannot be combined with deferSearchIndexOnImport: true",
+    );
 
     databaseClient.close();
   },

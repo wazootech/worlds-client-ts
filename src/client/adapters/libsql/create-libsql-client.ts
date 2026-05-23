@@ -2,14 +2,16 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
 import type { ClientOptions } from "@/client/client.ts";
 import { Client } from "@/client/client.ts";
-import type { Patch } from "@/client/quad-store/mod.ts";
 import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
 import { RdfjsQuadStore } from "@/client/adapters/rdfjs/mod.ts";
 
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
-import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import { initializeLibsqlSchema } from "./initialize-libsql-schema.ts";
-import type { LibsqlClientBaseOptions } from "./libsql-client-base-options.ts";
+import { createLibsqlPatchSyncState } from "./libsql-patch-sync.ts";
+import {
+  assertLibsqlClientIndexingOptions,
+  type LibsqlClientBaseOptions,
+} from "./libsql-client-base-options.ts";
 import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import { LibsqlStore } from "./libsql-store.ts";
 
@@ -37,6 +39,8 @@ export interface LibsqlOptions extends LibsqlClientBaseOptions {
 export async function createLibsqlClientOptions(
   options: LibsqlOptions,
 ): Promise<ClientOptions> {
+  assertLibsqlClientIndexingOptions(options);
+
   const vectorDimensions = options.vectorDimensions ?? 32;
   const queryBuilder = new LibsqlQueryBuilder(vectorDimensions);
 
@@ -51,22 +55,22 @@ export async function createLibsqlClientOptions(
     libsqlQueryBuilder: queryBuilder,
   });
 
-  const persistPatch = async (patch: Patch) => {
-    await commitPatchToLibsql(patch, {
-      client: options.client,
-      embeddingService: options.embeddingService,
-      textSplitter: textSplitter,
-      maxLookupChunkSize: options.maxLookupChunkSize,
-      quadFilter: options.quadFilter,
-      libsqlQueryBuilder: queryBuilder,
-      labelPredicates: options.labelPredicates,
-    });
-  };
+  const patchSync = createLibsqlPatchSyncState({
+    client: options.client,
+    embeddingService: options.embeddingService,
+    textSplitter,
+    maxLookupChunkSize: options.maxLookupChunkSize,
+    quadFilter: options.quadFilter,
+    libsqlQueryBuilder: queryBuilder,
+    labelPredicates: options.labelPredicates,
+    searchIndexOnImport: options.searchIndexOnImport,
+    deferSearchIndexOnImport: options.deferSearchIndexOnImport,
+  });
 
   const libsqlStore = new LibsqlStore({
     client: options.client,
     queryBuilder,
-    commitHandler: persistPatch,
+    commitHandler: patchSync.persistPatch,
     matchPageSize: options.matchPageSize,
   });
 
@@ -78,8 +82,10 @@ export async function createLibsqlClientOptions(
     quadStore: {
       export: (request) => quadStore.export(request),
       import: async (request) => {
+        patchSync.beforeImport();
         const response = await quadStore.import(request);
         await libsqlStore.commit();
+        await patchSync.afterImport();
         return response;
       },
     },
