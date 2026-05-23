@@ -36,12 +36,12 @@ Worlds delivers these features through an open-source TypeScript SDK.
 > LibSQL hydration, post-preload benchmark methodology, and scale SPARQL
 > query-shape helpers.
 >
-> **Production:** use Turso Cloud through `createLibsqlClient(...)` for scale.
-> Prefer hexastore SPARQL on LibSQL without mirroring the full graph into N3.
-> The RDFJS-backed and Deno Kv-backed search/index paths, including topologies
-> built around `RdfjsSearchIndex` and `DenokvSearchIndex`, are best suited to
-> local development, tests, and constrained single-process demos. They are not
-> the recommended production topology.
+> **Production:** use Turso Cloud through `createLibsqlClientOptions` + `Client`
+> for scale. Prefer hexastore SPARQL on LibSQL without mirroring the full graph
+> into N3. The RDFJS-backed and Deno Kv-backed search/index paths, including
+> topologies built around `RdfjsSearchIndex` and `DenokvSearchIndex`, are best
+> suited to local development, tests, and constrained single-process demos. They
+> are not the recommended production topology.
 
 ## Use Worlds
 
@@ -86,55 +86,61 @@ The Worlds Client SDK provides agents with durable semantic context.
 
 ### Instantiation
 
-Compose your client using optimized persistence adapters.
+Adapters wire three subsystems (`quadStore`, `sparqlEngine`, `searchIndex`) into
+`ClientOptions`. The `Client` class is a thin facade over that bag.
 
 For production-scale deployments, prefer LibSQL-compatible infrastructure such
-as Turso Cloud through `createLibsqlClient(...)`.
-
-```typescript
-import { createRdfjsClient } from "@worlds/client/adapters/rdfjs";
-import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
-import { createLibsqlClient } from "@worlds/client/adapters/libsql";
-import { createDenokvClient } from "@worlds/client/adapters/denokv";
-import { createClient } from "@libsql/client";
-import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
-
-// 1. In-Memory / Transient Graph (Default)
-const client = createRdfjsClient();
-
-// 2. Local SQLite or Turso Persistence via LibSQL (recommended for production)
-const db = createClient({ url: "file:./worlds.db" });
-const sqliteClient = await createLibsqlClient({ client: db });
-
-// 2b. Attach SPARQL explicitly when needed
-const queryEngine = new QueryEngine();
-const sqliteClientWithSparql = await createLibsqlClient({
-  client: db,
-  createSparqlEngine: ({ libsqlStore }) =>
-    new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
-});
-
-// 3. Stateless Edge Deployment via Deno Kv
-// Useful for prototyping and constrained edge flows, not the primary
-// production recommendation for search/index workloads.
-const kv = await Deno.openKv();
-const kvClient = createDenokvClient({ kv });
-```
-
-#### Advanced composition
-
-Use `*ClientOptions` builders when you need `ClientOptions` without constructing
-`Client` (for example, rebuilding a client from the same wiring in tests):
+as Turso Cloud through `createLibsqlClientOptions` + `Client`.
 
 ```typescript
 import { Client } from "@worlds/client";
+import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
 import { createLibsqlClientOptions } from "@worlds/client/adapters/libsql";
 import { createRdfjsClientOptions } from "@worlds/client/adapters/rdfjs";
 import { createDenokvClientOptions } from "@worlds/client/adapters/denokv";
+import { createClient } from "@libsql/client";
+import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
-const client = new Client(await createLibsqlClientOptions({ client: db }));
-const inMemoryOptions = createRdfjsClientOptions({ store: warmedStore });
+// 1. In-memory / transient graph (default)
+const inMemoryClient = new Client(createRdfjsClientOptions());
+
+// 2. Local SQLite or Turso via LibSQL (recommended for production)
+const db = createClient({ url: "file:./worlds.db" });
+const queryEngine = new QueryEngine();
+const libsqlClient = new Client(
+  await createLibsqlClientOptions({
+    client: db,
+    createSparqlEngine: ({ libsqlStore }) =>
+      new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
+  }),
+);
+
+// 3. Deno Kv (prototyping / constrained edge — not primary production path)
+const kv = await Deno.openKv();
+const kvClient = new Client(createDenokvClientOptions({ kv }));
 ```
+
+Cache `ClientOptions` (or a `Client`) in module scope when reusing wiring across
+requests — see **Runtime patterns** below.
+
+### Runtime patterns
+
+| Deployment                       | Examples                        | What to reuse across requests                                                 |
+| :------------------------------- | :------------------------------ | :---------------------------------------------------------------------------- |
+| Serverless / edge (warm isolate) | Deno Deploy, Vercel Edge        | `ClientOptions` or `Client` built **once per isolate** — not per HTTP request |
+| Long-running service             | Fly.io, DigitalOcean, 24/7 Deno | One `Client` at **process boot**                                              |
+
+Runnable matrices:
+
+- Long-running: [`examples/libsql-long-running`](examples/libsql-long-running)
+  (`hexastore.ts`, `n3.ts`)
+- Warm isolate:
+  [`examples/libsql-n3-warm-container`](examples/libsql-n3-warm-container)
+  (`hexastore.ts`, `n3.ts`)
+
+Do not call `createLibsqlN3ClientOptions` on every HTTP request when reusing a
+warmed N3 `store` — that rebuilds proxies, search index, and patch sync each
+time.
 
 #### Discovery search and SPARQL reasoning
 
@@ -172,10 +178,12 @@ Configure extra label predicates (union with built-in `rdfs:label`,
 `skos:prefLabel`, `schema:name`):
 
 ```typescript
-const client = await createLibsqlClient({
-  client: db,
-  labelPredicates: ["http://example.org/customLabel"],
-});
+const client = new Client(
+  await createLibsqlClientOptions({
+    client: db,
+    labelPredicates: ["http://example.org/customLabel"],
+  }),
+);
 ```
 
 After a schema upgrade or bulk ontology import, rebuild all search chunks from
@@ -207,15 +215,15 @@ await refreshSearchChunksForSubjects(["http://example.org/Aurelia"], {
 Label predicate commits fan out automatically; sibling fact rows pick up new
 alias tokens in `fts_value`.
 
-### Choosing a LibSQL client
+### Choosing a LibSQL topology
 
-Both factories provision hexastore indexes at schema init. Pick by how much
-graph you mirror in memory and how you run SPARQL.
+Both options builders provision hexastore indexes at schema init. Pick by how
+much graph you mirror in memory and how you run SPARQL.
 
-| Factory                | Module                              | When to use                                                                                                                  |
-| :--------------------- | :---------------------------------- | :--------------------------------------------------------------------------------------------------------------------------- |
-| `createLibsqlClient`   | `@worlds/client/adapters/libsql`    | **Production and large graphs.** SPARQL runs on `LibsqlStore` (hexastore). No full N3 hydration per request.                 |
-| `createLibsqlN3Client` | `@worlds/client/adapters/libsql/n3` | **Selective workloads** where hydrating into N3 is acceptable. Reuse one warmed `store` per container, not per HTTP request. |
+| Options builder               | Module                              | When to use                                                                                                                  |
+| :---------------------------- | :---------------------------------- | :--------------------------------------------------------------------------------------------------------------------------- |
+| `createLibsqlClientOptions`   | `@worlds/client/adapters/libsql`    | **Production and large graphs.** SPARQL runs on `LibsqlStore` (hexastore). No full N3 hydration per request.                 |
+| `createLibsqlN3ClientOptions` | `@worlds/client/adapters/libsql/n3` | **Selective workloads** where hydrating into N3 is acceptable. Reuse one warmed `store` per container, not per HTTP request. |
 
 Post-preload benchmarks (1k–50k quads) show **hydrate+N3** can win **selective**
 queries when the graph is already in memory; **libsqlStore** avoids full
@@ -229,31 +237,31 @@ full-graph scans at production scale.
   [#68](https://github.com/wazootech/worlds-client-ts/issues/68)
 
 ```typescript
-import { createLibsqlClient } from "@worlds/client/adapters/libsql";
-import { createLibsqlN3Client } from "@worlds/client/adapters/libsql/n3";
+import { createLibsqlClientOptions } from "@worlds/client/adapters/libsql";
+import { createLibsqlN3ClientOptions } from "@worlds/client/adapters/libsql/n3";
 ```
 
 ### Scale and SPARQL query shape
 
-At millions of quads, pick the factory at integration time — there is no runtime
-SPARQL router ([#63](https://github.com/wazootech/worlds-client-ts/issues/63)).
+At millions of quads, pick the topology at integration time — there is no
+runtime SPARQL router
+([#63](https://github.com/wazootech/worlds-client-ts/issues/63)).
 
 | Concern         | Production default                                                                                                                                                                                                      |
 | :-------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Client factory  | `createLibsqlClient` — hexastore `LibsqlStore`, no full N3 mirror per request                                                                                                                                           |
+| LibSQL topology | `createLibsqlClientOptions` — hexastore `LibsqlStore`, no full N3 mirror per request                                                                                                                                    |
 | Hot-path SPARQL | Bind at least one term (subject, predicate, or object). Subject-bound property lookups match crossover **selective** shapes and stay index-friendly                                                                     |
 | Avoid at scale  | Unbound `?s ?p ?o` (even with `LIMIT`) on `libsqlStore` — crossover **fullScan** degrades to hundreds of ms–seconds as quads grow ([#69](https://github.com/wazootech/worlds-client-ts/discussions/69))                 |
-| N3 + Comunica   | `createLibsqlN3Client` only when you need in-memory N3; pass a warmed `store` hydrated **once per container**, not per HTTP request                                                                                     |
+| N3 + Comunica   | `createLibsqlN3ClientOptions` only when you need in-memory N3; pass a warmed `store` hydrated **once per container**, not per HTTP request                                                                              |
 | Local crossover | `deno task bench` → `sparql-hexastore-crossover.bench.ts`; 100k–1M opt-in: `deno task bench:crossover-large` — see [`benchmarks/README.md`](benchmarks/README.md)                                                       |
 | Bulk import     | `deferSearchIndexOnImport: true` persists quads on import, then rebuilds search index after each import; `searchIndexOnImport: false` skips indexing until `await client.rebuildSearchIndex()` (SPARQL-only bulk loads) |
-| Cardinality     | `LibsqlStore.countQuads` is used by Comunica when `createLibsqlClient` wires hexastore SPARQL (no extra adapter config)                                                                                                 |
+| Cardinality     | `LibsqlStore.countQuads` is used by Comunica when hexastore SPARQL is wired (no extra adapter config)                                                                                                                   |
 
 Query helpers (same shapes as benchmarks):
 
 ```typescript
 import {
   createCappedUnboundTriplePatternSparqlQuery,
-  createLibsqlClient,
   createSubjectBoundPropertiesSparqlQuery,
 } from "@worlds/client/adapters/libsql";
 
@@ -271,7 +279,7 @@ Runnable walkthrough: `deno task example:libsql-sparql-scale`
 hydration (`DEFAULT_HYDRATION_BATCH_SIZE = 1000`), SPARQL query-shape helpers,
 and production scale guidance
 ([#68](https://github.com/wazootech/worlds-client-ts/issues/68)). Warm N3
-containers: `deno task example:libsql-n3-warm-container`.
+containers: `deno task example:libsql-n3-warm-container:n3`.
 
 ## Build with Worlds SDK
 
@@ -286,9 +294,10 @@ deno add jsr:@worlds/client
 ### Quickstart
 
 ```typescript
-import { createRdfjsClient } from "@worlds/client/adapters/rdfjs";
+import { Client } from "@worlds/client";
+import { createRdfjsClientOptions } from "@worlds/client/adapters/rdfjs";
 
-const client = createRdfjsClient();
+const client = new Client(createRdfjsClientOptions());
 
 // 1. Ingest structural Turtle data
 await client.import({
@@ -317,11 +326,17 @@ Basic intro demonstrating graph composition and SPARQL queries.
 deno task example:hello-world
 ```
 
-### LibSQL persistence
+### LibSQL long-running (Fly.io / DigitalOcean)
 
-Full disk-based synchronization, ACID mutations, hybrid FTS + vector search, and
-optional SPARQL. This is the production-recommended path, including Turso Cloud
-deployments via `createLibsqlClient(...)`.
+Hexastore (production default) and N3 hydrate paths for 24/7 processes.
+
+```bash
+deno task download:tfjs-use   # hexastore example only
+deno task example:libsql-long-running:hexastore
+deno task example:libsql-long-running:n3
+```
+
+See [`examples/libsql-long-running`](examples/libsql-long-running).
 
 ### LibSQL SPARQL at scale
 
@@ -332,22 +347,18 @@ Subject-bound vs capped-scan query shapes for large graphs
 deno task example:libsql-sparql-scale
 ```
 
-### LibSQL N3 warm container
+### LibSQL warm container (serverless / edge)
 
-Reuse one hydrated `store` per process — not per HTTP request
+Reuse wiring once per warm isolate — not per HTTP request
 ([#68](https://github.com/wazootech/worlds-client-ts/issues/68)).
 
 ```bash
-deno task example:libsql-n3-warm-container
+deno task example:libsql-n3-warm-container:hexastore
+deno task example:libsql-n3-warm-container:n3
 ```
 
-The LibSQL example wires `UniversalSentenceEncoderEmbeddingService` (USE lite,
-512 dimensions). Download offline model artifacts once, then run the example:
-
-```bash
-deno task download:tfjs-use
-deno task example:libsql-hello-world
-```
+`example:libsql-n3-warm-container` aliases the N3 entry. See
+[`examples/libsql-n3-warm-container`](examples/libsql-n3-warm-container).
 
 ### Stateless Deno Kv
 

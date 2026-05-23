@@ -1,7 +1,8 @@
 import { createClient } from "@libsql/client";
 import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import { Client } from "@worlds/client";
 import {
-  createLibsqlClient,
+  createLibsqlClientOptions,
   createSubjectBoundPropertiesSparqlQuery,
 } from "@worlds/client/adapters/libsql";
 import { UniversalSentenceEncoderEmbeddingService } from "@worlds/client/adapters/tfjs-universal-sentence-encoder";
@@ -29,7 +30,8 @@ function hasLocalUseModels(): boolean {
 }
 
 /**
- * This example demonstrates how to use `createLibsqlClient` with hybrid search:
+ * Long-running service (Fly.io, DigitalOcean, 24/7 Deno): one process-scoped Client
+ * over hexastore LibSQL. Demonstrates hybrid search:
  * LibSQL FTS5 keyword retrieval fused with vector similarity via USE lite embeddings.
  *
  * Prerequisites: run `deno task download:tfjs-use` once to cache model artifacts.
@@ -52,14 +54,16 @@ if (import.meta.main) {
   const queryEngine = new QueryEngine();
   const embeddingService = new UniversalSentenceEncoderEmbeddingService();
 
-  console.log("Provisioning LibSQL client with USE embedding service...");
-  const client = await createLibsqlClient({
-    client: databaseClient,
-    embeddingService,
-    vectorDimensions: USE_LITE_VECTOR_DIMENSIONS,
-    createSparqlEngine: ({ libsqlStore }) =>
-      new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
-  });
+  console.log("Provisioning hexastore client (process lifetime)...");
+  const client = new Client(
+    await createLibsqlClientOptions({
+      client: databaseClient,
+      embeddingService,
+      vectorDimensions: USE_LITE_VECTOR_DIMENSIONS,
+      createSparqlEngine: ({ libsqlStore }) =>
+        new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
+    }),
+  );
   console.log("Gateway operational.");
 
   console.log("\nIngesting semantically distinct quads...");

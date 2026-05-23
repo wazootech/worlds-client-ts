@@ -1,16 +1,19 @@
-# LibSQL N3 warm container
+# LibSQL warm container (serverless / edge)
 
-Demonstrates [#68](https://github.com/wazootech/worlds-client-ts/issues/68):
-hydrate LibSQL into N3 **once per container**, then pass the same `store` into
-`createLibsqlN3Client` for each request.
+For **Deno Deploy**, **Vercel Edge**, and other **warm isolates**: build
+`ClientOptions` (or `Client`) **once per isolate** in module scope — not per
+HTTP request ([#68](https://github.com/wazootech/worlds-client-ts/issues/68)).
 
-```bash
-deno task example:libsql-n3-warm-container
-```
+| Entry          | Topology                                              | Command                                                |
+| :------------- | :---------------------------------------------------- | :----------------------------------------------------- |
+| `hexastore.ts` | Hexastore `LibsqlStore` (production default on edge)  | `deno task example:libsql-n3-warm-container:hexastore` |
+| `n3.ts`        | Hydrate once → reuse `store` + one client per isolate | `deno task example:libsql-n3-warm-container:n3`        |
 
-Contrast with per-request hydration (anti-pattern at scale): omit `store` and
-let `createLibsqlN3Client` call `hydrateStoreFromLibsql` on every boot.
+Anti-pattern at scale: omit `store` and call `createLibsqlN3ClientOptions` on
+every request (full re-wire + implicit hydration).
+
+Contrast with long-running services:
+[`examples/libsql-long-running`](../libsql-long-running/README.md).
 
 See README **Scale and SPARQL query shape** and
-`deno task example:libsql-sparql-scale` for hexastore (`createLibsqlClient`)
-guidance.
+`deno task example:libsql-sparql-scale` for hexastore query-shape guidance.

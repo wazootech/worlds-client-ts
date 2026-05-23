@@ -73,7 +73,7 @@ export interface ComunicaBinding {
 export interface ComunicaSparqlEngineOptions {
   /**
    * store is the RDFJS store to execute the query on.
-   * For join cardinality hints, pass a store that implements `countQuads` (e.g. `LibsqlStore` from `createLibsqlClient`).
+   * For join cardinality hints, pass a store that implements `countQuads` (e.g. `LibsqlStore` from `createLibsqlClientOptions`).
    */
   store: rdfjs.Store;
 

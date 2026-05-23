@@ -1,6 +1,5 @@
 import { Store } from "n3";
 import type { ClientOptions } from "@/client/client.ts";
-import { Client } from "@/client/client.ts";
 import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
 import { DenokvSearchIndex } from "./denokv-search-index.ts";
 import type { DenokvQuadStoreOptions } from "./denokv-quad-store.ts";
@@ -68,11 +67,4 @@ export function createDenokvClientOptions(
       }
       : undefined,
   };
-}
-
-/**
- * createDenokvClient wires Deno KV persistence, search, and optional SPARQL into a ready Client.
- */
-export function createDenokvClient(options: DenokvOptions): Client {
-  return new Client(createDenokvClientOptions(options));
 }
