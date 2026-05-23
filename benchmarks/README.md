@@ -230,8 +230,11 @@ Captured on **Deno 2.8.0 (Windows x86_64)** via
 **libsqlStore only**, `searchIndexOnImport: false` (quads-only preload; no
 hydrate+N3, no FTS/chunk build during import).
 
-Module preload (`console.time`, not in `Deno.bench`): 100k ~20 s; 250k ~63 s;
-500k ~130 s; 1M ~279 s (single libsqlStore fixture per scale).
+Module preload (`console.time`, not in `Deno.bench`): 100k ~4.6 s; 250k ~14 s;
+500k ~28 s; 1M ~66 s (single libsqlStore fixture per scale; `:memory:` import
+after PR #87 batched quad INSERTs, Deno 2.8.0 Windows). Earlier ~20 / 63 / 130 /
+279 s rows predated batched INSERTs — see
+[discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69#discussioncomment-17033118).
 
 | Quads   | Query shape | Backend     | Avg     |
 | :------ | :---------- | :---------- | :------ |
