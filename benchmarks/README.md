@@ -82,6 +82,28 @@ For full import + search preload timing (not the crossover execute table), use
 `deferSearchIndexOnImport: true` on a dedicated bulk-load client (quads first,
 search index rebuilt after import).
 
+#### Reusing large fixtures (dev only)
+
+Opt-in file cache for **large libsqlStore** preload (`BENCH_REUSE_DB=1`). The
+first run imports into `benchmarks/.cache/crossover-large/`; later runs open the
+SQLite file and skip import when the manifest checksum matches (corpus version,
+schema version, quad count, quads-only import). `Deno.bench` still measures
+`execute()` only.
+
+```bash
+# shell or .env
+BENCH_REUSE_DB=1
+deno task bench:crossover-large:reuse
+```
+
+Published baselines in the table below use default `:memory:` unless labeled
+**file cache**. File-backed execute can differ slightly from `:memory:` (OS page
+cache). Invalidate cache: delete `benchmarks/.cache/crossover-large/` or bump
+`SYNTHETIC_CORPUS_VERSION` / `BENCH_LIBSQL_SCHEMA_VERSION` in
+[`shared/crossover-db-cache.ts`](shared/crossover-db-cache.ts) and
+[`shared/synthetic-data.ts`](shared/synthetic-data.ts). Override directory:
+`BENCH_DB_CACHE_DIR`.
+
 ## Measurement notes
 
 Benchmarks preload datasets and SPARQL engines at **module load**; only the hot

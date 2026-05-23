@@ -58,6 +58,7 @@
     "test": "deno test --allow-all --unstable-kv",
     "bench": "deno bench --allow-all --unstable-kv benchmarks/",
     "bench:crossover-large": "deno bench --allow-all --v8-flags=--max-old-space-size=8192 benchmarks/sparql-hexastore-crossover-large.bench.ts",
+    "bench:crossover-large:reuse": "deno bench --allow-all --env --v8-flags=--max-old-space-size=8192 benchmarks/sparql-hexastore-crossover-large.bench.ts",
     "publish:dry": "deno publish --dry-run --allow-dirty",
     "ci": {
       "description": "Formats, lints, checks, and tests the code",

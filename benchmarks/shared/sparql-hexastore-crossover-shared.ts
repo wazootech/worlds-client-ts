@@ -6,6 +6,16 @@ import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
 import { createLibsqlClientOptions } from "@worlds/client/adapters/libsql";
 import { createLibsqlN3ClientOptions } from "@worlds/client/adapters/libsql/n3";
 import type { SparqlEngineInterface } from "@worlds/client/sparql-engine";
+import {
+  buildCrossoverFixtureChecksumInputs,
+  computeCrossoverFixtureChecksum,
+  ensureCrossoverCacheDirectoryExists,
+  removeStaleCrossoverCacheFiles,
+  resolveCrossoverDbCacheDirectory,
+  resolveCrossoverDbCachePaths,
+  tryResolveCrossoverCacheHit,
+  writeCrossoverFixtureManifest,
+} from "./crossover-db-cache.ts";
 import { generateSyntheticQuads } from "./synthetic-data.ts";
 
 /** selectiveSubjectIri is the grounded subject for subject-bound SPARQL benchmarks. */
@@ -45,6 +55,24 @@ export interface PreloadedSparqlFixture {
 }
 
 /**
+ * PreloadSparqlCrossoverOptions configures crossover module preload behavior.
+ */
+export interface PreloadSparqlCrossoverOptions {
+  /** reuseFileCache enables on-disk libsqlStore fixtures when BENCH_REUSE_DB=1. */
+  reuseFileCache?: boolean;
+}
+
+/**
+ * LibsqlHexastoreFixtureResult reports whether a libsqlStore fixture used the file cache.
+ */
+interface LibsqlHexastoreFixtureResult {
+  /** fixture is the warmed SPARQL engine and database handle. */
+  fixture: PreloadedSparqlFixture;
+  /** cacheHit is true when an on-disk database was reused without re-import. */
+  cacheHit: boolean;
+}
+
+/**
  * sparqlEngineCacheKey builds a stable map key for preloaded crossover fixtures.
  */
 export function sparqlEngineCacheKey(
@@ -61,6 +89,93 @@ export function sparqlQueryForShape(queryShape: SparqlQueryShape): string {
   return queryShape === "selective"
     ? selectiveSparqlQuery
     : fullScanSparqlQuery;
+}
+
+/**
+ * importCorpusIntoLibsqlHexastore persists quads into LibSQL without timing SPARQL execute.
+ */
+async function importCorpusIntoLibsqlHexastore(
+  databaseClient: ReturnType<typeof createClient>,
+  corpusQuads: Quad[],
+): Promise<void> {
+  const clientOptions = await createLibsqlClientOptions({
+    client: databaseClient,
+    searchIndexOnImport: false,
+  });
+  const worldsClient = new Client(clientOptions);
+  await worldsClient.import({
+    source: { kind: "quads", quads: corpusQuads },
+  });
+}
+
+/**
+ * openLibsqlHexastoreSparqlEngine wires Comunica over an existing LibsqlStore database.
+ */
+async function openLibsqlHexastoreSparqlEngine(
+  databaseClient: ReturnType<typeof createClient>,
+): Promise<PreloadedSparqlFixture> {
+  const clientOptions = await createLibsqlClientOptions({
+    client: databaseClient,
+    searchIndexOnImport: false,
+    createSparqlEngine: ({ libsqlStore }) =>
+      new ComunicaSparqlEngine({
+        queryEngine: sharedQueryEngine,
+        store: libsqlStore,
+      }),
+  });
+  if (!clientOptions.sparqlEngine) {
+    throw new Error("libsqlStore bench requires createSparqlEngine");
+  }
+  return { databaseClient, sparqlEngine: clientOptions.sparqlEngine };
+}
+
+/**
+ * createLibsqlHexastoreSparqlEngine wires Comunica over LibsqlStore (no N3 hydration).
+ */
+async function createLibsqlHexastoreSparqlEngine(
+  corpusQuads: Quad[],
+  options?: { reuseFileCache?: boolean },
+): Promise<LibsqlHexastoreFixtureResult> {
+  if (!options?.reuseFileCache) {
+    const databaseClient = createClient({ url: ":memory:" });
+    await importCorpusIntoLibsqlHexastore(databaseClient, corpusQuads);
+    const fixture = await openLibsqlHexastoreSparqlEngine(databaseClient);
+    return { fixture, cacheHit: false };
+  }
+
+  const quadCount = corpusQuads.length;
+  const cachePaths = resolveCrossoverDbCachePaths(quadCount, "libsqlStore");
+  const checksumInputs = buildCrossoverFixtureChecksumInputs(quadCount);
+  const expectedChecksum = await computeCrossoverFixtureChecksum(
+    checksumInputs,
+  );
+
+  const cacheHit = await tryResolveCrossoverCacheHit(
+    cachePaths,
+    expectedChecksum,
+    quadCount,
+  );
+
+  if (cacheHit) {
+    const databaseClient = createClient({ url: cachePaths.databaseFileUrl });
+    const fixture = await openLibsqlHexastoreSparqlEngine(databaseClient);
+    return { fixture, cacheHit: true };
+  }
+
+  await ensureCrossoverCacheDirectoryExists(resolveCrossoverDbCacheDirectory());
+  await removeStaleCrossoverCacheFiles(cachePaths);
+
+  const databaseClient = createClient({ url: cachePaths.databaseFileUrl });
+  await importCorpusIntoLibsqlHexastore(databaseClient, corpusQuads);
+
+  const manifest = {
+    ...checksumInputs,
+    checksum: expectedChecksum,
+  };
+  await writeCrossoverFixtureManifest(cachePaths.manifestPath, manifest);
+
+  const fixture = await openLibsqlHexastoreSparqlEngine(databaseClient);
+  return { fixture, cacheHit: false };
 }
 
 /**
@@ -86,39 +201,20 @@ async function createHydrateN3SparqlEngine(
   return { databaseClient, sparqlEngine: clientOptions.sparqlEngine };
 }
 
-/**
- * createLibsqlHexastoreSparqlEngine wires Comunica over LibsqlStore (no N3 hydration).
- */
-async function createLibsqlHexastoreSparqlEngine(
-  corpusQuads: Quad[],
-): Promise<PreloadedSparqlFixture> {
-  const databaseClient = createClient({ url: ":memory:" });
-  const clientOptions = await createLibsqlClientOptions({
-    client: databaseClient,
-    searchIndexOnImport: false,
-    createSparqlEngine: ({ libsqlStore }) =>
-      new ComunicaSparqlEngine({
-        queryEngine: sharedQueryEngine,
-        store: libsqlStore,
-      }),
-  });
-  const worldsClient = new Client(clientOptions);
-  await worldsClient.import({
-    source: { kind: "quads", quads: corpusQuads },
-  });
-  if (!clientOptions.sparqlEngine) {
-    throw new Error("libsqlStore bench requires createSparqlEngine");
-  }
-  return { databaseClient, sparqlEngine: clientOptions.sparqlEngine };
-}
-
 async function createSparqlEngineForBackend(
   backend: SparqlBackend,
   corpusQuads: Quad[],
-): Promise<PreloadedSparqlFixture> {
-  return backend === "hydrate+N3"
-    ? await createHydrateN3SparqlEngine(corpusQuads)
-    : await createLibsqlHexastoreSparqlEngine(corpusQuads);
+  preloadOptions?: PreloadSparqlCrossoverOptions,
+): Promise<{ fixture: PreloadedSparqlFixture; cacheHit: boolean }> {
+  if (backend === "hydrate+N3") {
+    const fixture = await createHydrateN3SparqlEngine(corpusQuads);
+    return { fixture, cacheHit: false };
+  }
+  const { fixture, cacheHit } = await createLibsqlHexastoreSparqlEngine(
+    corpusQuads,
+    { reuseFileCache: preloadOptions?.reuseFileCache },
+  );
+  return { fixture, cacheHit };
 }
 
 /**
@@ -129,6 +225,7 @@ export async function preloadSparqlCrossoverFixtures(
   crossoverScales: readonly number[],
   logPrefix: string,
   crossoverBackends: readonly SparqlBackend[],
+  preloadOptions?: PreloadSparqlCrossoverOptions,
 ): Promise<Map<string, PreloadedSparqlFixture>> {
   const preloadedSparqlEngines = new Map<string, PreloadedSparqlFixture>();
 
@@ -143,8 +240,19 @@ export async function preloadSparqlCrossoverFixtures(
     for (const backend of crossoverBackends) {
       const preloadLabel = `${logPrefix} ${backend} ${quadCount}`;
       console.time(preloadLabel);
-      const fixture = await createSparqlEngineForBackend(backend, corpusQuads);
+      const { fixture, cacheHit } = await createSparqlEngineForBackend(
+        backend,
+        corpusQuads,
+        preloadOptions,
+      );
       console.timeEnd(preloadLabel);
+      if (cacheHit) {
+        console.log(`${preloadLabel} (cache hit)`);
+      } else if (
+        preloadOptions?.reuseFileCache && backend === "libsqlStore"
+      ) {
+        console.log(`${preloadLabel} (imported to file cache)`);
+      }
       preloadedSparqlEngines.set(
         sparqlEngineCacheKey(backend, quadCount),
         fixture,

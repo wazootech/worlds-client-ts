@@ -1,3 +1,4 @@
+import { isBenchReuseDbEnabled } from "./shared/crossover-db-cache.ts";
 import {
   largeCrossoverBackends,
   preloadSparqlCrossoverFixtures,
@@ -17,6 +18,7 @@ const preloadedSparqlEngines = await preloadSparqlCrossoverFixtures(
   largeCrossoverScales,
   "large",
   largeCrossoverBackends,
+  { reuseFileCache: isBenchReuseDbEnabled() },
 );
 
 registerSparqlCrossoverUnloadCleanup(preloadedSparqlEngines);

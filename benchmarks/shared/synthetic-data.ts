@@ -4,6 +4,11 @@ import type { Quad } from "@rdfjs/types";
 const { quad, namedNode, literal } = DataFactory;
 
 /**
+ * SYNTHETIC_CORPUS_VERSION bumps when generateSyntheticQuads output changes; invalidates bench DB cache manifests.
+ */
+export const SYNTHETIC_CORPUS_VERSION = 1;
+
+/**
  * generateSyntheticQuads yields a deterministic set of RDF quads tailored for scientific repeatability.
  * Each quad contains a descriptive literal optimized for text splitting and indexing benchmarks.
  *
