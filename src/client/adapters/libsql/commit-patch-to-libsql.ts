@@ -54,7 +54,7 @@ export interface CommitPatchToLibsqlOptions {
 
   /**
    * skipSearchIndexProjection omits FTS/vector chunk writes for this patch (quads table only).
-   * Pair with `rebuildLibsqlSearchIndexFromQuads` after bulk import when `ImportRequest.deferSearchIndex` is set.
+   * Pair with `rebuildLibsqlSearchIndexFromQuads` after bulk import when `deferSearchIndexOnImport` is set on the LibSQL client.
    */
   skipSearchIndexProjection?: boolean;
 }
@@ -126,7 +126,7 @@ async function stageInStatements(
  *
  * Large patches are written in multiple `client.batch` slices (see `STAGING_FLUSH_THRESHOLD`) to avoid
  * stack overflow and bound peak memory; that is chunked durability, not one atomic SQL transaction across
- * the entire patch. Use `ImportRequest.deferSearchIndex` plus `rebuildLibsqlSearchIndexFromQuads` when
+ * the entire patch. Use `deferSearchIndexOnImport` on the LibSQL factory plus `rebuildLibsqlSearchIndexFromQuads` when
  * bulk loading millions of quads.
  */
 export async function commitPatchToLibsql(

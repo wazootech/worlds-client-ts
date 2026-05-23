@@ -1,6 +1,5 @@
 import type { TextSplitterInterface } from "@/client/search-index/quad-chunker/mod.ts";
 import type { Patch } from "@/client/quad-store/mod.ts";
-import type { ImportRequest } from "@/client/quad-store/mod.ts";
 import {
   commitPatchToLibsql,
   type CommitPatchToLibsqlOptions,
@@ -30,13 +29,13 @@ export interface LibsqlPatchSyncState {
   /** persistPatch commits a patch to LibSQL using the current defer-search flag. */
   persistPatch: (patch: Patch) => Promise<void>;
 
-  /** prepareDeferredImport sets whether the next commit skips chunk projection. */
-  prepareDeferredImport: (request: ImportRequest) => void;
+  /** beforeImport applies deferSearchIndexOnImport before the next commit. */
+  beforeImport: () => void;
 
-  /** finalizeDeferredImport rebuilds search chunks when import used deferSearchIndex. */
-  finalizeDeferredImport: (
-    request: ImportRequest,
-  ) => Promise<RebuildLibsqlSearchIndexFromQuadsResult | undefined>;
+  /** afterImport rebuilds search chunks when deferSearchIndexOnImport is enabled. */
+  afterImport: () => Promise<
+    RebuildLibsqlSearchIndexFromQuadsResult | undefined
+  >;
 }
 
 /**
@@ -53,6 +52,7 @@ export function createLibsqlPatchSyncState(
     quadFilter,
     libsqlQueryBuilder,
     labelPredicates,
+    deferSearchIndexOnImport,
   } = dependencies;
 
   const commitPatchOptions: Omit<
@@ -89,12 +89,12 @@ export function createLibsqlPatchSyncState(
       skipSearchIndexForNextCommit = false;
     },
 
-    prepareDeferredImport: (request: ImportRequest) => {
-      skipSearchIndexForNextCommit = request.deferSearchIndex === true;
+    beforeImport: () => {
+      skipSearchIndexForNextCommit = deferSearchIndexOnImport === true;
     },
 
-    finalizeDeferredImport: async (request: ImportRequest) => {
-      if (!request.deferSearchIndex) {
+    afterImport: async () => {
+      if (!deferSearchIndexOnImport) {
         return undefined;
       }
       return await rebuildSearchIndex();

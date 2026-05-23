@@ -69,8 +69,9 @@ Module load logs `console.time` lines per scale (`generate`, then each backend).
 Only `sparqlEngine.execute()` is timed inside `Deno.bench`. Paste results into
 [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69).
 
-For faster large preload experiments, LibSQL `import` supports
-`deferSearchIndex: true` (quads first, search index rebuilt after import).
+For faster large preload experiments, construct a LibSQL client with
+`deferSearchIndexOnImport: true` (quads first, search index rebuilt after
+import).
 
 ## Measurement notes
 

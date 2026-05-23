@@ -77,6 +77,7 @@ export async function createLibsqlN3ClientOptions(
     quadFilter: options.quadFilter,
     libsqlQueryBuilder: queryBuilder,
     labelPredicates: options.labelPredicates,
+    deferSearchIndexOnImport: options.deferSearchIndexOnImport,
   });
 
   const commitChanges = async () => {
@@ -97,10 +98,10 @@ export async function createLibsqlN3ClientOptions(
     quadStore: {
       export: (request) => quadStore.export(request),
       import: async (request) => {
-        patchSync.prepareDeferredImport(request);
+        patchSync.beforeImport();
         const response = await quadStore.import(request);
         await commitChanges();
-        await patchSync.finalizeDeferredImport(request);
+        await patchSync.afterImport();
         return response;
       },
     },

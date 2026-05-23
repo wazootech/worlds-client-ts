@@ -58,6 +58,7 @@ export async function createLibsqlClientOptions(
     quadFilter: options.quadFilter,
     libsqlQueryBuilder: queryBuilder,
     labelPredicates: options.labelPredicates,
+    deferSearchIndexOnImport: options.deferSearchIndexOnImport,
   });
 
   const libsqlStore = new LibsqlStore({
@@ -75,10 +76,10 @@ export async function createLibsqlClientOptions(
     quadStore: {
       export: (request) => quadStore.export(request),
       import: async (request) => {
-        patchSync.prepareDeferredImport(request);
+        patchSync.beforeImport();
         const response = await quadStore.import(request);
         await libsqlStore.commit();
-        await patchSync.finalizeDeferredImport(request);
+        await patchSync.afterImport();
         return response;
       },
     },

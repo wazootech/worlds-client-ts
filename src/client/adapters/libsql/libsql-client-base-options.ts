@@ -36,4 +36,10 @@ export interface LibsqlClientBaseOptions {
    * labelPredicates extends built-in label IRIs used for subject alias discovery (union, deduped).
    */
   labelPredicates?: string[];
+
+  /**
+   * deferSearchIndexOnImport persists quads on each import and rebuilds FTS/vector chunks afterward.
+   * Enable only on LibSQL clients dedicated to large bulk loads; omit for normal incremental use.
+   */
+  deferSearchIndexOnImport?: boolean;
 }
