@@ -1,6 +1,5 @@
 import { Store } from "n3";
 import type { ClientOptions } from "@/client/client.ts";
-import { Client } from "@/client/client.ts";
 import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
 import { RdfjsQuadStore } from "./rdfjs-quad-store.ts";
 import { RdfjsSearchIndex } from "./rdfjs-search-index.ts";
@@ -47,11 +46,4 @@ export function createRdfjsClientOptions(
     searchIndex: new RdfjsSearchIndex(store),
     sparqlEngine: options?.createSparqlEngine?.({ store }),
   };
-}
-
-/**
- * createRdfjsClient wires in-memory RDFJS storage, search, and optional SPARQL into a ready Client.
- */
-export function createRdfjsClient(options?: RdfjsOptions): Client {
-  return new Client(createRdfjsClientOptions(options));
 }

@@ -1,13 +1,16 @@
+import { Client } from "@worlds/client";
 import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
-import { createRdfjsClient } from "@worlds/client/adapters/rdfjs";
+import { createRdfjsClientOptions } from "@worlds/client/adapters/rdfjs";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
 if (import.meta.main) {
   const queryEngine = new QueryEngine();
-  const client = createRdfjsClient({
-    createSparqlEngine: ({ store }) =>
-      new ComunicaSparqlEngine({ queryEngine, store }),
-  });
+  const client = new Client(
+    createRdfjsClientOptions({
+      createSparqlEngine: ({ store }) =>
+        new ComunicaSparqlEngine({ queryEngine, store }),
+    }),
+  );
 
   await client.import({
     source: {

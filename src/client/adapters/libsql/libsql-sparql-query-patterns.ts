@@ -1,7 +1,7 @@
 /**
  * createSubjectBoundPropertiesSparqlQuery builds a hexastore-friendly BGP with a grounded subject IRI.
  *
- * Prefer this shape on `createLibsqlClient` / `LibsqlStore` at production scale. Post-preload
+ * Prefer this shape on hexastore `LibsqlStore` at production scale. Post-preload
  * benchmarks label it **selective**; see
  * [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69).
  */

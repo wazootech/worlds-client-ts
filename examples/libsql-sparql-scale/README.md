@@ -8,7 +8,7 @@ Runnable companion to
 deno task example:libsql-sparql-scale
 ```
 
-Uses `createLibsqlClient` with query helpers from
+Uses `createLibsqlClientOptions` + `Client` with query helpers from
 `@worlds/client/adapters/libsql`:
 
 - **Selective:** `createSubjectBoundPropertiesSparqlQuery(subjectIri)` — default

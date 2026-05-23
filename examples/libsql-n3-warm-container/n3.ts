@@ -5,7 +5,8 @@ import {
   createSubjectBoundPropertiesSparqlQuery,
   hydrateStoreFromLibsql,
 } from "@worlds/client/adapters/libsql";
-import { createLibsqlN3Client } from "@worlds/client/adapters/libsql/n3";
+import { Client } from "@worlds/client";
+import { createLibsqlN3ClientOptions } from "@worlds/client/adapters/libsql/n3";
 import { DataFactory, Store } from "n3";
 
 const { quad, namedNode, literal } = DataFactory;
@@ -13,30 +14,31 @@ const { quad, namedNode, literal } = DataFactory;
 /** warmSubjectIri is the entity hydrated once and queried across simulated requests. */
 const warmSubjectIri = "urn:demo:warm:entity:0";
 
-/**
- * Simulates a container that hydrates LibSQL into N3 once, then reuses the same `store`
- * for every request ([#68](https://github.com/wazootech/worlds-client-ts/issues/68)).
- */
-async function createRequestClient(
-  databaseClient: ReturnType<typeof createClient>,
-  warmedStore: Store,
-) {
-  return await createLibsqlN3Client({
-    client: databaseClient,
-    store: warmedStore,
-    createSparqlEngine: ({ store }) =>
-      new ComunicaSparqlEngine({
-        queryEngine: new QueryEngine(),
-        store,
-      }),
-  });
+const databaseClient = createClient({ url: ":memory:" });
+
+/** warmIsolateClient is built once after hydration — not per HTTP request. */
+let warmIsolateClient: Client | undefined;
+
+async function getWarmIsolateClient(warmedStore: Store): Promise<Client> {
+  warmIsolateClient ??= new Client(
+    await createLibsqlN3ClientOptions({
+      client: databaseClient,
+      store: warmedStore,
+      createSparqlEngine: ({ store }) =>
+        new ComunicaSparqlEngine({
+          queryEngine: new QueryEngine(),
+          store,
+        }),
+    }),
+  );
+  return warmIsolateClient;
 }
 
 if (import.meta.main) {
-  const databaseClient = createClient({ url: ":memory:" });
-
-  const seedClient = await createLibsqlN3Client({ client: databaseClient });
-  await seedClient.import({
+  const bootClient = new Client(
+    await createLibsqlN3ClientOptions({ client: databaseClient }),
+  );
+  await bootClient.import({
     source: {
       kind: "quads",
       quads: [
@@ -58,21 +60,15 @@ if (import.meta.main) {
   );
   console.log(`Hydrated ${hydratedQuadCount} quad(s) into reused store.`);
 
-  console.log("\nSimulated request 1 (no re-hydration):");
-  const firstRequestClient = await createRequestClient(
-    databaseClient,
-    warmedStore,
-  );
+  console.log("\nSimulated request 1 (reuse warm-isolate client):");
+  const firstRequestClient = await getWarmIsolateClient(warmedStore);
   const firstResponse = await firstRequestClient.sparql({
     query: createSubjectBoundPropertiesSparqlQuery(warmSubjectIri),
   });
   console.log(JSON.stringify(firstResponse, null, 2));
 
-  console.log("\nSimulated request 2 (same warmed store):");
-  const secondRequestClient = await createRequestClient(
-    databaseClient,
-    warmedStore,
-  );
+  console.log("\nSimulated request 2 (same warmed store + client):");
+  const secondRequestClient = await getWarmIsolateClient(warmedStore);
   const secondResponse = await secondRequestClient.sparql({
     query: createSubjectBoundPropertiesSparqlQuery(warmSubjectIri),
   });

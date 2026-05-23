@@ -317,16 +317,31 @@ network hop latency during query execution.
 Hexastore indexes are provisioned at schema init for all LibSQL clients. Use
 separate modules so hexastore deployments do not import N3 hydration:
 
-- **`createLibsqlClient`**
+- **`createLibsqlClientOptions`**
   ([`create-libsql-client.ts`](src/client/adapters/libsql/create-libsql-client.ts))
   — `LibsqlStore` + hexastore indexes; `createSparqlEngine({ libsqlStore })`.
   `LibsqlStore.match` keyset-pages by `quads.id` (`matchPageSize`, default
-  1000). Optional `countQuads` supplies Comunica join cardinality hints.
-- **`createLibsqlN3Client`** — import `@worlds/client/adapters/libsql/n3`
+  1000). Optional `countQuads` supplies Comunica join cardinality hints. Wrap
+  with `new Client(await createLibsqlClientOptions(...))`.
+- **`createLibsqlN3ClientOptions`** — import `@worlds/client/adapters/libsql/n3`
   ([`n3/create-libsql-n3-client.ts`](src/client/adapters/libsql/n3/create-libsql-n3-client.ts));
   hydrate → `proxyStore` → sync patches to LibSQL;
   `createSparqlEngine({ store })` receives proxied N3. Not re-exported from
   `@worlds/client/adapters/libsql` (keeps hexastore-only imports free of N3).
+
+### Client lifecycle (runtime)
+
+Canonical construction: `new Client(await createXClientOptions(...))`. Do not
+reintroduce `createXClient` one-line wrappers.
+
+- **Serverless / edge (warm isolate):** build `ClientOptions` or `Client` once
+  in module scope per isolate; reuse across HTTP requests. See
+  [`examples/libsql-n3-warm-container`](examples/libsql-n3-warm-container).
+- **Long-running (Fly.io, DigitalOcean, 24/7 Deno):** one `Client` at process
+  boot. See [`examples/libsql-long-running`](examples/libsql-long-running).
+- When reusing a warmed N3 `store`, do **not** call
+  `createLibsqlN3ClientOptions` on every request — that rebuilds proxy, search
+  index, and patch sync.
 
 Use `benchmarks/sparql-hexastore-crossover.bench.ts`,
 [`benchmarks/README.md`](benchmarks/README.md), and
@@ -350,18 +365,18 @@ trivial container-level caching across sequential HTTP invocations.
 ### Sterile orchestration via adapters
 
 All active instrumentation (proxies, observers, and transactional mutation
-queues) is isolated strictly inside adapters (e.g. `createLibsqlClient`). The
-generalized `Client` is kept completely agnostic and sterile, accepting
+queues) is isolated strictly inside adapters (e.g. `createLibsqlClientOptions`).
+The generalized `Client` is kept completely agnostic and sterile, accepting
 pre-composed adapter options ready for constructor injection.
 
 ### Production deployment recommendation
 
 For production deployments and scale, the recommended topology is LibSQL-backed
-infrastructure through `createLibsqlClient`, especially Turso Cloud.
-RDFJS-backed and Deno KV-backed search/index topologies, including deployments
-centered on `RdfjsSearchIndex` and `DenokvSearchIndex`, are appropriate for
-local development, tests, and constrained single-process demos, but they are not
-the recommended production path.
+infrastructure through `createLibsqlClientOptions` + `Client`, especially Turso
+Cloud. RDFJS-backed and Deno KV-backed search/index topologies, including
+deployments centered on `RdfjsSearchIndex` and `DenokvSearchIndex`, are
+appropriate for local development, tests, and constrained single-process demos,
+but they are not the recommended production path.
 
 ### Resilient hybrid search with vectorless fallbacks
 

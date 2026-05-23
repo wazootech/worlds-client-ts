@@ -2,7 +2,6 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { Store } from "n3";
 
 import type { ClientOptions } from "@/client/client.ts";
-import { Client } from "@/client/client.ts";
 import type { Patch } from "@/client/quad-store/mod.ts";
 import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
 import { proxyStore } from "@/client/adapters/rdfjs/n3/mod.ts";
@@ -126,13 +125,4 @@ export async function createLibsqlN3ClientOptions(
       : undefined,
     searchIndex,
   };
-}
-
-/**
- * createLibsqlN3Client wires hydrate + N3 SPARQL + hybrid search into a ready Client.
- */
-export async function createLibsqlN3Client(
-  options: LibsqlN3Options,
-): Promise<Client> {
-  return new Client(await createLibsqlN3ClientOptions(options));
 }

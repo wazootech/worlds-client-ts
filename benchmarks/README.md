@@ -130,7 +130,7 @@ create a fresh database per iteration and use `warmup: 5`, `n: 50`.
   ```
 
 **Production (millions of quads):** prefer
-[`createLibsqlClient`](../src/client/adapters/libsql/create-libsql-client.ts)
+[`createLibsqlClientOptions`](../src/client/adapters/libsql/create-libsql-client.ts)
 for indexed SPARQL without a full N3 mirror; reuse a warmed
 [`store`](../src/client/adapters/libsql/n3/create-libsql-n3-client.ts) on the N3
 path per container, not per request. Track guidance in

@@ -1,9 +1,10 @@
 import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
+import { Client } from "@worlds/client";
 import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
 import {
   createCappedUnboundTriplePatternSparqlQuery,
-  createLibsqlClient,
+  createLibsqlClientOptions,
   createSubjectBoundPropertiesSparqlQuery,
 } from "@worlds/client/adapters/libsql";
 import { DataFactory } from "n3";
@@ -15,17 +16,19 @@ const exampleSubjectIri = "urn:demo:entity:0";
 
 /**
  * Demonstrates LibSQL hexastore SPARQL query shapes recommended at scale ([#68](https://github.com/wazootech/worlds-client-ts/issues/68)):
- * subject-bound selective queries on `createLibsqlClient`, and why unbound `?s ?p ?o` scans are dev-only.
+ * subject-bound selective queries on hexastore LibSQL, and why unbound `?s ?p ?o` scans are dev-only.
  */
 if (import.meta.main) {
   const databaseClient = createClient({ url: ":memory:" });
   const queryEngine = new QueryEngine();
 
-  const client = await createLibsqlClient({
-    client: databaseClient,
-    createSparqlEngine: ({ libsqlStore }) =>
-      new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
-  });
+  const client = new Client(
+    await createLibsqlClientOptions({
+      client: databaseClient,
+      createSparqlEngine: ({ libsqlStore }) =>
+        new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
+    }),
+  );
 
   await client.import({
     source: {
@@ -63,6 +66,6 @@ if (import.meta.main) {
   console.log(JSON.stringify(scanResponse, null, 2));
 
   console.log(
-    "\nFor warm N3 containers: deno task example:libsql-n3-warm-container",
+    "\nFor warm isolates: deno task example:libsql-n3-warm-container:n3",
   );
 }

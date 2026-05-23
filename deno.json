@@ -1,6 +1,6 @@
 {
   "name": "@worlds/client",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "nodeModulesDir": "auto",
   "exports": {
     ".": "./src/mod.ts",
@@ -46,9 +46,12 @@
   "tasks": {
     "download:tfjs-use": "deno run -A ./src/client/adapters/tfjs-universal-sentence-encoder/download-tfjs-use.ts",
     "example:hello-world": "deno -A ./examples/hello-world/main.ts",
-    "example:libsql-hello-world": "deno -A ./examples/libsql-hello-world/main.ts",
+    "example:libsql-long-running:hexastore": "deno -A ./examples/libsql-long-running/hexastore.ts",
+    "example:libsql-long-running:n3": "deno -A ./examples/libsql-long-running/n3.ts",
     "example:libsql-sparql-scale": "deno -A ./examples/libsql-sparql-scale/main.ts",
-    "example:libsql-n3-warm-container": "deno -A ./examples/libsql-n3-warm-container/main.ts",
+    "example:libsql-n3-warm-container": "deno -A ./examples/libsql-n3-warm-container/n3.ts",
+    "example:libsql-n3-warm-container:hexastore": "deno -A ./examples/libsql-n3-warm-container/hexastore.ts",
+    "example:libsql-n3-warm-container:n3": "deno -A ./examples/libsql-n3-warm-container/n3.ts",
     "example:denokv-hello-world": "deno -A --unstable-kv ./examples/denokv-hello-world/main.ts",
     "example:ai-sdk-hello-world": "deno -A --env ./examples/ai-sdk-hello-world/main.ts",
     "fmt": "deno fmt",

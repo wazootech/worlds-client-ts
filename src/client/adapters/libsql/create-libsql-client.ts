@@ -1,7 +1,6 @@
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
 import type { ClientOptions } from "@/client/client.ts";
-import { Client } from "@/client/client.ts";
 import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
 import { RdfjsQuadStore } from "@/client/adapters/rdfjs/mod.ts";
 
@@ -104,13 +103,4 @@ export async function createLibsqlClientOptions(
       : undefined,
     searchIndex,
   };
-}
-
-/**
- * createLibsqlClient wires hexastore SPARQL + hybrid search into a ready Client without N3 hydration.
- */
-export async function createLibsqlClient(
-  options: LibsqlOptions,
-): Promise<Client> {
-  return new Client(await createLibsqlClientOptions(options));
 }
