@@ -20,6 +20,13 @@ issue with before/after `deno bench` output instead.
 Tables below reflect **main** branch methodology (module preload, batched
 hydration); they are not a substitute for re-running on your machine.
 
+## Layout
+
+- `*.bench.ts` — runnable benchmarks (`deno bench` discovers these at the repo
+  root of `benchmarks/`, not under `shared/`).
+- [`shared/`](shared/) — helpers imported by benches (`synthetic-data.ts`,
+  `sparql-hexastore-crossover-shared.ts`).
+
 ## Run all benchmarks
 
 ```bash
@@ -41,6 +48,29 @@ deno bench --allow-all benchmarks/sparql-hexastore-crossover.bench.ts
 Compares **hydrate+N3** (`createLibsqlN3ClientOptions` from
 `@worlds/client/adapters/libsql/n3`) vs **libsqlStore**
 (`createLibsqlClientOptions` from `@worlds/client/adapters/libsql`).
+
+### SPARQL crossover at 100k–1M (opt-in, local only)
+
+[#76](https://github.com/wazootech/worlds-client-ts/issues/76). Not part of
+`deno task bench` — preload can take a long time and needs ample RAM (16 GB+, 32
+GB safer for 1M hydrate+N3).
+
+```bash
+deno task bench:crossover-large
+```
+
+Or with a larger V8 heap if preload OOMs:
+
+```bash
+deno bench --allow-all --v8-flags=--max-old-space-size=8192 benchmarks/sparql-hexastore-crossover-large.bench.ts
+```
+
+Module load logs `console.time` lines per scale (`generate`, then each backend).
+Only `sparqlEngine.execute()` is timed inside `Deno.bench`. Paste results into
+[discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69).
+
+For faster large preload experiments, LibSQL `import` supports
+`deferSearchIndex: true` (quads first, search index rebuilt after import).
 
 ## Measurement notes
 
@@ -153,6 +183,32 @@ for local regression checks.
 | 50000 | fullScan    | hydrate+N3  | 44.3 ms |
 | 50000 | fullScan    | libsqlStore | 215 ms  |
 
+### `sparql-hexastore-crossover-large.bench.ts` (execute only, preloaded)
+
+Captured on **Deno 2.8.0 (Windows x86_64)** via
+`deno task bench:crossover-large` (`--v8-flags=--max-old-space-size=8192`).
+Module preload (corpus + import, not timed in `Deno.bench`): 100k ~33–39
+s/backend; 250k ~91 s; 500k ~193–196 s; 1M ~466–509 s per backend.
+
+| Quads   | Query shape | Backend     | Avg     |
+| :------ | :---------- | :---------- | :------ |
+| 100000  | selective   | hydrate+N3  | 534 µs  |
+| 100000  | selective   | libsqlStore | 29.1 ms |
+| 100000  | fullScan    | hydrate+N3  | 68.7 ms |
+| 100000  | fullScan    | libsqlStore | 181 ms  |
+| 250000  | selective   | hydrate+N3  | 292 µs  |
+| 250000  | selective   | libsqlStore | 74.7 ms |
+| 250000  | fullScan    | hydrate+N3  | 443 ms  |
+| 250000  | fullScan    | libsqlStore | 438 ms  |
+| 500000  | selective   | hydrate+N3  | 284 µs  |
+| 500000  | selective   | libsqlStore | 142 ms  |
+| 500000  | fullScan    | hydrate+N3  | 210 ms  |
+| 500000  | fullScan    | libsqlStore | 840 ms  |
+| 1000000 | selective   | hydrate+N3  | 366 µs  |
+| 1000000 | selective   | libsqlStore | 286 ms  |
+| 1000000 | fullScan    | hydrate+N3  | 424 ms  |
+| 1000000 | fullScan    | libsqlStore | 1.8 s   |
+
 ## Regression policy
 
 - Investigate when a keyed benchmark regresses by **more than ~15%** average vs
@@ -172,12 +228,16 @@ Paste into
 [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69)
 or release notes:
 
-| Quads | Query shape | Backend     | Avg |
-| :---- | :---------- | :---------- | :-- |
-| 1000  | selective   | hydrate+N3  |     |
-| 1000  | selective   | libsqlStore |     |
-| 1000  | fullScan    | hydrate+N3  |     |
-| 1000  | fullScan    | libsqlStore |     |
-| 5000  | selective   | hydrate+N3  |     |
-| 5000  | selective   | libsqlStore |     |
-| …     | …           | …           |     |
+| Quads   | Query shape | Backend     | Avg |
+| :------ | :---------- | :---------- | :-- |
+| 1000    | selective   | hydrate+N3  |     |
+| 1000    | selective   | libsqlStore |     |
+| 1000    | fullScan    | hydrate+N3  |     |
+| 1000    | fullScan    | libsqlStore |     |
+| 5000    | selective   | hydrate+N3  |     |
+| 5000    | selective   | libsqlStore |     |
+| …       | …           | …           |     |
+| 100000  | selective   | hydrate+N3  |     |
+| 100000  | selective   | libsqlStore |     |
+| 1000000 | selective   | libsqlStore |     |
+| …       | …           | …           |     |

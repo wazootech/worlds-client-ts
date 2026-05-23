@@ -71,7 +71,10 @@ export interface ComunicaBinding {
  * ComunicaSparqlEngineOptions are the options for ComunicaSparqlEngine.
  */
 export interface ComunicaSparqlEngineOptions {
-  /** store is the RDFJS store to execute the query on. */
+  /**
+   * store is the RDFJS store to execute the query on.
+   * For join cardinality hints, pass a store that implements `countQuads` (e.g. `LibsqlStore` from `createLibsqlClient`).
+   */
   store: rdfjs.Store;
 
   /** queryEngine is the caller-provided Comunica-compatible query engine to use. */

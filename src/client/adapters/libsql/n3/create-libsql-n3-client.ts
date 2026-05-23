@@ -14,6 +14,7 @@ import {
   initializeLibsqlSchema,
   LibsqlQueryBuilder,
   LibsqlSearchIndex,
+  rebuildLibsqlSearchIndexFromQuads,
 } from "@/client/adapters/libsql/mod.ts";
 
 /**
@@ -69,6 +70,8 @@ export async function createLibsqlN3ClientOptions(
     libsqlQueryBuilder: queryBuilder,
   });
 
+  let skipSearchIndexForNextCommit = false;
+
   const commitChanges = async () => {
     const patches = drainPatches();
     if (patches.length === 0) return;
@@ -86,7 +89,9 @@ export async function createLibsqlN3ClientOptions(
       quadFilter: options.quadFilter,
       libsqlQueryBuilder: queryBuilder,
       labelPredicates: options.labelPredicates,
+      skipSearchIndexProjection: skipSearchIndexForNextCommit,
     });
+    skipSearchIndexForNextCommit = false;
   };
 
   const quadStore = new RdfjsQuadStore(store);
@@ -95,8 +100,20 @@ export async function createLibsqlN3ClientOptions(
     quadStore: {
       export: (request) => quadStore.export(request),
       import: async (request) => {
+        skipSearchIndexForNextCommit = request.deferSearchIndex === true;
         const response = await quadStore.import(request);
         await commitChanges();
+        if (request.deferSearchIndex) {
+          await rebuildLibsqlSearchIndexFromQuads({
+            client: options.client,
+            embeddingService: options.embeddingService,
+            textSplitter,
+            maxLookupChunkSize: options.maxLookupChunkSize,
+            quadFilter: options.quadFilter,
+            libsqlQueryBuilder: queryBuilder,
+            labelPredicates: options.labelPredicates,
+          });
+        }
         return response;
       },
     },

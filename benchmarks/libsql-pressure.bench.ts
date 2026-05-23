@@ -4,7 +4,7 @@ import { Client } from "@worlds/client";
 import { createLibsqlN3ClientOptions } from "@worlds/client/adapters/libsql/n3";
 import { hydrateStoreFromLibsql } from "@worlds/client/adapters/libsql";
 import { FakeEmbeddingService } from "@worlds/client/search-index/embedding-service";
-import { generateSyntheticQuads } from "./synthetic-data.ts";
+import { generateSyntheticQuads } from "./shared/synthetic-data.ts";
 
 // Pre-allocated payloads for strict repeatable boundaries
 const payloadSmall = generateSyntheticQuads(10);

@@ -250,7 +250,9 @@ SPARQL router ([#63](https://github.com/wazootech/worlds-client-ts/issues/63)).
 | Hot-path SPARQL | Bind at least one term (subject, predicate, or object). Subject-bound property lookups match crossover **selective** shapes and stay index-friendly                                                     |
 | Avoid at scale  | Unbound `?s ?p ?o` (even with `LIMIT`) on `libsqlStore` — crossover **fullScan** degrades to hundreds of ms–seconds as quads grow ([#69](https://github.com/wazootech/worlds-client-ts/discussions/69)) |
 | N3 + Comunica   | `createLibsqlN3Client` only when you need in-memory N3; pass a warmed `store` hydrated **once per container**, not per HTTP request                                                                     |
-| Local crossover | `deno task bench` → `sparql-hexastore-crossover.bench.ts`; methodology in [`benchmarks/README.md`](benchmarks/README.md)                                                                                |
+| Local crossover | `deno task bench` → `sparql-hexastore-crossover.bench.ts`; 100k–1M opt-in: `deno task bench:crossover-large` — see [`benchmarks/README.md`](benchmarks/README.md)                                       |
+| Bulk import     | `import({ deferSearchIndex: true })` on LibSQL clients persists quads first, then `rebuildLibsqlSearchIndexFromQuads` runs automatically after import                                                   |
+| Cardinality     | `LibsqlStore.countQuads` is used by Comunica when `createLibsqlClient` wires hexastore SPARQL (no extra adapter config)                                                                                 |
 
 Query helpers (same shapes as benchmarks):
 

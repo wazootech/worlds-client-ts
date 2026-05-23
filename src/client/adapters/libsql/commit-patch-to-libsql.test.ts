@@ -3,6 +3,7 @@ import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
+import { rebuildLibsqlSearchIndexFromQuads } from "./rebuild-libsql-search-index-from-quads.ts";
 import { FakeEmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
 import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import { initializeLibsqlSchema } from "./initialize-libsql-schema.ts";
@@ -180,5 +181,73 @@ Deno.test(
       "SELECT COUNT(*) as total FROM quads",
     );
     assertEquals(Number(quadRows.rows[0].total), bulkQuadCount);
+  },
+);
+
+Deno.test(
+  "commitPatchToLibsql - large bulk insertions flush staged statements without stack overflow",
+  async () => {
+    const client = createClient({ url: ":memory:" });
+    await setupSchema(client);
+
+    const largeBulkQuadCount = 50_000;
+    const largeBulkQuads = Array.from(
+      { length: largeBulkQuadCount },
+      (_, index) =>
+        quad(
+          namedNode(`urn:large-bulk:entity:${index}`),
+          namedNode("urn:large-bulk:predicate"),
+          literal(`large bulk literal ${index}`),
+        ),
+    );
+
+    const options = {
+      client,
+      textSplitter: sharedSplitter,
+      libsqlQueryBuilder: testLibsqlQueryBuilder,
+    };
+
+    await commitPatchToLibsql({
+      insertions: largeBulkQuads,
+      deletions: [],
+    }, options);
+
+    const quadRows = await client.execute(
+      "SELECT COUNT(*) as total FROM quads",
+    );
+    assertEquals(Number(quadRows.rows[0].total), largeBulkQuadCount);
+  },
+);
+
+Deno.test(
+  "commitPatchToLibsql - skipSearchIndexProjection defers chunk rows until rebuild",
+  async () => {
+    const client = createClient({ url: ":memory:" });
+    await setupSchema(client);
+
+    const options = {
+      client,
+      textSplitter: sharedSplitter,
+      libsqlQueryBuilder: testLibsqlQueryBuilder,
+    };
+
+    await commitPatchToLibsql({
+      insertions: [
+        quad(
+          namedNode("urn:defer:entity:0"),
+          namedNode("urn:defer:predicate"),
+          literal("defer search index projection"),
+        ),
+      ],
+      deletions: [],
+    }, { ...options, skipSearchIndexProjection: true });
+
+    const chunkRows = await client.execute(
+      "SELECT COUNT(*) as total FROM chunks",
+    );
+    assertEquals(Number(chunkRows.rows[0].total), 0);
+
+    const { chunkRowCount } = await rebuildLibsqlSearchIndexFromQuads(options);
+    assertEquals(chunkRowCount > 0, true);
   },
 );

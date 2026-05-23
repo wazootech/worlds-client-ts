@@ -7,6 +7,7 @@
     "jsr:@std/internal@^1.0.12": "1.0.13",
     "jsr:@std/path@^1.1.4": "1.1.4",
     "npm:@ai-sdk/google@^3.0.78": "3.0.78_zod@4.4.3",
+    "npm:@comunica/query-sparql-rdfjs-lite@*": "5.2.2",
     "npm:@comunica/query-sparql-rdfjs-lite@^5.2.2": "5.2.2",
     "npm:@langchain/core@^1.1.47": "1.1.47",
     "npm:@langchain/textsplitters@^1.0.1": "1.0.1_@langchain+core@1.1.47",

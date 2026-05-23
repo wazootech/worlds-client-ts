@@ -9,6 +9,7 @@ import { RdfjsQuadStore } from "@/client/adapters/rdfjs/mod.ts";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import { initializeLibsqlSchema } from "./initialize-libsql-schema.ts";
+import { rebuildLibsqlSearchIndexFromQuads } from "./rebuild-libsql-search-index-from-quads.ts";
 import type { LibsqlClientBaseOptions } from "./libsql-client-base-options.ts";
 import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import { LibsqlStore } from "./libsql-store.ts";
@@ -51,6 +52,8 @@ export async function createLibsqlClientOptions(
     libsqlQueryBuilder: queryBuilder,
   });
 
+  let skipSearchIndexForNextCommit = false;
+
   const persistPatch = async (patch: Patch) => {
     await commitPatchToLibsql(patch, {
       client: options.client,
@@ -60,7 +63,9 @@ export async function createLibsqlClientOptions(
       quadFilter: options.quadFilter,
       libsqlQueryBuilder: queryBuilder,
       labelPredicates: options.labelPredicates,
+      skipSearchIndexProjection: skipSearchIndexForNextCommit,
     });
+    skipSearchIndexForNextCommit = false;
   };
 
   const libsqlStore = new LibsqlStore({
@@ -78,8 +83,20 @@ export async function createLibsqlClientOptions(
     quadStore: {
       export: (request) => quadStore.export(request),
       import: async (request) => {
+        skipSearchIndexForNextCommit = request.deferSearchIndex === true;
         const response = await quadStore.import(request);
         await libsqlStore.commit();
+        if (request.deferSearchIndex) {
+          await rebuildLibsqlSearchIndexFromQuads({
+            client: options.client,
+            embeddingService: options.embeddingService,
+            textSplitter,
+            maxLookupChunkSize: options.maxLookupChunkSize,
+            quadFilter: options.quadFilter,
+            libsqlQueryBuilder: queryBuilder,
+            labelPredicates: options.labelPredicates,
+          });
+        }
         return response;
       },
     },
