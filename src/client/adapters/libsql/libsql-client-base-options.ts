@@ -39,12 +39,12 @@ export interface LibsqlClientBaseOptions {
 
   /**
    * searchIndexOnImport when false skips chunk/FTS projection on every commit and does not rebuild after import.
-   * Use for SPARQL-only bulk loads; call rebuildLibsqlSearchIndexFromQuads before search().
+   * Use for SPARQL-only bulk loads; call Client.rebuildSearchIndex() before search().
    */
   searchIndexOnImport?: boolean;
 
   /**
-   * deferSearchIndexOnImport persists quads on each import and rebuilds FTS/vector chunks afterward.
+   * deferSearchIndexOnImport persists quads on each import and rebuilds FTS/vector chunks afterward via Client.rebuildSearchIndex().
    * Enable only on LibSQL clients dedicated to large bulk loads; omit for normal incremental use.
    * Cannot be combined with searchIndexOnImport: false.
    */

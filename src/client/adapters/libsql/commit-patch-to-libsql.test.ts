@@ -19,6 +19,37 @@ async function setupSchema(client: ReturnType<typeof createClient>) {
 
 const sharedSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000 });
 
+Deno.test(
+  "commitPatchToLibsql - bulk quad INSERT persists expected quads row count",
+  async () => {
+    const client = createClient({ url: ":memory:" });
+    await setupSchema(client);
+
+    const bulkQuadCount = 120;
+    const bulkQuads = Array.from({ length: bulkQuadCount }, (_, index) =>
+      quad(
+        namedNode(`urn:subject:${index}`),
+        namedNode("urn:predicate"),
+        literal(`bulk insert ${index}`),
+      ));
+
+    await commitPatchToLibsql(
+      { insertions: bulkQuads, deletions: [] },
+      {
+        client,
+        textSplitter: sharedSplitter,
+        libsqlQueryBuilder: testLibsqlQueryBuilder,
+        skipSearchIndexProjection: true,
+      },
+    );
+
+    const quadRows = await client.execute(
+      "SELECT COUNT(*) as total FROM quads",
+    );
+    assertEquals(Number(quadRows.rows[0].total), bulkQuadCount);
+  },
+);
+
 Deno.test("commitPatchToLibsql - isolated writes and removals commit correctly to BOTH chunks and quads", async () => {
   const client = createClient({ url: ":memory:" });
   await setupSchema(client);

@@ -1,14 +1,19 @@
 import type { Client } from "@libsql/client";
 import { DataFactory } from "n3";
+import type { QuadFilter } from "@/client/quad-store/mod.ts";
 import type {
+  RebuildSearchIndexRequest,
+  RebuildSearchIndexResponse,
   SearchIndexInterface,
   SearchRequest,
   SearchResponse,
   SearchResult,
 } from "@/client/search-index/mod.ts";
 import { hashQuad } from "@/client/quad-store/mod.ts";
+import type { TextSplitterInterface } from "@/client/search-index/quad-chunker/mod.ts";
 import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import type { EmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
+import { rebuildLibsqlSearchIndexFromQuads } from "./rebuild-libsql-search-index-from-quads.ts";
 
 const { literal, namedNode, quad: createQuad, defaultGraph } = DataFactory;
 
@@ -27,6 +32,21 @@ export interface LibsqlSearchIndexOptions {
    * libsqlQueryBuilder must match the schema and commit path used when materializing chunk vectors.
    */
   libsqlQueryBuilder: LibsqlQueryBuilder;
+
+  /** textSplitter is required when rebuildSearchIndex rebuilds chunk rows from quads. */
+  textSplitter?: TextSplitterInterface;
+
+  /** quadFilter is the default inclusion boundary for rebuildSearchIndex when the request omits quadFilter. */
+  quadFilter?: QuadFilter;
+
+  /** labelPredicates extends built-in label IRIs used during rebuildSearchIndex chunk projection. */
+  labelPredicates?: string[];
+
+  /** maxLookupChunkSize caps IN-clause host parameters during rebuildSearchIndex (default 800). */
+  maxLookupChunkSize?: number;
+
+  /** maxWriteBatchSize caps statements per LibSQL batch during rebuildSearchIndex (default 500). */
+  maxWriteBatchSize?: number;
 }
 
 /**
@@ -103,5 +123,33 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
     }
 
     return { results };
+  }
+
+  /**
+   * rebuildSearchIndex rebuilds FTS/vector chunk rows from durable quads without re-importing graph data.
+   */
+  public async rebuildSearchIndex(
+    request?: RebuildSearchIndexRequest,
+  ): Promise<RebuildSearchIndexResponse> {
+    const textSplitter = this.options.textSplitter;
+    if (!textSplitter) {
+      throw new Error(
+        "LibsqlSearchIndex rebuildSearchIndex requires textSplitter in LibsqlSearchIndexOptions",
+      );
+    }
+
+    const quadFilter = request?.quadFilter ?? this.options.quadFilter;
+
+    return await rebuildLibsqlSearchIndexFromQuads({
+      client: this.options.client,
+      libsqlQueryBuilder: this.options.libsqlQueryBuilder,
+      embeddingService: this.options.embeddingService,
+      textSplitter,
+      maxLookupChunkSize: this.options.maxLookupChunkSize,
+      maxWriteBatchSize: this.options.maxWriteBatchSize,
+      quadFilter,
+      labelPredicates: this.options.labelPredicates,
+      readPageSize: request?.readPageSize,
+    });
   }
 }

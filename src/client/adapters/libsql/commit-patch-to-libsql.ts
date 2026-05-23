@@ -480,31 +480,25 @@ function buildRelationalStatements(
   quadIds: string[],
   queryBuilder: LibsqlQueryBuilder,
 ): InStatement[] {
-  const statements: InStatement[] = [];
-  for (let i = 0; i < quads.length; i++) {
-    const quad = quads[i];
-    const id = quadIds[i];
-
-    // Decompose literal nodes explicitly to capture type & lang tags
+  const insertQuadRows = quads.map((quad, index) => {
     const isLiteral = quad.object.termType === "Literal";
-    const literal = isLiteral ? (quad.object as rdfjs.Literal) : null;
+    const literalNode = isLiteral ? (quad.object as rdfjs.Literal) : null;
 
-    statements.push(
-      queryBuilder.buildInsertQuad({
-        quad_id: id,
-        s: quad.subject.value,
-        s_type: quad.subject.termType,
-        p: quad.predicate.value,
-        o: quad.object.value,
-        o_type: quad.object.termType,
-        o_datatype: literal?.datatype?.value,
-        o_lang: literal?.language,
-        g: quad.graph.value,
-        g_type: quad.graph.termType,
-      }),
-    );
-  }
-  return statements;
+    return {
+      quad_id: quadIds[index],
+      s: quad.subject.value,
+      s_type: quad.subject.termType,
+      p: quad.predicate.value,
+      o: quad.object.value,
+      o_type: quad.object.termType,
+      o_datatype: literalNode?.datatype?.value,
+      o_lang: literalNode?.language,
+      g: quad.graph.value,
+      g_type: quad.graph.termType,
+    };
+  });
+
+  return queryBuilder.buildBulkInsertQuads(insertQuadRows);
 }
 
 /**

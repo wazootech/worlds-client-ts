@@ -78,6 +78,19 @@ Deno.test(
 );
 
 Deno.test(
+  "createRdfjsClient - rebuildSearchIndex rejects on non-LibSQL topology",
+  async () => {
+    const client = createRdfjsClient();
+
+    await assertRejects(
+      () => client.rebuildSearchIndex(),
+      Error,
+      "search index rebuild is only supported for LibSQL-backed clients",
+    );
+  },
+);
+
+Deno.test(
   "createRdfjsClient - sparql rejects when createSparqlEngine is omitted",
   async () => {
     const client = createRdfjsClient();

@@ -12,6 +12,8 @@ import type {
   SparqlResponse,
 } from "./sparql-engine/mod.ts";
 import type {
+  RebuildSearchIndexRequest,
+  RebuildSearchIndexResponse,
   SearchIndexInterface,
   SearchRequest,
   SearchResponse,
@@ -63,5 +65,16 @@ export class Client implements ClientInterface {
 
   public async search(request: SearchRequest): Promise<SearchResponse> {
     return await this.options.searchIndex.search(request);
+  }
+
+  public async rebuildSearchIndex(
+    request?: RebuildSearchIndexRequest,
+  ): Promise<RebuildSearchIndexResponse> {
+    if (!this.options.searchIndex.rebuildSearchIndex) {
+      throw new Error(
+        "search index rebuild is only supported for LibSQL-backed clients",
+      );
+    }
+    return await this.options.searchIndex.rebuildSearchIndex(request);
   }
 }
