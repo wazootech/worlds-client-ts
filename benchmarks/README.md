@@ -45,15 +45,24 @@ deno bench --allow-all --unstable-kv benchmarks/
 deno bench --allow-all benchmarks/sparql-hexastore-crossover.bench.ts
 ```
 
-Compares **hydrate+N3** (`createLibsqlN3ClientOptions` from
-`@worlds/client/adapters/libsql/n3`) vs **libsqlStore**
+**Standard (1k–50k):** compares **hydrate+N3** (`createLibsqlN3ClientOptions`
+from `@worlds/client/adapters/libsql/n3`) vs **libsqlStore**
 (`createLibsqlClientOptions` from `@worlds/client/adapters/libsql`).
+
+**Large (100k–1M):** **libsqlStore only** — the scalable LibSQL path for hybrid
+search + SPARQL in production
+([#68](https://github.com/wazootech/worlds-client-ts/issues/68)); does not run
+hydrate+N3.
+
+Crossover preload uses `searchIndexOnImport: false` (quads only; the timed slice
+is `execute()`). Apps that need `search()` at scale use normal import with
+inline indexing or `deferSearchIndexOnImport: true`, then `search()`.
 
 ### SPARQL crossover at 100k–1M (opt-in, local only)
 
 [#76](https://github.com/wazootech/worlds-client-ts/issues/76). Not part of
-`deno task bench` — preload can take a long time and needs ample RAM (16 GB+, 32
-GB safer for 1M hydrate+N3).
+`deno task bench` — preload can take a long time and needs ample RAM (16 GB+ for
+1M libsqlStore preload).
 
 ```bash
 deno task bench:crossover-large
@@ -69,9 +78,9 @@ Module load logs `console.time` lines per scale (`generate`, then each backend).
 Only `sparqlEngine.execute()` is timed inside `Deno.bench`. Paste results into
 [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69).
 
-For faster large preload experiments, construct a LibSQL client with
-`deferSearchIndexOnImport: true` (quads first, search index rebuilt after
-import).
+For full import + search preload timing (not the crossover execute table), use
+`deferSearchIndexOnImport: true` on a dedicated bulk-load client (quads first,
+search index rebuilt after import).
 
 ## Measurement notes
 
@@ -188,27 +197,26 @@ for local regression checks.
 
 Captured on **Deno 2.8.0 (Windows x86_64)** via
 `deno task bench:crossover-large` (`--v8-flags=--max-old-space-size=8192`).
-Module preload (corpus + import, not timed in `Deno.bench`): 100k ~33–39
-s/backend; 250k ~91 s; 500k ~193–196 s; 1M ~466–509 s per backend.
+**libsqlStore only**, `searchIndexOnImport: false` (quads-only preload; no
+hydrate+N3, no FTS/chunk build during import).
+
+Module preload (`console.time`, not in `Deno.bench`): 100k ~20 s; 250k ~63 s;
+500k ~130 s; 1M ~279 s (single libsqlStore fixture per scale).
 
 | Quads   | Query shape | Backend     | Avg     |
 | :------ | :---------- | :---------- | :------ |
-| 100000  | selective   | hydrate+N3  | 534 µs  |
-| 100000  | selective   | libsqlStore | 29.1 ms |
-| 100000  | fullScan    | hydrate+N3  | 68.7 ms |
-| 100000  | fullScan    | libsqlStore | 181 ms  |
-| 250000  | selective   | hydrate+N3  | 292 µs  |
-| 250000  | selective   | libsqlStore | 74.7 ms |
-| 250000  | fullScan    | hydrate+N3  | 443 ms  |
-| 250000  | fullScan    | libsqlStore | 438 ms  |
-| 500000  | selective   | hydrate+N3  | 284 µs  |
-| 500000  | selective   | libsqlStore | 142 ms  |
-| 500000  | fullScan    | hydrate+N3  | 210 ms  |
-| 500000  | fullScan    | libsqlStore | 840 ms  |
-| 1000000 | selective   | hydrate+N3  | 366 µs  |
-| 1000000 | selective   | libsqlStore | 286 ms  |
-| 1000000 | fullScan    | hydrate+N3  | 424 ms  |
-| 1000000 | fullScan    | libsqlStore | 1.8 s   |
+| 100000  | selective   | libsqlStore | 38.2 ms |
+| 100000  | fullScan    | libsqlStore | 232 ms  |
+| 250000  | selective   | libsqlStore | 101 ms  |
+| 250000  | fullScan    | libsqlStore | 539 ms  |
+| 500000  | selective   | libsqlStore | 179 ms  |
+| 500000  | fullScan    | libsqlStore | 1.1 s   |
+| 1000000 | selective   | libsqlStore | 373 ms  |
+| 1000000 | fullScan    | libsqlStore | 2.2 s   |
+
+Earlier captures (2026-05-22) included hydrate+N3 and inline search indexing;
+preload ~33–39 s/backend at 100k through ~466–509 s/backend at 1M — not
+comparable to the row above.
 
 ## Regression policy
 
@@ -238,7 +246,6 @@ or release notes:
 | 5000    | selective   | hydrate+N3  |     |
 | 5000    | selective   | libsqlStore |     |
 | …       | …           | …           |     |
-| 100000  | selective   | hydrate+N3  |     |
 | 100000  | selective   | libsqlStore |     |
 | 1000000 | selective   | libsqlStore |     |
 | …       | …           | …           |     |

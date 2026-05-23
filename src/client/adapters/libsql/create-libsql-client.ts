@@ -8,7 +8,10 @@ import { RdfjsQuadStore } from "@/client/adapters/rdfjs/mod.ts";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { initializeLibsqlSchema } from "./initialize-libsql-schema.ts";
 import { createLibsqlPatchSyncState } from "./libsql-patch-sync.ts";
-import type { LibsqlClientBaseOptions } from "./libsql-client-base-options.ts";
+import {
+  assertLibsqlClientIndexingOptions,
+  type LibsqlClientBaseOptions,
+} from "./libsql-client-base-options.ts";
 import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import { LibsqlStore } from "./libsql-store.ts";
 
@@ -36,6 +39,8 @@ export interface LibsqlOptions extends LibsqlClientBaseOptions {
 export async function createLibsqlClientOptions(
   options: LibsqlOptions,
 ): Promise<ClientOptions> {
+  assertLibsqlClientIndexingOptions(options);
+
   const vectorDimensions = options.vectorDimensions ?? 32;
   const queryBuilder = new LibsqlQueryBuilder(vectorDimensions);
 
@@ -58,6 +63,7 @@ export async function createLibsqlClientOptions(
     quadFilter: options.quadFilter,
     libsqlQueryBuilder: queryBuilder,
     labelPredicates: options.labelPredicates,
+    searchIndexOnImport: options.searchIndexOnImport,
     deferSearchIndexOnImport: options.deferSearchIndexOnImport,
   });
 

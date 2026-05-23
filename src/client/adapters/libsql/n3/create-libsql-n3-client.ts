@@ -7,7 +7,10 @@ import type { Patch } from "@/client/quad-store/mod.ts";
 import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
 import { proxyStore } from "@/client/adapters/rdfjs/n3/mod.ts";
 import { RdfjsQuadStore } from "@/client/adapters/rdfjs/mod.ts";
-import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/mod.ts";
+import {
+  assertLibsqlClientIndexingOptions,
+  type LibsqlClientBaseOptions,
+} from "@/client/adapters/libsql/mod.ts";
 import {
   createLibsqlPatchSyncState,
   hydrateStoreFromLibsql,
@@ -43,6 +46,8 @@ export interface LibsqlN3Options extends LibsqlClientBaseOptions {
 export async function createLibsqlN3ClientOptions(
   options: LibsqlN3Options,
 ): Promise<ClientOptions> {
+  assertLibsqlClientIndexingOptions(options);
+
   const vectorDimensions = options.vectorDimensions ?? 32;
   const queryBuilder = new LibsqlQueryBuilder(vectorDimensions);
 
@@ -77,6 +82,7 @@ export async function createLibsqlN3ClientOptions(
     quadFilter: options.quadFilter,
     libsqlQueryBuilder: queryBuilder,
     labelPredicates: options.labelPredicates,
+    searchIndexOnImport: options.searchIndexOnImport,
     deferSearchIndexOnImport: options.deferSearchIndexOnImport,
   });
 

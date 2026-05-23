@@ -52,8 +52,13 @@ export function createLibsqlPatchSyncState(
     quadFilter,
     libsqlQueryBuilder,
     labelPredicates,
+    searchIndexOnImport,
     deferSearchIndexOnImport,
   } = dependencies;
+
+  const projectSearchIndex = searchIndexOnImport !== false;
+  const deferSearchDuringImport = projectSearchIndex &&
+    deferSearchIndexOnImport === true;
 
   const commitPatchOptions: Omit<
     CommitPatchToLibsqlOptions,
@@ -84,17 +89,18 @@ export function createLibsqlPatchSyncState(
     persistPatch: async (patch: Patch) => {
       await commitPatchToLibsql(patch, {
         ...commitPatchOptions,
-        skipSearchIndexProjection: skipSearchIndexForNextCommit,
+        skipSearchIndexProjection: !projectSearchIndex ||
+          skipSearchIndexForNextCommit,
       });
       skipSearchIndexForNextCommit = false;
     },
 
     beforeImport: () => {
-      skipSearchIndexForNextCommit = deferSearchIndexOnImport === true;
+      skipSearchIndexForNextCommit = deferSearchDuringImport;
     },
 
     afterImport: async () => {
-      if (!deferSearchIndexOnImport) {
+      if (!deferSearchDuringImport) {
         return undefined;
       }
       return await rebuildSearchIndex();

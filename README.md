@@ -244,15 +244,15 @@ import { createLibsqlN3Client } from "@worlds/client/adapters/libsql/n3";
 At millions of quads, pick the factory at integration time — there is no runtime
 SPARQL router ([#63](https://github.com/wazootech/worlds-client-ts/issues/63)).
 
-| Concern         | Production default                                                                                                                                                                                      |
-| :-------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Client factory  | `createLibsqlClient` — hexastore `LibsqlStore`, no full N3 mirror per request                                                                                                                           |
-| Hot-path SPARQL | Bind at least one term (subject, predicate, or object). Subject-bound property lookups match crossover **selective** shapes and stay index-friendly                                                     |
-| Avoid at scale  | Unbound `?s ?p ?o` (even with `LIMIT`) on `libsqlStore` — crossover **fullScan** degrades to hundreds of ms–seconds as quads grow ([#69](https://github.com/wazootech/worlds-client-ts/discussions/69)) |
-| N3 + Comunica   | `createLibsqlN3Client` only when you need in-memory N3; pass a warmed `store` hydrated **once per container**, not per HTTP request                                                                     |
-| Local crossover | `deno task bench` → `sparql-hexastore-crossover.bench.ts`; 100k–1M opt-in: `deno task bench:crossover-large` — see [`benchmarks/README.md`](benchmarks/README.md)                                       |
-| Bulk import     | `createLibsqlClient({ deferSearchIndexOnImport: true, ... })` persists quads on import, then rebuilds search index after each import (bulk-load clients only)                                           |
-| Cardinality     | `LibsqlStore.countQuads` is used by Comunica when `createLibsqlClient` wires hexastore SPARQL (no extra adapter config)                                                                                 |
+| Concern         | Production default                                                                                                                                                                                                      |
+| :-------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Client factory  | `createLibsqlClient` — hexastore `LibsqlStore`, no full N3 mirror per request                                                                                                                                           |
+| Hot-path SPARQL | Bind at least one term (subject, predicate, or object). Subject-bound property lookups match crossover **selective** shapes and stay index-friendly                                                                     |
+| Avoid at scale  | Unbound `?s ?p ?o` (even with `LIMIT`) on `libsqlStore` — crossover **fullScan** degrades to hundreds of ms–seconds as quads grow ([#69](https://github.com/wazootech/worlds-client-ts/discussions/69))                 |
+| N3 + Comunica   | `createLibsqlN3Client` only when you need in-memory N3; pass a warmed `store` hydrated **once per container**, not per HTTP request                                                                                     |
+| Local crossover | `deno task bench` → `sparql-hexastore-crossover.bench.ts`; 100k–1M opt-in: `deno task bench:crossover-large` — see [`benchmarks/README.md`](benchmarks/README.md)                                                       |
+| Bulk import     | `deferSearchIndexOnImport: true` persists quads on import, then rebuilds search index after each import; `searchIndexOnImport: false` skips indexing until `rebuildLibsqlSearchIndexFromQuads` (SPARQL-only bulk loads) |
+| Cardinality     | `LibsqlStore.countQuads` is used by Comunica when `createLibsqlClient` wires hexastore SPARQL (no extra adapter config)                                                                                                 |
 
 Query helpers (same shapes as benchmarks):
 

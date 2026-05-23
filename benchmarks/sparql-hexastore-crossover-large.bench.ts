@@ -1,4 +1,5 @@
 import {
+  largeCrossoverBackends,
   preloadSparqlCrossoverFixtures,
   registerSparqlCrossoverBenchmarks,
   registerSparqlCrossoverUnloadCleanup,
@@ -15,10 +16,12 @@ const largeCrossoverScales = [
 const preloadedSparqlEngines = await preloadSparqlCrossoverFixtures(
   largeCrossoverScales,
   "large",
+  largeCrossoverBackends,
 );
 
 registerSparqlCrossoverUnloadCleanup(preloadedSparqlEngines);
 registerSparqlCrossoverBenchmarks(
   largeCrossoverScales,
   preloadedSparqlEngines,
+  largeCrossoverBackends,
 );

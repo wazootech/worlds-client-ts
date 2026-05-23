@@ -27,6 +27,17 @@ export type SparqlQueryShape = "selective" | "fullScan";
 /** SparqlBackend labels hydrate+N3 vs hexastore LibsqlStore wiring. */
 export type SparqlBackend = "hydrate+N3" | "libsqlStore";
 
+/** standardCrossoverBackends compares hydrate+N3 and libsqlStore at smaller scales. */
+export const standardCrossoverBackends = [
+  "hydrate+N3",
+  "libsqlStore",
+] as const satisfies readonly SparqlBackend[];
+
+/** largeCrossoverBackends is the production-scale libsqlStore path only (100k–1M). */
+export const largeCrossoverBackends = [
+  "libsqlStore",
+] as const satisfies readonly SparqlBackend[];
+
 /** PreloadedSparqlFixture holds a warmed SPARQL engine and its database handle. */
 export interface PreloadedSparqlFixture {
   databaseClient: ReturnType<typeof createClient>;
@@ -61,6 +72,7 @@ async function createHydrateN3SparqlEngine(
   const databaseClient = createClient({ url: ":memory:" });
   const clientOptions = await createLibsqlN3ClientOptions({
     client: databaseClient,
+    searchIndexOnImport: false,
     createSparqlEngine: ({ store }) =>
       new ComunicaSparqlEngine({ queryEngine: sharedQueryEngine, store }),
   });
@@ -83,6 +95,7 @@ async function createLibsqlHexastoreSparqlEngine(
   const databaseClient = createClient({ url: ":memory:" });
   const clientOptions = await createLibsqlClientOptions({
     client: databaseClient,
+    searchIndexOnImport: false,
     createSparqlEngine: ({ libsqlStore }) =>
       new ComunicaSparqlEngine({
         queryEngine: sharedQueryEngine,
@@ -115,6 +128,7 @@ async function createSparqlEngineForBackend(
 export async function preloadSparqlCrossoverFixtures(
   crossoverScales: readonly number[],
   logPrefix: string,
+  crossoverBackends: readonly SparqlBackend[],
 ): Promise<Map<string, PreloadedSparqlFixture>> {
   const preloadedSparqlEngines = new Map<string, PreloadedSparqlFixture>();
 
@@ -126,7 +140,7 @@ export async function preloadSparqlCrossoverFixtures(
     const corpusQuads = generateSyntheticQuads(quadCount);
     console.timeEnd(corpusGenerationLabel);
 
-    for (const backend of ["hydrate+N3", "libsqlStore"] as const) {
+    for (const backend of crossoverBackends) {
       const preloadLabel = `${logPrefix} ${backend} ${quadCount}`;
       console.time(preloadLabel);
       const fixture = await createSparqlEngineForBackend(backend, corpusQuads);
@@ -161,10 +175,11 @@ export function registerSparqlCrossoverUnloadCleanup(
 export function registerSparqlCrossoverBenchmarks(
   crossoverScales: readonly number[],
   preloadedSparqlEngines: Map<string, PreloadedSparqlFixture>,
+  crossoverBackends: readonly SparqlBackend[],
 ): void {
   for (const quadCount of crossoverScales) {
     for (const queryShape of ["selective", "fullScan"] as const) {
-      for (const backend of ["hydrate+N3", "libsqlStore"] as const) {
+      for (const backend of crossoverBackends) {
         const query = sparqlQueryForShape(queryShape);
         const cacheKey = sparqlEngineCacheKey(backend, quadCount);
         Deno.bench({
