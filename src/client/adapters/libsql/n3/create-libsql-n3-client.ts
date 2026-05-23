@@ -72,6 +72,10 @@ export async function createLibsqlN3ClientOptions(
     client: options.client,
     embeddingService: options.embeddingService,
     libsqlQueryBuilder: queryBuilder,
+    textSplitter,
+    quadFilter: options.quadFilter,
+    labelPredicates: options.labelPredicates,
+    maxLookupChunkSize: options.maxLookupChunkSize,
   });
 
   const patchSync = createLibsqlPatchSyncState({

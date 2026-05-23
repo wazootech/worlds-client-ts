@@ -4,7 +4,12 @@ import type {
   ImportRequest,
   ImportResponse,
 } from "./quad-store/mod.ts";
-import type { SearchRequest, SearchResponse } from "./search-index/mod.ts";
+import type {
+  RebuildSearchIndexRequest,
+  RebuildSearchIndexResponse,
+  SearchRequest,
+  SearchResponse,
+} from "./search-index/mod.ts";
 import type { SparqlRequest, SparqlResponse } from "./sparql-engine/mod.ts";
 
 /**
@@ -38,4 +43,13 @@ export interface ClientInterface {
    * @returns A promise that resolves to the search response.
    */
   search(request: SearchRequest): Promise<SearchResponse>;
+
+  /**
+   * rebuildSearchIndex rebuilds the derived search index from durable quads (LibSQL clients only).
+   * @param request optional quadFilter scope and read page size.
+   * @returns A promise that resolves to processed quad and chunk row counts.
+   */
+  rebuildSearchIndex(
+    request?: RebuildSearchIndexRequest,
+  ): Promise<RebuildSearchIndexResponse>;
 }

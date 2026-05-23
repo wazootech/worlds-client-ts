@@ -17,6 +17,26 @@ export interface SearchResponse {
 }
 
 /**
+ * RebuildSearchIndexRequest scopes repair to quads matching QuadFilter boundaries.
+ */
+export interface RebuildSearchIndexRequest {
+  /** quadFilter limits which durable quads are scanned (e.g. graphs include). */
+  quadFilter?: QuadFilter;
+  /** readPageSize limits quads per SQL page during scan (default 1000). */
+  readPageSize?: number;
+}
+
+/**
+ * RebuildSearchIndexResponse reports repair counts (idempotent rerun safe).
+ */
+export interface RebuildSearchIndexResponse {
+  /** processedQuadCount is the number of durable quads scanned during repair. */
+  processedQuadCount: number;
+  /** chunkRowCount is the number of chunk rows written to FTS/vector tables. */
+  chunkRowCount: number;
+}
+
+/**
  * SearchResult is a hybrid keyword/vector hit against an RDF literal.
  */
 export interface SearchResult {
@@ -52,4 +72,14 @@ export interface SearchIndexInterface {
    * @returns promise resolving to a set of relevancy-ranked triple matches.
    */
   search(request: SearchRequest): Promise<SearchResponse>;
+
+  /**
+   * rebuildSearchIndex rebuilds FTS/vector chunks from durable quads (LibSQL adapters only).
+   *
+   * @param request optional quadFilter scope and read page size.
+   * @returns promise resolving to processed quad and chunk row counts.
+   */
+  rebuildSearchIndex?(
+    request?: RebuildSearchIndexRequest,
+  ): Promise<RebuildSearchIndexResponse>;
 }

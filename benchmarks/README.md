@@ -55,8 +55,14 @@ search + SPARQL in production
 hydrate+N3.
 
 Crossover preload uses `searchIndexOnImport: false` (quads only; the timed slice
-is `execute()`). Apps that need `search()` at scale use normal import with
-inline indexing or `deferSearchIndexOnImport: true`, then `search()`.
+is `execute()`). Do **not** call `Client.rebuildSearchIndex()` in crossover
+harnesses — it rebuilds FTS/chunks and does not affect execute timings. Batched
+quad `INSERT`s speed the untimed preload / `BENCH_REUSE_DB` cache build.
+
+Apps that need `search()` at scale use normal import with inline indexing,
+`deferSearchIndexOnImport: true` (rebuild after each import), or
+`searchIndexOnImport: false` plus `await client.rebuildSearchIndex()` once after
+bulk load.
 
 ### SPARQL crossover at 100k–1M (opt-in, local only)
 
@@ -80,7 +86,9 @@ Only `sparqlEngine.execute()` is timed inside `Deno.bench`. Paste results into
 
 For full import + search preload timing (not the crossover execute table), use
 `deferSearchIndexOnImport: true` on a dedicated bulk-load client (quads first,
-search index rebuilt after import).
+search index rebuilt after import), or `searchIndexOnImport: false` followed by
+`await client.rebuildSearchIndex()` when you want quads and search repair as
+separate timed steps.
 
 #### Reusing large fixtures (dev only)
 

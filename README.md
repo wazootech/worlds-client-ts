@@ -182,20 +182,14 @@ After a schema upgrade or bulk ontology import, rebuild all search chunks from
 durable `quads`:
 
 ```typescript
-import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import {
-  LibsqlQueryBuilder,
-  rebuildLibsqlSearchIndexFromQuads,
-} from "@worlds/client/adapters/libsql";
-
-await rebuildLibsqlSearchIndexFromQuads({
-  client: db,
-  libsqlQueryBuilder: new LibsqlQueryBuilder(vectorDimensions),
-  textSplitter,
-  embeddingService,
-  labelPredicates: ["http://example.org/customLabel"],
+await client.rebuildSearchIndex({
+  quadFilter: { include: { graphs: ["http://example.org/ontology"] } },
 });
 ```
+
+Advanced: `rebuildLibsqlSearchIndexFromQuads` in
+`@worlds/client/adapters/libsql` remains available when you do not have a
+`Client` instance.
 
 After renaming an entity, refresh every chunk for affected subjects:
 
@@ -251,7 +245,7 @@ SPARQL router ([#63](https://github.com/wazootech/worlds-client-ts/issues/63)).
 | Avoid at scale  | Unbound `?s ?p ?o` (even with `LIMIT`) on `libsqlStore` — crossover **fullScan** degrades to hundreds of ms–seconds as quads grow ([#69](https://github.com/wazootech/worlds-client-ts/discussions/69))                 |
 | N3 + Comunica   | `createLibsqlN3Client` only when you need in-memory N3; pass a warmed `store` hydrated **once per container**, not per HTTP request                                                                                     |
 | Local crossover | `deno task bench` → `sparql-hexastore-crossover.bench.ts`; 100k–1M opt-in: `deno task bench:crossover-large` — see [`benchmarks/README.md`](benchmarks/README.md)                                                       |
-| Bulk import     | `deferSearchIndexOnImport: true` persists quads on import, then rebuilds search index after each import; `searchIndexOnImport: false` skips indexing until `rebuildLibsqlSearchIndexFromQuads` (SPARQL-only bulk loads) |
+| Bulk import     | `deferSearchIndexOnImport: true` persists quads on import, then rebuilds search index after each import; `searchIndexOnImport: false` skips indexing until `await client.rebuildSearchIndex()` (SPARQL-only bulk loads) |
 | Cardinality     | `LibsqlStore.countQuads` is used by Comunica when `createLibsqlClient` wires hexastore SPARQL (no extra adapter config)                                                                                                 |
 
 Query helpers (same shapes as benchmarks):

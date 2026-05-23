@@ -155,6 +155,150 @@ Deno.test(
 );
 
 Deno.test(
+  "createLibsqlClientOptions - rebuildSearchIndex after searchIndexOnImport false enables search",
+  async () => {
+    const databaseClient = createClient({ url: ":memory:" });
+
+    const client = new Client(
+      await createLibsqlClientOptions({
+        client: databaseClient,
+        searchIndexOnImport: false,
+        createSparqlEngine: ({ libsqlStore }) =>
+          new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
+      }),
+    );
+
+    await client.import({
+      source: {
+        kind: "quads",
+        quads: [
+          quad(
+            namedNode("urn:entity:rebuild-me"),
+            namedNode("urn:label"),
+            literal("rebuild search index later"),
+          ),
+        ],
+      },
+    });
+
+    const beforeRebuild = await databaseClient.execute(
+      "SELECT COUNT(*) as total FROM chunks",
+    );
+    assertEquals(Number(beforeRebuild.rows[0].total), 0);
+
+    const rebuildResponse = await client.rebuildSearchIndex();
+    assertEquals(rebuildResponse.processedQuadCount, 1);
+    assertEquals(rebuildResponse.chunkRowCount > 0, true);
+
+    const afterRebuild = await databaseClient.execute(
+      "SELECT COUNT(*) as total FROM chunks",
+    );
+    assertEquals(Number(afterRebuild.rows[0].total) > 0, true);
+
+    const searchResponse = await client.search({
+      query: "rebuild search",
+    });
+    assertEquals(searchResponse.results?.length ?? 0, 1);
+
+    databaseClient.close();
+  },
+);
+
+Deno.test(
+  "createLibsqlClientOptions - rebuildSearchIndex quadFilter scopes indexed graphs",
+  async () => {
+    const databaseClient = createClient({ url: ":memory:" });
+    const graphAlpha = namedNode("urn:graph:alpha");
+    const graphBeta = namedNode("urn:graph:beta");
+
+    const client = new Client(
+      await createLibsqlClientOptions({
+        client: databaseClient,
+        searchIndexOnImport: false,
+        createSparqlEngine: ({ libsqlStore }) =>
+          new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
+      }),
+    );
+
+    await client.import({
+      source: {
+        kind: "quads",
+        quads: [
+          quad(
+            namedNode("urn:entity:alpha"),
+            namedNode("urn:label"),
+            literal("alpha graph only"),
+            graphAlpha,
+          ),
+          quad(
+            namedNode("urn:entity:beta"),
+            namedNode("urn:label"),
+            literal("beta graph only"),
+            graphBeta,
+          ),
+        ],
+      },
+    });
+
+    await client.rebuildSearchIndex({
+      quadFilter: { include: { graphs: ["urn:graph:alpha"] } },
+    });
+
+    const alphaSearch = await client.search({ query: "alpha graph" });
+    assertEquals(alphaSearch.results?.length ?? 0, 1);
+
+    const betaSearch = await client.search({ query: "beta graph" });
+    assertEquals(betaSearch.results?.length ?? 0, 0);
+
+    databaseClient.close();
+  },
+);
+
+Deno.test(
+  "createLibsqlClientOptions - rebuildSearchIndex is idempotent on second run",
+  async () => {
+    const databaseClient = createClient({ url: ":memory:" });
+
+    const client = new Client(
+      await createLibsqlClientOptions({
+        client: databaseClient,
+        searchIndexOnImport: false,
+        createSparqlEngine: ({ libsqlStore }) =>
+          new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
+      }),
+    );
+
+    await client.import({
+      source: {
+        kind: "quads",
+        quads: [
+          quad(
+            namedNode("urn:entity:idempotent"),
+            namedNode("urn:label"),
+            literal("idempotent rebuild"),
+          ),
+        ],
+      },
+    });
+
+    const firstRebuild = await client.rebuildSearchIndex();
+    const secondRebuild = await client.rebuildSearchIndex();
+
+    assertEquals(firstRebuild.chunkRowCount, secondRebuild.chunkRowCount);
+
+    const chunkRows = await databaseClient.execute(
+      "SELECT COUNT(*) as total FROM chunks",
+    );
+    assertEquals(
+      Number(chunkRows.rows[0].total),
+      secondRebuild.chunkRowCount,
+    );
+
+    databaseClient.close();
+  },
+);
+
+Deno.test(
   "createLibsqlClientOptions - searchIndexOnImport false rejects deferSearchIndexOnImport",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });

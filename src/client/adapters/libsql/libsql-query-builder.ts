@@ -8,6 +8,38 @@ import {
 /** DEFAULT_LIBSQL_MATCH_PAGE_SIZE caps rows per hexastore match SQL round-trip. */
 export const DEFAULT_LIBSQL_MATCH_PAGE_SIZE = 1000;
 
+/** BULK_INSERT_QUAD_COLUMN_COUNT is host parameters per quad row in bulk INSERT statements. */
+const BULK_INSERT_QUAD_COLUMN_COUNT = 10;
+
+/**
+ * BULK_INSERT_QUAD_ROWS_PER_STATEMENT caps rows per INSERT under SQLite 999 host-parameter limit with headroom.
+ */
+export const BULK_INSERT_QUAD_ROWS_PER_STATEMENT = 80;
+
+/** InsertQuadRow is one relational quad row bound for INSERT OR REPLACE into quads. */
+export interface InsertQuadRow {
+  /** quad_id is the stable hash identifier for the quad row. */
+  quad_id: string;
+  /** s is the subject IRI or node value. */
+  s: string;
+  /** s_type is the RDF term type for the subject. */
+  s_type: string;
+  /** p is the predicate IRI. */
+  p: string;
+  /** o is the object value. */
+  o: string;
+  /** o_type is the RDF term type for the object. */
+  o_type: string;
+  /** o_datatype is the literal datatype IRI when the object is typed. */
+  o_datatype?: string | null;
+  /** o_lang is the literal language tag when present. */
+  o_lang?: string | null;
+  /** g is the graph name value. */
+  g: string;
+  /** g_type is the RDF term type for the graph slot. */
+  g_type: string;
+}
+
 /** Maximum embedding dimensions accepted by LibsqlQueryBuilder (LibSQL / resource guardrail). */
 const LIBSQL_QUERY_BUILDER_MAX_VECTOR_DIMENSIONS = 8192;
 const LIBSQL_FTS_STOPWORDS = new Set([
@@ -378,35 +410,70 @@ export class LibsqlQueryBuilder {
     };
   }
 
-  public buildInsertQuad(insertQuadOptions: {
-    quad_id: string;
-    s: string;
-    s_type: string;
-    p: string;
-    o: string;
-    o_type: string;
-    o_datatype?: string | null;
-    o_lang?: string | null;
-    g: string;
-    g_type: string;
-  }): { sql: string; args: (string | null)[] } {
-    return {
-      sql:
-        `INSERT OR REPLACE INTO quads (id, s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        insertQuadOptions.quad_id,
-        insertQuadOptions.s,
-        insertQuadOptions.s_type,
-        insertQuadOptions.p,
-        insertQuadOptions.o,
-        insertQuadOptions.o_type,
-        insertQuadOptions.o_datatype ?? null,
-        insertQuadOptions.o_lang ?? null,
-        insertQuadOptions.g,
-        insertQuadOptions.g_type,
-      ],
-    };
+  public buildInsertQuad(
+    insertQuadOptions: InsertQuadRow,
+  ): { sql: string; args: (string | null)[] } {
+    return this.buildBulkInsertQuads([insertQuadOptions])[0];
+  }
+
+  /**
+   * buildBulkInsertQuads emits multi-row INSERT OR REPLACE statements chunked under SQLite host-parameter limits.
+   */
+  public buildBulkInsertQuads(
+    insertQuadRows: InsertQuadRow[],
+  ): Array<{ sql: string; args: (string | null)[] }> {
+    if (insertQuadRows.length === 0) {
+      return [];
+    }
+
+    const statements: Array<{ sql: string; args: (string | null)[] }> = [];
+
+    for (
+      let rowOffset = 0;
+      rowOffset < insertQuadRows.length;
+      rowOffset += BULK_INSERT_QUAD_ROWS_PER_STATEMENT
+    ) {
+      const rowBatch = insertQuadRows.slice(
+        rowOffset,
+        rowOffset + BULK_INSERT_QUAD_ROWS_PER_STATEMENT,
+      );
+      const valuePlaceholders = rowBatch
+        .map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        .join(", ");
+      const args: (string | null)[] = [];
+
+      for (const insertQuadRow of rowBatch) {
+        args.push(
+          insertQuadRow.quad_id,
+          insertQuadRow.s,
+          insertQuadRow.s_type,
+          insertQuadRow.p,
+          insertQuadRow.o,
+          insertQuadRow.o_type,
+          insertQuadRow.o_datatype ?? null,
+          insertQuadRow.o_lang ?? null,
+          insertQuadRow.g,
+          insertQuadRow.g_type,
+        );
+      }
+
+      if (
+        args.length > BULK_INSERT_QUAD_ROWS_PER_STATEMENT *
+            BULK_INSERT_QUAD_COLUMN_COUNT
+      ) {
+        throw new Error(
+          `buildBulkInsertQuads: batch exceeds SQLite host-parameter budget (${args.length})`,
+        );
+      }
+
+      statements.push({
+        sql:
+          `INSERT OR REPLACE INTO quads (id, s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type) VALUES ${valuePlaceholders}`,
+        args,
+      });
+    }
+
+    return statements;
   }
 
   public sanitizeFtsQuery(query: string): string {
