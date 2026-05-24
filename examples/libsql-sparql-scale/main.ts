@@ -1,7 +1,7 @@
 import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { Client } from "@worlds/client";
-import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import { createComunicaLibsqlSparqlEngineFactory } from "@worlds/client/adapters/comunica";
 import {
   createCappedUnboundTriplePatternSparqlQuery,
   createLibsqlClientOptions,
@@ -25,8 +25,9 @@ if (import.meta.main) {
   const client = new Client(
     await createLibsqlClientOptions({
       client: databaseClient,
-      createSparqlEngine: ({ libsqlStore }) =>
-        new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
+      createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
+        queryEngine,
+      }),
     }),
   );
 

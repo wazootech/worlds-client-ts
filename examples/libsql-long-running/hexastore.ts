@@ -1,5 +1,5 @@
 import { createClient } from "@libsql/client";
-import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import { createComunicaLibsqlSparqlEngineFactory } from "@worlds/client/adapters/comunica";
 import { Client } from "@worlds/client";
 import {
   createLibsqlClientOptions,
@@ -60,8 +60,9 @@ if (import.meta.main) {
       client: databaseClient,
       embeddingService,
       vectorDimensions: USE_LITE_VECTOR_DIMENSIONS,
-      createSparqlEngine: ({ libsqlStore }) =>
-        new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
+      createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
+        queryEngine,
+      }),
     }),
   );
   console.log("Gateway operational.");

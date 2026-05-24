@@ -1,5 +1,5 @@
 import { Client } from "@worlds/client";
-import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import { createComunicaSparqlEngineFactory } from "@worlds/client/adapters/comunica";
 import { createDenokvClientOptions } from "@worlds/client/adapters/denokv";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
@@ -16,8 +16,7 @@ if (import.meta.main) {
   const client = new Client(
     createDenokvClientOptions({
       kv,
-      createSparqlEngine: ({ store }) =>
-        new ComunicaSparqlEngine({ queryEngine, store }),
+      createSparqlEngine: createComunicaSparqlEngineFactory({ queryEngine }),
     }),
   );
   console.log("💡 Stateless gateway operational!");

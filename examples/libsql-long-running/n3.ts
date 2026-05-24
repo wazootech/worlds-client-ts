@@ -1,6 +1,6 @@
 import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
-import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import { createComunicaSparqlEngineFactory } from "@worlds/client/adapters/comunica";
 import { createSubjectBoundPropertiesSparqlQuery } from "@worlds/client/adapters/libsql";
 import { Client } from "@worlds/client";
 import { createLibsqlN3ClientOptions } from "@worlds/client/adapters/libsql/n3";
@@ -25,8 +25,7 @@ if (import.meta.main) {
   const client = new Client(
     await createLibsqlN3ClientOptions({
       client: databaseClient,
-      createSparqlEngine: ({ store }) =>
-        new ComunicaSparqlEngine({ queryEngine, store }),
+      createSparqlEngine: createComunicaSparqlEngineFactory({ queryEngine }),
     }),
   );
 

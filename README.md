@@ -94,7 +94,10 @@ as Turso Cloud through `createLibsqlClientOptions` + `Client`.
 
 ```typescript
 import { Client } from "@worlds/client";
-import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import {
+  createComunicaLibsqlSparqlEngineFactory,
+  createComunicaSparqlEngineFactory,
+} from "@worlds/client/adapters/comunica";
 import { createLibsqlClientOptions } from "@worlds/client/adapters/libsql";
 import { createRdfjsClientOptions } from "@worlds/client/adapters/rdfjs";
 import { createDenokvClientOptions } from "@worlds/client/adapters/denokv";
@@ -110,14 +113,20 @@ const queryEngine = new QueryEngine();
 const libsqlClient = new Client(
   await createLibsqlClientOptions({
     client: db,
-    createSparqlEngine: ({ libsqlStore }) =>
-      new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
+    createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
+      queryEngine,
+    }),
   }),
 );
 
 // 3. Deno Kv (prototyping / constrained edge — not primary production path)
 const kv = await Deno.openKv();
-const kvClient = new Client(createDenokvClientOptions({ kv }));
+const kvClient = new Client(
+  createDenokvClientOptions({
+    kv,
+    createSparqlEngine: createComunicaSparqlEngineFactory({ queryEngine }),
+  }),
+);
 ```
 
 Cache `ClientOptions` (or a `Client`) in module scope when reusing wiring across

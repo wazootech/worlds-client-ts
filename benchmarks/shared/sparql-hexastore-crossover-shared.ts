@@ -2,7 +2,10 @@ import { createClient } from "@libsql/client";
 import type { Quad } from "@rdfjs/types";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { Client } from "@worlds/client";
-import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import {
+  createComunicaLibsqlSparqlEngineFactory,
+  createComunicaSparqlEngineFactory,
+} from "@worlds/client/adapters/comunica";
 import { createLibsqlClientOptions } from "@worlds/client/adapters/libsql";
 import { createLibsqlN3ClientOptions } from "@worlds/client/adapters/libsql/n3";
 import type { SparqlEngineInterface } from "@worlds/client/sparql-engine";
@@ -117,11 +120,9 @@ async function openLibsqlHexastoreSparqlEngine(
   const clientOptions = await createLibsqlClientOptions({
     client: databaseClient,
     searchIndexOnImport: false,
-    createSparqlEngine: ({ libsqlStore }) =>
-      new ComunicaSparqlEngine({
-        queryEngine: sharedQueryEngine,
-        store: libsqlStore,
-      }),
+    createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
+      queryEngine: sharedQueryEngine,
+    }),
   });
   if (!clientOptions.sparqlEngine) {
     throw new Error("libsqlStore bench requires createSparqlEngine");
@@ -188,8 +189,9 @@ async function createHydrateN3SparqlEngine(
   const clientOptions = await createLibsqlN3ClientOptions({
     client: databaseClient,
     searchIndexOnImport: false,
-    createSparqlEngine: ({ store }) =>
-      new ComunicaSparqlEngine({ queryEngine: sharedQueryEngine, store }),
+    createSparqlEngine: createComunicaSparqlEngineFactory({
+      queryEngine: sharedQueryEngine,
+    }),
   });
   const worldsClient = new Client(clientOptions);
   await worldsClient.import({
