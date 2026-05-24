@@ -334,6 +334,10 @@ separate modules so hexastore deployments do not import N3 hydration:
 Canonical construction: `new Client(await createXClientOptions(...))`. Do not
 reintroduce `createXClient` one-line wrappers.
 
+For standard Comunica SPARQL, pass `createComunicaSparqlEngineFactory` or
+`createComunicaLibsqlSparqlEngineFactory` from
+`@worlds/client/adapters/comunica` as the adapter's `createSparqlEngine` option.
+
 - **Serverless / edge (warm isolate):** build `ClientOptions` or `Client` once
   in module scope per isolate; reuse across HTTP requests. See
   [`examples/libsql-n3-warm-container`](examples/libsql-n3-warm-container).

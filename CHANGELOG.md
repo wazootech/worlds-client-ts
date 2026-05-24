@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.14
+
+### Added
+
+- `createComunicaSparqlEngineFactory` and
+  `createComunicaLibsqlSparqlEngineFactory` on
+  `@worlds/client/adapters/comunica` — preset helpers that return typed
+  `createSparqlEngine` callbacks for standard Comunica wiring.
+
 ## 0.0.13
 
 ### Breaking

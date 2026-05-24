@@ -1,7 +1,7 @@
 import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { Client } from "@worlds/client";
-import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import { createComunicaLibsqlSparqlEngineFactory } from "@worlds/client/adapters/comunica";
 import {
   createLibsqlClientOptions,
   createSubjectBoundPropertiesSparqlQuery,
@@ -14,6 +14,7 @@ const { quad, namedNode, literal } = DataFactory;
 const warmSubjectIri = "urn:demo:warm:hexastore:0";
 
 const databaseClient = createClient({ url: ":memory:" });
+const queryEngine = new QueryEngine();
 
 /** warmIsolateClient survives warm isolates (Deno Deploy, Vercel Edge, etc.). */
 let warmIsolateClient: Client | undefined;
@@ -22,11 +23,9 @@ async function getWarmIsolateClient(): Promise<Client> {
   warmIsolateClient ??= new Client(
     await createLibsqlClientOptions({
       client: databaseClient,
-      createSparqlEngine: ({ libsqlStore }) =>
-        new ComunicaSparqlEngine({
-          queryEngine: new QueryEngine(),
-          store: libsqlStore,
-        }),
+      createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
+        queryEngine,
+      }),
     }),
   );
   return warmIsolateClient;
