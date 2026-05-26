@@ -23,7 +23,7 @@ import {
 /**
  * CommitPatchToLibsqlOptions provides configurations for executing updates against LibSQL durable stores.
  */
-export interface CommitPatchToLibsqlOptions {
+export interface CommitPatchToLibsqlOptions extends QuadFilter {
   /** client is the underlying database connection. */
   client: Client;
 
@@ -38,9 +38,6 @@ export interface CommitPatchToLibsqlOptions {
 
   /** maxWriteBatchSize caps how many statements are sent per LibSQL write batch. Defaults to 500. */
   maxWriteBatchSize?: number;
-
-  /** quadFilter defines active synchronization inclusion bounds, facilitating hybrid partitioning where only specific facts are persisted. */
-  quadFilter?: QuadFilter;
 
   /**
    * libsqlQueryBuilder supplies dimension-aware SQL used for deletions, inserts, and chunk replication.
@@ -137,7 +134,8 @@ export async function commitPatchToLibsql(
     client,
     maxLookupChunkSize,
     maxWriteBatchSize,
-    quadFilter,
+    include,
+    exclude,
     libsqlQueryBuilder,
   } = options;
   const lookupChunkSize = maxLookupChunkSize ?? DEFAULT_MAX_LOOKUP_CHUNK_SIZE;
@@ -147,8 +145,7 @@ export async function commitPatchToLibsql(
   );
   const statements: InStatement[] = [];
 
-  // ⚡ Performant Optimizations First: Compile pre-emptive filter gates to support lightning-fast memory partitioning
-  const matcher = filterQuads(quadFilter);
+  const matcher = filterQuads({ include, exclude });
 
   const targetedDeletions = patch.deletions?.filter(matcher) ?? [];
   const targetedInsertions = patch.insertions?.filter(matcher) ?? [];

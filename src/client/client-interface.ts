@@ -46,7 +46,7 @@ export interface ClientInterface {
 
   /**
    * rebuildSearchIndex rebuilds the derived search index from durable quads (LibSQL clients only).
-   * @param request optional quadFilter scope and read page size.
+   * @param request optional include/exclude scope and read page size.
    * @returns A promise that resolves to processed quad and chunk row counts.
    */
   rebuildSearchIndex(

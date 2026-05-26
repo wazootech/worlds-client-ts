@@ -19,9 +19,7 @@ export interface SearchResponse {
 /**
  * RebuildSearchIndexRequest scopes repair to quads matching QuadFilter boundaries.
  */
-export interface RebuildSearchIndexRequest {
-  /** quadFilter limits which durable quads are scanned (e.g. graphs include). */
-  quadFilter?: QuadFilter;
+export interface RebuildSearchIndexRequest extends QuadFilter {
   /** readPageSize limits quads per SQL page during scan (default 1000). */
   readPageSize?: number;
 }
@@ -76,7 +74,7 @@ export interface SearchIndexInterface {
   /**
    * rebuildSearchIndex rebuilds FTS/vector chunks from durable quads (LibSQL adapters only).
    *
-   * @param request optional quadFilter scope and read page size.
+   * @param request optional include/exclude scope and read page size.
    * @returns promise resolving to processed quad and chunk row counts.
    */
   rebuildSearchIndex?(

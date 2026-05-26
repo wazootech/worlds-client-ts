@@ -1,6 +1,5 @@
 import type { Client } from "@libsql/client";
 import type * as rdfjs from "@rdfjs/types";
-import type { QuadFilter } from "@/client/quad-store/mod.ts";
 import { filterQuads } from "@/client/quad-store/mod.ts";
 import {
   type CommitPatchToLibsqlOptions,
@@ -15,9 +14,6 @@ import { DEFAULT_LIBSQL_MATCH_PAGE_SIZE } from "./libsql-query-builder.ts";
  */
 export interface RebuildLibsqlSearchIndexFromQuadsOptions
   extends CommitPatchToLibsqlOptions {
-  /** quadFilter applies the same inclusion boundaries used during synchronization. */
-  quadFilter?: QuadFilter;
-
   /** readPageSize limits quads loaded per SQL page while scanning the hexastore (default 1000). */
   readPageSize?: number;
 }
@@ -42,7 +38,8 @@ export async function rebuildLibsqlSearchIndexFromQuads(
 ): Promise<RebuildLibsqlSearchIndexFromQuadsResult> {
   const {
     client,
-    quadFilter,
+    include,
+    exclude,
     libsqlQueryBuilder,
     readPageSize,
   } = options;
@@ -50,17 +47,17 @@ export async function rebuildLibsqlSearchIndexFromQuads(
     1,
     Math.floor(readPageSize ?? DEFAULT_LIBSQL_MATCH_PAGE_SIZE),
   );
-  const matcher = filterQuads(quadFilter);
+  const matcher = filterQuads({ include, exclude });
 
   let processedQuadCount = 0;
   let chunkRowCount = 0;
   let afterQuadId: string | undefined;
 
   for (;;) {
-    const query = libsqlQueryBuilder.buildHydrateQuadsPageQuery(quadFilter, {
-      afterQuadId,
-      limit: pageSize,
-    });
+    const query = libsqlQueryBuilder.buildHydrateQuadsPageQuery(
+      { include, exclude },
+      { afterQuadId, limit: pageSize },
+    );
     const resultSet = await client.execute(query);
 
     if (resultSet.rows.length === 0) {
@@ -118,7 +115,8 @@ export function createLibsqlSearchIndexRebuilder(
       textSplitter: dependencies.textSplitter,
       maxLookupChunkSize: dependencies.maxLookupChunkSize,
       maxWriteBatchSize: dependencies.maxWriteBatchSize,
-      quadFilter: dependencies.quadFilter,
+      include: dependencies.include,
+      exclude: dependencies.exclude,
       readPageSize: dependencies.readPageSize,
       labelPredicates: dependencies.labelPredicates,
     });

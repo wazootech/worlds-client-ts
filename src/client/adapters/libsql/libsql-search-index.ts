@@ -20,7 +20,7 @@ const { literal, namedNode, quad: createQuad, defaultGraph } = DataFactory;
 /**
  * LibsqlSearchIndexOptions defines the structured configuration and dependency parameters needed to construct the LibSQL search engine.
  */
-export interface LibsqlSearchIndexOptions {
+export interface LibsqlSearchIndexOptions extends QuadFilter {
   /** client is the initialized @libsql/client instance pointing to the target database. */
   client: Client;
   /** embeddingService is an optional capability for projecting textual search inputs into dense vector space. */
@@ -35,9 +35,6 @@ export interface LibsqlSearchIndexOptions {
 
   /** textSplitter is required when rebuildSearchIndex rebuilds chunk rows from quads. */
   textSplitter?: TextSplitterInterface;
-
-  /** quadFilter is the default inclusion boundary for rebuildSearchIndex when the request omits quadFilter. */
-  quadFilter?: QuadFilter;
 
   /** labelPredicates extends built-in label IRIs used during rebuildSearchIndex chunk projection. */
   labelPredicates?: string[];
@@ -138,7 +135,8 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
       );
     }
 
-    const quadFilter = request?.quadFilter ?? this.options.quadFilter;
+    const include = request?.include ?? this.options.include;
+    const exclude = request?.exclude ?? this.options.exclude;
 
     return await rebuildLibsqlSearchIndexFromQuads({
       client: this.options.client,
@@ -147,7 +145,8 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
       textSplitter,
       maxLookupChunkSize: this.options.maxLookupChunkSize,
       maxWriteBatchSize: this.options.maxWriteBatchSize,
-      quadFilter,
+      include,
+      exclude,
       labelPredicates: this.options.labelPredicates,
       readPageSize: request?.readPageSize,
     });

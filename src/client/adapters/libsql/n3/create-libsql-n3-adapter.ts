@@ -57,7 +57,7 @@ export async function createLibsqlN3Adapter(
     await hydrateStoreFromLibsql(
       options.client,
       initialStore,
-      options.quadFilter,
+      { include: options.include, exclude: options.exclude },
     );
   }
 
@@ -72,7 +72,8 @@ export async function createLibsqlN3Adapter(
     embeddingService: options.embeddingService,
     libsqlQueryBuilder: queryBuilder,
     textSplitter,
-    quadFilter: options.quadFilter,
+    include: options.include,
+    exclude: options.exclude,
     labelPredicates: options.labelPredicates,
     maxLookupChunkSize: options.maxLookupChunkSize,
   });
@@ -82,7 +83,8 @@ export async function createLibsqlN3Adapter(
     embeddingService: options.embeddingService,
     textSplitter,
     maxLookupChunkSize: options.maxLookupChunkSize,
-    quadFilter: options.quadFilter,
+    include: options.include,
+    exclude: options.exclude,
     libsqlQueryBuilder: queryBuilder,
     labelPredicates: options.labelPredicates,
     searchIndexOnImport: options.searchIndexOnImport,

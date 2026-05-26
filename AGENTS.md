@@ -477,7 +477,7 @@ After a schema upgrade or bulk ontology import, rebuild all search chunks:
 
 ```typescript
 await client.rebuildSearchIndex({
-  quadFilter: { include: { graphs: ["http://example.org/ontology"] } },
+  include: { graphs: ["http://example.org/ontology"] },
 });
 ```
 

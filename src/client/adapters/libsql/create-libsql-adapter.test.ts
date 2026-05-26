@@ -205,7 +205,7 @@ Deno.test(
 );
 
 Deno.test(
-  "createLibsqlAdapter - rebuildSearchIndex quadFilter scopes indexed graphs",
+  "createLibsqlAdapter - rebuildSearchIndex include/exclude scopes indexed graphs",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
     const graphAlpha = namedNode("urn:graph:alpha");
@@ -241,7 +241,7 @@ Deno.test(
     });
 
     await client.rebuildSearchIndex({
-      quadFilter: { include: { graphs: ["urn:graph:alpha"] } },
+      include: { graphs: ["urn:graph:alpha"] },
     });
 
     const alphaSearch = await client.search({ query: "alpha graph" });

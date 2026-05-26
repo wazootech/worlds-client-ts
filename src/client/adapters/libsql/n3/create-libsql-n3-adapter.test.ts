@@ -345,10 +345,8 @@ Deno.test("QuadFilter Integration: enables hybrid partitioning persisting specif
     await createLibsqlN3Adapter({
       client: db,
       embeddingService,
-      quadFilter: {
-        include: {
-          graphs: [PERSISTENT_GRAPH],
-        },
+      include: {
+        graphs: [PERSISTENT_GRAPH],
       },
     }),
   );
@@ -406,10 +404,8 @@ Deno.test("QuadFilter Integration: enables hybrid partitioning persisting specif
     await createLibsqlN3Adapter({
       client: db,
       embeddingService,
-      quadFilter: {
-        include: {
-          graphs: [PERSISTENT_GRAPH],
-        },
+      include: {
+        graphs: [PERSISTENT_GRAPH],
       },
     }),
   );

@@ -49,7 +49,8 @@ export function createLibsqlPatchSyncState(
     embeddingService,
     textSplitter,
     maxLookupChunkSize,
-    quadFilter,
+    include,
+    exclude,
     libsqlQueryBuilder,
     labelPredicates,
     searchIndexOnImport,
@@ -68,7 +69,8 @@ export function createLibsqlPatchSyncState(
     embeddingService,
     textSplitter,
     maxLookupChunkSize,
-    quadFilter,
+    include,
+    exclude,
     libsqlQueryBuilder,
     labelPredicates,
   };
@@ -79,7 +81,8 @@ export function createLibsqlPatchSyncState(
     embeddingService,
     textSplitter,
     maxLookupChunkSize,
-    quadFilter,
+    include,
+    exclude,
     labelPredicates,
   });
 
