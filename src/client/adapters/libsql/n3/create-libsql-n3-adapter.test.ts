@@ -4,7 +4,7 @@ import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory, Store } from "n3";
 import { Client } from "@/client/client.ts";
 import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
-import { createLibsqlN3ClientOptions } from "./create-libsql-n3-client.ts";
+import { createLibsqlN3Adapter } from "./create-libsql-n3-adapter.ts";
 import { FakeEmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
 
 const { quad, namedNode, literal } = DataFactory;
@@ -16,7 +16,7 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
   const embeddingService = new FakeEmbeddingService();
 
   const client = new Client(
-    await createLibsqlN3ClientOptions({
+    await createLibsqlN3Adapter({
       client: db,
       embeddingService,
       createSparqlEngine: ({ store }) =>
@@ -98,7 +98,7 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
       // Destroy active memory references and simulate a software crash/reboot.
       // Create a fresh client reusing the SAME physical :memory: database.
       const refreshedClient = new Client(
-        await createLibsqlN3ClientOptions({
+        await createLibsqlN3Adapter({
           client: db,
           embeddingService,
         }),
@@ -200,7 +200,7 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
       const db = createClient({ url: ":memory:" });
       const embeddingService = new FakeEmbeddingService();
       const client = new Client(
-        await createLibsqlN3ClientOptions({
+        await createLibsqlN3Adapter({
           client: db,
           embeddingService,
         }),
@@ -269,7 +269,7 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
       const db = createClient({ url: ":memory:" });
       const embeddingService = new FakeEmbeddingService();
       const client = new Client(
-        await createLibsqlN3ClientOptions({
+        await createLibsqlN3Adapter({
           client: db,
           embeddingService,
         }),
@@ -342,7 +342,7 @@ Deno.test("QuadFilter Integration: enables hybrid partitioning persisting specif
 
   // Initialize client with filter restricting SQL writes exclusively to the persistent graph
   const client = new Client(
-    await createLibsqlN3ClientOptions({
+    await createLibsqlN3Adapter({
       client: db,
       embeddingService,
       quadFilter: {
@@ -403,7 +403,7 @@ Deno.test("QuadFilter Integration: enables hybrid partitioning persisting specif
   // 4. ASSERT: Verify Hydration boundary on reboot
   // Restart client pointing to the same DB with identical filtering bounds
   const restartedClient = new Client(
-    await createLibsqlN3ClientOptions({
+    await createLibsqlN3Adapter({
       client: db,
       embeddingService,
       quadFilter: {
@@ -451,11 +451,11 @@ const expectedHexastoreIndexNames = [
 ] as const;
 
 Deno.test(
-  "createLibsqlN3ClientOptions - initializeSchema provisions all hexastore indexes",
+  "createLibsqlN3Adapter - initializeSchema provisions all hexastore indexes",
   async () => {
     const db = createClient({ url: ":memory:" });
 
-    await createLibsqlN3ClientOptions({ client: db });
+    await createLibsqlN3Adapter({ client: db });
 
     const indexResultSet = await db.execute(
       "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'quads'",
@@ -469,7 +469,7 @@ Deno.test(
       );
     }
 
-    await createLibsqlN3ClientOptions({ client: db });
+    await createLibsqlN3Adapter({ client: db });
 
     db.close();
   },

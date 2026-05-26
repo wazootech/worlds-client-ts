@@ -20,9 +20,9 @@ import type {
 } from "./search-index/mod.ts";
 
 /**
- * ClientOptions details the aggregate internal subsystems powering active execution.
+ * Adapter details the aggregate internal subsystems powering active execution.
  */
-export interface ClientOptions {
+export interface Adapter {
   /**
    * quadStore manages the ingestion and extraction of triple/quad data.
    */
@@ -45,36 +45,36 @@ export interface ClientOptions {
  * declarative querying, and fuzzy searching.
  */
 export class Client implements ClientInterface {
-  public constructor(protected readonly options: ClientOptions) {}
+  public constructor(protected readonly adapter: Adapter) {}
 
   public async import(request: ImportRequest): Promise<ImportResponse> {
-    return await this.options.quadStore.import(request);
+    return await this.adapter.quadStore.import(request);
   }
 
   public async export(request: ExportRequest): Promise<ExportResponse> {
-    return await this.options.quadStore.export(request);
+    return await this.adapter.quadStore.export(request);
   }
 
   public async sparql(request: SparqlRequest): Promise<SparqlResponse> {
-    if (!this.options.sparqlEngine) {
+    if (!this.adapter.sparqlEngine) {
       throw new Error("SPARQL engine is not configured.");
     }
 
-    return await this.options.sparqlEngine.execute(request);
+    return await this.adapter.sparqlEngine.execute(request);
   }
 
   public async search(request: SearchRequest): Promise<SearchResponse> {
-    return await this.options.searchIndex.search(request);
+    return await this.adapter.searchIndex.search(request);
   }
 
   public async rebuildSearchIndex(
     request?: RebuildSearchIndexRequest,
   ): Promise<RebuildSearchIndexResponse> {
-    if (!this.options.searchIndex.rebuildSearchIndex) {
+    if (!this.adapter.searchIndex.rebuildSearchIndex) {
       throw new Error(
         "search index rebuild is only supported for LibSQL-backed clients",
       );
     }
-    return await this.options.searchIndex.rebuildSearchIndex(request);
+    return await this.adapter.searchIndex.rebuildSearchIndex(request);
   }
 }

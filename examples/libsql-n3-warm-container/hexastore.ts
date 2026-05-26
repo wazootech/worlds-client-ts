@@ -3,7 +3,7 @@ import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { Client } from "@worlds/client";
 import { createComunicaLibsqlSparqlEngineFactory } from "@worlds/client/adapters/comunica";
 import {
-  createLibsqlClientOptions,
+  createLibsqlAdapter,
   createSubjectBoundPropertiesSparqlQuery,
 } from "@worlds/client/adapters/libsql";
 import { DataFactory } from "n3";
@@ -21,7 +21,7 @@ let warmIsolateClient: Client | undefined;
 
 async function getWarmIsolateClient(): Promise<Client> {
   warmIsolateClient ??= new Client(
-    await createLibsqlClientOptions({
+    await createLibsqlAdapter({
       client: databaseClient,
       createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
         queryEngine,

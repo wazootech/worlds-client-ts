@@ -1,5 +1,5 @@
 import { Store } from "n3";
-import type { ClientOptions } from "@/client/client.ts";
+import type { Adapter } from "@/client/client.ts";
 import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
 import { RdfjsQuadStore } from "./rdfjs-quad-store.ts";
 import { RdfjsSearchIndex } from "./rdfjs-search-index.ts";
@@ -29,16 +29,16 @@ export interface RdfjsOptions {
 }
 
 /**
- * createRdfjsClientOptions synthesizes a lightweight, in-memory client gateway context backed entirely by
+ * createRdfjsAdapter synthesizes a lightweight, in-memory client adapter backed entirely by
  * local RDFJS primitives. It is the fastest path to a working Client for development, tests,
  * and single-process demos where no external persistence is needed.
  *
- * Unlike createLibsqlClientOptions and createDenokvClientOptions, there is no synchronization layer — all data exists
+ * Unlike createLibsqlAdapter and createDenokvAdapter, there is no synchronization layer — all data exists
  * transiently in the N3 Store and is lost when the process exits.
  */
-export function createRdfjsClientOptions(
+export function createRdfjsAdapter(
   options?: RdfjsOptions,
-): ClientOptions {
+): Adapter {
   const store = options?.store ?? new Store();
 
   return {

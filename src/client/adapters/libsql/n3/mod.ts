@@ -1,1 +1,1 @@
-export * from "./create-libsql-n3-client.ts";
+export * from "./create-libsql-n3-adapter.ts";

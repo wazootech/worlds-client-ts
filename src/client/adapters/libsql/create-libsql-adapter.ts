@@ -1,6 +1,6 @@
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
-import type { ClientOptions } from "@/client/client.ts";
+import type { Adapter } from "@/client/client.ts";
 import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
 import { RdfjsQuadStore } from "@/client/adapters/rdfjs/mod.ts";
 
@@ -33,11 +33,11 @@ export interface LibsqlOptions extends LibsqlClientBaseOptions {
 }
 
 /**
- * createLibsqlClientOptions synthesizes ClientOptions for direct LibsqlStore + hexastore indexes.
+ * createLibsqlAdapter synthesizes a Adapter for direct LibsqlStore + hexastore indexes.
  */
-export async function createLibsqlClientOptions(
+export async function createLibsqlAdapter(
   options: LibsqlOptions,
-): Promise<ClientOptions> {
+): Promise<Adapter> {
   assertLibsqlClientIndexingOptions(options);
 
   const vectorDimensions = options.vectorDimensions ?? 32;

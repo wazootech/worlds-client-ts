@@ -134,8 +134,8 @@ Never use parent-relative `../` to reach another domain. Never import
 - ✅ `@/client/quad-store/mod.ts`, `@/client/sparql-engine/mod.ts`,
   `@/client/adapters/rdfjs/mod.ts` (from `adapters/libsql/`)
 - ✅ `@/client/quad-store/mod.ts` (from `search-index/quad-chunker/`)
-- ✅ `import { Client, type ClientOptions } from "@/client/client.ts"` (adapter
-  factories — not `@/mod.ts`, avoids root barrel cycles)
+- ✅ `import { Client } from "@/client/client.ts"` (adapter factories — not
+  `@/mod.ts`, avoids root barrel cycles)
 - ✅ `@/client/adapters/libsql/mod.ts` (from `adapters/libsql/n3/`)
 - ✅ `./string-to-chars.ts` (from `tokenizer/tokenizer.ts`)
 - ✅ `./client.ts`, `./adapters/rdfjs/mod.ts` (from `src/client/client.test.ts`)
@@ -317,35 +317,34 @@ network hop latency during query execution.
 Hexastore indexes are provisioned at schema init for all LibSQL clients. Use
 separate modules so hexastore deployments do not import N3 hydration:
 
-- **`createLibsqlClientOptions`**
-  ([`create-libsql-client.ts`](src/client/adapters/libsql/create-libsql-client.ts))
+- **`createLibsqlAdapter`**
+  ([`create-libsql-adapter.ts`](src/client/adapters/libsql/create-libsql-adapter.ts))
   — `LibsqlStore` + hexastore indexes; `createSparqlEngine({ libsqlStore })`.
   `LibsqlStore.match` keyset-pages by `quads.id` (`matchPageSize`, default
   1000). Optional `countQuads` supplies Comunica join cardinality hints. Wrap
-  with `new Client(await createLibsqlClientOptions(...))`.
-- **`createLibsqlN3ClientOptions`** — import `@worlds/client/adapters/libsql/n3`
-  ([`n3/create-libsql-n3-client.ts`](src/client/adapters/libsql/n3/create-libsql-n3-client.ts));
+  with `new Client(await createLibsqlAdapter(...))`.
+- **`createLibsqlN3Adapter`** — import `@worlds/client/adapters/libsql/n3`
+  ([`n3/create-libsql-n3-adapter.ts`](src/client/adapters/libsql/n3/create-libsql-n3-adapter.ts));
   hydrate → `proxyStore` → sync patches to LibSQL;
   `createSparqlEngine({ store })` receives proxied N3. Not re-exported from
   `@worlds/client/adapters/libsql` (keeps hexastore-only imports free of N3).
 
 ### Client lifecycle (runtime)
 
-Canonical construction: `new Client(await createXClientOptions(...))`. Do not
+Canonical construction: `new Client(await createXAdapter(...))`. Do not
 reintroduce `createXClient` one-line wrappers.
 
 For standard Comunica SPARQL, pass `createComunicaSparqlEngineFactory` or
 `createComunicaLibsqlSparqlEngineFactory` from
 `@worlds/client/adapters/comunica` as the adapter's `createSparqlEngine` option.
 
-- **Serverless / edge (warm isolate):** build `ClientOptions` or `Client` once
-  in module scope per isolate; reuse across HTTP requests. See
+- **Serverless / edge (warm isolate):** build `Adapter` or `Client` once in
+  module scope per isolate; reuse across HTTP requests. See
   [`examples/libsql-n3-warm-container`](examples/libsql-n3-warm-container).
 - **Long-running (Fly.io, DigitalOcean, 24/7 Deno):** one `Client` at process
   boot. See [`examples/libsql-long-running`](examples/libsql-long-running).
-- When reusing a warmed N3 `store`, do **not** call
-  `createLibsqlN3ClientOptions` on every request — that rebuilds proxy, search
-  index, and patch sync.
+- When reusing a warmed N3 `store`, do **not** call `createLibsqlN3Adapter` on
+  every request — that rebuilds proxy, search index, and patch sync.
 
 Use `benchmarks/sparql-hexastore-crossover.bench.ts`,
 [`benchmarks/README.md`](benchmarks/README.md), and
@@ -369,18 +368,18 @@ trivial container-level caching across sequential HTTP invocations.
 ### Sterile orchestration via adapters
 
 All active instrumentation (proxies, observers, and transactional mutation
-queues) is isolated strictly inside adapters (e.g. `createLibsqlClientOptions`).
-The generalized `Client` is kept completely agnostic and sterile, accepting
+queues) is isolated strictly inside adapters (e.g. `createLibsqlAdapter`). The
+generalized `Client` is kept completely agnostic and sterile, accepting
 pre-composed adapter options ready for constructor injection.
 
 ### Production deployment recommendation
 
 For production deployments and scale, the recommended topology is LibSQL-backed
-infrastructure through `createLibsqlClientOptions` + `Client`, especially Turso
-Cloud. RDFJS-backed and Deno KV-backed search/index topologies, including
-deployments centered on `RdfjsSearchIndex` and `DenokvSearchIndex`, are
-appropriate for local development, tests, and constrained single-process demos,
-but they are not the recommended production path.
+infrastructure through `createLibsqlAdapter` + `Client`, especially Turso Cloud.
+RDFJS-backed and Deno KV-backed search/index topologies, including deployments
+centered on `RdfjsSearchIndex` and `DenokvSearchIndex`, are appropriate for
+local development, tests, and constrained single-process demos, but they are not
+the recommended production path.
 
 ### Resilient hybrid search with vectorless fallbacks
 
@@ -413,3 +412,164 @@ rank positions blended with a standard smoothing constant ($k = 60$).
 The system enforces stable, canonical, URL-safe base64 identifiers computed via
 `hashQuad` for all search results and database synchronizer records. This
 secures precise, duplicate-free idempotency checks and stable ranking sweeps.
+
+## Agent prompt contract
+
+This section defines the canonical interaction pattern for AI agents consuming
+the `Client` API via tools. Agents use **hybrid search** to discover subject
+IRIs, then **SPARQL** to traverse and reason over the graph.
+
+### Hybrid search retrieval modes
+
+The search index supports three retrieval topologies:
+
+- **Hybrid (fused)**: vector cosine similarity + keyword BM25 blended via
+  Reciprocal Rank Fusion (RRF, $k = 60$). Default when an embedding service is
+  configured.
+- **Keyword-only**: FTS5 full-text search over `chunks.fts_value`. Active when
+  no embedding service is provided, or as automatic graceful degradation when
+  the embedding service is unreachable.
+- **Semantic-only**: vector similarity search without keyword scoring. Available
+  when embeddings are configured but FTS is not needed.
+
+Agents MUST NOT assume which retrieval mode is active. Results always return
+`subject`, `predicate`, and `text` regardless of mode.
+
+### Search-then-SPARQL multi-hop pattern
+
+1. Call **search** with an exact label or keyword. Use `subject` (and
+   `predicate` when helpful) from results for SPARQL bindings. Do not use `text`
+   alone as a query binding.
+2. Call **SPARQL** for traversal. Start with
+   `SELECT ?p ?o WHERE { <uri> ?p ?o }` to inspect a resource before targeted
+   queries.
+3. Final answers use **exact literals from SPARQL bindings**. Say "not found"
+   instead of guessing.
+4. Stop tooling once the requested literal appears in bindings.
+
+### Search index internals
+
+- `chunks.value`: the object literal returned as `SearchResult.text`.
+- `chunks.fts_value`: subject local name, predicate phrase, literal, and
+  configured label aliases (for FTS indexing and vector embedding).
+- Vectors embed a deduplicated union of `fts_value` and `value` per chunk, keyed
+  by `fts_value`.
+- Search discovers subject IRIs; SPARQL disambiguates.
+
+### Label predicates
+
+Built-in label predicates (`rdfs:label`, `skos:prefLabel`, `schema:name`) are
+always indexed. Extend with `labelPredicates` on adapter options:
+
+```typescript
+await createLibsqlAdapter({
+  client: db,
+  labelPredicates: ["http://example.org/customLabel"],
+});
+```
+
+Label predicate commits fan out automatically; sibling fact rows pick up new
+alias tokens in `fts_value`.
+
+### Search index maintenance
+
+After a schema upgrade or bulk ontology import, rebuild all search chunks:
+
+```typescript
+await client.rebuildSearchIndex({
+  quadFilter: { include: { graphs: ["http://example.org/ontology"] } },
+});
+```
+
+After renaming an entity, refresh chunks for affected subjects:
+
+```typescript
+import { refreshSearchChunksForSubjects } from "@worlds/client/adapters/libsql";
+
+await refreshSearchChunksForSubjects(["http://example.org/Aurelia"], {
+  client: db,
+  textSplitter,
+  libsqlQueryBuilder,
+  embeddingService,
+});
+```
+
+Advanced: `rebuildLibsqlSearchIndexFromQuads` in
+`@worlds/client/adapters/libsql` remains available without a `Client` instance.
+
+### Alignment with eval harness
+
+Keep AI tool descriptions and system prompts aligned with
+[worlds-client-evals](https://github.com/wazootech/worlds-client-evals)
+(`src/tools/create-eval-tools.ts`, `eval-agent-system-prompt.ts`) and
+`examples/ai-sdk-hello-world/agent-prompts.ts`.
+
+## Scale and topology guidance
+
+### Choosing a LibSQL topology
+
+Both options builders provision hexastore indexes at schema init. Pick by how
+much graph you mirror in memory and how you run SPARQL.
+
+| Options builder         | Module                              | When to use                                                                                                                  |
+| :---------------------- | :---------------------------------- | :--------------------------------------------------------------------------------------------------------------------------- |
+| `createLibsqlAdapter`   | `@worlds/client/adapters/libsql`    | **Production and large graphs.** SPARQL runs on `LibsqlStore` (hexastore). No full N3 hydration per request.                 |
+| `createLibsqlN3Adapter` | `@worlds/client/adapters/libsql/n3` | **Selective workloads** where hydrating into N3 is acceptable. Reuse one warmed `store` per container, not per HTTP request. |
+
+Post-preload benchmarks (1k-50k quads) show hydrate+N3 can win selective queries
+when the graph is already in memory; libsqlStore avoids full hydration cost and
+is the better default as graphs grow. Avoid unbound full-graph scans at
+production scale.
+
+### SPARQL query shape at scale
+
+At millions of quads, pick the topology at integration time.
+
+| Concern         | Production default                                                                                                               |
+| :-------------- | :------------------------------------------------------------------------------------------------------------------------------- |
+| LibSQL topology | `createLibsqlAdapter` with hexastore `LibsqlStore`, no full N3 mirror per request                                                |
+| Hot-path SPARQL | Bind at least one term (subject, predicate, or object). Subject-bound property lookups match crossover selective shapes          |
+| Avoid at scale  | Unbound `?s ?p ?o` (even with `LIMIT`) on libsqlStore; fullScan degrades to hundreds of ms as quads grow                         |
+| N3 + Comunica   | `createLibsqlN3Adapter` only when you need in-memory N3; pass a warmed `store` hydrated once per container, not per HTTP request |
+| Cardinality     | `LibsqlStore.countQuads` is used by Comunica when hexastore SPARQL is wired (no extra adapter config)                            |
+
+Query helpers (same shapes as benchmarks):
+
+```typescript
+import {
+  createCappedUnboundTriplePatternSparqlQuery,
+  createSubjectBoundPropertiesSparqlQuery,
+} from "@worlds/client/adapters/libsql";
+
+const selectiveQuery = createSubjectBoundPropertiesSparqlQuery("urn:entity:0");
+const devScanQuery = createCappedUnboundTriplePatternSparqlQuery(100);
+```
+
+### Warm container patterns
+
+- **Serverless / edge (warm isolate):** build `Adapter` or `Client` once in
+  module scope per isolate; reuse across HTTP requests.
+- **Long-running (Fly.io, DigitalOcean, 24/7 Deno):** one `Client` at process
+  boot.
+- When reusing a warmed N3 `store`, do **not** call `createLibsqlN3Adapter` on
+  every request; that rebuilds proxy, search index, and patch sync.
+
+### Bulk import strategies
+
+| Flag                             | Behavior                                                                                         |
+| :------------------------------- | :----------------------------------------------------------------------------------------------- |
+| `searchIndexOnImport: false`     | Skips chunk/FTS projection on every commit. Call `client.rebuildSearchIndex()` before searching. |
+| `deferSearchIndexOnImport: true` | Persists quads on each import, rebuilds FTS/vector chunks afterward via `rebuildSearchIndex`.    |
+
+These flags cannot be combined. Use for SPARQL-only bulk loads or large initial
+imports where indexing can happen once at the end.
+
+### Benchmark references
+
+- Canonical crossover write-up:
+  [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69)
+- Local numbers and methodology: [`benchmarks/README.md`](benchmarks/README.md)
+- Scale roadmap (millions of quads):
+  [#68](https://github.com/wazootech/worlds-client-ts/issues/68)
+- Earlier crossover context:
+  [discussion #45](https://github.com/wazootech/worlds-client-ts/discussions/45)

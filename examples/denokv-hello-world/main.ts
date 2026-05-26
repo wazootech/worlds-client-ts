@@ -1,10 +1,10 @@
 import { Client } from "@worlds/client";
 import { createComunicaSparqlEngineFactory } from "@worlds/client/adapters/comunica";
-import { createDenokvClientOptions } from "@worlds/client/adapters/denokv";
+import { createDenokvAdapter } from "@worlds/client/adapters/denokv";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
 /**
- * This example demonstrates how to use `createDenokvClientOptions` for persistent, durable
+ * This example demonstrates how to use `createDenokvAdapter` for persistent, durable
  * storage of RDF graph context, combined with stateless serverless search and query execution.
  */
 if (import.meta.main) {
@@ -14,7 +14,7 @@ if (import.meta.main) {
 
   console.log("🧠 Provisioning unified Deno Kv sync engine...");
   const client = new Client(
-    createDenokvClientOptions({
+    createDenokvAdapter({
       kv,
       createSparqlEngine: createComunicaSparqlEngineFactory({ queryEngine }),
     }),

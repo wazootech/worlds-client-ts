@@ -1,7 +1,7 @@
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { Store } from "n3";
 
-import type { ClientOptions } from "@/client/client.ts";
+import type { Adapter } from "@/client/client.ts";
 import type { Patch } from "@/client/quad-store/mod.ts";
 import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
 import { proxyStore } from "@/client/adapters/rdfjs/n3/mod.ts";
@@ -40,11 +40,11 @@ export interface LibsqlN3Options extends LibsqlClientBaseOptions {
 }
 
 /**
- * createLibsqlN3ClientOptions synthesizes ClientOptions for the hydrate → proxyStore → LibSQL sync path.
+ * createLibsqlN3Adapter synthesizes a Adapter for the hydrate → proxyStore → LibSQL sync path.
  */
-export async function createLibsqlN3ClientOptions(
+export async function createLibsqlN3Adapter(
   options: LibsqlN3Options,
-): Promise<ClientOptions> {
+): Promise<Adapter> {
   assertLibsqlClientIndexingOptions(options);
 
   const vectorDimensions = options.vectorDimensions ?? 32;

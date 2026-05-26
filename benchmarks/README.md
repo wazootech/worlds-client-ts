@@ -45,9 +45,9 @@ deno bench --allow-all --unstable-kv benchmarks/
 deno bench --allow-all benchmarks/sparql-hexastore-crossover.bench.ts
 ```
 
-**Standard (1k–50k):** compares **hydrate+N3** (`createLibsqlN3ClientOptions`
-from `@worlds/client/adapters/libsql/n3`) vs **libsqlStore**
-(`createLibsqlClientOptions` from `@worlds/client/adapters/libsql`).
+**Standard (1k–50k):** compares **hydrate+N3** (`createLibsqlN3Adapter` from
+`@worlds/client/adapters/libsql/n3`) vs **libsqlStore** (`createLibsqlAdapter`
+from `@worlds/client/adapters/libsql`).
 
 **Large (100k–1M):** **libsqlStore only** — the scalable LibSQL path for hybrid
 search + SPARQL in production
@@ -130,10 +130,10 @@ create a fresh database per iteration and use `warmup: 5`, `n: 50`.
   ```
 
 **Production (millions of quads):** prefer
-[`createLibsqlClientOptions`](../src/client/adapters/libsql/create-libsql-client.ts)
+[`createLibsqlAdapter`](../src/client/adapters/libsql/create-libsql-adapter.ts)
 for indexed SPARQL without a full N3 mirror; reuse a warmed
-[`store`](../src/client/adapters/libsql/n3/create-libsql-n3-client.ts) on the N3
-path per container, not per request. Track guidance in
+[`store`](../src/client/adapters/libsql/n3/create-libsql-n3-adapter.ts) on the
+N3 path per container, not per request. Track guidance in
 [#68](https://github.com/wazootech/worlds-client-ts/issues/68).
 
 Baselines in the **pre-preload** table (below) are **not** directly comparable

@@ -1,5 +1,5 @@
 import { Store } from "n3";
-import type { ClientOptions } from "@/client/client.ts";
+import type { Adapter } from "@/client/client.ts";
 import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
 import { DenokvSearchIndex } from "./denokv-search-index.ts";
 import type { DenokvQuadStoreOptions } from "./denokv-quad-store.ts";
@@ -24,14 +24,14 @@ export interface DenokvOptions extends DenokvQuadStoreOptions {
 }
 
 /**
- * createDenokvClientOptions synthesizes a client gateway context designed explicitly for
+ * createDenokvAdapter synthesizes a client adapter designed explicitly for
  * stateless, per-operation execution. It leverages a lazy, transient hydration
  * pipeline that fetches fresh durable quads on-demand, providing strong data
  * consistency without requiring long-lived memory store residency.
  */
-export function createDenokvClientOptions(
+export function createDenokvAdapter(
   options: DenokvOptions,
-): ClientOptions {
+): Adapter {
   const quadStore = new DenokvQuadStore(options);
 
   /**

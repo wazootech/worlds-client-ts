@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased
+
+### Breaking
+
+- Renamed `ClientOptions` to `Adapter`. The interface describes the composed
+  adapter bridging platform-specific infrastructure to the generic `Client`, not
+  passive configuration.
+- Renamed all adapter factory functions to match:
+  - `createRdfjsClientOptions` -> `createRdfjsAdapter`
+  - `createLibsqlClientOptions` -> `createLibsqlAdapter`
+  - `createLibsqlN3ClientOptions` -> `createLibsqlN3Adapter`
+  - `createDenokvClientOptions` -> `createDenokvAdapter`
+- Factory source files renamed for file-symbol alignment (e.g.
+  `create-libsql-client.ts` -> `create-libsql-adapter.ts`).
+
+### Migration
+
+```typescript
+// Before
+const client = new Client(await createLibsqlClientOptions({ client: db }));
+
+// After
+const client = new Client(await createLibsqlAdapter({ client: db }));
+```
+
 ## 0.0.14
 
 ### Added
