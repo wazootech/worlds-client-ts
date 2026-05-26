@@ -1,5 +1,5 @@
 import { Client } from "@worlds/client";
-import { createDenokvClientOptions } from "@worlds/client/adapters/denokv";
+import { createDenokvAdapter } from "@worlds/client/adapters/denokv";
 import { generateSyntheticQuads } from "./shared/synthetic-data.ts";
 
 // Pre-allocated payloads for strict repeatable boundaries
@@ -19,8 +19,8 @@ async function setupIsolatedClient(): Promise<{
   kv: Deno.Kv;
 }> {
   const kv = await Deno.openKv(":memory:");
-  const clientOptions = createDenokvClientOptions({ kv });
-  const client = new Client(clientOptions);
+  const adapter = createDenokvAdapter({ kv });
+  const client = new Client(adapter);
   return { client, kv };
 }
 

@@ -6,7 +6,7 @@ import {
   hydrateStoreFromLibsql,
 } from "@worlds/client/adapters/libsql";
 import { Client } from "@worlds/client";
-import { createLibsqlN3ClientOptions } from "@worlds/client/adapters/libsql/n3";
+import { createLibsqlN3Adapter } from "@worlds/client/adapters/libsql/n3";
 import { DataFactory, Store } from "n3";
 
 const { quad, namedNode, literal } = DataFactory;
@@ -22,7 +22,7 @@ let warmIsolateClient: Client | undefined;
 
 async function getWarmIsolateClient(warmedStore: Store): Promise<Client> {
   warmIsolateClient ??= new Client(
-    await createLibsqlN3ClientOptions({
+    await createLibsqlN3Adapter({
       client: databaseClient,
       store: warmedStore,
       createSparqlEngine: createComunicaSparqlEngineFactory({ queryEngine }),
@@ -33,7 +33,7 @@ async function getWarmIsolateClient(warmedStore: Store): Promise<Client> {
 
 if (import.meta.main) {
   const bootClient = new Client(
-    await createLibsqlN3ClientOptions({ client: databaseClient }),
+    await createLibsqlN3Adapter({ client: databaseClient }),
   );
   await bootClient.import({
     source: {

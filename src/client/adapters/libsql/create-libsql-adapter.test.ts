@@ -4,7 +4,7 @@ import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory } from "n3";
 import { Client } from "@/client/client.ts";
 import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
-import { createLibsqlClientOptions } from "./create-libsql-client.ts";
+import { createLibsqlAdapter } from "./create-libsql-adapter.ts";
 import type { LibsqlStore } from "./libsql-store.ts";
 
 const { quad, namedNode, literal } = DataFactory;
@@ -22,12 +22,12 @@ const expectedHexastoreIndexNames = [
 ] as const;
 
 Deno.test(
-  "createLibsqlClientOptions - createSparqlEngine receives LibsqlStore",
+  "createLibsqlAdapter - createSparqlEngine receives LibsqlStore",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
     let receivedLibsqlStore: LibsqlStore | undefined;
 
-    await createLibsqlClientOptions({
+    await createLibsqlAdapter({
       client: databaseClient,
       createSparqlEngine: ({ libsqlStore }) => {
         receivedLibsqlStore = libsqlStore;
@@ -42,12 +42,12 @@ Deno.test(
 );
 
 Deno.test(
-  "createLibsqlClientOptions - import persists quads readable via SPARQL",
+  "createLibsqlAdapter - import persists quads readable via SPARQL",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
 
     const client = new Client(
-      await createLibsqlClientOptions({
+      await createLibsqlAdapter({
         client: databaseClient,
         createSparqlEngine: ({ libsqlStore }) =>
           new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
@@ -81,11 +81,11 @@ Deno.test(
 );
 
 Deno.test(
-  "createLibsqlClientOptions - initializeSchema provisions all hexastore indexes",
+  "createLibsqlAdapter - initializeSchema provisions all hexastore indexes",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
 
-    await createLibsqlClientOptions({ client: databaseClient });
+    await createLibsqlAdapter({ client: databaseClient });
 
     const indexResultSet = await databaseClient.execute(
       "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'quads'",
@@ -99,19 +99,19 @@ Deno.test(
       );
     }
 
-    await createLibsqlClientOptions({ client: databaseClient });
+    await createLibsqlAdapter({ client: databaseClient });
 
     databaseClient.close();
   },
 );
 
 Deno.test(
-  "createLibsqlClientOptions - searchIndexOnImport false skips chunks and search stays empty",
+  "createLibsqlAdapter - searchIndexOnImport false skips chunks and search stays empty",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
 
     const client = new Client(
-      await createLibsqlClientOptions({
+      await createLibsqlAdapter({
         client: databaseClient,
         searchIndexOnImport: false,
         createSparqlEngine: ({ libsqlStore }) =>
@@ -155,12 +155,12 @@ Deno.test(
 );
 
 Deno.test(
-  "createLibsqlClientOptions - rebuildSearchIndex after searchIndexOnImport false enables search",
+  "createLibsqlAdapter - rebuildSearchIndex after searchIndexOnImport false enables search",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
 
     const client = new Client(
-      await createLibsqlClientOptions({
+      await createLibsqlAdapter({
         client: databaseClient,
         searchIndexOnImport: false,
         createSparqlEngine: ({ libsqlStore }) =>
@@ -205,14 +205,14 @@ Deno.test(
 );
 
 Deno.test(
-  "createLibsqlClientOptions - rebuildSearchIndex quadFilter scopes indexed graphs",
+  "createLibsqlAdapter - rebuildSearchIndex quadFilter scopes indexed graphs",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
     const graphAlpha = namedNode("urn:graph:alpha");
     const graphBeta = namedNode("urn:graph:beta");
 
     const client = new Client(
-      await createLibsqlClientOptions({
+      await createLibsqlAdapter({
         client: databaseClient,
         searchIndexOnImport: false,
         createSparqlEngine: ({ libsqlStore }) =>
@@ -255,12 +255,12 @@ Deno.test(
 );
 
 Deno.test(
-  "createLibsqlClientOptions - rebuildSearchIndex is idempotent on second run",
+  "createLibsqlAdapter - rebuildSearchIndex is idempotent on second run",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
 
     const client = new Client(
-      await createLibsqlClientOptions({
+      await createLibsqlAdapter({
         client: databaseClient,
         searchIndexOnImport: false,
         createSparqlEngine: ({ libsqlStore }) =>
@@ -299,13 +299,13 @@ Deno.test(
 );
 
 Deno.test(
-  "createLibsqlClientOptions - searchIndexOnImport false rejects deferSearchIndexOnImport",
+  "createLibsqlAdapter - searchIndexOnImport false rejects deferSearchIndexOnImport",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
 
     await assertRejects(
       () =>
-        createLibsqlClientOptions({
+        createLibsqlAdapter({
           client: databaseClient,
           searchIndexOnImport: false,
           deferSearchIndexOnImport: true,

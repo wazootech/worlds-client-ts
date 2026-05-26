@@ -1,7 +1,7 @@
 import { createClient } from "@libsql/client";
 import { Client } from "@worlds/client";
 import { createComunicaLibsqlSparqlEngineFactory } from "@worlds/client/adapters/comunica";
-import { createLibsqlClientOptions } from "@worlds/client/adapters/libsql";
+import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { GRAPH_GROUNDED_AGENT_SYSTEM_PROMPT } from "./agent-prompts.ts";
 import { createTools } from "./tools.ts";
@@ -16,7 +16,7 @@ if (import.meta.main) {
   const queryEngine = new QueryEngine();
 
   const client = new Client(
-    await createLibsqlClientOptions({
+    await createLibsqlAdapter({
       client: database,
       createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
         queryEngine,

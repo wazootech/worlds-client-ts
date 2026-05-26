@@ -3,15 +3,15 @@ import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory, Store } from "n3";
 import { Client } from "@/client/client.ts";
 import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
-import { createRdfjsClientOptions } from "./create-rdfjs-client.ts";
+import { createRdfjsAdapter } from "./create-rdfjs-adapter.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 const queryEngine = new QueryEngine();
 
 Deno.test(
-  "createRdfjsClientOptions - import delivers immediate search hits",
+  "createRdfjsAdapter - import delivers immediate search hits",
   async () => {
-    const client = new Client(createRdfjsClientOptions());
+    const client = new Client(createRdfjsAdapter());
     const testQuad = quad(
       namedNode("http://example.com/sub"),
       namedNode("http://example.com/pred"),
@@ -27,7 +27,7 @@ Deno.test(
 );
 
 Deno.test(
-  "createRdfjsClientOptions - preloaded store is shared with the client",
+  "createRdfjsAdapter - preloaded store is shared with the client",
   async () => {
     const store = new Store();
     store.addQuad(
@@ -36,7 +36,7 @@ Deno.test(
       literal("Preloaded fact."),
     );
 
-    const client = new Client(createRdfjsClientOptions({ store }));
+    const client = new Client(createRdfjsAdapter({ store }));
 
     const response = await client.search({ query: "preloaded" });
     assertEquals(response.results?.length, 1);
@@ -45,10 +45,10 @@ Deno.test(
 );
 
 Deno.test(
-  "createRdfjsClientOptions - createSparqlEngine enables SELECT queries",
+  "createRdfjsAdapter - createSparqlEngine enables SELECT queries",
   async () => {
     const client = new Client(
-      createRdfjsClientOptions({
+      createRdfjsAdapter({
         createSparqlEngine: ({ store }) =>
           new ComunicaSparqlEngine({ queryEngine, store }),
       }),
@@ -81,9 +81,9 @@ Deno.test(
 );
 
 Deno.test(
-  "createRdfjsClientOptions - rebuildSearchIndex rejects on non-LibSQL topology",
+  "createRdfjsAdapter - rebuildSearchIndex rejects on non-LibSQL topology",
   async () => {
-    const client = new Client(createRdfjsClientOptions());
+    const client = new Client(createRdfjsAdapter());
 
     await assertRejects(
       () => client.rebuildSearchIndex(),
@@ -94,9 +94,9 @@ Deno.test(
 );
 
 Deno.test(
-  "createRdfjsClientOptions - sparql rejects when createSparqlEngine is omitted",
+  "createRdfjsAdapter - sparql rejects when createSparqlEngine is omitted",
   async () => {
-    const client = new Client(createRdfjsClientOptions());
+    const client = new Client(createRdfjsAdapter());
 
     await assertRejects(
       () => client.sparql({ query: "ASK WHERE { ?s ?p ?o }" }),

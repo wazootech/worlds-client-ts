@@ -2,7 +2,7 @@ import { createClient } from "@libsql/client";
 import { createComunicaLibsqlSparqlEngineFactory } from "@worlds/client/adapters/comunica";
 import { Client } from "@worlds/client";
 import {
-  createLibsqlClientOptions,
+  createLibsqlAdapter,
   createSubjectBoundPropertiesSparqlQuery,
 } from "@worlds/client/adapters/libsql";
 import { UniversalSentenceEncoderEmbeddingService } from "@worlds/client/adapters/tfjs-universal-sentence-encoder";
@@ -56,7 +56,7 @@ if (import.meta.main) {
 
   console.log("Provisioning hexastore client (process lifetime)...");
   const client = new Client(
-    await createLibsqlClientOptions({
+    await createLibsqlAdapter({
       client: databaseClient,
       embeddingService,
       vectorDimensions: USE_LITE_VECTOR_DIMENSIONS,

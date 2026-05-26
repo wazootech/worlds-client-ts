@@ -4,7 +4,7 @@ import { Client } from "@worlds/client";
 import { createComunicaLibsqlSparqlEngineFactory } from "@worlds/client/adapters/comunica";
 import {
   createCappedUnboundTriplePatternSparqlQuery,
-  createLibsqlClientOptions,
+  createLibsqlAdapter,
   createSubjectBoundPropertiesSparqlQuery,
 } from "@worlds/client/adapters/libsql";
 import { DataFactory } from "n3";
@@ -23,7 +23,7 @@ if (import.meta.main) {
   const queryEngine = new QueryEngine();
 
   const client = new Client(
-    await createLibsqlClientOptions({
+    await createLibsqlAdapter({
       client: databaseClient,
       createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
         queryEngine,

@@ -6,8 +6,8 @@ import {
   createComunicaLibsqlSparqlEngineFactory,
   createComunicaSparqlEngineFactory,
 } from "@worlds/client/adapters/comunica";
-import { createLibsqlClientOptions } from "@worlds/client/adapters/libsql";
-import { createLibsqlN3ClientOptions } from "@worlds/client/adapters/libsql/n3";
+import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
+import { createLibsqlN3Adapter } from "@worlds/client/adapters/libsql/n3";
 import type { SparqlEngineInterface } from "@worlds/client/sparql-engine";
 import {
   buildCrossoverFixtureChecksumInputs,
@@ -101,11 +101,11 @@ async function importCorpusIntoLibsqlHexastore(
   databaseClient: ReturnType<typeof createClient>,
   corpusQuads: Quad[],
 ): Promise<void> {
-  const clientOptions = await createLibsqlClientOptions({
+  const adapter = await createLibsqlAdapter({
     client: databaseClient,
     searchIndexOnImport: false,
   });
-  const worldsClient = new Client(clientOptions);
+  const worldsClient = new Client(adapter);
   await worldsClient.import({
     source: { kind: "quads", quads: corpusQuads },
   });
@@ -117,17 +117,17 @@ async function importCorpusIntoLibsqlHexastore(
 async function openLibsqlHexastoreSparqlEngine(
   databaseClient: ReturnType<typeof createClient>,
 ): Promise<PreloadedSparqlFixture> {
-  const clientOptions = await createLibsqlClientOptions({
+  const adapter = await createLibsqlAdapter({
     client: databaseClient,
     searchIndexOnImport: false,
     createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
       queryEngine: sharedQueryEngine,
     }),
   });
-  if (!clientOptions.sparqlEngine) {
+  if (!adapter.sparqlEngine) {
     throw new Error("libsqlStore bench requires createSparqlEngine");
   }
-  return { databaseClient, sparqlEngine: clientOptions.sparqlEngine };
+  return { databaseClient, sparqlEngine: adapter.sparqlEngine };
 }
 
 /**
@@ -186,21 +186,21 @@ async function createHydrateN3SparqlEngine(
   corpusQuads: Quad[],
 ): Promise<PreloadedSparqlFixture> {
   const databaseClient = createClient({ url: ":memory:" });
-  const clientOptions = await createLibsqlN3ClientOptions({
+  const adapter = await createLibsqlN3Adapter({
     client: databaseClient,
     searchIndexOnImport: false,
     createSparqlEngine: createComunicaSparqlEngineFactory({
       queryEngine: sharedQueryEngine,
     }),
   });
-  const worldsClient = new Client(clientOptions);
+  const worldsClient = new Client(adapter);
   await worldsClient.import({
     source: { kind: "quads", quads: corpusQuads },
   });
-  if (!clientOptions.sparqlEngine) {
+  if (!adapter.sparqlEngine) {
     throw new Error("hydrate+N3 bench requires createSparqlEngine");
   }
-  return { databaseClient, sparqlEngine: clientOptions.sparqlEngine };
+  return { databaseClient, sparqlEngine: adapter.sparqlEngine };
 }
 
 async function createSparqlEngineForBackend(

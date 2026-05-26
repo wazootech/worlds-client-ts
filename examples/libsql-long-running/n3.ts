@@ -3,7 +3,7 @@ import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { createComunicaSparqlEngineFactory } from "@worlds/client/adapters/comunica";
 import { createSubjectBoundPropertiesSparqlQuery } from "@worlds/client/adapters/libsql";
 import { Client } from "@worlds/client";
-import { createLibsqlN3ClientOptions } from "@worlds/client/adapters/libsql/n3";
+import { createLibsqlN3Adapter } from "@worlds/client/adapters/libsql/n3";
 import { DataFactory } from "n3";
 
 const { quad, namedNode, literal } = DataFactory;
@@ -23,7 +23,7 @@ if (import.meta.main) {
     "Boot: hydrate LibSQL into N3 and wire client (process lifetime)...",
   );
   const client = new Client(
-    await createLibsqlN3ClientOptions({
+    await createLibsqlN3Adapter({
       client: databaseClient,
       createSparqlEngine: createComunicaSparqlEngineFactory({ queryEngine }),
     }),

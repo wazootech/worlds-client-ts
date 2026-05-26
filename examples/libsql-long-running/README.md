@@ -1,8 +1,8 @@
 # LibSQL long-running service
 
 For **Fly.io**, **DigitalOcean App Platform**, and other **24/7** Deno/Node
-processes: build `ClientOptions` once at boot and hold one `Client` for the
-process lifetime.
+processes: build a `Adapter` once at boot and hold one `Client` for the process
+lifetime.
 
 | Entry          | Topology                                     | Command                                           |
 | :------------- | :------------------------------------------- | :------------------------------------------------ |
