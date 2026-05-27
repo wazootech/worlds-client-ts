@@ -2,6 +2,62 @@
 
 ## Unreleased
 
+## 0.0.16
+
+### Breaking
+
+- Removed exported `Adapter` interface. `Client` is the sole public runtime
+  type; factories return `Client` directly.
+- Restored `createLibsqlClient`, `createLibsqlN3Client`, `createRdfjsClient`,
+  and `createDenokvClient` as canonical factory names. `createXAdapter` remains
+  as a deprecated alias (removed in 0.0.17).
+- Renamed `SparqlEngineInterface.execute` to `sparql` (aligns with
+  `ClientInterface.sparql`).
+- Removed `createSparqlEngine` from `createLibsqlN3Client`. Use
+  `createLibsqlN3ComunicaClient` from
+  `@worlds/client/adapters/libsql-n3/comunica` for Comunica SPARQL; pass a
+  warmed `store` to control hydration timing.
+
+### Migration
+
+```typescript
+// Before (0.0.15)
+import { Client } from "@worlds/client";
+import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
+
+const client = new Client(
+  await createLibsqlAdapter({ client: db }),
+);
+
+// After (0.0.16)
+import { createLibsqlClient } from "@worlds/client/adapters/libsql";
+
+const client = await createLibsqlClient({ client: db });
+```
+
+Advanced composition (tests, custom stores):
+
+```typescript
+import { Client } from "@worlds/client";
+
+const client = new Client(quadStore, searchIndex, sparqlEngine);
+```
+
+LibSQL N3 + Comunica:
+
+```typescript
+// Before
+await createLibsqlN3Client({
+  client: db,
+  createSparqlEngine: createComunicaSparqlEngineFactory({ queryEngine }),
+});
+
+// After
+import { createLibsqlN3ComunicaClient } from "@worlds/client/adapters/libsql-n3/comunica";
+
+await createLibsqlN3ComunicaClient({ client: db, queryEngine });
+```
+
 ## 0.0.15
 
 ### Breaking

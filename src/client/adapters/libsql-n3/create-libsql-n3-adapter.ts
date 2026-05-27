@@ -1,9 +1,13 @@
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { Store } from "n3";
 
-import type { Adapter } from "@/client/client.ts";
+import { Client } from "@/client/client.ts";
+import type { ExportRequest, ImportRequest } from "@/client/quad-store/mod.ts";
 import { mergePatches } from "@/client/quad-store/mod.ts";
-import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
+import type {
+  SparqlEngineInterface,
+  SparqlRequest,
+} from "@/client/sparql-engine/mod.ts";
 import { createProxiedN3Store } from "@/client/quad-store/n3/mod.ts";
 import { RdfjsQuadStore } from "@/client/adapters/rdfjs/mod.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/mod.ts";
@@ -21,19 +25,23 @@ import { hydrateStoreFromLibsql } from "./hydrate-store-from-libsql.ts";
 export interface LibsqlN3AdapterOptions extends LibsqlClientBaseOptions {
   /** store is an optional starting store, useful for serverless environments where the store is already initialized. */
   store?: Store;
-
-  /** createSparqlEngine optionally attaches a caller-provided SPARQL engine over the hydrated N3 store. */
-  createSparqlEngine?: (
-    options: { store: Store },
-  ) => SparqlEngineInterface;
 }
 
 /**
- * createLibsqlN3Adapter synthesizes a Adapter for the hydrate → createProxiedN3Store → LibSQL sync path.
+ * AttachLibsqlN3SparqlEngine wires a SPARQL engine after the proxied N3 store exists (in-repo preset use only).
  */
-export async function createLibsqlN3Adapter(
+export type AttachLibsqlN3SparqlEngine = (
+  options: { store: Store },
+) => SparqlEngineInterface;
+
+/**
+ * assembleLibsqlN3Client builds a Client for the hydrate → createProxiedN3Store → LibSQL sync path.
+ * Prefer createLibsqlN3Client (search/import) or createLibsqlN3ComunicaClient (Comunica SPARQL).
+ */
+export async function assembleLibsqlN3Client(
   options: LibsqlN3AdapterOptions,
-): Promise<Adapter> {
+  attachSparqlEngine?: AttachLibsqlN3SparqlEngine,
+): Promise<Client> {
   const vectorDimensions = options.vectorDimensions ?? 32;
   const queryBuilder = new LibsqlQueryBuilder(vectorDimensions);
 
@@ -50,7 +58,7 @@ export async function createLibsqlN3Adapter(
   }
 
   const { store, drainPatches } = createProxiedN3Store(initialStore);
-  const configuredSparqlEngine = options.createSparqlEngine?.({ store });
+  const configuredSparqlEngine = attachSparqlEngine?.({ store });
 
   const textSplitter = options.textSplitter ??
     new RecursiveCharacterTextSplitter({ chunkSize: 1000 });
@@ -76,26 +84,41 @@ export async function createLibsqlN3Adapter(
 
   const quadStore = new RdfjsQuadStore(store);
 
-  return {
-    quadStore: {
-      export: (request) => quadStore.export(request),
-      import: async (request) => {
-        patchSync.beforeImport();
-        const response = await quadStore.import(request);
+  const wrappedQuadStore = {
+    export: (request: ExportRequest) => quadStore.export(request),
+    import: async (request: ImportRequest) => {
+      patchSync.beforeImport();
+      const response = await quadStore.import(request);
+      await commitChanges();
+      await patchSync.afterImport();
+      return response;
+    },
+  };
+
+  const wrappedSparqlEngine = configuredSparqlEngine
+    ? {
+      sparql: async (request: SparqlRequest) => {
+        const response = await configuredSparqlEngine.sparql(request);
         await commitChanges();
-        await patchSync.afterImport();
         return response;
       },
-    },
-    sparqlEngine: configuredSparqlEngine
-      ? {
-        execute: async (request) => {
-          const response = await configuredSparqlEngine.execute(request);
-          await commitChanges();
-          return response;
-        },
-      }
-      : undefined,
-    searchIndex,
-  };
+    }
+    : undefined;
+
+  return new Client(wrappedQuadStore, searchIndex, wrappedSparqlEngine);
 }
+
+/**
+ * createLibsqlN3Client synthesizes a Client for import, export, and search without SPARQL.
+ * For Comunica SPARQL, use createLibsqlN3ComunicaClient from `@worlds/client/adapters/libsql-n3/comunica`.
+ */
+export async function createLibsqlN3Client(
+  options: LibsqlN3AdapterOptions,
+): Promise<Client> {
+  return await assembleLibsqlN3Client(options);
+}
+
+/**
+ * createLibsqlN3Adapter is deprecated; use createLibsqlN3Client. Removed in 0.0.17.
+ */
+export const createLibsqlN3Adapter = createLibsqlN3Client;

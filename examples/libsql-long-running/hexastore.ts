@@ -1,7 +1,6 @@
 import { createClient } from "@libsql/client";
 import { createComunicaLibsqlSparqlEngineFactory } from "@worlds/client/adapters/comunica";
-import { Client } from "@worlds/client";
-import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
+import { createLibsqlClient } from "@worlds/client/adapters/libsql";
 import { UniversalSentenceEncoderEmbeddingService } from "@worlds/client/adapters/tfjs-universal-sentence-encoder";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory } from "n3";
@@ -52,16 +51,14 @@ if (import.meta.main) {
   const embeddingService = new UniversalSentenceEncoderEmbeddingService();
 
   console.log("Provisioning hexastore client (process lifetime)...");
-  const client = new Client(
-    await createLibsqlAdapter({
-      client: databaseClient,
-      embeddingService,
-      vectorDimensions: USE_LITE_VECTOR_DIMENSIONS,
-      createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
-        queryEngine,
-      }),
+  const client = await createLibsqlClient({
+    client: databaseClient,
+    embeddingService,
+    vectorDimensions: USE_LITE_VECTOR_DIMENSIONS,
+    createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
+      queryEngine,
     }),
-  );
+  });
   console.log("Gateway operational.");
 
   console.log("\nIngesting semantically distinct quads...");

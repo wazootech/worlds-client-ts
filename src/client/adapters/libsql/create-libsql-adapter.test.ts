@@ -2,9 +2,8 @@ import { assertEquals, assertExists } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory } from "n3";
-import { Client } from "@/client/client.ts";
 import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
-import { createLibsqlAdapter } from "./create-libsql-adapter.ts";
+import { createLibsqlClient } from "./create-libsql-adapter.ts";
 import type { LibsqlStore } from "@/client/adapters/libsql/store/mod.ts";
 
 const { quad, namedNode, literal } = DataFactory;
@@ -22,12 +21,12 @@ const expectedHexastoreIndexNames = [
 ] as const;
 
 Deno.test(
-  "createLibsqlAdapter - createSparqlEngine receives LibsqlStore",
+  "createLibsqlClient - createSparqlEngine receives LibsqlStore",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
     let receivedLibsqlStore: LibsqlStore | undefined;
 
-    await createLibsqlAdapter({
+    await createLibsqlClient({
       client: databaseClient,
       createSparqlEngine: ({ libsqlStore }) => {
         receivedLibsqlStore = libsqlStore;
@@ -42,17 +41,15 @@ Deno.test(
 );
 
 Deno.test(
-  "createLibsqlAdapter - import persists quads readable via SPARQL",
+  "createLibsqlClient - import persists quads readable via SPARQL",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
 
-    const client = new Client(
-      await createLibsqlAdapter({
-        client: databaseClient,
-        createSparqlEngine: ({ libsqlStore }) =>
-          new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
-      }),
-    );
+    const client = await createLibsqlClient({
+      client: databaseClient,
+      createSparqlEngine: ({ libsqlStore }) =>
+        new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
+    });
 
     await client.import({
       source: {
@@ -81,11 +78,11 @@ Deno.test(
 );
 
 Deno.test(
-  "createLibsqlAdapter - initializeSchema provisions all hexastore indexes",
+  "createLibsqlClient - initializeSchema provisions all hexastore indexes",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
 
-    await createLibsqlAdapter({ client: databaseClient });
+    await createLibsqlClient({ client: databaseClient });
 
     const indexResultSet = await databaseClient.execute(
       "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'quads'",
@@ -99,25 +96,23 @@ Deno.test(
       );
     }
 
-    await createLibsqlAdapter({ client: databaseClient });
+    await createLibsqlClient({ client: databaseClient });
 
     databaseClient.close();
   },
 );
 
 Deno.test(
-  "createLibsqlAdapter - searchIndexOnImport disabled skips chunks and search stays empty",
+  "createLibsqlClient - searchIndexOnImport disabled skips chunks and search stays empty",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
 
-    const client = new Client(
-      await createLibsqlAdapter({
-        client: databaseClient,
-        searchIndexOnImport: "disabled",
-        createSparqlEngine: ({ libsqlStore }) =>
-          new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
-      }),
-    );
+    const client = await createLibsqlClient({
+      client: databaseClient,
+      searchIndexOnImport: "disabled",
+      createSparqlEngine: ({ libsqlStore }) =>
+        new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
+    });
 
     await client.import({
       source: {
@@ -155,18 +150,16 @@ Deno.test(
 );
 
 Deno.test(
-  "createLibsqlAdapter - rebuildSearchIndex after searchIndexOnImport disabled enables search",
+  "createLibsqlClient - rebuildSearchIndex after searchIndexOnImport disabled enables search",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
 
-    const client = new Client(
-      await createLibsqlAdapter({
-        client: databaseClient,
-        searchIndexOnImport: "disabled",
-        createSparqlEngine: ({ libsqlStore }) =>
-          new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
-      }),
-    );
+    const client = await createLibsqlClient({
+      client: databaseClient,
+      searchIndexOnImport: "disabled",
+      createSparqlEngine: ({ libsqlStore }) =>
+        new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
+    });
 
     await client.import({
       source: {
@@ -205,20 +198,18 @@ Deno.test(
 );
 
 Deno.test(
-  "createLibsqlAdapter - rebuildSearchIndex include/exclude scopes indexed graphs",
+  "createLibsqlClient - rebuildSearchIndex include/exclude scopes indexed graphs",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
     const graphAlpha = namedNode("urn:graph:alpha");
     const graphBeta = namedNode("urn:graph:beta");
 
-    const client = new Client(
-      await createLibsqlAdapter({
-        client: databaseClient,
-        searchIndexOnImport: "disabled",
-        createSparqlEngine: ({ libsqlStore }) =>
-          new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
-      }),
-    );
+    const client = await createLibsqlClient({
+      client: databaseClient,
+      searchIndexOnImport: "disabled",
+      createSparqlEngine: ({ libsqlStore }) =>
+        new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
+    });
 
     await client.import({
       source: {
@@ -255,18 +246,16 @@ Deno.test(
 );
 
 Deno.test(
-  "createLibsqlAdapter - rebuildSearchIndex is idempotent on second run",
+  "createLibsqlClient - rebuildSearchIndex is idempotent on second run",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
 
-    const client = new Client(
-      await createLibsqlAdapter({
-        client: databaseClient,
-        searchIndexOnImport: "disabled",
-        createSparqlEngine: ({ libsqlStore }) =>
-          new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
-      }),
-    );
+    const client = await createLibsqlClient({
+      client: databaseClient,
+      searchIndexOnImport: "disabled",
+      createSparqlEngine: ({ libsqlStore }) =>
+        new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
+    });
 
     await client.import({
       source: {

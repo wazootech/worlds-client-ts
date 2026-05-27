@@ -1,7 +1,6 @@
 import { createClient } from "@libsql/client";
-import { Client } from "@worlds/client";
 import { createComunicaLibsqlSparqlEngineFactory } from "@worlds/client/adapters/comunica";
-import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
+import { createLibsqlClient } from "@worlds/client/adapters/libsql";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { GRAPH_GROUNDED_AGENT_SYSTEM_PROMPT } from "./agent-prompts.ts";
 import { createTools } from "./tools.ts";
@@ -15,14 +14,12 @@ if (import.meta.main) {
   const database = createClient({ url: ":memory:" });
   const queryEngine = new QueryEngine();
 
-  const client = new Client(
-    await createLibsqlAdapter({
-      client: database,
-      createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
-        queryEngine,
-      }),
+  const client = await createLibsqlClient({
+    client: database,
+    createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
+      queryEngine,
     }),
-  );
+  });
 
   console.log("Ingesting initial knowledge...");
   await client.import({

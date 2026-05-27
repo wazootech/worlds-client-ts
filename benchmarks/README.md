@@ -45,9 +45,9 @@ deno bench --allow-all --unstable-kv benchmarks/
 deno bench --allow-all benchmarks/sparql-hexastore-crossover.bench.ts
 ```
 
-**Standard (1k–50k):** compares **hydrate+N3** (`createLibsqlN3Adapter` from
-`@worlds/client/adapters/libsql-n3`) vs **libsqlStore** (`createLibsqlAdapter`
-from `@worlds/client/adapters/libsql`).
+**Standard (1k–50k):** compares **hydrate+N3** (`createLibsqlN3ComunicaClient`
+from `@worlds/client/adapters/libsql-n3`) vs **libsqlStore**
+(`createLibsqlClient` from `@worlds/client/adapters/libsql`).
 
 **Large (100k–1M):** **libsqlStore only** — the scalable LibSQL path for hybrid
 search + SPARQL in production
@@ -82,7 +82,7 @@ deno bench --allow-all --v8-flags=--max-old-space-size=8192 benchmarks/sparql-he
 ```
 
 Module load logs `console.time` lines per scale (`generate`, then each backend).
-Only `sparqlEngine.execute()` is timed inside `Deno.bench`. Paste results into
+Only `sparqlEngine.sparql()` is timed inside `Deno.bench`. Paste results into
 [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69).
 
 For full import + search preload timing (not the crossover execute table), use
@@ -131,7 +131,7 @@ create a fresh database per iteration and use `warmup: 5`, `n: 50`.
   ```
 
 **Production (millions of quads):** prefer
-[`createLibsqlAdapter`](../src/client/adapters/libsql/create-libsql-adapter.ts)
+[`createLibsqlClient`](../src/client/adapters/libsql/create-libsql-adapter.ts)
 for indexed SPARQL without a full N3 mirror; reuse a warmed
 [`store`](../src/client/adapters/libsql-n3/create-libsql-n3-adapter.ts) on the
 N3 path per container, not per request. Track guidance in

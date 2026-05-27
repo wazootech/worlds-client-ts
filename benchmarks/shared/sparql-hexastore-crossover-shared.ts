@@ -1,14 +1,10 @@
 import { createClient } from "@libsql/client";
 import type { Quad } from "@rdfjs/types";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
-import { Client } from "@worlds/client";
-import {
-  createComunicaLibsqlSparqlEngineFactory,
-  createComunicaSparqlEngineFactory,
-} from "@worlds/client/adapters/comunica";
-import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
-import { createLibsqlN3Adapter } from "@worlds/client/adapters/libsql-n3";
-import type { SparqlEngineInterface } from "@worlds/client/sparql-engine";
+import type { Client } from "@worlds/client";
+import { createComunicaLibsqlSparqlEngineFactory } from "@worlds/client/adapters/comunica";
+import { createLibsqlClient } from "@worlds/client/adapters/libsql";
+import { createLibsqlN3ComunicaClient } from "@worlds/client/adapters/libsql-n3/comunica";
 import {
   buildCrossoverFixtureChecksumInputs,
   computeCrossoverFixtureChecksum,
@@ -51,10 +47,10 @@ export const largeCrossoverBackends = [
   "libsqlStore",
 ] as const satisfies readonly SparqlBackend[];
 
-/** PreloadedSparqlFixture holds a warmed SPARQL engine and its database handle. */
+/** PreloadedSparqlFixture holds a warmed Client and its database handle. */
 export interface PreloadedSparqlFixture {
   databaseClient: ReturnType<typeof createClient>;
-  sparqlEngine: SparqlEngineInterface;
+  worldsClient: Client;
 }
 
 /**
@@ -101,11 +97,10 @@ async function importCorpusIntoLibsqlHexastore(
   databaseClient: ReturnType<typeof createClient>,
   corpusQuads: Quad[],
 ): Promise<void> {
-  const adapter = await createLibsqlAdapter({
+  const worldsClient = await createLibsqlClient({
     client: databaseClient,
     searchIndexOnImport: "disabled",
   });
-  const worldsClient = new Client(adapter);
   await worldsClient.import({
     source: { kind: "quads", quads: corpusQuads },
   });
@@ -117,17 +112,14 @@ async function importCorpusIntoLibsqlHexastore(
 async function openLibsqlHexastoreSparqlEngine(
   databaseClient: ReturnType<typeof createClient>,
 ): Promise<PreloadedSparqlFixture> {
-  const adapter = await createLibsqlAdapter({
+  const worldsClient = await createLibsqlClient({
     client: databaseClient,
     searchIndexOnImport: "disabled",
     createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
       queryEngine: sharedQueryEngine,
     }),
   });
-  if (!adapter.sparqlEngine) {
-    throw new Error("libsqlStore bench requires createSparqlEngine");
-  }
-  return { databaseClient, sparqlEngine: adapter.sparqlEngine };
+  return { databaseClient, worldsClient };
 }
 
 /**
@@ -186,21 +178,15 @@ async function createHydrateN3SparqlEngine(
   corpusQuads: Quad[],
 ): Promise<PreloadedSparqlFixture> {
   const databaseClient = createClient({ url: ":memory:" });
-  const adapter = await createLibsqlN3Adapter({
+  const worldsClient = await createLibsqlN3ComunicaClient({
     client: databaseClient,
     searchIndexOnImport: "disabled",
-    createSparqlEngine: createComunicaSparqlEngineFactory({
-      queryEngine: sharedQueryEngine,
-    }),
+    queryEngine: sharedQueryEngine,
   });
-  const worldsClient = new Client(adapter);
   await worldsClient.import({
     source: { kind: "quads", quads: corpusQuads },
   });
-  if (!adapter.sparqlEngine) {
-    throw new Error("hydrate+N3 bench requires createSparqlEngine");
-  }
-  return { databaseClient, sparqlEngine: adapter.sparqlEngine };
+  return { databaseClient, worldsClient };
 }
 
 async function createSparqlEngineForBackend(
@@ -303,7 +289,7 @@ export function registerSparqlCrossoverBenchmarks(
             }
 
             benchContext.start();
-            await fixture.sparqlEngine.execute({ query });
+            await fixture.worldsClient.sparql({ query });
             benchContext.end();
           },
         });

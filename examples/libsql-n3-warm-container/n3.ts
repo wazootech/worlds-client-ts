@@ -1,11 +1,11 @@
 import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
-import { createComunicaSparqlEngineFactory } from "@worlds/client/adapters/comunica";
 import {
-  createLibsqlN3Adapter,
+  createLibsqlN3Client,
   hydrateStoreFromLibsql,
 } from "@worlds/client/adapters/libsql-n3";
-import { Client } from "@worlds/client";
+import { createLibsqlN3ComunicaClient } from "@worlds/client/adapters/libsql-n3/comunica";
+import type { Client } from "@worlds/client";
 import { DataFactory, Store } from "n3";
 
 const { quad, namedNode, literal } = DataFactory;
@@ -20,20 +20,16 @@ const queryEngine = new QueryEngine();
 let warmIsolateClient: Client | undefined;
 
 async function getWarmIsolateClient(warmedStore: Store): Promise<Client> {
-  warmIsolateClient ??= new Client(
-    await createLibsqlN3Adapter({
-      client: databaseClient,
-      store: warmedStore,
-      createSparqlEngine: createComunicaSparqlEngineFactory({ queryEngine }),
-    }),
-  );
-  return warmIsolateClient;
+  warmIsolateClient ??= await createLibsqlN3ComunicaClient({
+    client: databaseClient,
+    store: warmedStore,
+    queryEngine,
+  });
+  return warmIsolateClient as Client;
 }
 
 if (import.meta.main) {
-  const bootClient = new Client(
-    await createLibsqlN3Adapter({ client: databaseClient }),
-  );
+  const bootClient = await createLibsqlN3Client({ client: databaseClient });
   await bootClient.import({
     source: {
       kind: "quads",

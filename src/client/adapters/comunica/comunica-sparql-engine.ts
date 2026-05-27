@@ -96,7 +96,7 @@ export class ComunicaSparqlEngine implements SparqlEngineInterface {
     private readonly options: ComunicaSparqlEngineOptions,
   ) {}
 
-  public async execute(request: SparqlRequest): Promise<SparqlResponse> {
+  public async sparql(request: SparqlRequest): Promise<SparqlResponse> {
     const response = await executeSparql(
       this.options.queryEngine,
       this.options.store,

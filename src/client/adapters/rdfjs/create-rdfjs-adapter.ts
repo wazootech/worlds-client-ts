@@ -1,5 +1,5 @@
 import { Store } from "n3";
-import type { Adapter } from "@/client/client.ts";
+import { Client } from "@/client/client.ts";
 import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
 import { RdfjsQuadStore } from "./rdfjs-quad-store.ts";
 import { RdfjsSearchIndex } from "./rdfjs-search-index.ts";
@@ -26,17 +26,22 @@ export interface RdfjsOptions {
  * local RDFJS primitives. It is the fastest path to a working Client for development, tests,
  * and single-process demos where no external persistence is needed.
  *
- * Unlike createLibsqlAdapter and createDenokvAdapter, there is no synchronization layer — all data exists
+ * Unlike createLibsqlClient and createDenokvClient, there is no synchronization layer — all data exists
  * transiently in the N3 Store and is lost when the process exits.
  */
-export function createRdfjsAdapter(
+export function createRdfjsClient(
   options?: RdfjsOptions,
-): Adapter {
+): Client {
   const store = options?.store ?? new Store();
 
-  return {
-    quadStore: new RdfjsQuadStore(store),
-    searchIndex: new RdfjsSearchIndex(store),
-    sparqlEngine: options?.createSparqlEngine?.({ store }),
-  };
+  return new Client(
+    new RdfjsQuadStore(store),
+    new RdfjsSearchIndex(store),
+    options?.createSparqlEngine?.({ store }),
+  );
 }
+
+/**
+ * createRdfjsAdapter is deprecated; use createRdfjsClient. Removed in 0.0.17.
+ */
+export const createRdfjsAdapter = createRdfjsClient;

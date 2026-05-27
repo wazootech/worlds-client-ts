@@ -3,11 +3,11 @@
  */
 export interface SparqlEngineInterface {
   /**
-   * execute fires a SPARQL request and returns a strongly typed response.
+   * sparql fires a SPARQL request and returns a strongly typed response.
    *
    * @param request contains the raw query string and execution settings.
    */
-  execute(request: SparqlRequest): Promise<SparqlResponse>;
+  sparql(request: SparqlRequest): Promise<SparqlResponse>;
 }
 
 /**

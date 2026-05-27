@@ -9,11 +9,11 @@ import { hashQuad } from "./quad-store/mod.ts";
 const queryEngine = new QueryEngine();
 
 function createTestClient(store: Store): Client {
-  return new Client({
-    quadStore: new RdfjsQuadStore(store),
-    sparqlEngine: new ComunicaSparqlEngine({ queryEngine, store }),
-    searchIndex: new RdfjsSearchIndex(store),
-  });
+  return new Client(
+    new RdfjsQuadStore(store),
+    new RdfjsSearchIndex(store),
+    new ComunicaSparqlEngine({ queryEngine, store }),
+  );
 }
 
 Deno.test("Client.import delegates to quadStore.import", async () => {
@@ -47,7 +47,7 @@ Deno.test("Client.export delegates to quadStore.export", async () => {
   assertEquals(response.quads.length, 0);
 });
 
-Deno.test("Client.sparql delegates to sparqlEngine.execute", async () => {
+Deno.test("Client.sparql delegates to sparqlEngine.sparql", async () => {
   const store = new Store();
   const client = createTestClient(store);
 
@@ -61,10 +61,10 @@ Deno.test("Client.sparql delegates to sparqlEngine.execute", async () => {
 
 Deno.test("Client.sparql rejects when sparqlEngine is not configured", async () => {
   const store = new Store();
-  const client = new Client({
-    quadStore: new RdfjsQuadStore(store),
-    searchIndex: new RdfjsSearchIndex(store),
-  });
+  const client = new Client(
+    new RdfjsQuadStore(store),
+    new RdfjsSearchIndex(store),
+  );
 
   await assertRejects(
     () => client.sparql({ query: "ASK WHERE { ?s ?p ?o }" }),

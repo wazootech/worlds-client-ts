@@ -1,7 +1,11 @@
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
-import type { Adapter } from "@/client/client.ts";
-import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
+import { Client } from "@/client/client.ts";
+import type { ExportRequest, ImportRequest } from "@/client/quad-store/mod.ts";
+import type {
+  SparqlEngineInterface,
+  SparqlRequest,
+} from "@/client/sparql-engine/mod.ts";
 import { RdfjsQuadStore } from "@/client/adapters/rdfjs/mod.ts";
 
 import type { LibsqlClientBaseOptions } from "./libsql-client-base-options.ts";
@@ -32,11 +36,11 @@ export interface LibsqlAdapterOptions extends LibsqlClientBaseOptions {
 }
 
 /**
- * createLibsqlAdapter synthesizes a Adapter for direct LibsqlStore + hexastore indexes.
+ * createLibsqlClient synthesizes a Client for direct LibsqlStore + hexastore indexes.
  */
-export async function createLibsqlAdapter(
+export async function createLibsqlClient(
   options: LibsqlAdapterOptions,
-): Promise<Adapter> {
+): Promise<Client> {
   const vectorDimensions = options.vectorDimensions ?? 32;
   const queryBuilder = new LibsqlQueryBuilder(vectorDimensions);
 
@@ -68,26 +72,31 @@ export async function createLibsqlAdapter(
 
   const quadStore = new RdfjsQuadStore(libsqlStore);
 
-  return {
-    quadStore: {
-      export: (request) => quadStore.export(request),
-      import: async (request) => {
-        patchSync.beforeImport();
-        const response = await quadStore.import(request);
+  const wrappedQuadStore = {
+    export: (request: ExportRequest) => quadStore.export(request),
+    import: async (request: ImportRequest) => {
+      patchSync.beforeImport();
+      const response = await quadStore.import(request);
+      await libsqlStore.commit();
+      await patchSync.afterImport();
+      return response;
+    },
+  };
+
+  const wrappedSparqlEngine = configuredSparqlEngine
+    ? {
+      sparql: async (request: SparqlRequest) => {
+        const response = await configuredSparqlEngine.sparql(request);
         await libsqlStore.commit();
-        await patchSync.afterImport();
         return response;
       },
-    },
-    sparqlEngine: configuredSparqlEngine
-      ? {
-        execute: async (request) => {
-          const response = await configuredSparqlEngine.execute(request);
-          await libsqlStore.commit();
-          return response;
-        },
-      }
-      : undefined,
-    searchIndex,
-  };
+    }
+    : undefined;
+
+  return new Client(wrappedQuadStore, searchIndex, wrappedSparqlEngine);
 }
+
+/**
+ * createLibsqlAdapter is deprecated; use createLibsqlClient. Removed in 0.0.17.
+ */
+export const createLibsqlAdapter = createLibsqlClient;

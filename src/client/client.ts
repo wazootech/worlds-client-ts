@@ -19,61 +19,45 @@ import type {
 } from "./search-index/mod.ts";
 
 /**
- * Adapter details the aggregate internal subsystems powering active execution.
- */
-export interface Adapter {
-  /**
-   * quadStore manages the ingestion and extraction of triple/quad data.
-   */
-  quadStore: QuadStoreInterface;
-
-  /**
-   * sparqlEngine evaluates declarative queries and updates against the graph.
-   */
-  sparqlEngine?: SparqlEngineInterface;
-
-  /**
-   * searchIndex enables high-performance keyword search across the graph literals.
-   */
-  searchIndex: SearchIndexInterface;
-}
-
-/**
  * Client is the standard gateway client for the Worlds API.
  * It aggregates the specialized capabilities for data persistence,
  * declarative querying, and fuzzy searching.
  */
 export class Client implements ClientInterface {
-  public constructor(protected readonly adapter: Adapter) {}
+  public constructor(
+    private readonly quadStore: QuadStoreInterface,
+    private readonly searchIndex: SearchIndexInterface,
+    private readonly sparqlEngine?: SparqlEngineInterface,
+  ) {}
 
   public async import(request: ImportRequest): Promise<void> {
-    return await this.adapter.quadStore.import(request);
+    return await this.quadStore.import(request);
   }
 
   public async export(request: ExportRequest): Promise<ExportResponse> {
-    return await this.adapter.quadStore.export(request);
+    return await this.quadStore.export(request);
   }
 
   public async sparql(request: SparqlRequest): Promise<SparqlResponse> {
-    if (!this.adapter.sparqlEngine) {
+    if (!this.sparqlEngine) {
       throw new Error("SPARQL engine is not configured.");
     }
 
-    return await this.adapter.sparqlEngine.execute(request);
+    return await this.sparqlEngine.sparql(request);
   }
 
   public async search(request: SearchRequest): Promise<SearchResponse> {
-    return await this.adapter.searchIndex.search(request);
+    return await this.searchIndex.search(request);
   }
 
   public async rebuildSearchIndex(
     request?: RebuildSearchIndexRequest,
   ): Promise<RebuildSearchIndexResponse> {
-    if (!this.adapter.searchIndex.rebuildSearchIndex) {
+    if (!this.searchIndex.rebuildSearchIndex) {
       throw new Error(
         "search index rebuild is only supported for LibSQL-backed clients",
       );
     }
-    return await this.adapter.searchIndex.rebuildSearchIndex(request);
+    return await this.searchIndex.rebuildSearchIndex(request);
   }
 }
