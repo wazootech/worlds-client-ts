@@ -4,7 +4,7 @@ import { Store } from "n3";
 import type { Adapter } from "@/client/client.ts";
 import type { Patch } from "@/client/quad-store/mod.ts";
 import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
-import { proxyStore } from "@/client/adapters/rdfjs/n3/mod.ts";
+import { createProxiedN3Store } from "@/client/quad-store/n3/mod.ts";
 import { RdfjsQuadStore } from "@/client/adapters/rdfjs/mod.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/mod.ts";
 import {
@@ -16,7 +16,7 @@ import {
 import { hydrateStoreFromLibsql } from "./hydrate-store-from-libsql.ts";
 
 /**
- * LibsqlN3AdapterOptions configures LibSQL with hydrate → proxyStore → patch sync to LibSQL.
+ * LibsqlN3AdapterOptions configures LibSQL with hydrate → createProxiedN3Store → patch sync to LibSQL.
  */
 export interface LibsqlN3AdapterOptions extends LibsqlClientBaseOptions {
   /** store is an optional starting store, useful for serverless environments where the store is already initialized. */
@@ -29,7 +29,7 @@ export interface LibsqlN3AdapterOptions extends LibsqlClientBaseOptions {
 }
 
 /**
- * createLibsqlN3Adapter synthesizes a Adapter for the hydrate → proxyStore → LibSQL sync path.
+ * createLibsqlN3Adapter synthesizes a Adapter for the hydrate → createProxiedN3Store → LibSQL sync path.
  */
 export async function createLibsqlN3Adapter(
   options: LibsqlN3AdapterOptions,
@@ -49,7 +49,7 @@ export async function createLibsqlN3Adapter(
     );
   }
 
-  const { store, drainPatches } = proxyStore(initialStore);
+  const { store, drainPatches } = createProxiedN3Store(initialStore);
   const configuredSparqlEngine = options.createSparqlEngine?.({ store });
 
   const textSplitter = options.textSplitter ??

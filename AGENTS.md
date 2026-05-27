@@ -178,7 +178,7 @@ stay free of N3 hydration (see architectural map below). Under
 | `@worlds/client/adapters/libsql-n3`                       | libsql-n3 `mod.ts`                  |
 | `@worlds/client/adapters/comunica`                        | comunica `mod.ts`                   |
 | `@worlds/client/adapters/rdfjs`                           | rdfjs `mod.ts`                      |
-| `@worlds/client/adapters/rdfjs/n3`                        | rdfjs `n3/mod.ts`                   |
+| `@worlds/client/quad-store/n3`                            | quad-store `n3/mod.ts`              |
 | `@worlds/client/adapters/denokv`                          | denokv `mod.ts`                     |
 | `@worlds/client/adapters/tfjs-universal-sentence-encoder` | TFJS adapter `mod.ts`               |
 

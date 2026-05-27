@@ -3,13 +3,13 @@ import type * as rdfjs from "@rdfjs/types";
 import type { Patch } from "@/client/quad-store/mod.ts";
 
 /**
- * proxyStore installs a non-invasive JavaScript Proxy wrapper around a concrete N3 Store.
+ * createProxiedN3Store installs a non-invasive JavaScript Proxy wrapper around a concrete N3 Store.
  * It transparently captures memory modifications (adds, removes, imports) and stages them for background synchronization.
  *
  * IMPORTANT: It enforces strict idempotency guards, ensuring that ONLY actual factual delta
  * mutations are captured. Redundant operations that do not change graph state are ignored.
  */
-export function proxyStore(target: Store): {
+export function createProxiedN3Store(target: Store): {
   store: Store;
   drainPatches: () => Patch[];
 } {

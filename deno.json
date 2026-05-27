@@ -5,6 +5,7 @@
   "exports": {
     ".": "./src/mod.ts",
     "./quad-store": "./src/client/quad-store/mod.ts",
+    "./quad-store/n3": "./src/client/quad-store/n3/mod.ts",
     "./search-index": "./src/client/search-index/mod.ts",
     "./search-index/embedding-service": "./src/client/search-index/embedding-service/mod.ts",
     "./search-index/quad-chunker": "./src/client/search-index/quad-chunker/mod.ts",
@@ -14,7 +15,6 @@
     "./adapters/tfjs-universal-sentence-encoder": "./src/client/adapters/tfjs-universal-sentence-encoder/mod.ts",
     "./adapters/comunica": "./src/client/adapters/comunica/mod.ts",
     "./adapters/rdfjs": "./src/client/adapters/rdfjs/mod.ts",
-    "./adapters/rdfjs/n3": "./src/client/adapters/rdfjs/n3/mod.ts",
     "./adapters/denokv": "./src/client/adapters/denokv/mod.ts"
   },
   "imports": {
