@@ -2,7 +2,6 @@ import type {
   ExportRequest,
   ExportResponse,
   ImportRequest,
-  ImportResponse,
 } from "./quad-store/mod.ts";
 import type {
   RebuildSearchIndexRequest,
@@ -21,7 +20,7 @@ export interface ClientInterface {
    * @param request The import request body.
    * @returns A promise that resolves to the import response.
    */
-  import(request: ImportRequest): Promise<ImportResponse>;
+  import(request: ImportRequest): Promise<void>;
 
   /**
    * export exports data from the Worlds API.

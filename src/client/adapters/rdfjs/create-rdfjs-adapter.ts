@@ -5,13 +5,6 @@ import { RdfjsQuadStore } from "./rdfjs-quad-store.ts";
 import { RdfjsSearchIndex } from "./rdfjs-search-index.ts";
 
 /**
- * RdfjsSparqlEngineOptions supplies the per-adapter N3 Store for SPARQL engine construction.
- */
-export interface RdfjsSparqlEngineOptions {
-  store: Store;
-}
-
-/**
  * RdfjsOptions specifies optional configuration for an in-memory RDFJS client context.
  */
 export interface RdfjsOptions {
@@ -24,7 +17,7 @@ export interface RdfjsOptions {
    * createSparqlEngine optionally attaches a caller-provided SPARQL engine over the adapter-managed store.
    */
   createSparqlEngine?: (
-    options: RdfjsSparqlEngineOptions,
+    options: { store: Store },
   ) => SparqlEngineInterface;
 }
 

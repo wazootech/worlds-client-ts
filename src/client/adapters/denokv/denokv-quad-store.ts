@@ -4,7 +4,6 @@ import type {
   ExportRequest,
   ExportResponse,
   ImportRequest,
-  ImportResponse,
   QuadStoreInterface,
 } from "@/client/quad-store/mod.ts";
 import { hashQuad } from "@/client/quad-store/mod.ts";
@@ -46,7 +45,7 @@ export class DenokvQuadStore implements QuadStoreInterface {
     private readonly options: DenokvQuadStoreOptions,
   ) {}
 
-  public async import(request: ImportRequest): Promise<ImportResponse> {
+  public async import(request: ImportRequest): Promise<void> {
     const mode = request.mode ?? "merge";
     const keyPrefix = this.options.keyPrefix ?? ["quads"];
 

@@ -2,10 +2,7 @@ import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { Client } from "@worlds/client";
 import { createComunicaLibsqlSparqlEngineFactory } from "@worlds/client/adapters/comunica";
-import {
-  createLibsqlAdapter,
-  createSubjectBoundPropertiesSparqlQuery,
-} from "@worlds/client/adapters/libsql";
+import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
 import { DataFactory } from "n3";
 
 const { quad, namedNode, literal } = DataFactory;
@@ -50,14 +47,16 @@ if (import.meta.main) {
   console.log("Simulated request 1 (reuse warm-isolate client):");
   const firstClient = await getWarmIsolateClient();
   const firstResponse = await firstClient.sparql({
-    query: createSubjectBoundPropertiesSparqlQuery(warmSubjectIri),
+    query:
+      `SELECT ?property ?object WHERE { <${warmSubjectIri}> ?property ?object }`,
   });
   console.log(JSON.stringify(firstResponse, null, 2));
 
   console.log("\nSimulated request 2 (same module-scoped client):");
   const secondClient = await getWarmIsolateClient();
   const secondResponse = await secondClient.sparql({
-    query: createSubjectBoundPropertiesSparqlQuery(warmSubjectIri),
+    query:
+      `SELECT ?property ?object WHERE { <${warmSubjectIri}> ?property ?object }`,
   });
   console.log(JSON.stringify(secondResponse, null, 2));
 }

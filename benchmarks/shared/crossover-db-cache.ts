@@ -30,8 +30,8 @@ export interface CrossoverFixtureChecksumInputs {
   quadCount: number;
   /** backend labels the crossover wiring (large cache supports libsqlStore only). */
   backend: "libsqlStore";
-  /** searchIndexOnImport records whether chunk projection ran during import. */
-  searchIndexOnImport: false;
+  /** searchIndexOnImport records the indexing mode used during import. */
+  searchIndexOnImport: "disabled";
 }
 
 /**
@@ -117,7 +117,7 @@ export function buildCrossoverFixtureChecksumInputs(
     benchLibsqlSchemaVersion: BENCH_LIBSQL_SCHEMA_VERSION,
     quadCount,
     backend: "libsqlStore",
-    searchIndexOnImport: false,
+    searchIndexOnImport: "disabled",
   };
 }
 

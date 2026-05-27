@@ -14,8 +14,3 @@ export interface Patch {
    */
   deletions: rdfjs.Quad[];
 }
-
-/**
- * PatchListener describes a functional sink that accepts a batch of store changes asynchronously.
- */
-export type PatchListener = (patch: Patch) => Promise<void> | void;

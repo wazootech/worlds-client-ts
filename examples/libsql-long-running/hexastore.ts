@@ -1,10 +1,7 @@
 import { createClient } from "@libsql/client";
 import { createComunicaLibsqlSparqlEngineFactory } from "@worlds/client/adapters/comunica";
 import { Client } from "@worlds/client";
-import {
-  createLibsqlAdapter,
-  createSubjectBoundPropertiesSparqlQuery,
-} from "@worlds/client/adapters/libsql";
+import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
 import { UniversalSentenceEncoderEmbeddingService } from "@worlds/client/adapters/tfjs-universal-sentence-encoder";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory } from "n3";
@@ -107,7 +104,8 @@ if (import.meta.main) {
 
   console.log("\nExecuting subject-bound SPARQL query...");
   const sparqlResponse = await client.sparql({
-    query: createSubjectBoundPropertiesSparqlQuery("urn:animal:cat"),
+    query:
+      `SELECT ?property ?object WHERE { <urn:animal:cat> ?property ?object }`,
   });
   console.log(JSON.stringify(sparqlResponse, null, 2));
 }

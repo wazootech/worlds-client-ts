@@ -20,11 +20,6 @@ export interface ImportRequest {
 }
 
 /**
- * ImportResponse is the response from an import operation.
- */
-export type ImportResponse = void;
-
-/**
  * ExportRequest is the request type for the export function.
  */
 export interface ExportRequest {
@@ -51,7 +46,7 @@ export interface QuadStoreInterface {
    *
    * @param request The payload defining the ingestion source and overwrite mode.
    */
-  import(request: ImportRequest): Promise<ImportResponse>;
+  import(request: ImportRequest): Promise<void>;
 
   /**
    * export extracts the graph contents in raw quads or serialized formats.

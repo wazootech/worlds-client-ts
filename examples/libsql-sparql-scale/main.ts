@@ -2,11 +2,7 @@ import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { Client } from "@worlds/client";
 import { createComunicaLibsqlSparqlEngineFactory } from "@worlds/client/adapters/comunica";
-import {
-  createCappedUnboundTriplePatternSparqlQuery,
-  createLibsqlAdapter,
-  createSubjectBoundPropertiesSparqlQuery,
-} from "@worlds/client/adapters/libsql";
+import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
 import { DataFactory } from "n3";
 
 const { quad, namedNode, literal } = DataFactory;
@@ -52,16 +48,16 @@ if (import.meta.main) {
     mode: "merge",
   });
 
-  const selectiveSparqlQuery = createSubjectBoundPropertiesSparqlQuery(
-    exampleSubjectIri,
-  );
+  const selectiveSparqlQuery =
+    `SELECT ?property ?object WHERE { <${exampleSubjectIri}> ?property ?object }`;
   console.log("Selective (production-style):", selectiveSparqlQuery);
   const selectiveResponse = await client.sparql({
     query: selectiveSparqlQuery,
   });
   console.log(JSON.stringify(selectiveResponse, null, 2));
 
-  const devOnlyScanQuery = createCappedUnboundTriplePatternSparqlQuery(100);
+  const devOnlyScanQuery =
+    "SELECT ?subject ?property ?object WHERE { ?subject ?property ?object } LIMIT 100";
   console.log("\nCapped full scan (dev/small graphs only):", devOnlyScanQuery);
   const scanResponse = await client.sparql({ query: devOnlyScanQuery });
   console.log(JSON.stringify(scanResponse, null, 2));
