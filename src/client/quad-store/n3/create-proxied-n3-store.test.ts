@@ -1,14 +1,14 @@
 import { assertEquals } from "@std/assert";
 import { DataFactory, Store } from "n3";
-import { proxyStore } from "./proxy-store.ts";
+import { createProxiedN3Store } from "./create-proxied-n3-store.ts";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { executeSparql } from "@/client/adapters/comunica/mod.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 
-Deno.test("Slice 1: proxyStore proxy captures raw addQuad mutation", () => {
+Deno.test("Slice 1: createProxiedN3Store proxy captures raw addQuad mutation", () => {
   const baseStore = new Store();
-  const { store, drainPatches } = proxyStore(baseStore);
+  const { store, drainPatches } = createProxiedN3Store(baseStore);
 
   const testQuad = quad(
     namedNode("urn:sub"),
@@ -37,12 +37,12 @@ Deno.test("Slice 1: proxyStore proxy captures raw addQuad mutation", () => {
   );
 });
 
-Deno.test("Slice 1: proxyStore proxy captures raw removeQuad mutation", () => {
+Deno.test("Slice 1: createProxiedN3Store proxy captures raw removeQuad mutation", () => {
   const baseStore = new Store();
   const testQuad = quad(namedNode("u:s"), namedNode("u:p"), literal("v"));
   baseStore.addQuad(testQuad);
 
-  const { store, drainPatches } = proxyStore(baseStore);
+  const { store, drainPatches } = createProxiedN3Store(baseStore);
 
   // Perform remove through proxy
   store.removeQuad(testQuad);
@@ -56,14 +56,14 @@ Deno.test("Slice 1: proxyStore proxy captures raw removeQuad mutation", () => {
   );
 });
 
-Deno.test("Slice 1: proxyStore proxy captures removeMatches", async () => {
+Deno.test("Slice 1: createProxiedN3Store proxy captures removeMatches", async () => {
   const baseStore = new Store();
   const q1 = quad(namedNode("u:s1"), namedNode("u:p"), literal("v1"));
   const q2 = quad(namedNode("u:s2"), namedNode("u:p"), literal("v2"));
   baseStore.addQuad(q1);
   baseStore.addQuad(q2);
 
-  const { store, drainPatches } = proxyStore(baseStore);
+  const { store, drainPatches } = createProxiedN3Store(baseStore);
 
   // removeMatches returns a stream — consume it to ensure queue is populated
   const removalStream = store.removeMatches(null, namedNode("u:p"), null, null);
@@ -90,7 +90,7 @@ Deno.test("Slice 1: proxyStore proxy captures removeMatches", async () => {
 
 Deno.test("Slice 2: bridge automatically transparently captures implicit Comunica SPARQL updates", async () => {
   const baseStore = new Store();
-  const { store, drainPatches } = proxyStore(baseStore);
+  const { store, drainPatches } = createProxiedN3Store(baseStore);
   const engine = new QueryEngine();
 
   // Fire a live SPARQL Update into the proxied store
@@ -121,9 +121,9 @@ Deno.test("Slice 2: bridge automatically transparently captures implicit Comunic
   assertEquals(baseStore.size, 1, "Memory failed to write");
 });
 
-Deno.test("proxyStore - add alias captures insertions like addQuad", () => {
+Deno.test("createProxiedN3Store - add alias captures insertions like addQuad", () => {
   const baseStore = new Store();
-  const { store, drainPatches } = proxyStore(baseStore);
+  const { store, drainPatches } = createProxiedN3Store(baseStore);
   const testQuad = quad(
     namedNode("urn:sub"),
     namedNode("urn:pred"),
@@ -139,20 +139,20 @@ Deno.test("proxyStore - add alias captures insertions like addQuad", () => {
 });
 
 Deno.test(
-  'proxyStore - proxied store exposes removeMatches for Comunica "has" checks',
+  'createProxiedN3Store - proxied store exposes removeMatches for Comunica "has" checks',
   () => {
     const baseStore = new Store();
-    const { store } = proxyStore(baseStore);
+    const { store } = createProxiedN3Store(baseStore);
 
     assertEquals("removeMatches" in store, true);
   },
 );
 
 Deno.test(
-  "proxyStore - duplicate addQuad does not enqueue redundant patches",
+  "createProxiedN3Store - duplicate addQuad does not enqueue redundant patches",
   () => {
     const baseStore = new Store();
-    const { store, drainPatches } = proxyStore(baseStore);
+    const { store, drainPatches } = createProxiedN3Store(baseStore);
     const testQuad = quad(
       namedNode("urn:sub"),
       namedNode("urn:pred"),
@@ -168,10 +168,10 @@ Deno.test(
   },
 );
 
-Deno.test("proxyStore - removeQuad on absent quad emits no patch", () => {
+Deno.test("createProxiedN3Store - removeQuad on absent quad emits no patch", () => {
   const baseStore = new Store();
   const testQuad = quad(namedNode("u:s"), namedNode("u:p"), literal("v"));
-  const { store, drainPatches } = proxyStore(baseStore);
+  const { store, drainPatches } = createProxiedN3Store(baseStore);
 
   store.removeQuad(testQuad);
 
@@ -179,7 +179,7 @@ Deno.test("proxyStore - removeQuad on absent quad emits no patch", () => {
 });
 
 Deno.test(
-  "proxyStore - addQuads records only novel quads in the patch",
+  "createProxiedN3Store - addQuads records only novel quads in the patch",
   () => {
     const baseStore = new Store();
     const existingQuad = quad(
@@ -194,7 +194,7 @@ Deno.test(
     );
     baseStore.addQuad(existingQuad);
 
-    const { store, drainPatches } = proxyStore(baseStore);
+    const { store, drainPatches } = createProxiedN3Store(baseStore);
     store.addQuads([existingQuad, novelQuad]);
 
     const pending = drainPatches();
@@ -206,7 +206,7 @@ Deno.test(
 );
 
 Deno.test(
-  "proxyStore - removeQuads records only quads that existed in the store",
+  "createProxiedN3Store - removeQuads records only quads that existed in the store",
   () => {
     const baseStore = new Store();
     const presentQuad = quad(
@@ -221,7 +221,7 @@ Deno.test(
     );
     baseStore.addQuad(presentQuad);
 
-    const { store, drainPatches } = proxyStore(baseStore);
+    const { store, drainPatches } = createProxiedN3Store(baseStore);
     store.removeQuads([presentQuad, absentQuad]);
 
     const pending = drainPatches();
@@ -232,9 +232,9 @@ Deno.test(
   },
 );
 
-Deno.test("proxyStore - drainPatches clears the pending queue", () => {
+Deno.test("createProxiedN3Store - drainPatches clears the pending queue", () => {
   const baseStore = new Store();
-  const { store, drainPatches } = proxyStore(baseStore);
+  const { store, drainPatches } = createProxiedN3Store(baseStore);
   const testQuad = quad(namedNode("u:s"), namedNode("u:p"), literal("v"));
 
   store.addQuad(testQuad);
@@ -243,10 +243,10 @@ Deno.test("proxyStore - drainPatches clears the pending queue", () => {
 });
 
 Deno.test(
-  "proxyStore - import stream captures novel quads from an N3 match stream",
+  "createProxiedN3Store - import stream captures novel quads from an N3 match stream",
   async () => {
     const baseStore = new Store();
-    const { store, drainPatches } = proxyStore(baseStore);
+    const { store, drainPatches } = createProxiedN3Store(baseStore);
 
     const donorStore = new Store();
     const firstQuad = quad(namedNode("u:s1"), namedNode("u:p"), literal("a"));

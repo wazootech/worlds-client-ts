@@ -3,11 +3,11 @@ import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
-import { rebuildLibsqlSearchIndexFromQuads } from "./rebuild-libsql-search-index-from-quads.ts";
+import { rebuildLibsqlSearchIndexFromQuads } from "@/client/adapters/libsql/search/rebuild-libsql-search-index-from-quads.ts";
 import { FakeEmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
-import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
-import { initializeLibsqlSchema } from "./initialize-libsql-schema.ts";
-import { buildChunkFtsValue } from "./build-chunk-fts-value.ts";
+import { LibsqlQueryBuilder } from "@/client/adapters/libsql/store/mod.ts";
+import { initializeLibsqlSchema } from "@/client/adapters/libsql/store/mod.ts";
+import { buildChunkFtsValue } from "@/client/adapters/libsql/search/search-chunk-fts.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 

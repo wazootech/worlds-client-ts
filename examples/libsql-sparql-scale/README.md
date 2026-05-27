@@ -8,13 +8,12 @@ Runnable companion to
 deno task example:libsql-sparql-scale
 ```
 
-Uses `createLibsqlAdapter` + `Client` with query helpers from
-`@worlds/client/adapters/libsql`:
+Uses `createLibsqlAdapter` + `Client` with inline SPARQL strings:
 
-- **Selective:** `createSubjectBoundPropertiesSparqlQuery(subjectIri)` — default
+- **Selective:** subject-bound `SELECT ?p ?o WHERE { <iri> ?p ?o }` — default
   for production hot paths.
-- **Capped scan:** `createCappedUnboundTriplePatternSparqlQuery(limit)` — small
-  graphs and debugging only.
+- **Capped scan:** `SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT n` — small graphs
+  and debugging only.
 
 Crossover numbers and methodology:
 [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69),

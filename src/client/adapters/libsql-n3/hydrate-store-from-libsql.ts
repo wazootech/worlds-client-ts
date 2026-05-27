@@ -2,14 +2,17 @@ import type { Client } from "@libsql/client";
 import type { Store } from "n3";
 import type * as rdfjs from "@rdfjs/types";
 import type { QuadFilter } from "@/client/quad-store/mod.ts";
-import { quadFromLibsqlRow } from "./libsql-quad-row.ts";
 import {
   DEFAULT_LIBSQL_MATCH_PAGE_SIZE,
-  defaultLibsqlQueryBuilder,
-} from "./libsql-query-builder.ts";
+  LibsqlQueryBuilder,
+  quadFromLibsqlRow,
+} from "@/client/adapters/libsql/mod.ts";
 
 /** DEFAULT_HYDRATION_BATCH_SIZE caps peak heap during hydration by flushing quads into the N3 store in chunks. */
 const DEFAULT_HYDRATION_BATCH_SIZE = 1000;
+
+/** DEFAULT_HYDRATION_VECTOR_DIMENSIONS is the fallback vector width when no queryBuilder is supplied. */
+const DEFAULT_HYDRATION_VECTOR_DIMENSIONS = 32;
 
 /**
  * hydrateStoreFromLibsql reconstructs full in-memory state at lightning speeds by deserializing
@@ -19,14 +22,17 @@ export async function hydrateStoreFromLibsql(
   client: Client,
   target: Store,
   filter?: QuadFilter,
+  queryBuilder?: LibsqlQueryBuilder,
 ): Promise<number> {
+  const resolvedQueryBuilder = queryBuilder ??
+    new LibsqlQueryBuilder(DEFAULT_HYDRATION_VECTOR_DIMENSIONS);
   const pageSize = DEFAULT_LIBSQL_MATCH_PAGE_SIZE;
   const batchQuads: rdfjs.Quad[] = [];
   let hydratedCount = 0;
   let afterQuadId: string | undefined;
 
   for (;;) {
-    const query = defaultLibsqlQueryBuilder.buildHydrateQuadsPageQuery(filter, {
+    const query = resolvedQueryBuilder.buildHydrateQuadsPageQuery(filter, {
       afterQuadId,
       limit: pageSize,
     });

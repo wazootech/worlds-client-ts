@@ -1,6 +1,4 @@
-import type { Client } from "@libsql/client";
 import { DataFactory } from "n3";
-import type { QuadFilter } from "@/client/quad-store/mod.ts";
 import type {
   RebuildSearchIndexRequest,
   RebuildSearchIndexResponse,
@@ -10,9 +8,8 @@ import type {
   SearchResult,
 } from "@/client/search-index/mod.ts";
 import { hashQuad } from "@/client/quad-store/mod.ts";
-import type { TextSplitterInterface } from "@/client/search-index/quad-chunker/mod.ts";
-import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
-import type { EmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
+import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
+import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/store/mod.ts";
 import { rebuildLibsqlSearchIndexFromQuads } from "./rebuild-libsql-search-index-from-quads.ts";
 
 const { literal, namedNode, quad: createQuad, defaultGraph } = DataFactory;
@@ -20,27 +17,12 @@ const { literal, namedNode, quad: createQuad, defaultGraph } = DataFactory;
 /**
  * LibsqlSearchIndexOptions defines the structured configuration and dependency parameters needed to construct the LibSQL search engine.
  */
-export interface LibsqlSearchIndexOptions extends QuadFilter {
-  /** client is the initialized @libsql/client instance pointing to the target database. */
-  client: Client;
-  /** embeddingService is an optional capability for projecting textual search inputs into dense vector space. */
-  embeddingService?: EmbeddingService;
-  /** limit establishes optional page sizing constraints for search result sets, defaulting to 100. */
-  limit?: number;
-
-  /**
-   * libsqlQueryBuilder must match the schema and commit path used when materializing chunk vectors.
-   */
+export interface LibsqlSearchIndexOptions extends LibsqlClientBaseOptions {
+  /** libsqlQueryBuilder must match the schema and commit path used when materializing chunk vectors. */
   libsqlQueryBuilder: LibsqlQueryBuilder;
 
-  /** textSplitter is required when rebuildSearchIndex rebuilds chunk rows from quads. */
-  textSplitter?: TextSplitterInterface;
-
-  /** labelPredicates extends built-in label IRIs used during rebuildSearchIndex chunk projection. */
-  labelPredicates?: string[];
-
-  /** maxLookupChunkSize caps IN-clause host parameters during rebuildSearchIndex (default 800). */
-  maxLookupChunkSize?: number;
+  /** limit establishes optional page sizing constraints for search result sets, defaulting to 100. */
+  limit?: number;
 
   /** maxWriteBatchSize caps statements per LibSQL batch during rebuildSearchIndex (default 500). */
   maxWriteBatchSize?: number;
@@ -139,15 +121,10 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
     const exclude = request?.exclude ?? this.options.exclude;
 
     return await rebuildLibsqlSearchIndexFromQuads({
-      client: this.options.client,
-      libsqlQueryBuilder: this.options.libsqlQueryBuilder,
-      embeddingService: this.options.embeddingService,
+      ...this.options,
       textSplitter,
-      maxLookupChunkSize: this.options.maxLookupChunkSize,
-      maxWriteBatchSize: this.options.maxWriteBatchSize,
       include,
       exclude,
-      labelPredicates: this.options.labelPredicates,
       readPageSize: request?.readPageSize,
     });
   }

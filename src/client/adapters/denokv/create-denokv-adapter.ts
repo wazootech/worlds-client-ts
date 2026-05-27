@@ -6,20 +6,12 @@ import type { DenokvQuadStoreOptions } from "./denokv-quad-store.ts";
 import { DenokvQuadStore } from "./denokv-quad-store.ts";
 
 /**
- * DenokvSparqlEngineOptions contains the per-query hydrated RDFJS store available to caller-provided SPARQL adapters.
- */
-export interface DenokvSparqlEngineOptions {
-  /** store is the freshly hydrated RDFJS workspace for the current SPARQL operation. */
-  store: Store;
-}
-
-/**
  * DenokvOptions specifies configuration parameters for Deno Kv adapter contexts.
  */
 export interface DenokvOptions extends DenokvQuadStoreOptions {
   /** createSparqlEngine optionally attaches a caller-provided SPARQL engine over each hydrated workspace. */
   createSparqlEngine?: (
-    options: DenokvSparqlEngineOptions,
+    options: { store: Store },
   ) => SparqlEngineInterface;
 }
 

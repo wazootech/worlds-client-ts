@@ -46,7 +46,7 @@ deno bench --allow-all benchmarks/sparql-hexastore-crossover.bench.ts
 ```
 
 **Standard (1k–50k):** compares **hydrate+N3** (`createLibsqlN3Adapter` from
-`@worlds/client/adapters/libsql/n3`) vs **libsqlStore** (`createLibsqlAdapter`
+`@worlds/client/adapters/libsql-n3`) vs **libsqlStore** (`createLibsqlAdapter`
 from `@worlds/client/adapters/libsql`).
 
 **Large (100k–1M):** **libsqlStore only** — the scalable LibSQL path for hybrid
@@ -54,15 +54,16 @@ search + SPARQL in production
 ([#68](https://github.com/wazootech/worlds-client-ts/issues/68)); does not run
 hydrate+N3.
 
-Crossover preload uses `searchIndexOnImport: false` (quads only; the timed slice
-is `execute()`). Do **not** call `Client.rebuildSearchIndex()` in crossover
-harnesses — it rebuilds FTS/chunks and does not affect execute timings. Batched
-quad `INSERT`s speed the untimed preload / `BENCH_REUSE_DB` cache build.
+Crossover preload uses `searchIndexOnImport: "disabled"` (quads only; the timed
+slice is `execute()`). Do **not** call `Client.rebuildSearchIndex()` in
+crossover harnesses — it rebuilds FTS/chunks and does not affect execute
+timings. Batched quad `INSERT`s speed the untimed preload / `BENCH_REUSE_DB`
+cache build.
 
-Apps that need `search()` at scale use normal import with inline indexing,
-`deferSearchIndexOnImport: true` (rebuild after each import), or
-`searchIndexOnImport: false` plus `await client.rebuildSearchIndex()` once after
-bulk load.
+Apps that need `search()` at scale use normal import with inline indexing
+(`"incremental"`, the default), `searchIndexOnImport: "deferred"` (rebuild after
+each import), or `searchIndexOnImport: "disabled"` plus
+`await client.rebuildSearchIndex()` once after bulk load.
 
 ### SPARQL crossover at 100k–1M (opt-in, local only)
 
@@ -85,10 +86,10 @@ Only `sparqlEngine.execute()` is timed inside `Deno.bench`. Paste results into
 [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69).
 
 For full import + search preload timing (not the crossover execute table), use
-`deferSearchIndexOnImport: true` on a dedicated bulk-load client (quads first,
-search index rebuilt after import), or `searchIndexOnImport: false` followed by
-`await client.rebuildSearchIndex()` when you want quads and search repair as
-separate timed steps.
+`searchIndexOnImport: "deferred"` on a dedicated bulk-load client (quads first,
+search index rebuilt after import), or `searchIndexOnImport: "disabled"`
+followed by `await client.rebuildSearchIndex()` when you want quads and search
+repair as separate timed steps.
 
 #### Reusing large fixtures (dev only)
 
@@ -132,7 +133,7 @@ create a fresh database per iteration and use `warmup: 5`, `n: 50`.
 **Production (millions of quads):** prefer
 [`createLibsqlAdapter`](../src/client/adapters/libsql/create-libsql-adapter.ts)
 for indexed SPARQL without a full N3 mirror; reuse a warmed
-[`store`](../src/client/adapters/libsql/n3/create-libsql-n3-adapter.ts) on the
+[`store`](../src/client/adapters/libsql-n3/create-libsql-n3-adapter.ts) on the
 N3 path per container, not per request. Track guidance in
 [#68](https://github.com/wazootech/worlds-client-ts/issues/68).
 
@@ -227,7 +228,7 @@ for local regression checks.
 
 Captured on **Deno 2.8.0 (Windows x86_64)** via
 `deno task bench:crossover-large` (`--v8-flags=--max-old-space-size=8192`).
-**libsqlStore only**, `searchIndexOnImport: false` (quads-only preload; no
+**libsqlStore only**, `searchIndexOnImport: "disabled"` (quads-only preload; no
 hydrate+N3, no FTS/chunk build during import).
 
 Module preload (`console.time`, not in `Deno.bench`): 100k ~4.6 s; 250k ~14 s;

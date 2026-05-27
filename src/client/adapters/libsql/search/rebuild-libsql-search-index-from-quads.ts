@@ -1,22 +1,11 @@
-import type { Client } from "@libsql/client";
 import type * as rdfjs from "@rdfjs/types";
 import { filterQuads } from "@/client/quad-store/mod.ts";
 import {
   type CommitPatchToLibsqlOptions,
   refreshSearchChunksForQuads,
-} from "./commit-patch-to-libsql.ts";
-import { quadFromLibsqlRow } from "./libsql-quad-row.ts";
-import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
-import { DEFAULT_LIBSQL_MATCH_PAGE_SIZE } from "./libsql-query-builder.ts";
-
-/**
- * RebuildLibsqlSearchIndexFromQuadsOptions configures a full search-index refresh from durable quads.
- */
-export interface RebuildLibsqlSearchIndexFromQuadsOptions
-  extends CommitPatchToLibsqlOptions {
-  /** readPageSize limits quads loaded per SQL page while scanning the hexastore (default 1000). */
-  readPageSize?: number;
-}
+} from "@/client/adapters/libsql/sync/commit-patch-to-libsql.ts";
+import { quadFromLibsqlRow } from "@/client/adapters/libsql/store/libsql-quad-row.ts";
+import { DEFAULT_LIBSQL_MATCH_PAGE_SIZE } from "@/client/adapters/libsql/store/libsql-query-builder.ts";
 
 /**
  * RebuildLibsqlSearchIndexFromQuadsResult reports how many quads and chunk rows were processed.
@@ -34,7 +23,7 @@ export interface RebuildLibsqlSearchIndexFromQuadsResult {
  * Use after schema upgrades, label predicate changes, or discovery-index tuning so existing corpora pick up refreshed `fts_value` and vectors.
  */
 export async function rebuildLibsqlSearchIndexFromQuads(
-  options: RebuildLibsqlSearchIndexFromQuadsOptions,
+  options: CommitPatchToLibsqlOptions & { readPageSize?: number },
 ): Promise<RebuildLibsqlSearchIndexFromQuadsResult> {
   const {
     client,
@@ -97,27 +86,7 @@ export async function rebuildLibsqlSearchIndexFromQuads(
  * createLibsqlSearchIndexRebuilder returns a closure that rebuilds search chunks using stable LibSQL dependencies.
  */
 export function createLibsqlSearchIndexRebuilder(
-  dependencies:
-    & {
-      client: Client;
-      libsqlQueryBuilder: LibsqlQueryBuilder;
-    }
-    & Omit<
-      RebuildLibsqlSearchIndexFromQuadsOptions,
-      "client" | "libsqlQueryBuilder"
-    >,
+  dependencies: CommitPatchToLibsqlOptions & { readPageSize?: number },
 ): () => Promise<RebuildLibsqlSearchIndexFromQuadsResult> {
-  return () =>
-    rebuildLibsqlSearchIndexFromQuads({
-      client: dependencies.client,
-      libsqlQueryBuilder: dependencies.libsqlQueryBuilder,
-      embeddingService: dependencies.embeddingService,
-      textSplitter: dependencies.textSplitter,
-      maxLookupChunkSize: dependencies.maxLookupChunkSize,
-      maxWriteBatchSize: dependencies.maxWriteBatchSize,
-      include: dependencies.include,
-      exclude: dependencies.exclude,
-      readPageSize: dependencies.readPageSize,
-      labelPredicates: dependencies.labelPredicates,
-    });
+  return () => rebuildLibsqlSearchIndexFromQuads(dependencies);
 }

@@ -7,7 +7,7 @@ import {
   createComunicaSparqlEngineFactory,
 } from "@worlds/client/adapters/comunica";
 import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
-import { createLibsqlN3Adapter } from "@worlds/client/adapters/libsql/n3";
+import { createLibsqlN3Adapter } from "@worlds/client/adapters/libsql-n3";
 import type { SparqlEngineInterface } from "@worlds/client/sparql-engine";
 import {
   buildCrossoverFixtureChecksumInputs,
@@ -103,7 +103,7 @@ async function importCorpusIntoLibsqlHexastore(
 ): Promise<void> {
   const adapter = await createLibsqlAdapter({
     client: databaseClient,
-    searchIndexOnImport: false,
+    searchIndexOnImport: "disabled",
   });
   const worldsClient = new Client(adapter);
   await worldsClient.import({
@@ -119,7 +119,7 @@ async function openLibsqlHexastoreSparqlEngine(
 ): Promise<PreloadedSparqlFixture> {
   const adapter = await createLibsqlAdapter({
     client: databaseClient,
-    searchIndexOnImport: false,
+    searchIndexOnImport: "disabled",
     createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
       queryEngine: sharedQueryEngine,
     }),
@@ -188,7 +188,7 @@ async function createHydrateN3SparqlEngine(
   const databaseClient = createClient({ url: ":memory:" });
   const adapter = await createLibsqlN3Adapter({
     client: databaseClient,
-    searchIndexOnImport: false,
+    searchIndexOnImport: "disabled",
     createSparqlEngine: createComunicaSparqlEngineFactory({
       queryEngine: sharedQueryEngine,
     }),

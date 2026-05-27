@@ -1,11 +1,11 @@
-import { assertEquals, assertExists, assertRejects } from "@std/assert";
+import { assertEquals, assertExists } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory } from "n3";
 import { Client } from "@/client/client.ts";
 import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
 import { createLibsqlAdapter } from "./create-libsql-adapter.ts";
-import type { LibsqlStore } from "./libsql-store.ts";
+import type { LibsqlStore } from "@/client/adapters/libsql/store/mod.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 const queryEngine = new QueryEngine();
@@ -106,14 +106,14 @@ Deno.test(
 );
 
 Deno.test(
-  "createLibsqlAdapter - searchIndexOnImport false skips chunks and search stays empty",
+  "createLibsqlAdapter - searchIndexOnImport disabled skips chunks and search stays empty",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
 
     const client = new Client(
       await createLibsqlAdapter({
         client: databaseClient,
-        searchIndexOnImport: false,
+        searchIndexOnImport: "disabled",
         createSparqlEngine: ({ libsqlStore }) =>
           new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
       }),
@@ -155,14 +155,14 @@ Deno.test(
 );
 
 Deno.test(
-  "createLibsqlAdapter - rebuildSearchIndex after searchIndexOnImport false enables search",
+  "createLibsqlAdapter - rebuildSearchIndex after searchIndexOnImport disabled enables search",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
 
     const client = new Client(
       await createLibsqlAdapter({
         client: databaseClient,
-        searchIndexOnImport: false,
+        searchIndexOnImport: "disabled",
         createSparqlEngine: ({ libsqlStore }) =>
           new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
       }),
@@ -214,7 +214,7 @@ Deno.test(
     const client = new Client(
       await createLibsqlAdapter({
         client: databaseClient,
-        searchIndexOnImport: false,
+        searchIndexOnImport: "disabled",
         createSparqlEngine: ({ libsqlStore }) =>
           new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
       }),
@@ -262,7 +262,7 @@ Deno.test(
     const client = new Client(
       await createLibsqlAdapter({
         client: databaseClient,
-        searchIndexOnImport: false,
+        searchIndexOnImport: "disabled",
         createSparqlEngine: ({ libsqlStore }) =>
           new ComunicaSparqlEngine({ queryEngine, store: libsqlStore }),
       }),
@@ -292,26 +292,6 @@ Deno.test(
     assertEquals(
       Number(chunkRows.rows[0].total),
       secondRebuild.chunkRowCount,
-    );
-
-    databaseClient.close();
-  },
-);
-
-Deno.test(
-  "createLibsqlAdapter - searchIndexOnImport false rejects deferSearchIndexOnImport",
-  async () => {
-    const databaseClient = createClient({ url: ":memory:" });
-
-    await assertRejects(
-      () =>
-        createLibsqlAdapter({
-          client: databaseClient,
-          searchIndexOnImport: false,
-          deferSearchIndexOnImport: true,
-        }),
-      Error,
-      "searchIndexOnImport: false cannot be combined with deferSearchIndexOnImport: true",
     );
 
     databaseClient.close();

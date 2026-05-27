@@ -5,54 +5,34 @@ import type {
 } from "@/client/search-index/quad-chunker/mod.ts";
 import { chunkQuads } from "@/client/search-index/quad-chunker/mod.ts";
 import type * as rdfjs from "@rdfjs/types";
-import type { Patch, QuadFilter } from "@/client/quad-store/mod.ts";
+import type { Patch } from "@/client/quad-store/mod.ts";
 import {
   filterQuads,
   hashQuad,
   isTextualLiteral,
 } from "@/client/quad-store/mod.ts";
-import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
-import type { EmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
-import { buildChunkFtsValue } from "./build-chunk-fts-value.ts";
-import { quadFromLibsqlRow } from "./libsql-quad-row.ts";
+import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
+import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/store/mod.ts";
+import { quadFromLibsqlRow } from "@/client/adapters/libsql/store/libsql-quad-row.ts";
 import {
-  DEFAULT_LABEL_PREDICATES,
+  buildChunkFtsValue,
   resolveLabelPredicates,
-} from "./label-predicates.ts";
+} from "@/client/adapters/libsql/search/search-chunk-fts.ts";
 
 /**
  * CommitPatchToLibsqlOptions provides configurations for executing updates against LibSQL durable stores.
  */
-export interface CommitPatchToLibsqlOptions extends QuadFilter {
-  /** client is the underlying database connection. */
-  client: Client;
-
-  /** embeddingService is an optional projection capability for text literals, needed only if chunking requires new vector math. */
-  embeddingService?: EmbeddingService;
-
+export interface CommitPatchToLibsqlOptions extends LibsqlClientBaseOptions {
   /** textSplitter is the splitting facility consumed when breaking large strings into search metadata. */
   textSplitter: TextSplitterInterface;
-
-  /** maxLookupChunkSize specifies the maximum bound parameters per SQL statement for IN-clause lookups and deletions. Defaults to 800 (below SQLite SQLITE_MAX_VARIABLE_NUMBER). */
-  maxLookupChunkSize?: number;
 
   /** maxWriteBatchSize caps how many statements are sent per LibSQL write batch. Defaults to 500. */
   maxWriteBatchSize?: number;
 
-  /**
-   * libsqlQueryBuilder supplies dimension-aware SQL used for deletions, inserts, and chunk replication.
-   */
+  /** libsqlQueryBuilder supplies dimension-aware SQL used for deletions, inserts, and chunk replication. */
   libsqlQueryBuilder: LibsqlQueryBuilder;
 
-  /**
-   * labelPredicates extends built-in label IRIs used for subject alias discovery at index time (union, deduped).
-   */
-  labelPredicates?: string[];
-
-  /**
-   * skipSearchIndexProjection omits FTS/vector chunk writes for this patch (quads table only).
-   * Pair with `rebuildLibsqlSearchIndexFromQuads` after bulk import when `deferSearchIndexOnImport` is set on the LibSQL client.
-   */
+  /** skipSearchIndexProjection omits FTS/vector chunk writes for this patch (quads table only). Pair with `rebuildLibsqlSearchIndexFromQuads` after bulk import when searchIndexOnImport is "deferred". */
   skipSearchIndexProjection?: boolean;
 }
 
@@ -123,8 +103,8 @@ async function stageInStatements(
  *
  * Large patches are written in multiple `client.batch` slices (see `STAGING_FLUSH_THRESHOLD`) to avoid
  * stack overflow and bound peak memory; that is chunked durability, not one atomic SQL transaction across
- * the entire patch. Use `deferSearchIndexOnImport` on the LibSQL factory plus `rebuildLibsqlSearchIndexFromQuads` when
- * bulk loading millions of quads.
+ * the entire patch. Use `searchIndexOnImport: "deferred"` on the LibSQL factory plus `rebuildLibsqlSearchIndexFromQuads`
+ * when bulk loading millions of quads.
  */
 export async function commitPatchToLibsql(
   patch: Patch,
@@ -634,5 +614,3 @@ async function buildVectorChunkStatements(
 
   return statements;
 }
-
-export { DEFAULT_LABEL_PREDICATES, resolveLabelPredicates };

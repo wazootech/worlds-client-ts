@@ -5,7 +5,6 @@ import type {
   ExportRequest,
   ExportResponse,
   ImportRequest,
-  ImportResponse,
   QuadStoreInterface,
 } from "@/client/quad-store/mod.ts";
 
@@ -16,7 +15,7 @@ import type {
 export class RdfjsQuadStore implements QuadStoreInterface {
   constructor(private readonly store: rdfjs.Store) {}
 
-  public async import(request: ImportRequest): Promise<ImportResponse> {
+  public async import(request: ImportRequest): Promise<void> {
     const mode = request.mode ?? "merge";
     const quads = await materializeImportQuads(request.source);
 

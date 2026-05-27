@@ -3,7 +3,6 @@ import type {
   ExportRequest,
   ExportResponse,
   ImportRequest,
-  ImportResponse,
   QuadStoreInterface,
 } from "./quad-store/mod.ts";
 import type {
@@ -47,7 +46,7 @@ export interface Adapter {
 export class Client implements ClientInterface {
   public constructor(protected readonly adapter: Adapter) {}
 
-  public async import(request: ImportRequest): Promise<ImportResponse> {
+  public async import(request: ImportRequest): Promise<void> {
     return await this.adapter.quadStore.import(request);
   }
 

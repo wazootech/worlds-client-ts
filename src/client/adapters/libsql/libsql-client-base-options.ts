@@ -35,34 +35,11 @@ export interface LibsqlClientBaseOptions extends QuadFilter {
   labelPredicates?: string[];
 
   /**
-   * searchIndexOnImport when false skips chunk/FTS projection on every commit and does not rebuild after import.
-   * Use for SPARQL-only bulk loads; call Client.rebuildSearchIndex() before search().
+   * searchIndexOnImport controls when FTS/vector chunk projection runs during import.
+   *
+   * - `"incremental"` (default when omitted): chunks each quad on commit.
+   * - `"deferred"`: persists quads on each import, rebuilds FTS/vector chunks in one pass afterward.
+   * - `"disabled"`: skips chunking entirely; caller calls `Client.rebuildSearchIndex()` before searching.
    */
-  searchIndexOnImport?: boolean;
-
-  /**
-   * deferSearchIndexOnImport persists quads on each import and rebuilds FTS/vector chunks afterward via Client.rebuildSearchIndex().
-   * Enable only on LibSQL clients dedicated to large bulk loads; omit for normal incremental use.
-   * Cannot be combined with searchIndexOnImport: false.
-   */
-  deferSearchIndexOnImport?: boolean;
-}
-
-/**
- * assertLibsqlClientIndexingOptions rejects mutually exclusive LibSQL search-indexing flags.
- */
-export function assertLibsqlClientIndexingOptions(
-  options: Pick<
-    LibsqlClientBaseOptions,
-    "searchIndexOnImport" | "deferSearchIndexOnImport"
-  >,
-): void {
-  if (
-    options.searchIndexOnImport === false &&
-    options.deferSearchIndexOnImport === true
-  ) {
-    throw new Error(
-      "searchIndexOnImport: false cannot be combined with deferSearchIndexOnImport: true",
-    );
-  }
+  searchIndexOnImport?: "incremental" | "deferred" | "disabled";
 }

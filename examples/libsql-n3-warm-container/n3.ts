@@ -2,11 +2,10 @@ import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { createComunicaSparqlEngineFactory } from "@worlds/client/adapters/comunica";
 import {
-  createSubjectBoundPropertiesSparqlQuery,
+  createLibsqlN3Adapter,
   hydrateStoreFromLibsql,
-} from "@worlds/client/adapters/libsql";
+} from "@worlds/client/adapters/libsql-n3";
 import { Client } from "@worlds/client";
-import { createLibsqlN3Adapter } from "@worlds/client/adapters/libsql/n3";
 import { DataFactory, Store } from "n3";
 
 const { quad, namedNode, literal } = DataFactory;
@@ -60,14 +59,16 @@ if (import.meta.main) {
   console.log("\nSimulated request 1 (reuse warm-isolate client):");
   const firstRequestClient = await getWarmIsolateClient(warmedStore);
   const firstResponse = await firstRequestClient.sparql({
-    query: createSubjectBoundPropertiesSparqlQuery(warmSubjectIri),
+    query:
+      `SELECT ?property ?object WHERE { <${warmSubjectIri}> ?property ?object }`,
   });
   console.log(JSON.stringify(firstResponse, null, 2));
 
   console.log("\nSimulated request 2 (same warmed store + client):");
   const secondRequestClient = await getWarmIsolateClient(warmedStore);
   const secondResponse = await secondRequestClient.sparql({
-    query: createSubjectBoundPropertiesSparqlQuery(warmSubjectIri),
+    query:
+      `SELECT ?property ?object WHERE { <${warmSubjectIri}> ?property ?object }`,
   });
   console.log(JSON.stringify(secondResponse, null, 2));
 }

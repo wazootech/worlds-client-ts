@@ -20,7 +20,7 @@ async function importCorpusIntoLibsqlHexastoreForTest(
 ): Promise<void> {
   const adapter = await createLibsqlAdapter({
     client: databaseClient,
-    searchIndexOnImport: false,
+    searchIndexOnImport: "disabled",
   });
   const worldsClient = new Client(adapter);
   await worldsClient.import({
