@@ -529,9 +529,7 @@ function createCommitHandler(
 }
 
 async function computeQuadId(quad: rdfjs.Quad): Promise<string> {
-  const { hashQuad } = await import(
-    "../../quad-store/mod.ts"
-  );
+  const { hashQuad } = await import("@/client/quad-store/mod.ts");
   return await hashQuad(quad);
 }
 

@@ -1,9 +1,8 @@
 import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { createComunicaSparqlEngineFactory } from "@worlds/client/adapters/comunica";
-import { createSubjectBoundPropertiesSparqlQuery } from "@worlds/client/adapters/libsql";
 import { Client } from "@worlds/client";
-import { createLibsqlN3Adapter } from "@worlds/client/adapters/libsql/n3";
+import { createLibsqlN3Adapter } from "@worlds/client/adapters/libsql-n3";
 import { DataFactory } from "n3";
 
 const { quad, namedNode, literal } = DataFactory;
@@ -45,7 +44,8 @@ if (import.meta.main) {
 
   console.log("\nSubject-bound SPARQL (same client, no re-hydration):");
   const sparqlResponse = await client.sparql({
-    query: createSubjectBoundPropertiesSparqlQuery(demoSubjectIri),
+    query:
+      `SELECT ?property ?object WHERE { <${demoSubjectIri}> ?property ?object }`,
   });
   console.log(JSON.stringify(sparqlResponse, null, 2));
 }

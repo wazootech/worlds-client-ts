@@ -1,9 +1,11 @@
 import { createClient } from "@libsql/client";
 import { Store } from "n3";
 import { RdfjsSearchIndex } from "@worlds/client/adapters/rdfjs";
-import { LibsqlSearchIndex } from "@worlds/client/adapters/libsql";
-import { createLibsqlN3Adapter } from "@worlds/client/adapters/libsql/n3";
-import { defaultLibsqlQueryBuilder } from "@worlds/client/adapters/libsql";
+import {
+  LibsqlQueryBuilder,
+  LibsqlSearchIndex,
+} from "@worlds/client/adapters/libsql";
+import { createLibsqlN3Adapter } from "@worlds/client/adapters/libsql-n3";
 import { Client } from "@worlds/client";
 import { generateSyntheticQuads } from "./shared/synthetic-data.ts";
 
@@ -26,7 +28,7 @@ async function prepareLibsqlSearchIndex(count: number) {
 
   const searchIndex = new LibsqlSearchIndex({
     client: db,
-    libsqlQueryBuilder: defaultLibsqlQueryBuilder,
+    libsqlQueryBuilder: new LibsqlQueryBuilder(32),
   });
   return { searchIndex, db };
 }

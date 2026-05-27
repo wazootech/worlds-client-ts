@@ -120,8 +120,10 @@ mathematical brevity.
    `@/client/adapters/libsql/mod.ts`.
 2. **Same domain folder.** `./file.ts` or `./subfolder/mod.ts` for siblings and
    children.
-3. **Nested folder, parent barrel.** `@/client/adapters/libsql/mod.ts` from
-   `libsql/n3/` — not `../` and not `@worlds/client/...`.
+3. **Nested folder, parent barrel.** `@/client/adapters/libsql/mod.ts` or
+   `@/client/adapters/libsql/store/mod.ts` from `libsql/search/` or
+   `libsql/sync/` — not `../` and not `@worlds/client/...`. From `libsql-n3/`,
+   use `@/client/adapters/libsql/mod.ts` (not `../libsql/...`).
 
 Never use parent-relative `../` to reach another domain. Never import
 `@worlds/client/...` anywhere under `src/`.
@@ -136,7 +138,7 @@ Never use parent-relative `../` to reach another domain. Never import
 - ✅ `@/client/quad-store/mod.ts` (from `search-index/quad-chunker/`)
 - ✅ `import { Client } from "@/client/client.ts"` (adapter factories — not
   `@/mod.ts`, avoids root barrel cycles)
-- ✅ `@/client/adapters/libsql/mod.ts` (from `adapters/libsql/n3/`)
+- ✅ `@/client/adapters/libsql/mod.ts` (from `adapters/libsql-n3/`)
 - ✅ `./string-to-chars.ts` (from `tokenizer/tokenizer.ts`)
 - ✅ `./client.ts`, `./adapters/rdfjs/mod.ts` (from `src/client/client.test.ts`)
 - ✅ `@worlds/client/adapters/libsql` (from `examples/`, benchmarks, other
@@ -157,8 +159,10 @@ would cycle — e.g. `chunk-quads.ts` uses `@/client/quad-store/mod.ts`, not
 When adding a new importable subpath, add it to `exports` in `deno.json` for
 `@worlds/client/...` consumers. Mirror the file path under `@/client/...` for
 in-repo imports (no duplicate `@worlds/client/*` entries in `imports`). Keep
-`adapters/libsql/n3` separate from `adapters/libsql` so hexastore-only consumers
-stay free of N3 hydration (see architectural map below).
+`adapters/libsql-n3` separate from `adapters/libsql` so hexastore-only consumers
+stay free of N3 hydration (see architectural map below). Under
+`adapters/libsql/`, use `store/`, `search/`, and `sync/` subfolders (each with a
+`mod.ts` barrel); keep shared options and factories at the libsql root.
 
 ### Documented `exports` subpaths
 
@@ -171,7 +175,7 @@ stay free of N3 hydration (see architectural map below).
 | `@worlds/client/search-index/quad-chunker`                | quad-chunker `mod.ts`               |
 | `@worlds/client/sparql-engine`                            | `./src/client/sparql-engine/mod.ts` |
 | `@worlds/client/adapters/libsql`                          | libsql `mod.ts`                     |
-| `@worlds/client/adapters/libsql/n3`                       | libsql `n3/mod.ts`                  |
+| `@worlds/client/adapters/libsql-n3`                       | libsql-n3 `mod.ts`                  |
 | `@worlds/client/adapters/comunica`                        | comunica `mod.ts`                   |
 | `@worlds/client/adapters/rdfjs`                           | rdfjs `mod.ts`                      |
 | `@worlds/client/adapters/rdfjs/n3`                        | rdfjs `n3/mod.ts`                   |
@@ -323,8 +327,8 @@ separate modules so hexastore deployments do not import N3 hydration:
   `LibsqlStore.match` keyset-pages by `quads.id` (`matchPageSize`, default
   1000). Optional `countQuads` supplies Comunica join cardinality hints. Wrap
   with `new Client(await createLibsqlAdapter(...))`.
-- **`createLibsqlN3Adapter`** — import `@worlds/client/adapters/libsql/n3`
-  ([`n3/create-libsql-n3-adapter.ts`](src/client/adapters/libsql/n3/create-libsql-n3-adapter.ts));
+- **`createLibsqlN3Adapter`** — import `@worlds/client/adapters/libsql-n3`
+  ([`create-libsql-n3-adapter.ts`](src/client/adapters/libsql-n3/create-libsql-n3-adapter.ts));
   hydrate → `proxyStore` → sync patches to LibSQL;
   `createSparqlEngine({ store })` receives proxied N3. Not re-exported from
   `@worlds/client/adapters/libsql` (keeps hexastore-only imports free of N3).
@@ -354,9 +358,8 @@ context:
 [discussion #45](https://github.com/wazootech/worlds-client-ts/discussions/45).
 Scale guidance for very large graphs:
 [#68](https://github.com/wazootech/worlds-client-ts/issues/68). SPARQL
-query-shape helpers live in
-[`libsql-sparql-query-patterns.ts`](src/client/adapters/libsql/libsql-sparql-query-patterns.ts);
-see README **Scale and SPARQL query shape** and `examples/libsql-sparql-scale`.
+query-shape examples are inlined in `examples/libsql-sparql-scale`; see README
+**Scale and SPARQL query shape**.
 
 ### Decoupled store lifecycle via dependency injection
 
@@ -514,7 +517,7 @@ much graph you mirror in memory and how you run SPARQL.
 | Options builder         | Module                              | When to use                                                                                                                  |
 | :---------------------- | :---------------------------------- | :--------------------------------------------------------------------------------------------------------------------------- |
 | `createLibsqlAdapter`   | `@worlds/client/adapters/libsql`    | **Production and large graphs.** SPARQL runs on `LibsqlStore` (hexastore). No full N3 hydration per request.                 |
-| `createLibsqlN3Adapter` | `@worlds/client/adapters/libsql/n3` | **Selective workloads** where hydrating into N3 is acceptable. Reuse one warmed `store` per container, not per HTTP request. |
+| `createLibsqlN3Adapter` | `@worlds/client/adapters/libsql-n3` | **Selective workloads** where hydrating into N3 is acceptable. Reuse one warmed `store` per container, not per HTTP request. |
 
 Post-preload benchmarks (1k-50k quads) show hydrate+N3 can win selective queries
 when the graph is already in memory; libsqlStore avoids full hydration cost and
@@ -536,13 +539,10 @@ At millions of quads, pick the topology at integration time.
 Query helpers (same shapes as benchmarks):
 
 ```typescript
-import {
-  createCappedUnboundTriplePatternSparqlQuery,
-  createSubjectBoundPropertiesSparqlQuery,
-} from "@worlds/client/adapters/libsql";
-
-const selectiveQuery = createSubjectBoundPropertiesSparqlQuery("urn:entity:0");
-const devScanQuery = createCappedUnboundTriplePatternSparqlQuery(100);
+const selectiveQuery =
+  `SELECT ?property ?object WHERE { <urn:entity:0> ?property ?object }`;
+const devScanQuery =
+  "SELECT ?subject ?property ?object WHERE { ?subject ?property ?object } LIMIT 100";
 ```
 
 ### Warm container patterns
@@ -556,12 +556,13 @@ const devScanQuery = createCappedUnboundTriplePatternSparqlQuery(100);
 
 ### Bulk import strategies
 
-| Flag                             | Behavior                                                                                         |
-| :------------------------------- | :----------------------------------------------------------------------------------------------- |
-| `searchIndexOnImport: false`     | Skips chunk/FTS projection on every commit. Call `client.rebuildSearchIndex()` before searching. |
-| `deferSearchIndexOnImport: true` | Persists quads on each import, rebuilds FTS/vector chunks afterward via `rebuildSearchIndex`.    |
+| Value                                | Behavior                                                                         |
+| :----------------------------------- | :------------------------------------------------------------------------------- |
+| `searchIndexOnImport: "incremental"` | Default. Chunks each quad on commit (inline FTS/vector projection).              |
+| `searchIndexOnImport: "deferred"`    | Persists quads on each import, rebuilds FTS/vector chunks in one pass afterward. |
+| `searchIndexOnImport: "disabled"`    | Skips chunking entirely. Call `client.rebuildSearchIndex()` before searching.    |
 
-These flags cannot be combined. Use for SPARQL-only bulk loads or large initial
+Use `"deferred"` or `"disabled"` for SPARQL-only bulk loads or large initial
 imports where indexing can happen once at the end.
 
 ### Benchmark references
