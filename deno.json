@@ -1,6 +1,6 @@
 {
   "name": "@worlds/client",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "nodeModulesDir": "auto",
   "exports": {
     ".": "./src/mod.ts",
@@ -11,7 +11,9 @@
     "./search-index/quad-chunker": "./src/client/search-index/quad-chunker/mod.ts",
     "./sparql-engine": "./src/client/sparql-engine/mod.ts",
     "./adapters/libsql": "./src/client/adapters/libsql/mod.ts",
+    "./adapters/libsql/comunica": "./src/client/adapters/libsql/comunica/mod.ts",
     "./adapters/libsql-n3": "./src/client/adapters/libsql-n3/mod.ts",
+    "./adapters/libsql-n3/comunica": "./src/client/adapters/libsql-n3/comunica/mod.ts",
     "./adapters/tfjs-universal-sentence-encoder": "./src/client/adapters/tfjs-universal-sentence-encoder/mod.ts",
     "./adapters/comunica": "./src/client/adapters/comunica/mod.ts",
     "./adapters/rdfjs": "./src/client/adapters/rdfjs/mod.ts",

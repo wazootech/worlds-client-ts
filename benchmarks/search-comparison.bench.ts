@@ -5,8 +5,7 @@ import {
   LibsqlQueryBuilder,
   LibsqlSearchIndex,
 } from "@worlds/client/adapters/libsql";
-import { createLibsqlN3Adapter } from "@worlds/client/adapters/libsql-n3";
-import { Client } from "@worlds/client";
+import { createLibsqlN3Client } from "@worlds/client/adapters/libsql-n3";
 import { generateSyntheticQuads } from "./shared/synthetic-data.ts";
 
 // -----------------------------------------------------------------------------
@@ -16,9 +15,7 @@ import { generateSyntheticQuads } from "./shared/synthetic-data.ts";
 
 async function prepareLibsqlSearchIndex(count: number) {
   const db = createClient({ url: ":memory:" });
-  const client = new Client(
-    await createLibsqlN3Adapter({ client: db }), // No embedding service -> Pure Keyword FTS Mode
-  );
+  const client = await createLibsqlN3Client({ client: db }); // No embedding service -> Pure Keyword FTS Mode
 
   // Batch ingestion in segments to prevent exceeding SQL statement variable caps
   const dataset = generateSyntheticQuads(count);

@@ -303,22 +303,27 @@ network hop latency during query execution.
 Hexastore indexes are provisioned at schema init for all LibSQL clients. Use
 separate modules so hexastore deployments do not import N3 hydration:
 
-- **`createLibsqlAdapter`**
+- **`createLibsqlClient`**
   ([`create-libsql-adapter.ts`](src/client/adapters/libsql/create-libsql-adapter.ts))
-  — `LibsqlStore` + hexastore indexes; `createSparqlEngine({ libsqlStore })`.
+  — `LibsqlStore` + hexastore indexes; import/export/search only (no SPARQL).
   `LibsqlStore.match` keyset-pages by `quads.id` (`matchPageSize`, default
-  1000). Optional `countQuads` supplies Comunica join cardinality hints. Wrap
-  with `new Client(await createLibsqlAdapter(...))`.
-- **`createLibsqlN3Adapter`** — import `@worlds/client/adapters/libsql-n3`
+  1000). Optional `countQuads` supplies Comunica join cardinality hints. Returns
+  `Client` directly.
+- **`createLibsqlComunicaClient`** — import
+  `@worlds/client/adapters/libsql/comunica`; Comunica SPARQL over `LibsqlStore`.
+- **`createLibsqlN3Client`** — import `@worlds/client/adapters/libsql-n3`
   ([`create-libsql-n3-adapter.ts`](src/client/adapters/libsql-n3/create-libsql-n3-adapter.ts));
   hydrate → `createProxiedN3Store` → `mergePatches` → `persistPatch` to LibSQL;
-  `createSparqlEngine({ store })` receives proxied N3. Not re-exported from
+  import/export/search only (no SPARQL). Not re-exported from
   `@worlds/client/adapters/libsql` (keeps hexastore-only imports free of N3).
+- **`createLibsqlN3ComunicaClient`** — import
+  `@worlds/client/adapters/libsql-n3/comunica`; Comunica SPARQL over the proxied
+  N3 store. Pass optional `store` for warm-isolate hydration policy.
 
 ### N3 patch capture (libsql-n3 sync path)
 
-`createLibsqlN3Adapter` synchronizes durable LibSQL state from an in-memory N3
-store:
+`createLibsqlN3ComunicaClient` (and search-only `createLibsqlN3Client`)
+synchronize durable LibSQL state from an in-memory N3 store:
 
 1. `hydrateStoreFromLibsql` (skipped when reusing a warmed `store`)
 2. `createProxiedN3Store` from `@worlds/client/quad-store/n3` — captures
@@ -327,25 +332,29 @@ store:
    before persist (no deduplication)
 4. `persistPatch` via libsql sync — writes quads and search-index projections
 
-`createRdfjsAdapter` does not use patch capture; data is transient in memory
+`createRdfjsClient` does not use patch capture; data is transient in memory
 only.
 
 ### Client lifecycle (runtime)
 
-Canonical construction: `new Client(await createXAdapter(...))`. Do not
-reintroduce `createXClient` one-line wrappers.
+Canonical construction: `await createXClient(...)`. Factories return `Client`
+directly. `createXAdapter` remains as a deprecated alias (removed in 0.0.17).
 
-For standard Comunica SPARQL, pass `createComunicaSparqlEngineFactory` or
-`createComunicaLibsqlSparqlEngineFactory` from
-`@worlds/client/adapters/comunica` as the adapter's `createSparqlEngine` option.
+For advanced composition or tests, use positional constructor injection:
+`new Client(quadStore, searchIndex, sparqlEngine?)`.
 
-- **Serverless / edge (warm isolate):** build `Adapter` or `Client` once in
-  module scope per isolate; reuse across HTTP requests. See
+For Comunica SPARQL: `createLibsqlComunicaClient` (hexastore),
+`createLibsqlN3ComunicaClient` (N3 path), or `createComunicaSparqlEngineFactory`
+on `createRdfjsClient` / `createDenokvClient`.
+
+- **Serverless / edge (warm isolate):** build one `Client` in module scope per
+  isolate; reuse across HTTP requests. See
   [`examples/libsql-n3-warm-container`](examples/libsql-n3-warm-container).
 - **Long-running (Fly.io, DigitalOcean, 24/7 Deno):** one `Client` at process
   boot. See [`examples/libsql-long-running`](examples/libsql-long-running).
-- When reusing a warmed N3 `store`, do **not** call `createLibsqlN3Adapter` on
-  every request — that rebuilds proxy, search index, and patch sync.
+- When reusing a warmed N3 `store`, do **not** call
+  `createLibsqlN3ComunicaClient` on every request — that rebuilds proxy, search
+  index, and patch sync.
 
 Use `benchmarks/sparql-hexastore-crossover.bench.ts`,
 [`benchmarks/README.md`](benchmarks/README.md), and
@@ -365,17 +374,18 @@ and hydration of the Graph Store are fully externalized from the generalized
 `Client` factory. The caller injects an initialized `Store` directly, allowing
 trivial container-level caching across sequential HTTP invocations.
 
-### Sterile orchestration via adapters
+### Sterile orchestration via factories
 
 All active instrumentation (proxies, observers, and transactional mutation
-queues) is isolated strictly inside adapters (e.g. `createLibsqlAdapter`). The
-generalized `Client` is kept completely agnostic and sterile, accepting
-pre-composed adapter options ready for constructor injection.
+queues) is isolated inside adapter factories (e.g. `createLibsqlClient`). The
+`Client` class delegates to injected `QuadStoreInterface`,
+`SearchIndexInterface`, and optional `SparqlEngineInterface` without knowing
+persistence topology.
 
 ### Production deployment recommendation
 
 For production deployments and scale, the recommended topology is LibSQL-backed
-infrastructure through `createLibsqlAdapter` + `Client`, especially Turso Cloud.
+infrastructure through `createLibsqlClient`, especially Turso Cloud.
 RDFJS-backed and Deno KV-backed search/index topologies, including deployments
 centered on `RdfjsSearchIndex` and `DenokvSearchIndex`, are appropriate for
 local development, tests, and constrained single-process demos, but they are not
@@ -462,7 +472,7 @@ Built-in label predicates (`rdfs:label`, `skos:prefLabel`, `schema:name`) are
 always indexed. Extend with `labelPredicates` on adapter options:
 
 ```typescript
-await createLibsqlAdapter({
+await createLibsqlClient({
   client: db,
   labelPredicates: ["http://example.org/customLabel"],
 });
@@ -511,10 +521,11 @@ Keep AI tool descriptions and system prompts aligned with
 Both options builders provision hexastore indexes at schema init. Pick by how
 much graph you mirror in memory and how you run SPARQL.
 
-| Options builder         | Module                              | When to use                                                                                                                  |
-| :---------------------- | :---------------------------------- | :--------------------------------------------------------------------------------------------------------------------------- |
-| `createLibsqlAdapter`   | `@worlds/client/adapters/libsql`    | **Production and large graphs.** SPARQL runs on `LibsqlStore` (hexastore). No full N3 hydration per request.                 |
-| `createLibsqlN3Adapter` | `@worlds/client/adapters/libsql-n3` | **Selective workloads** where hydrating into N3 is acceptable. Reuse one warmed `store` per container, not per HTTP request. |
+| Options builder                | Module                                       | When to use                                                                                                                  |
+| :----------------------------- | :------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------- |
+| `createLibsqlComunicaClient`   | `@worlds/client/adapters/libsql/comunica`    | **Production and large graphs.** SPARQL runs on `LibsqlStore` (hexastore). No full N3 hydration per request.                 |
+| `createLibsqlClient`           | `@worlds/client/adapters/libsql`             | Hexastore import/export/search only (no SPARQL).                                                                             |
+| `createLibsqlN3ComunicaClient` | `@worlds/client/adapters/libsql-n3/comunica` | **Selective workloads** where hydrating into N3 is acceptable. Reuse one warmed `store` per container, not per HTTP request. |
 
 Post-preload benchmarks (1k-50k quads) show hydrate+N3 can win selective queries
 when the graph is already in memory; libsqlStore avoids full hydration cost and
@@ -525,13 +536,13 @@ production scale.
 
 At millions of quads, pick the topology at integration time.
 
-| Concern         | Production default                                                                                                               |
-| :-------------- | :------------------------------------------------------------------------------------------------------------------------------- |
-| LibSQL topology | `createLibsqlAdapter` with hexastore `LibsqlStore`, no full N3 mirror per request                                                |
-| Hot-path SPARQL | Bind at least one term (subject, predicate, or object). Subject-bound property lookups match crossover selective shapes          |
-| Avoid at scale  | Unbound `?s ?p ?o` (even with `LIMIT`) on libsqlStore; fullScan degrades to hundreds of ms as quads grow                         |
-| N3 + Comunica   | `createLibsqlN3Adapter` only when you need in-memory N3; pass a warmed `store` hydrated once per container, not per HTTP request |
-| Cardinality     | `LibsqlStore.countQuads` is used by Comunica when hexastore SPARQL is wired (no extra adapter config)                            |
+| Concern         | Production default                                                                                                      |
+| :-------------- | :---------------------------------------------------------------------------------------------------------------------- |
+| LibSQL topology | `createLibsqlComunicaClient` with hexastore `LibsqlStore`, no full N3 mirror per request                                |
+| Hot-path SPARQL | Bind at least one term (subject, predicate, or object). Subject-bound property lookups match crossover selective shapes |
+| Avoid at scale  | Unbound `?s ?p ?o` (even with `LIMIT`) on libsqlStore; fullScan degrades to hundreds of ms as quads grow                |
+| N3 + Comunica   | `createLibsqlN3ComunicaClient`; pass a warmed `store` hydrated once per container, not per HTTP request                 |
+| Cardinality     | `LibsqlStore.countQuads` is used by Comunica when hexastore SPARQL is wired (no extra adapter config)                   |
 
 Query helpers (same shapes as benchmarks):
 
@@ -544,12 +555,13 @@ const devScanQuery =
 
 ### Warm container patterns
 
-- **Serverless / edge (warm isolate):** build `Adapter` or `Client` once in
-  module scope per isolate; reuse across HTTP requests.
+- **Serverless / edge (warm isolate):** build one `Client` once in module scope
+  per isolate; reuse across HTTP requests.
 - **Long-running (Fly.io, DigitalOcean, 24/7 Deno):** one `Client` at process
   boot.
-- When reusing a warmed N3 `store`, do **not** call `createLibsqlN3Adapter` on
-  every request; that rebuilds proxy, search index, and patch sync.
+- When reusing a warmed N3 `store`, do **not** call
+  `createLibsqlN3ComunicaClient` on every request; that rebuilds proxy, search
+  index, and patch sync.
 
 ### Bulk import strategies
 

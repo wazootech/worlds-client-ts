@@ -1,6 +1,9 @@
 import { Store } from "n3";
-import type { Adapter } from "@/client/client.ts";
-import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
+import { Client } from "@/client/client.ts";
+import type {
+  SparqlEngineInterface,
+  SparqlRequest,
+} from "@/client/sparql-engine/mod.ts";
 import { DenokvSearchIndex } from "./denokv-search-index.ts";
 import type { DenokvQuadStoreOptions } from "./denokv-quad-store.ts";
 import { DenokvQuadStore } from "./denokv-quad-store.ts";
@@ -16,14 +19,14 @@ export interface DenokvOptions extends DenokvQuadStoreOptions {
 }
 
 /**
- * createDenokvAdapter synthesizes a client adapter designed explicitly for
- * stateless, per-operation execution. It leverages a lazy, transient hydration
- * pipeline that fetches fresh durable quads on-demand, providing strong data
- * consistency without requiring long-lived memory store residency.
+ * createDenokvClient synthesizes a Client designed explicitly for stateless,
+ * per-operation execution. It leverages a lazy, transient hydration pipeline that
+ * fetches fresh durable quads on-demand, providing strong data consistency without
+ * requiring long-lived memory store residency.
  */
-export function createDenokvAdapter(
+export function createDenokvClient(
   options: DenokvOptions,
-): Adapter {
+): Client {
   const quadStore = new DenokvQuadStore(options);
 
   /**
@@ -41,22 +44,23 @@ export function createDenokvAdapter(
     return store;
   };
 
-  return {
-    quadStore,
+  const sparqlEngine = options.createSparqlEngine
+    ? {
+      sparql: async (request: SparqlRequest) => {
+        const workspace = await hydrateWorkspace();
+        const engine = options.createSparqlEngine?.({ store: workspace });
+        if (!engine) {
+          throw new Error("SPARQL engine is not configured.");
+        }
+        return await engine.sparql(request);
+      },
+    }
+    : undefined;
 
-    searchIndex: new DenokvSearchIndex(options),
-
-    sparqlEngine: options.createSparqlEngine
-      ? {
-        execute: async (request) => {
-          const workspace = await hydrateWorkspace();
-          const engine = options.createSparqlEngine?.({ store: workspace });
-          if (!engine) {
-            throw new Error("SPARQL engine is not configured.");
-          }
-          return await engine.execute(request);
-        },
-      }
-      : undefined,
-  };
+  return new Client(quadStore, new DenokvSearchIndex(options), sparqlEngine);
 }
+
+/**
+ * createDenokvAdapter is deprecated; use createDenokvClient. Removed in 0.0.17.
+ */
+export const createDenokvAdapter = createDenokvClient;

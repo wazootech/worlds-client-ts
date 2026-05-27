@@ -30,7 +30,7 @@ Deno.test(
       queryEngine,
     });
     const sparqlEngine = createSparqlEngine({ store });
-    const response = await sparqlEngine.execute({
+    const response = await sparqlEngine.sparql({
       query:
         "SELECT ?object WHERE { <https://example.com/s> <https://example.com/p> ?object }",
     });
@@ -83,7 +83,7 @@ Deno.test(
       queryEngine,
     });
     const sparqlEngine = createSparqlEngine({ libsqlStore });
-    const response = await sparqlEngine.execute({
+    const response = await sparqlEngine.sparql({
       query: `SELECT ?object WHERE { <${subjectIri}> ?property ?object }`,
     });
 

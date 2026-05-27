@@ -1,8 +1,6 @@
 import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
-import { Client } from "@worlds/client";
-import { createComunicaLibsqlSparqlEngineFactory } from "@worlds/client/adapters/comunica";
-import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
+import { createLibsqlComunicaClient } from "@worlds/client/adapters/libsql/comunica";
 import { DataFactory } from "n3";
 
 const { quad, namedNode, literal } = DataFactory;
@@ -18,14 +16,10 @@ if (import.meta.main) {
   const databaseClient = createClient({ url: ":memory:" });
   const queryEngine = new QueryEngine();
 
-  const client = new Client(
-    await createLibsqlAdapter({
-      client: databaseClient,
-      createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
-        queryEngine,
-      }),
-    }),
-  );
+  const client = await createLibsqlComunicaClient({
+    client: databaseClient,
+    queryEngine,
+  });
 
   await client.import({
     source: {

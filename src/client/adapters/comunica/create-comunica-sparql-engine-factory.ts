@@ -24,7 +24,7 @@ export function createComunicaSparqlEngineFactory(
 }
 
 /**
- * createComunicaLibsqlSparqlEngineFactory returns a createSparqlEngine callback for hexastore LibSQL clients.
+ * createComunicaLibsqlSparqlEngineFactory returns a createSparqlEngine callback for hexastore LibSQL clients (prefer createLibsqlComunicaClient).
  */
 export function createComunicaLibsqlSparqlEngineFactory(
   options: CreateComunicaSparqlEngineFactoryOptions,

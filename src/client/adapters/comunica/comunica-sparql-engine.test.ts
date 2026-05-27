@@ -222,7 +222,7 @@ Deno.test(
       },
     });
 
-    const response = await sparqlEngine.execute({
+    const response = await sparqlEngine.sparql({
       query: `INSERT DATA { <urn:onvoid> <urn:flag> "set" . }`,
     });
 
@@ -429,7 +429,7 @@ Deno.test(
       queryEngine,
       store: libsqlStore,
     });
-    const response = await sparqlEngine.execute({
+    const response = await sparqlEngine.sparql({
       query:
         `SELECT ?property ?object WHERE { <${subjectIri}> ?property ?object }`,
     });

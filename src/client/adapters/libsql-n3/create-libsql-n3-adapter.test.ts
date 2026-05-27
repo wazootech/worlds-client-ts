@@ -2,9 +2,8 @@ import { assertEquals, assertExists } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory, Store } from "n3";
-import { Client } from "@/client/client.ts";
-import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
-import { createLibsqlN3Adapter } from "./create-libsql-n3-adapter.ts";
+import { createLibsqlN3Client } from "./create-libsql-n3-adapter.ts";
+import { createLibsqlN3ComunicaClient } from "./comunica/create-libsql-n3-comunica-client.ts";
 import { FakeEmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
 
 const { quad, namedNode, literal } = DataFactory;
@@ -15,14 +14,11 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
   const db = createClient({ url: ":memory:" });
   const embeddingService = new FakeEmbeddingService();
 
-  const client = new Client(
-    await createLibsqlN3Adapter({
-      client: db,
-      embeddingService,
-      createSparqlEngine: ({ store }) =>
-        new ComunicaSparqlEngine({ queryEngine, store }),
-    }),
-  );
+  const client = await createLibsqlN3ComunicaClient({
+    client: db,
+    embeddingService,
+    queryEngine,
+  });
 
   await t.step(
     "Scenario 1: client.import delivers immediate index observability",
@@ -97,12 +93,10 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
     async () => {
       // Destroy active memory references and simulate a software crash/reboot.
       // Create a fresh client reusing the SAME physical :memory: database.
-      const refreshedClient = new Client(
-        await createLibsqlN3Adapter({
-          client: db,
-          embeddingService,
-        }),
-      );
+      const refreshedClient = await createLibsqlN3Client({
+        client: db,
+        embeddingService,
+      });
 
       // Perform a search directly on the new client.
       // Expected: Hydrator recovered facts from 'quads' table -> re-rendered memory -> enabled lookups!
@@ -199,12 +193,10 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
     async () => {
       const db = createClient({ url: ":memory:" });
       const embeddingService = new FakeEmbeddingService();
-      const client = new Client(
-        await createLibsqlN3Adapter({
-          client: db,
-          embeddingService,
-        }),
-      );
+      const client = await createLibsqlN3Client({
+        client: db,
+        embeddingService,
+      });
 
       const staleQuad = quad(
         namedNode("urn:person:erin"),
@@ -268,12 +260,10 @@ Deno.test("E2E DEMO: unified data entry enables immediate hybrid search availabi
     async () => {
       const db = createClient({ url: ":memory:" });
       const embeddingService = new FakeEmbeddingService();
-      const client = new Client(
-        await createLibsqlN3Adapter({
-          client: db,
-          embeddingService,
-        }),
-      );
+      const client = await createLibsqlN3Client({
+        client: db,
+        embeddingService,
+      });
 
       const staleQuad = quad(
         namedNode("urn:person:gina"),
@@ -341,15 +331,13 @@ Deno.test("QuadFilter Integration: enables hybrid partitioning persisting specif
   const EPHEMERAL_GRAPH = "http://worlds.wazoo.dev/.well-known/ephemeral";
 
   // Initialize client with filter restricting SQL writes exclusively to the persistent graph
-  const client = new Client(
-    await createLibsqlN3Adapter({
-      client: db,
-      embeddingService,
-      include: {
-        graphs: [PERSISTENT_GRAPH],
-      },
-    }),
-  );
+  const client = await createLibsqlN3Client({
+    client: db,
+    embeddingService,
+    include: {
+      graphs: [PERSISTENT_GRAPH],
+    },
+  });
 
   // 1. Stage both durable and ephemeral facts
   const durableQuad = quad(
@@ -400,15 +388,13 @@ Deno.test("QuadFilter Integration: enables hybrid partitioning persisting specif
 
   // 4. ASSERT: Verify Hydration boundary on reboot
   // Restart client pointing to the same DB with identical filtering bounds
-  const restartedClient = new Client(
-    await createLibsqlN3Adapter({
-      client: db,
-      embeddingService,
-      include: {
-        graphs: [PERSISTENT_GRAPH],
-      },
-    }),
-  );
+  const restartedClient = await createLibsqlN3Client({
+    client: db,
+    embeddingService,
+    include: {
+      graphs: [PERSISTENT_GRAPH],
+    },
+  });
 
   const rebootSearchDurable = await restartedClient.search({
     query: "durable",
@@ -447,11 +433,11 @@ const expectedHexastoreIndexNames = [
 ] as const;
 
 Deno.test(
-  "createLibsqlN3Adapter - initializeSchema provisions all hexastore indexes",
+  "createLibsqlN3Client - initializeSchema provisions all hexastore indexes",
   async () => {
     const db = createClient({ url: ":memory:" });
 
-    await createLibsqlN3Adapter({ client: db });
+    await createLibsqlN3Client({ client: db });
 
     const indexResultSet = await db.execute(
       "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'quads'",
@@ -465,7 +451,7 @@ Deno.test(
       );
     }
 
-    await createLibsqlN3Adapter({ client: db });
+    await createLibsqlN3Client({ client: db });
 
     db.close();
   },
