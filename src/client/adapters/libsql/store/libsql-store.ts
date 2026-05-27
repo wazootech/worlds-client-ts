@@ -1,4 +1,4 @@
-import type { Client, Row } from "@libsql/client";
+import type { Client } from "@libsql/client";
 import type * as rdfjs from "@rdfjs/types";
 import { DataFactory } from "n3";
 import { Readable } from "node:stream";
@@ -6,8 +6,9 @@ import { EventEmitter } from "node:events";
 import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import { DEFAULT_LIBSQL_MATCH_PAGE_SIZE } from "./libsql-query-builder.ts";
 import type { Patch } from "@/client/quad-store/mod.ts";
+import { quadFromLibsqlRow } from "./libsql-quad-row.ts";
 
-const { namedNode, literal, blankNode, defaultGraph, quad } = DataFactory;
+const { namedNode } = DataFactory;
 
 /**
  * CommitHandler is a callback that atomically persists a patch of buffered mutations.
@@ -102,7 +103,7 @@ export class LibsqlStore implements rdfjs.Store {
 
           for (const row of resultSet.rows) {
             afterQuadId = String(row.id);
-            rowStream.push(this.rowToQuad(row));
+            rowStream.push(quadFromLibsqlRow(row));
           }
 
           if (resultSet.rows.length < this.matchPageSize) {
@@ -280,65 +281,5 @@ export class LibsqlStore implements rdfjs.Store {
   public clearBuffer(): void {
     this.insertBuffer = [];
     this.deleteBuffer = [];
-  }
-
-  // ────────────────────────────────────────────────
-  // Private helpers
-  // ────────────────────────────────────────────────
-
-  /**
-   * rowToQuad reconstructs an RDF/JS Quad from a LibSQL result row.
-   */
-  private rowToQuad(row: Row): rdfjs.Quad {
-    const subject = this.reconstructNonLiteral(
-      String(row.s),
-      String(row.s_type),
-    );
-    const predicate = namedNode(String(row.p));
-    const object = this.reconstructObject(row);
-    const graph = this.reconstructGraph(row);
-
-    return quad(subject, predicate, object, graph);
-  }
-
-  /**
-   * reconstructNonLiteral returns a NamedNode or BlankNode (never a Literal, since
-   * Literals cannot appear in subject or graph positions in RDF 1.1).
-   */
-  private reconstructNonLiteral(
-    value: string,
-    type: string,
-  ): rdfjs.NamedNode | rdfjs.BlankNode {
-    if (type === "BlankNode") return blankNode(value);
-    return namedNode(value);
-  }
-
-  private reconstructObject(row: Row): rdfjs.Quad_Object {
-    const value = String(row.o);
-    const type = String(row.o_type);
-
-    if (type === "Literal") {
-      const dt = row.o_datatype ? String(row.o_datatype) : undefined;
-      const lang = row.o_lang ? String(row.o_lang) : undefined;
-
-      if (lang && lang.trim().length > 0) {
-        return literal(value, lang);
-      }
-      if (dt && dt !== "http://www.w3.org/2001/XMLSchema#string") {
-        return literal(value, namedNode(dt));
-      }
-      return literal(value);
-    }
-
-    return this.reconstructNonLiteral(value, type);
-  }
-
-  private reconstructGraph(row: Row): rdfjs.Quad_Graph {
-    const value = String(row.g);
-    const type = String(row.g_type);
-
-    if (type === "DefaultGraph") return defaultGraph();
-    if (type === "BlankNode") return blankNode(value);
-    return namedNode(value);
   }
 }

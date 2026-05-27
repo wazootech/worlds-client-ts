@@ -1,9 +1,37 @@
+import type * as rdfjs from "@rdfjs/types";
 import type { QuadFilter } from "@/client/quad-store/mod.ts";
 import type { SearchRequest } from "@/client/search-index/mod.ts";
-import {
-  buildLibsqlQuadPatternWhereClause,
-  type LibsqlQuadPattern,
-} from "./libsql-quad-pattern-sql.ts";
+
+/** rdfLangStringIri is the RDF datatype for language-tagged literals in N3/RDF/JS. */
+const rdfLangStringIri =
+  "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
+
+/** xsdStringIri is the XSD string datatype IRI. */
+const xsdStringIri = "http://www.w3.org/2001/XMLSchema#string";
+
+/**
+ * LibsqlQuadPattern holds optional bound RDF/JS terms for hexastore quad pattern matching.
+ */
+export interface LibsqlQuadPattern {
+  /** subject is the optional bound subject term. */
+  subject: rdfjs.Term | null;
+  /** predicate is the optional bound predicate term. */
+  predicate: rdfjs.Term | null;
+  /** object is the optional bound object term. */
+  object: rdfjs.Term | null;
+  /** graph is the optional bound graph term. */
+  graph: rdfjs.Term | null;
+}
+
+/**
+ * LibsqlQuadPatternWhereClause is the SQL fragment and bound args for a quad pattern filter.
+ */
+export interface LibsqlQuadPatternWhereClause {
+  /** conditions are AND-joined predicates without a leading WHERE. */
+  conditions: string[];
+  /** args are bound parameters in statement order. */
+  args: (string | null)[];
+}
 
 /** DEFAULT_LIBSQL_MATCH_PAGE_SIZE caps rows per hexastore match SQL round-trip. */
 export const DEFAULT_LIBSQL_MATCH_PAGE_SIZE = 1000;
@@ -385,7 +413,10 @@ export class LibsqlQueryBuilder {
     filter: QuadFilter | undefined,
     pageOptions: { afterQuadId?: string; limit?: number },
   ): { sql: string; args: string[] } {
-    const { whereClauses, filterArgs } = buildHydrateFilterClauses(filter);
+    const { whereClauses, filterArgs } = buildIncludeExcludeFilterClauses(
+      filter,
+      QUADS_TABLE_COLUMNS,
+    );
     const args = [...filterArgs];
 
     if (pageOptions.afterQuadId) {
@@ -486,49 +517,10 @@ export class LibsqlQueryBuilder {
   ): { sql: string; args: (string | number)[] } {
     const { vectorJson, limit } = searchBuildOptions;
 
-    const whereClauses: string[] = [];
-    const filterArgs: (string | number)[] = [];
-
-    const filterConfigurations = [
-      {
-        values: request.exclude?.subjects,
-        column: "chunks.subject",
-        operator: "NOT IN",
-      },
-      {
-        values: request.exclude?.predicates,
-        column: "chunks.predicate",
-        operator: "NOT IN",
-      },
-      {
-        values: request.exclude?.graphs,
-        column: "chunks.graph",
-        operator: "NOT IN",
-      },
-      {
-        values: request.include?.subjects,
-        column: "chunks.subject",
-        operator: "IN",
-      },
-      {
-        values: request.include?.predicates,
-        column: "chunks.predicate",
-        operator: "IN",
-      },
-      {
-        values: request.include?.graphs,
-        column: "chunks.graph",
-        operator: "IN",
-      },
-    ] as const;
-
-    for (const { values, column, operator } of filterConfigurations) {
-      if (values?.length) {
-        const placeholders = generatePlaceholders(values.length);
-        whereClauses.push(`${column} ${operator} (${placeholders})`);
-        filterArgs.push(...values);
-      }
-    }
+    const { whereClauses, filterArgs } = buildIncludeExcludeFilterClauses(
+      request,
+      CHUNKS_TABLE_COLUMNS,
+    );
 
     const whereFilter = whereClauses.length > 0
       ? `WHERE ${whereClauses.join(" AND ")}`
@@ -672,45 +664,66 @@ export class LibsqlQueryBuilder {
   }
 }
 
+/** ColumnMapping maps QuadFilter dimensions to SQL column names. */
+interface ColumnMapping {
+  subjects: string;
+  predicates: string;
+  graphs: string;
+}
+
+/** QUADS_TABLE_COLUMNS maps QuadFilter fields to quads table column names. */
+const QUADS_TABLE_COLUMNS: ColumnMapping = {
+  subjects: "s",
+  predicates: "p",
+  graphs: "g",
+};
+
+/** CHUNKS_TABLE_COLUMNS maps QuadFilter fields to chunks table column names. */
+const CHUNKS_TABLE_COLUMNS: ColumnMapping = {
+  subjects: "chunks.subject",
+  predicates: "chunks.predicate",
+  graphs: "chunks.graph",
+};
+
 /**
- * buildHydrateFilterClauses builds WHERE fragments for quad-filtered hydration reads.
+ * buildIncludeExcludeFilterClauses builds parameterized WHERE fragments from a QuadFilter using the given column mapping.
  */
-function buildHydrateFilterClauses(filter: QuadFilter | undefined): {
-  whereClauses: string[];
-  filterArgs: string[];
-} {
+function buildIncludeExcludeFilterClauses(
+  filter: QuadFilter | undefined,
+  columnMapping: ColumnMapping,
+): { whereClauses: string[]; filterArgs: string[] } {
   const whereClauses: string[] = [];
   const filterArgs: string[] = [];
 
   const filterConfigurations = [
     {
       values: filter?.exclude?.subjects,
-      column: "s",
+      column: columnMapping.subjects,
       operator: "NOT IN",
     },
     {
       values: filter?.exclude?.predicates,
-      column: "p",
+      column: columnMapping.predicates,
       operator: "NOT IN",
     },
     {
       values: filter?.exclude?.graphs,
-      column: "g",
+      column: columnMapping.graphs,
       operator: "NOT IN",
     },
     {
       values: filter?.include?.subjects,
-      column: "s",
+      column: columnMapping.subjects,
       operator: "IN",
     },
     {
       values: filter?.include?.predicates,
-      column: "p",
+      column: columnMapping.predicates,
       operator: "IN",
     },
     {
       values: filter?.include?.graphs,
-      column: "g",
+      column: columnMapping.graphs,
       operator: "IN",
     },
   ] as const;
@@ -725,14 +738,6 @@ function buildHydrateFilterClauses(filter: QuadFilter | undefined): {
 
   return { whereClauses, filterArgs };
 }
-
-/**
- * defaultLibsqlQueryBuilder is the default 32-dimensional builder for callers that do not vary embedding width.
- */
-export const defaultLibsqlQueryBuilder: LibsqlQueryBuilder =
-  new LibsqlQueryBuilder(
-    32,
-  );
 
 /**
  * sanitizeFtsQuery defends SQLite against internal parsing crash vectors
@@ -764,4 +769,65 @@ function sanitizeFtsQuery(query: string): string {
  */
 function generatePlaceholders(count: number): string {
   return Array(count).fill("?").join(", ");
+}
+
+/**
+ * buildLibsqlQuadPatternWhereClause constructs WHERE conditions and args for a hexastore quad pattern.
+ */
+export function buildLibsqlQuadPatternWhereClause(
+  pattern: LibsqlQuadPattern,
+): LibsqlQuadPatternWhereClause {
+  const conditions: string[] = [];
+  const args: (string | null)[] = [];
+
+  appendTermCondition(conditions, args, "s", "s_type", pattern.subject);
+  appendTermCondition(conditions, args, "o", "o_type", pattern.object);
+
+  if (pattern.predicate) {
+    conditions.push("p = ?");
+    args.push(pattern.predicate.value);
+  }
+
+  appendTermCondition(conditions, args, "g", "g_type", pattern.graph);
+
+  return { conditions, args };
+}
+
+/**
+ * appendTermCondition adds WHERE clauses and args for a term that may be a NamedNode, BlankNode, or Literal.
+ */
+function appendTermCondition(
+  conditions: string[],
+  args: (string | null)[],
+  valueColumn: string,
+  typeColumn: string,
+  term: rdfjs.Term | null,
+): void {
+  if (!term) return;
+
+  conditions.push(`${valueColumn} = ?`);
+  args.push(term.value);
+
+  conditions.push(`${typeColumn} = ?`);
+  args.push(term.termType);
+
+  if (term.termType === "Literal") {
+    const literalTerm = term as rdfjs.Literal;
+    if (literalTerm.language) {
+      conditions.push(`o_lang = ?`);
+      args.push(literalTerm.language);
+    }
+    if (literalTerm.datatype) {
+      const datatypeValue = literalTerm.datatype.value;
+      if (
+        datatypeValue === xsdStringIri ||
+        datatypeValue === rdfLangStringIri
+      ) {
+        conditions.push(`o_datatype IS NULL`);
+      } else {
+        conditions.push(`o_datatype = ?`);
+        args.push(datatypeValue);
+      }
+    }
+  }
 }

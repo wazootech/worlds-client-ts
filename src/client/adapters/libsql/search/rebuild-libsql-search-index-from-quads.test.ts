@@ -7,7 +7,7 @@ import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import { initializeLibsqlSchema } from "./initialize-libsql-schema.ts";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { rebuildLibsqlSearchIndexFromQuads } from "./rebuild-libsql-search-index-from-quads.ts";
-import { resolveLabelPredicates } from "./label-predicates.ts";
+import { resolveLabelPredicates } from "./search-chunk-fts.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 

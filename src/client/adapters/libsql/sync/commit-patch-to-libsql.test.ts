@@ -7,7 +7,7 @@ import { rebuildLibsqlSearchIndexFromQuads } from "./rebuild-libsql-search-index
 import { FakeEmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
 import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import { initializeLibsqlSchema } from "./initialize-libsql-schema.ts";
-import { buildChunkFtsValue } from "./build-chunk-fts-value.ts";
+import { buildChunkFtsValue } from "./search-chunk-fts.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 

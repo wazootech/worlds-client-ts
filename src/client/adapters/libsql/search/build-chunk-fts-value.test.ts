@@ -3,7 +3,7 @@ import {
   buildChunkFtsValue,
   extractRdfLocalLabel,
   formatPredicatePhrase,
-} from "./build-chunk-fts-value.ts";
+} from "./search-chunk-fts.ts";
 
 Deno.test("buildChunkFtsValue - includes subject local name predicate and literal", () => {
   const ftsValue = buildChunkFtsValue({
