@@ -2,7 +2,7 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { Store } from "n3";
 
 import type { Adapter } from "@/client/client.ts";
-import type { Patch } from "@/client/quad-store/mod.ts";
+import { mergePatches } from "@/client/quad-store/mod.ts";
 import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
 import { createProxiedN3Store } from "@/client/quad-store/n3/mod.ts";
 import { RdfjsQuadStore } from "@/client/adapters/rdfjs/mod.ts";
@@ -71,12 +71,7 @@ export async function createLibsqlN3Adapter(
     const patches = drainPatches();
     if (patches.length === 0) return;
 
-    const merged: Patch = {
-      insertions: patches.flatMap((patch) => patch.insertions),
-      deletions: patches.flatMap((patch) => patch.deletions),
-    };
-
-    await patchSync.persistPatch(merged);
+    await patchSync.persistPatch(mergePatches(patches));
   };
 
   const quadStore = new RdfjsQuadStore(store);

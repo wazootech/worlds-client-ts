@@ -4,6 +4,10 @@
 
 ### Breaking
 
+- Removed `@worlds/client/adapters/rdfjs/n3`. N3 patch capture moved to
+  `@worlds/client/quad-store/n3` as `createProxiedN3Store` (formerly
+  `proxyStore` on the old path).
+- Added `mergePatches` on `@worlds/client/quad-store`.
 - Renamed `ClientOptions` to `Adapter`. The interface describes the composed
   adapter bridging platform-specific infrastructure to the generic `Client`, not
   passive configuration.
@@ -23,6 +27,18 @@ const client = new Client(await createLibsqlClientOptions({ client: db }));
 
 // After
 const client = new Client(await createLibsqlAdapter({ client: db }));
+```
+
+```typescript
+// Before
+import { proxyStore } from "@worlds/client/adapters/rdfjs/n3";
+
+// After
+import { createProxiedN3Store } from "@worlds/client/quad-store/n3";
+import { mergePatches } from "@worlds/client/quad-store";
+
+const { store, drainPatches } = createProxiedN3Store(baseStore);
+const patch = mergePatches(drainPatches());
 ```
 
 ## 0.0.14

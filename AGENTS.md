@@ -164,24 +164,6 @@ stay free of N3 hydration (see architectural map below). Under
 `adapters/libsql/`, use `store/`, `search/`, and `sync/` subfolders (each with a
 `mod.ts` barrel); keep shared options and factories at the libsql root.
 
-### Documented `exports` subpaths
-
-| Subpath                                                   | Entry                               |
-| :-------------------------------------------------------- | :---------------------------------- |
-| `@worlds/client`                                          | `./src/mod.ts`                      |
-| `@worlds/client/quad-store`                               | `./src/client/quad-store/mod.ts`    |
-| `@worlds/client/search-index`                             | `./src/client/search-index/mod.ts`  |
-| `@worlds/client/search-index/embedding-service`           | embedding-service `mod.ts`          |
-| `@worlds/client/search-index/quad-chunker`                | quad-chunker `mod.ts`               |
-| `@worlds/client/sparql-engine`                            | `./src/client/sparql-engine/mod.ts` |
-| `@worlds/client/adapters/libsql`                          | libsql `mod.ts`                     |
-| `@worlds/client/adapters/libsql-n3`                       | libsql-n3 `mod.ts`                  |
-| `@worlds/client/adapters/comunica`                        | comunica `mod.ts`                   |
-| `@worlds/client/adapters/rdfjs`                           | rdfjs `mod.ts`                      |
-| `@worlds/client/quad-store/n3`                            | quad-store `n3/mod.ts`              |
-| `@worlds/client/adapters/denokv`                          | denokv `mod.ts`                     |
-| `@worlds/client/adapters/tfjs-universal-sentence-encoder` | TFJS adapter `mod.ts`               |
-
 ### No inline imports
 
 Declare every module dependency at the top with `import` / `import type`. Do not
@@ -329,9 +311,24 @@ separate modules so hexastore deployments do not import N3 hydration:
   with `new Client(await createLibsqlAdapter(...))`.
 - **`createLibsqlN3Adapter`** — import `@worlds/client/adapters/libsql-n3`
   ([`create-libsql-n3-adapter.ts`](src/client/adapters/libsql-n3/create-libsql-n3-adapter.ts));
-  hydrate → `proxyStore` → sync patches to LibSQL;
+  hydrate → `createProxiedN3Store` → `mergePatches` → `persistPatch` to LibSQL;
   `createSparqlEngine({ store })` receives proxied N3. Not re-exported from
   `@worlds/client/adapters/libsql` (keeps hexastore-only imports free of N3).
+
+### N3 patch capture (libsql-n3 sync path)
+
+`createLibsqlN3Adapter` synchronizes durable LibSQL state from an in-memory N3
+store:
+
+1. `hydrateStoreFromLibsql` (skipped when reusing a warmed `store`)
+2. `createProxiedN3Store` from `@worlds/client/quad-store/n3` — captures
+   mutation deltas with idempotency guards
+3. `mergePatches` on `@worlds/client/quad-store` — concatenates drained patches
+   before persist (no deduplication)
+4. `persistPatch` via libsql sync — writes quads and search-index projections
+
+`createRdfjsAdapter` does not use patch capture; data is transient in memory
+only.
 
 ### Client lifecycle (runtime)
 
