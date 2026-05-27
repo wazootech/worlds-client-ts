@@ -103,17 +103,14 @@ const client = createRdfjsClient({
 ### LibSQL (production)
 
 ```typescript
-import { createComunicaLibsqlSparqlEngineFactory } from "@worlds/client/adapters/comunica";
-import { createLibsqlClient } from "@worlds/client/adapters/libsql";
+import { createLibsqlComunicaClient } from "@worlds/client/adapters/libsql/comunica";
 import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
 const db = createClient({ url: "file:./worlds.db" });
-const client = await createLibsqlClient({
+const client = await createLibsqlComunicaClient({
   client: db,
-  createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
-    queryEngine: new QueryEngine(),
-  }),
+  queryEngine: new QueryEngine(),
 });
 ```
 

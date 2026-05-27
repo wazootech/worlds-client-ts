@@ -13,10 +13,12 @@
   as a deprecated alias (removed in 0.0.17).
 - Renamed `SparqlEngineInterface.execute` to `sparql` (aligns with
   `ClientInterface.sparql`).
-- Removed `createSparqlEngine` from `createLibsqlN3Client`. Use
+- Removed `createSparqlEngine` from `createLibsqlClient` and
+  `createLibsqlN3Client`. Use `createLibsqlComunicaClient` from
+  `@worlds/client/adapters/libsql/comunica` (hexastore) or
   `createLibsqlN3ComunicaClient` from
-  `@worlds/client/adapters/libsql-n3/comunica` for Comunica SPARQL; pass a
-  warmed `store` to control hydration timing.
+  `@worlds/client/adapters/libsql-n3/comunica` (hydrated N3); pass a warmed
+  `store` on the N3 path to control hydration timing.
 
 ### Migration
 
@@ -41,6 +43,21 @@ Advanced composition (tests, custom stores):
 import { Client } from "@worlds/client";
 
 const client = new Client(quadStore, searchIndex, sparqlEngine);
+```
+
+LibSQL hexastore + Comunica:
+
+```typescript
+// Before
+await createLibsqlClient({
+  client: db,
+  createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({ queryEngine }),
+});
+
+// After
+import { createLibsqlComunicaClient } from "@worlds/client/adapters/libsql/comunica";
+
+await createLibsqlComunicaClient({ client: db, queryEngine });
 ```
 
 LibSQL N3 + Comunica:

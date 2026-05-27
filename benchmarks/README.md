@@ -47,7 +47,7 @@ deno bench --allow-all benchmarks/sparql-hexastore-crossover.bench.ts
 
 **Standard (1k–50k):** compares **hydrate+N3** (`createLibsqlN3ComunicaClient`
 from `@worlds/client/adapters/libsql-n3`) vs **libsqlStore**
-(`createLibsqlClient` from `@worlds/client/adapters/libsql`).
+(`createLibsqlComunicaClient` from `@worlds/client/adapters/libsql/comunica`).
 
 **Large (100k–1M):** **libsqlStore only** — the scalable LibSQL path for hybrid
 search + SPARQL in production

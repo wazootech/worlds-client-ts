@@ -305,10 +305,12 @@ separate modules so hexastore deployments do not import N3 hydration:
 
 - **`createLibsqlClient`**
   ([`create-libsql-adapter.ts`](src/client/adapters/libsql/create-libsql-adapter.ts))
-  — `LibsqlStore` + hexastore indexes; `createSparqlEngine({ libsqlStore })`.
+  — `LibsqlStore` + hexastore indexes; import/export/search only (no SPARQL).
   `LibsqlStore.match` keyset-pages by `quads.id` (`matchPageSize`, default
   1000). Optional `countQuads` supplies Comunica join cardinality hints. Returns
   `Client` directly.
+- **`createLibsqlComunicaClient`** — import
+  `@worlds/client/adapters/libsql/comunica`; Comunica SPARQL over `LibsqlStore`.
 - **`createLibsqlN3Client`** — import `@worlds/client/adapters/libsql-n3`
   ([`create-libsql-n3-adapter.ts`](src/client/adapters/libsql-n3/create-libsql-n3-adapter.ts));
   hydrate → `createProxiedN3Store` → `mergePatches` → `persistPatch` to LibSQL;
@@ -341,10 +343,9 @@ directly. `createXAdapter` remains as a deprecated alias (removed in 0.0.17).
 For advanced composition or tests, use positional constructor injection:
 `new Client(quadStore, searchIndex, sparqlEngine?)`.
 
-For Comunica SPARQL: `createLibsqlN3ComunicaClient` (N3 path),
-`createComunicaLibsqlSparqlEngineFactory` on `createLibsqlClient` (hexastore),
-or `createComunicaSparqlEngineFactory` on `createRdfjsClient` /
-`createDenokvClient`.
+For Comunica SPARQL: `createLibsqlComunicaClient` (hexastore),
+`createLibsqlN3ComunicaClient` (N3 path), or `createComunicaSparqlEngineFactory`
+on `createRdfjsClient` / `createDenokvClient`.
 
 - **Serverless / edge (warm isolate):** build one `Client` in module scope per
   isolate; reuse across HTTP requests. See
@@ -522,7 +523,8 @@ much graph you mirror in memory and how you run SPARQL.
 
 | Options builder                | Module                                       | When to use                                                                                                                  |
 | :----------------------------- | :------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------- |
-| `createLibsqlClient`           | `@worlds/client/adapters/libsql`             | **Production and large graphs.** SPARQL runs on `LibsqlStore` (hexastore). No full N3 hydration per request.                 |
+| `createLibsqlComunicaClient`   | `@worlds/client/adapters/libsql/comunica`    | **Production and large graphs.** SPARQL runs on `LibsqlStore` (hexastore). No full N3 hydration per request.                 |
+| `createLibsqlClient`           | `@worlds/client/adapters/libsql`             | Hexastore import/export/search only (no SPARQL).                                                                             |
 | `createLibsqlN3ComunicaClient` | `@worlds/client/adapters/libsql-n3/comunica` | **Selective workloads** where hydrating into N3 is acceptable. Reuse one warmed `store` per container, not per HTTP request. |
 
 Post-preload benchmarks (1k-50k quads) show hydrate+N3 can win selective queries
@@ -536,7 +538,7 @@ At millions of quads, pick the topology at integration time.
 
 | Concern         | Production default                                                                                                      |
 | :-------------- | :---------------------------------------------------------------------------------------------------------------------- |
-| LibSQL topology | `createLibsqlClient` with hexastore `LibsqlStore`, no full N3 mirror per request                                        |
+| LibSQL topology | `createLibsqlComunicaClient` with hexastore `LibsqlStore`, no full N3 mirror per request                                |
 | Hot-path SPARQL | Bind at least one term (subject, predicate, or object). Subject-bound property lookups match crossover selective shapes |
 | Avoid at scale  | Unbound `?s ?p ?o` (even with `LIMIT`) on libsqlStore; fullScan degrades to hundreds of ms as quads grow                |
 | N3 + Comunica   | `createLibsqlN3ComunicaClient`; pass a warmed `store` hydrated once per container, not per HTTP request                 |

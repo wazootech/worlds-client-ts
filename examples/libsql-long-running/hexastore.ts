@@ -1,6 +1,5 @@
 import { createClient } from "@libsql/client";
-import { createComunicaLibsqlSparqlEngineFactory } from "@worlds/client/adapters/comunica";
-import { createLibsqlClient } from "@worlds/client/adapters/libsql";
+import { createLibsqlComunicaClient } from "@worlds/client/adapters/libsql/comunica";
 import { UniversalSentenceEncoderEmbeddingService } from "@worlds/client/adapters/tfjs-universal-sentence-encoder";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory } from "n3";
@@ -51,13 +50,11 @@ if (import.meta.main) {
   const embeddingService = new UniversalSentenceEncoderEmbeddingService();
 
   console.log("Provisioning hexastore client (process lifetime)...");
-  const client = await createLibsqlClient({
+  const client = await createLibsqlComunicaClient({
     client: databaseClient,
     embeddingService,
     vectorDimensions: USE_LITE_VECTOR_DIMENSIONS,
-    createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
-      queryEngine,
-    }),
+    queryEngine,
   });
   console.log("Gateway operational.");
 

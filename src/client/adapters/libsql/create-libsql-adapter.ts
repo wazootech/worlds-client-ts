@@ -18,28 +18,24 @@ import {
 import { createLibsqlPatchSyncState } from "@/client/adapters/libsql/sync/mod.ts";
 
 /**
- * LibsqlSparqlEngineOptions contains the hexastore-backed LibsqlStore for SPARQL adapters.
- */
-export interface LibsqlSparqlEngineOptions {
-  /** libsqlStore is the durable hexastore-backed RDF/JS store (SQL index seeks, no N3 hydration). */
-  libsqlStore: LibsqlStore;
-}
-
-/**
  * LibsqlAdapterOptions configures LibSQL execution through LibsqlStore and hexastore indexes.
  */
-export interface LibsqlAdapterOptions extends LibsqlClientBaseOptions {
-  /** createSparqlEngine optionally attaches a caller-provided SPARQL engine over LibsqlStore. */
-  createSparqlEngine?: (
-    options: LibsqlSparqlEngineOptions,
-  ) => SparqlEngineInterface;
-}
+export interface LibsqlAdapterOptions extends LibsqlClientBaseOptions {}
 
 /**
- * createLibsqlClient synthesizes a Client for direct LibsqlStore + hexastore indexes.
+ * AttachLibsqlSparqlEngine wires a SPARQL engine after LibsqlStore exists (in-repo preset use only).
  */
-export async function createLibsqlClient(
+export type AttachLibsqlSparqlEngine = (
+  options: { libsqlStore: LibsqlStore },
+) => SparqlEngineInterface;
+
+/**
+ * assembleLibsqlClient builds a Client for LibsqlStore + hexastore indexes.
+ * Prefer createLibsqlClient (search/import) or createLibsqlComunicaClient (Comunica SPARQL).
+ */
+export async function assembleLibsqlClient(
   options: LibsqlAdapterOptions,
+  attachSparqlEngine?: AttachLibsqlSparqlEngine,
 ): Promise<Client> {
   const vectorDimensions = options.vectorDimensions ?? 32;
   const queryBuilder = new LibsqlQueryBuilder(vectorDimensions);
@@ -68,7 +64,7 @@ export async function createLibsqlClient(
     matchPageSize: options.matchPageSize,
   });
 
-  const configuredSparqlEngine = options.createSparqlEngine?.({ libsqlStore });
+  const configuredSparqlEngine = attachSparqlEngine?.({ libsqlStore });
 
   const quadStore = new RdfjsQuadStore(libsqlStore);
 
@@ -94,6 +90,16 @@ export async function createLibsqlClient(
     : undefined;
 
   return new Client(wrappedQuadStore, searchIndex, wrappedSparqlEngine);
+}
+
+/**
+ * createLibsqlClient synthesizes a Client for import, export, and search without SPARQL.
+ * For Comunica SPARQL, use createLibsqlComunicaClient from `@worlds/client/adapters/libsql/comunica`.
+ */
+export async function createLibsqlClient(
+  options: LibsqlAdapterOptions,
+): Promise<Client> {
+  return await assembleLibsqlClient(options);
 }
 
 /**

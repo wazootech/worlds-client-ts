@@ -2,7 +2,7 @@ import { createClient } from "@libsql/client";
 import type { Quad } from "@rdfjs/types";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import type { Client } from "@worlds/client";
-import { createComunicaLibsqlSparqlEngineFactory } from "@worlds/client/adapters/comunica";
+import { createLibsqlComunicaClient } from "@worlds/client/adapters/libsql/comunica";
 import { createLibsqlClient } from "@worlds/client/adapters/libsql";
 import { createLibsqlN3ComunicaClient } from "@worlds/client/adapters/libsql-n3/comunica";
 import {
@@ -112,12 +112,10 @@ async function importCorpusIntoLibsqlHexastore(
 async function openLibsqlHexastoreSparqlEngine(
   databaseClient: ReturnType<typeof createClient>,
 ): Promise<PreloadedSparqlFixture> {
-  const worldsClient = await createLibsqlClient({
+  const worldsClient = await createLibsqlComunicaClient({
     client: databaseClient,
     searchIndexOnImport: "disabled",
-    createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
-      queryEngine: sharedQueryEngine,
-    }),
+    queryEngine: sharedQueryEngine,
   });
   return { databaseClient, worldsClient };
 }
