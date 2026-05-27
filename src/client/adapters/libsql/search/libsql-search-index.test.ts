@@ -3,8 +3,10 @@ import { createClient } from "@libsql/client";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { FakeEmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
 import type { EmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
-import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
-import { initializeLibsqlSchema } from "./initialize-libsql-schema.ts";
+import {
+  initializeLibsqlSchema,
+  LibsqlQueryBuilder,
+} from "@/client/adapters/libsql/store/mod.ts";
 
 // --- Helpers ---
 

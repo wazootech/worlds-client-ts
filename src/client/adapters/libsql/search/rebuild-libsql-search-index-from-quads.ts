@@ -3,9 +3,9 @@ import { filterQuads } from "@/client/quad-store/mod.ts";
 import {
   type CommitPatchToLibsqlOptions,
   refreshSearchChunksForQuads,
-} from "./commit-patch-to-libsql.ts";
-import { quadFromLibsqlRow } from "./libsql-quad-row.ts";
-import { DEFAULT_LIBSQL_MATCH_PAGE_SIZE } from "./libsql-query-builder.ts";
+} from "@/client/adapters/libsql/sync/commit-patch-to-libsql.ts";
+import { quadFromLibsqlRow } from "@/client/adapters/libsql/store/libsql-quad-row.ts";
+import { DEFAULT_LIBSQL_MATCH_PAGE_SIZE } from "@/client/adapters/libsql/store/libsql-query-builder.ts";
 
 /**
  * RebuildLibsqlSearchIndexFromQuadsResult reports how many quads and chunk rows were processed.

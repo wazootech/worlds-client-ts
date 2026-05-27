@@ -1,12 +1,14 @@
 import { assertEquals } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { Store } from "n3";
-import { defaultLibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import { LibsqlQueryBuilder } from "@/client/adapters/libsql/mod.ts";
 import { hydrateStoreFromLibsql } from "./hydrate-store-from-libsql.ts";
+
+const testQueryBuilder = new LibsqlQueryBuilder(32);
 
 Deno.test("Slice 4: Hydrator - recovers whole graph from stored serialized quad lines", async () => {
   const client = createClient({ url: ":memory:" });
-  await client.execute(defaultLibsqlQueryBuilder.buildLibsqlQuadsTable());
+  await client.execute(testQueryBuilder.buildLibsqlQuadsTable());
 
   // Manually seed the raw table with granular component columns mimicking sync engine
   await client.execute({
@@ -58,7 +60,7 @@ Deno.test("Slice 4: Hydrator - recovers whole graph from stored serialized quad 
 
 Deno.test("Hydrator - faithfully reconstructs advanced terms (BlankNodes, Datatypes, Languages)", async () => {
   const client = createClient({ url: ":memory:" });
-  await client.execute(defaultLibsqlQueryBuilder.buildLibsqlQuadsTable());
+  await client.execute(testQueryBuilder.buildLibsqlQuadsTable());
 
   await client.execute({
     sql:
@@ -141,7 +143,7 @@ Deno.test("Hydrator - faithfully reconstructs advanced terms (BlankNodes, Dataty
 
 Deno.test("hydrateStoreFromLibsql - returns zero when the quads table is empty", async () => {
   const client = createClient({ url: ":memory:" });
-  await client.execute(defaultLibsqlQueryBuilder.buildLibsqlQuadsTable());
+  await client.execute(testQueryBuilder.buildLibsqlQuadsTable());
 
   const targetStore = new Store();
   const count = await hydrateStoreFromLibsql(client, targetStore);
@@ -154,7 +156,7 @@ Deno.test(
   "hydrateStoreFromLibsql - applies QuadFilter include constraints during hydration",
   async () => {
     const client = createClient({ url: ":memory:" });
-    await client.execute(defaultLibsqlQueryBuilder.buildLibsqlQuadsTable());
+    await client.execute(testQueryBuilder.buildLibsqlQuadsTable());
 
     await client.execute({
       sql:
@@ -203,7 +205,7 @@ Deno.test(
   "hydrateStoreFromLibsql - hydrates NamedNode object terms from stored rows",
   async () => {
     const client = createClient({ url: ":memory:" });
-    await client.execute(defaultLibsqlQueryBuilder.buildLibsqlQuadsTable());
+    await client.execute(testQueryBuilder.buildLibsqlQuadsTable());
 
     await client.execute({
       sql:
@@ -283,7 +285,7 @@ Deno.test(
   "hydrateStoreFromLibsql - hydrates more than one internal batch without losing quads",
   async () => {
     const client = createClient({ url: ":memory:" });
-    await client.execute(defaultLibsqlQueryBuilder.buildLibsqlQuadsTable());
+    await client.execute(testQueryBuilder.buildLibsqlQuadsTable());
 
     const rowCount = 1500;
     for (let index = 0; index < rowCount; index++) {

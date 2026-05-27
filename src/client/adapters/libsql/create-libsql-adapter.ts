@@ -4,15 +4,14 @@ import type { Adapter } from "@/client/client.ts";
 import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
 import { RdfjsQuadStore } from "@/client/adapters/rdfjs/mod.ts";
 
-import { LibsqlSearchIndex } from "./libsql-search-index.ts";
-import { initializeLibsqlSchema } from "./initialize-libsql-schema.ts";
-import { createLibsqlPatchSyncState } from "./libsql-patch-sync.ts";
+import type { LibsqlClientBaseOptions } from "./libsql-client-base-options.ts";
+import { LibsqlSearchIndex } from "@/client/adapters/libsql/search/mod.ts";
 import {
-  assertLibsqlClientIndexingOptions,
-  type LibsqlClientBaseOptions,
-} from "./libsql-client-base-options.ts";
-import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
-import { LibsqlStore } from "./libsql-store.ts";
+  initializeLibsqlSchema,
+  LibsqlQueryBuilder,
+  LibsqlStore,
+} from "@/client/adapters/libsql/store/mod.ts";
+import { createLibsqlPatchSyncState } from "@/client/adapters/libsql/sync/mod.ts";
 
 /**
  * LibsqlSparqlEngineOptions contains the hexastore-backed LibsqlStore for SPARQL adapters.
@@ -23,9 +22,9 @@ export interface LibsqlSparqlEngineOptions {
 }
 
 /**
- * LibsqlOptions configures LibSQL execution through LibsqlStore and hexastore indexes.
+ * LibsqlAdapterOptions configures LibSQL execution through LibsqlStore and hexastore indexes.
  */
-export interface LibsqlOptions extends LibsqlClientBaseOptions {
+export interface LibsqlAdapterOptions extends LibsqlClientBaseOptions {
   /** createSparqlEngine optionally attaches a caller-provided SPARQL engine over LibsqlStore. */
   createSparqlEngine?: (
     options: LibsqlSparqlEngineOptions,
@@ -36,10 +35,8 @@ export interface LibsqlOptions extends LibsqlClientBaseOptions {
  * createLibsqlAdapter synthesizes a Adapter for direct LibsqlStore + hexastore indexes.
  */
 export async function createLibsqlAdapter(
-  options: LibsqlOptions,
+  options: LibsqlAdapterOptions,
 ): Promise<Adapter> {
-  assertLibsqlClientIndexingOptions(options);
-
   const vectorDimensions = options.vectorDimensions ?? 32;
   const queryBuilder = new LibsqlQueryBuilder(vectorDimensions);
 
@@ -49,27 +46,15 @@ export async function createLibsqlAdapter(
     new RecursiveCharacterTextSplitter({ chunkSize: 1000 });
 
   const searchIndex = new LibsqlSearchIndex({
-    client: options.client,
-    embeddingService: options.embeddingService,
+    ...options,
     libsqlQueryBuilder: queryBuilder,
     textSplitter,
-    include: options.include,
-    exclude: options.exclude,
-    labelPredicates: options.labelPredicates,
-    maxLookupChunkSize: options.maxLookupChunkSize,
   });
 
   const patchSync = createLibsqlPatchSyncState({
-    client: options.client,
-    embeddingService: options.embeddingService,
-    textSplitter,
-    maxLookupChunkSize: options.maxLookupChunkSize,
-    include: options.include,
-    exclude: options.exclude,
+    ...options,
     libsqlQueryBuilder: queryBuilder,
-    labelPredicates: options.labelPredicates,
-    searchIndexOnImport: options.searchIndexOnImport,
-    deferSearchIndexOnImport: options.deferSearchIndexOnImport,
+    textSplitter,
   });
 
   const libsqlStore = new LibsqlStore({

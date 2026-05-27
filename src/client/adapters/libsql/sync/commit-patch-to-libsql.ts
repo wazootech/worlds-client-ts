@@ -11,13 +11,13 @@ import {
   hashQuad,
   isTextualLiteral,
 } from "@/client/quad-store/mod.ts";
-import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
-import type { LibsqlClientBaseOptions } from "./libsql-client-base-options.ts";
-import { quadFromLibsqlRow } from "./libsql-quad-row.ts";
+import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
+import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/store/mod.ts";
+import { quadFromLibsqlRow } from "@/client/adapters/libsql/store/libsql-quad-row.ts";
 import {
   buildChunkFtsValue,
   resolveLabelPredicates,
-} from "./search-chunk-fts.ts";
+} from "@/client/adapters/libsql/search/search-chunk-fts.ts";
 
 /**
  * CommitPatchToLibsqlOptions provides configurations for executing updates against LibSQL durable stores.
