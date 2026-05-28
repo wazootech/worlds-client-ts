@@ -80,7 +80,7 @@ export interface PreloadedSparqlFixture {
  * PreloadSparqlHexastorePerfOptions configures hexastore perf module preload behavior.
  */
 export interface PreloadSparqlHexastorePerfOptions {
-  /** reuseFileCache enables on-disk libsqlStore fixtures when BENCH_REUSE_DB=1. */
+  /** reuseFileCache enables on-disk fixtures for libsqlStore and denokvStore when BENCH_REUSE_DB=1. */
   reuseFileCache?: boolean;
 }
 
@@ -163,7 +163,10 @@ async function createLibsqlHexastoreSparqlEngine(
 
   const quadCount = corpusQuads.length;
   const cachePaths = resolveHexastorePerfDbCachePaths(quadCount, "libsqlStore");
-  const checksumInputs = buildHexastorePerfFixtureChecksumInputs(quadCount);
+  const checksumInputs = buildHexastorePerfFixtureChecksumInputs(
+    quadCount,
+    "libsqlStore",
+  );
   const expectedChecksum = await computeHexastorePerfFixtureChecksum(
     checksumInputs,
   );
@@ -227,14 +230,54 @@ function openDenokvHexastoreSparqlEngine(kv: Deno.Kv): PreloadedSparqlFixture {
 }
 
 /**
- * createDenokvHexastoreSparqlEngine wires Comunica over DenokvRdfjsStore (in-memory KV).
+ * createDenokvHexastoreSparqlEngine wires Comunica over DenokvRdfjsStore (memory or file-backed KV).
  */
 async function createDenokvHexastoreSparqlEngine(
   corpusQuads: Quad[],
-): Promise<PreloadedSparqlFixture> {
-  const kv = await Deno.openKv(":memory:");
+  options?: { reuseFileCache?: boolean },
+): Promise<{ fixture: PreloadedSparqlFixture; cacheHit: boolean }> {
+  if (!options?.reuseFileCache) {
+    const kv = await Deno.openKv(":memory:");
+    await importCorpusIntoDenokvHexastore(kv, corpusQuads);
+    return { fixture: openDenokvHexastoreSparqlEngine(kv), cacheHit: false };
+  }
+
+  const quadCount = corpusQuads.length;
+  const cachePaths = resolveHexastorePerfDbCachePaths(quadCount, "denokvStore");
+  const checksumInputs = buildHexastorePerfFixtureChecksumInputs(
+    quadCount,
+    "denokvStore",
+  );
+  const expectedChecksum = await computeHexastorePerfFixtureChecksum(
+    checksumInputs,
+  );
+
+  const cacheHit = await tryResolveHexastorePerfCacheHit(
+    cachePaths,
+    expectedChecksum,
+    quadCount,
+  );
+
+  if (cacheHit) {
+    const kv = await Deno.openKv(cachePaths.kvDirectoryPath);
+    return { fixture: openDenokvHexastoreSparqlEngine(kv), cacheHit: true };
+  }
+
+  await ensureHexastorePerfCacheDirectoryExists(
+    resolveHexastorePerfDbCacheDirectory(),
+  );
+  await removeStaleHexastorePerfCacheFiles(cachePaths);
+
+  const kv = await Deno.openKv(cachePaths.kvDirectoryPath);
   await importCorpusIntoDenokvHexastore(kv, corpusQuads);
-  return openDenokvHexastoreSparqlEngine(kv);
+
+  const manifest = {
+    ...checksumInputs,
+    checksum: expectedChecksum,
+  };
+  await writeHexastorePerfFixtureManifest(cachePaths.manifestPath, manifest);
+
+  return { fixture: openDenokvHexastoreSparqlEngine(kv), cacheHit: false };
 }
 
 async function createSparqlEngineForBackend(
@@ -250,8 +293,11 @@ async function createSparqlEngineForBackend(
     return { fixture, cacheHit };
   }
 
-  const fixture = await createDenokvHexastoreSparqlEngine(corpusQuads);
-  return { fixture, cacheHit: false };
+  const { fixture, cacheHit } = await createDenokvHexastoreSparqlEngine(
+    corpusQuads,
+    { reuseFileCache: preloadOptions?.reuseFileCache },
+  );
+  return { fixture, cacheHit };
 }
 
 /**
@@ -285,9 +331,7 @@ export async function preloadSparqlHexastorePerfFixtures(
       console.timeEnd(preloadLabel);
       if (cacheHit) {
         console.log(`${preloadLabel} (cache hit)`);
-      } else if (
-        preloadOptions?.reuseFileCache && backend === "libsqlStore"
-      ) {
+      } else if (preloadOptions?.reuseFileCache) {
         console.log(`${preloadLabel} (imported to file cache)`);
       }
       preloadedSparqlEngines.set(

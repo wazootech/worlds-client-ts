@@ -60,8 +60,11 @@
     "bench:hexastore-perf-denokv": "deno bench --allow-all --unstable-kv benchmarks/sparql-hexastore-perf-denokv.bench.ts",
     "bench:hexastore-perf-denokv:full-scan": "deno bench --allow-all --unstable-kv --env benchmarks/sparql-hexastore-perf-denokv.bench.ts",
     "bench:hexastore-perf-large-libsql": "deno bench --allow-all --v8-flags=--max-old-space-size=8192 benchmarks/sparql-hexastore-perf-large-libsql.bench.ts",
+    "bench:hexastore-perf-large-libsql:full-scan": "deno bench --allow-all --env --v8-flags=--max-old-space-size=8192 benchmarks/sparql-hexastore-perf-large-libsql.bench.ts",
     "bench:hexastore-perf-large-libsql:reuse": "deno bench --allow-all --env --v8-flags=--max-old-space-size=8192 benchmarks/sparql-hexastore-perf-large-libsql.bench.ts",
     "bench:hexastore-perf-large-denokv": "deno bench --allow-all --unstable-kv --v8-flags=--max-old-space-size=8192 benchmarks/sparql-hexastore-perf-large-denokv.bench.ts",
+    "bench:hexastore-perf-large-denokv:full-scan": "deno bench --allow-all --unstable-kv --env --v8-flags=--max-old-space-size=8192 benchmarks/sparql-hexastore-perf-large-denokv.bench.ts",
+    "bench:hexastore-perf-large-denokv:reuse": "deno bench --allow-all --unstable-kv --env --v8-flags=--max-old-space-size=8192 benchmarks/sparql-hexastore-perf-large-denokv.bench.ts",
     "publish:dry": "deno publish --dry-run --allow-dirty",
     "ci": {
       "description": "Formats, lints, checks, and tests the code",

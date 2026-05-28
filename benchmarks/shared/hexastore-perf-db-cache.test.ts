@@ -31,7 +31,10 @@ async function importCorpusIntoLibsqlHexastoreForTest(
 Deno.test(
   "computeHexastorePerfFixtureChecksum - stable digest for identical inputs",
   async () => {
-    const checksumInputs = buildHexastorePerfFixtureChecksumInputs(1000);
+    const checksumInputs = buildHexastorePerfFixtureChecksumInputs(
+      1000,
+      "libsqlStore",
+    );
     const firstChecksum = await computeHexastorePerfFixtureChecksum(
       checksumInputs,
     );
@@ -45,7 +48,10 @@ Deno.test(
 Deno.test(
   "computeHexastorePerfFixtureChecksum - different corpus version changes digest",
   async () => {
-    const baselineInputs = buildHexastorePerfFixtureChecksumInputs(1000);
+    const baselineInputs = buildHexastorePerfFixtureChecksumInputs(
+      1000,
+      "libsqlStore",
+    );
     const baselineChecksum = await computeHexastorePerfFixtureChecksum(
       baselineInputs,
     );
@@ -74,6 +80,18 @@ Deno.test(
 );
 
 Deno.test(
+  "resolveHexastorePerfDbCachePaths - names denokvStore KV directory and manifest files",
+  () => {
+    const cachePaths = resolveHexastorePerfDbCachePaths(10, "denokvStore");
+    assertEquals(
+      cachePaths.kvDirectoryPath.endsWith("denokvStore-10"),
+      true,
+    );
+    assertEquals(cachePaths.manifestPath.endsWith("denokvStore-10.json"), true);
+  },
+);
+
+Deno.test(
   "validateCachedLibsqlHexastorePerfDatabase - accepts quads-only in-memory fixture",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
@@ -83,7 +101,7 @@ Deno.test(
         generateSyntheticQuads(10),
       );
       const expectedChecksum = await computeHexastorePerfFixtureChecksum(
-        buildHexastorePerfFixtureChecksumInputs(10),
+        buildHexastorePerfFixtureChecksumInputs(10, "libsqlStore"),
       );
       const isValid = await validateCachedLibsqlHexastorePerfDatabase(
         databaseClient,
@@ -102,7 +120,10 @@ Deno.test(
     const temporaryDirectory = await Deno.makeTempDir();
     const manifestPath = path.join(temporaryDirectory, "libsqlStore-10.json");
     try {
-      const checksumInputs = buildHexastorePerfFixtureChecksumInputs(10);
+      const checksumInputs = buildHexastorePerfFixtureChecksumInputs(
+        10,
+        "libsqlStore",
+      );
       const expectedChecksum = await computeHexastorePerfFixtureChecksum(
         checksumInputs,
       );

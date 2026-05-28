@@ -1,3 +1,4 @@
+import { isBenchReuseDbEnabled } from "./shared/hexastore-perf-db-cache.ts";
 import {
   denokvHexastorePerfBackends,
   preloadSparqlHexastorePerfFixtures,
@@ -17,6 +18,7 @@ const preloadedSparqlEngines = await preloadSparqlHexastorePerfFixtures(
   largePerfScales,
   "large denokv",
   denokvHexastorePerfBackends,
+  { reuseFileCache: isBenchReuseDbEnabled() },
 );
 
 registerSparqlHexastorePerfUnloadCleanup(preloadedSparqlEngines);

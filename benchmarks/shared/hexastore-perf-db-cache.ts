@@ -1,6 +1,7 @@
 import { type Client, createClient } from "@libsql/client";
 import { encodeHex } from "@std/encoding/hex";
 import * as path from "@std/path";
+import { DenokvRdfjsStore } from "@worlds/client/adapters/denokv";
 import { SYNTHETIC_CORPUS_VERSION } from "./synthetic-data.ts";
 
 /**
@@ -8,45 +9,79 @@ import { SYNTHETIC_CORPUS_VERSION } from "./synthetic-data.ts";
  */
 export const BENCH_LIBSQL_SCHEMA_VERSION = 1;
 
-/** DEFAULT_HEXASTORE_PERF_CACHE_DIR is the default on-disk cache root for large libsqlStore perf fixtures. */
+/**
+ * BENCH_DENOKV_HEXASTORE_SCHEMA_VERSION bumps when Denokv hexastore layout relevant to perf fixtures changes.
+ */
+export const BENCH_DENOKV_HEXASTORE_SCHEMA_VERSION = 1;
+
+/** HexastorePerfCacheBackend labels backends that support large on-disk perf fixture reuse. */
+export type HexastorePerfCacheBackend = "libsqlStore" | "denokvStore";
+
+/** DEFAULT_HEXASTORE_PERF_CACHE_DIR is the default on-disk cache root for large perf fixtures. */
 const BENCHMARKS_ROOT = path.fromFileUrl(new URL("../..", import.meta.url));
 
-/** DEFAULT_HEXASTORE_PERF_CACHE_DIR stores large libsqlStore database files under benchmarks/.cache. */
+/** DEFAULT_HEXASTORE_PERF_CACHE_DIR stores large database files under benchmarks/.cache. */
 export const DEFAULT_HEXASTORE_PERF_CACHE_DIR = path.join(
   BENCHMARKS_ROOT,
   ".cache",
   "hexastore-perf-large",
 );
 
-/**
- * HexastorePerfFixtureChecksumInputs lists manifest fields hashed for bench DB cache identity.
- */
-export interface HexastorePerfFixtureChecksumInputs {
+/** HexastorePerfFixtureChecksumInputsBase lists manifest fields shared across backends. */
+interface HexastorePerfFixtureChecksumInputsBase {
   /** syntheticCorpusVersion tracks generateSyntheticQuads revisions. */
   syntheticCorpusVersion: number;
-  /** benchLibsqlSchemaVersion tracks LibSQL schema revisions relevant to perf fixtures. */
-  benchLibsqlSchemaVersion: number;
   /** quadCount is the synthetic corpus size for this fixture. */
   quadCount: number;
-  /** backend labels the hexastore wiring (large cache supports libsqlStore only). */
-  backend: "libsqlStore";
   /** searchIndexOnImport records the indexing mode used during import. */
   searchIndexOnImport: "disabled";
 }
 
 /**
- * HexastorePerfFixtureManifest persists checksum inputs plus the computed digest on disk.
+ * LibsqlHexastorePerfFixtureChecksumInputs is the canonical checksum input for libsqlStore fixtures.
  */
-export interface HexastorePerfFixtureManifest
-  extends HexastorePerfFixtureChecksumInputs {
-  /** checksum is the SHA-256 hex digest of canonical HexastorePerfFixtureChecksumInputs JSON. */
-  checksum: string;
+export interface LibsqlHexastorePerfFixtureChecksumInputs
+  extends HexastorePerfFixtureChecksumInputsBase {
+  /** backend labels the hexastore wiring. */
+  backend: "libsqlStore";
+  /** benchLibsqlSchemaVersion tracks LibSQL schema revisions relevant to perf fixtures. */
+  benchLibsqlSchemaVersion: number;
 }
 
 /**
- * HexastorePerfDbCachePaths locates the SQLite file and JSON sidecar for a cached perf fixture.
+ * DenokvHexastorePerfFixtureChecksumInputs is the canonical checksum input for denokvStore fixtures.
  */
-export interface HexastorePerfDbCachePaths {
+export interface DenokvHexastorePerfFixtureChecksumInputs
+  extends HexastorePerfFixtureChecksumInputsBase {
+  /** backend labels the hexastore wiring. */
+  backend: "denokvStore";
+  /** benchDenokvHexastoreSchemaVersion tracks Denokv hexastore revisions relevant to perf fixtures. */
+  benchDenokvHexastoreSchemaVersion: number;
+}
+
+/**
+ * HexastorePerfFixtureChecksumInputs lists manifest fields hashed for bench cache identity.
+ */
+export type HexastorePerfFixtureChecksumInputs =
+  | LibsqlHexastorePerfFixtureChecksumInputs
+  | DenokvHexastorePerfFixtureChecksumInputs;
+
+/**
+ * HexastorePerfFixtureManifest persists checksum inputs plus the computed digest on disk.
+ */
+export type HexastorePerfFixtureManifest =
+  & HexastorePerfFixtureChecksumInputs
+  & {
+    /** checksum is the SHA-256 hex digest of canonical HexastorePerfFixtureChecksumInputs JSON. */
+    checksum: string;
+  };
+
+/**
+ * LibsqlHexastorePerfDbCachePaths locates the SQLite file and JSON sidecar for a cached libsql fixture.
+ */
+export interface LibsqlHexastorePerfDbCachePaths {
+  /** backend labels the hexastore wiring. */
+  backend: "libsqlStore";
   /** databasePath is the absolute path to the LibSQL SQLite file. */
   databasePath: string;
   /** databaseFileUrl is the libsql client URL for databasePath. */
@@ -56,17 +91,36 @@ export interface HexastorePerfDbCachePaths {
 }
 
 /**
+ * DenokvHexastorePerfDbCachePaths locates the on-disk KV directory and JSON sidecar for a cached denokv fixture.
+ */
+export interface DenokvHexastorePerfDbCachePaths {
+  /** backend labels the hexastore wiring. */
+  backend: "denokvStore";
+  /** kvDirectoryPath is the absolute path passed to Deno.openKv for a file-backed database. */
+  kvDirectoryPath: string;
+  /** manifestPath is the absolute path to the JSON manifest sidecar. */
+  manifestPath: string;
+}
+
+/**
+ * HexastorePerfDbCachePaths locates on-disk storage and manifest paths for a cached perf fixture.
+ */
+export type HexastorePerfDbCachePaths =
+  | LibsqlHexastorePerfDbCachePaths
+  | DenokvHexastorePerfDbCachePaths;
+
+/**
  * CachedHexastorePerfFixtureValidation holds expected row counts for a cache hit check.
  */
 export interface CachedHexastorePerfFixtureValidation {
-  /** quadCount is the expected number of rows in the quads table. */
+  /** quadCount is the expected number of quads in the fixture. */
   quadCount: number;
   /** expectedChecksum is the digest that must match the manifest sidecar. */
   expectedChecksum: string;
 }
 
 /**
- * isBenchReuseDbEnabled returns true when BENCH_REUSE_DB=1 enables on-disk libsql perf fixture reuse.
+ * isBenchReuseDbEnabled returns true when BENCH_REUSE_DB=1 enables on-disk perf fixture reuse.
  */
 export function isBenchReuseDbEnabled(): boolean {
   return Deno.env.get("BENCH_REUSE_DB") === "1";
@@ -92,40 +146,78 @@ export function resolveHexastorePerfDbCacheDirectory(): string {
 }
 
 /**
- * resolveHexastorePerfDbCachePaths builds database and manifest paths for a libsqlStore perf scale.
+ * resolveHexastorePerfDbCachePaths builds storage and manifest paths for a large libsqlStore scale.
  */
 export function resolveHexastorePerfDbCachePaths(
   quadCount: number,
   backend: "libsqlStore",
+): LibsqlHexastorePerfDbCachePaths;
+/**
+ * resolveHexastorePerfDbCachePaths builds storage and manifest paths for a large denokvStore scale.
+ */
+export function resolveHexastorePerfDbCachePaths(
+  quadCount: number,
+  backend: "denokvStore",
+): DenokvHexastorePerfDbCachePaths;
+export function resolveHexastorePerfDbCachePaths(
+  quadCount: number,
+  backend: HexastorePerfCacheBackend,
 ): HexastorePerfDbCachePaths {
   const cacheDirectory = resolveHexastorePerfDbCacheDirectory();
-  const databasePath = path.join(
-    cacheDirectory,
-    `${backend}-${quadCount}.db`,
-  );
   const manifestPath = path.join(
     cacheDirectory,
     `${backend}-${quadCount}.json`,
   );
+
+  if (backend === "libsqlStore") {
+    const databasePath = path.join(
+      cacheDirectory,
+      `${backend}-${quadCount}.db`,
+    );
+    return {
+      backend: "libsqlStore",
+      databasePath,
+      databaseFileUrl: path.toFileUrl(databasePath).href,
+      manifestPath,
+    };
+  }
+
+  const kvDirectoryPath = path.join(
+    cacheDirectory,
+    `${backend}-${quadCount}`,
+  );
   return {
-    databasePath,
-    databaseFileUrl: path.toFileUrl(databasePath).href,
+    backend: "denokvStore",
+    kvDirectoryPath,
     manifestPath,
   };
 }
 
 /**
- * buildHexastorePerfFixtureChecksumInputs constructs the canonical inputs for a libsqlStore quads-only fixture.
+ * buildHexastorePerfFixtureChecksumInputs constructs canonical checksum inputs for a quads-only fixture.
  */
 export function buildHexastorePerfFixtureChecksumInputs(
   quadCount: number,
+  backend: HexastorePerfCacheBackend,
 ): HexastorePerfFixtureChecksumInputs {
-  return {
+  const sharedFields = {
     syntheticCorpusVersion: SYNTHETIC_CORPUS_VERSION,
-    benchLibsqlSchemaVersion: BENCH_LIBSQL_SCHEMA_VERSION,
     quadCount,
-    backend: "libsqlStore",
-    searchIndexOnImport: "disabled",
+    searchIndexOnImport: "disabled" as const,
+  };
+
+  if (backend === "libsqlStore") {
+    return {
+      ...sharedFields,
+      backend: "libsqlStore",
+      benchLibsqlSchemaVersion: BENCH_LIBSQL_SCHEMA_VERSION,
+    };
+  }
+
+  return {
+    ...sharedFields,
+    backend: "denokvStore",
+    benchDenokvHexastoreSchemaVersion: BENCH_DENOKV_HEXASTORE_SCHEMA_VERSION,
   };
 }
 
@@ -181,13 +273,23 @@ export async function ensureHexastorePerfCacheDirectoryExists(
 }
 
 /**
- * removeStaleHexastorePerfCacheFiles deletes a partial or invalid database and manifest pair.
+ * removeStaleHexastorePerfCacheFiles deletes a partial or invalid storage and manifest pair.
  */
 export async function removeStaleHexastorePerfCacheFiles(
   cachePaths: HexastorePerfDbCachePaths,
 ): Promise<void> {
+  if (cachePaths.backend === "libsqlStore") {
+    await Promise.all([
+      Deno.remove(cachePaths.databasePath).catch(() => undefined),
+      Deno.remove(cachePaths.manifestPath).catch(() => undefined),
+    ]);
+    return;
+  }
+
   await Promise.all([
-    Deno.remove(cachePaths.databasePath).catch(() => undefined),
+    Deno.remove(cachePaths.kvDirectoryPath, { recursive: true }).catch(() =>
+      undefined
+    ),
     Deno.remove(cachePaths.manifestPath).catch(() => undefined),
   ]);
 }
@@ -212,7 +314,19 @@ export async function validateCachedLibsqlHexastorePerfDatabase(
 }
 
 /**
- * tryResolveHexastorePerfCacheHit validates manifest and database state; logs cache miss reasons.
+ * validateCachedDenokvHexastorePerfDatabase checks quad counts for a quads-only Denokv cache hit.
+ */
+export async function validateCachedDenokvHexastorePerfDatabase(
+  kv: Deno.Kv,
+  validation: CachedHexastorePerfFixtureValidation,
+): Promise<boolean> {
+  const rdfjsStore = new DenokvRdfjsStore({ kv });
+  const storedQuadCount = await rdfjsStore.countQuads(null, null, null, null);
+  return storedQuadCount === validation.quadCount;
+}
+
+/**
+ * tryResolveHexastorePerfCacheHit validates manifest and storage state; logs cache miss reasons.
  */
 export async function tryResolveHexastorePerfCacheHit(
   cachePaths: HexastorePerfDbCachePaths,
@@ -231,28 +345,54 @@ export async function tryResolveHexastorePerfCacheHit(
     return false;
   }
 
+  if (cachePaths.backend === "libsqlStore") {
+    try {
+      await Deno.stat(cachePaths.databasePath);
+    } catch {
+      console.log(`cache miss (${cachePaths.databasePath}: database missing)`);
+      return false;
+    }
+
+    const databaseClient = createClient({ url: cachePaths.databaseFileUrl });
+
+    try {
+      const isValid = await validateCachedLibsqlHexastorePerfDatabase(
+        databaseClient,
+        {
+          quadCount,
+          expectedChecksum,
+        },
+      );
+      if (!isValid) {
+        console.log("cache miss (quad or chunk count mismatch)");
+      }
+      return isValid;
+    } finally {
+      databaseClient.close();
+    }
+  }
+
   try {
-    await Deno.stat(cachePaths.databasePath);
+    await Deno.stat(cachePaths.kvDirectoryPath);
   } catch {
-    console.log(`cache miss (${cachePaths.databasePath}: database missing)`);
+    console.log(
+      `cache miss (${cachePaths.kvDirectoryPath}: KV directory missing)`,
+    );
     return false;
   }
 
-  const databaseClient = createClient({ url: cachePaths.databaseFileUrl });
+  const kv = await Deno.openKv(cachePaths.kvDirectoryPath);
 
   try {
-    const isValid = await validateCachedLibsqlHexastorePerfDatabase(
-      databaseClient,
-      {
-        quadCount,
-        expectedChecksum,
-      },
-    );
+    const isValid = await validateCachedDenokvHexastorePerfDatabase(kv, {
+      quadCount,
+      expectedChecksum,
+    });
     if (!isValid) {
-      console.log("cache miss (quad or chunk count mismatch)");
+      console.log("cache miss (quad count mismatch)");
     }
     return isValid;
   } finally {
-    databaseClient.close();
+    kv.close();
   }
 }

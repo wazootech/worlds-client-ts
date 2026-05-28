@@ -77,9 +77,17 @@ deno task bench:hexastore-perf-libsql:full-scan
 deno task bench:hexastore-perf-denokv:full-scan
 ```
 
+Large benches use the same env via `:full-scan` tasks:
+
+```bash
+deno task bench:hexastore-perf-large-libsql:full-scan
+deno task bench:hexastore-perf-large-denokv:full-scan
+```
+
 **Large (100k–1M):** separate libsql and denokv large benches
-([#68](https://github.com/wazootech/worlds-client-ts/issues/68)). Deno KV large
-preload is memory-heavy and has no on-disk fixture reuse.
+([#68](https://github.com/wazootech/worlds-client-ts/issues/68)). Both support
+`:reuse` and `:full-scan` tasks; Denokv large preload is still slow — use reuse
+for repeat captures, not day-to-day iteration.
 
 Hexastore perf preload uses `searchIndexOnImport: "disabled"` (quads only; the
 timed slice is `execute()`). Do **not** call `Client.rebuildSearchIndex()` in
@@ -131,22 +139,25 @@ repair as separate timed steps.
 
 #### Reusing large fixtures (dev only)
 
-Opt-in file cache for **large libsqlStore** preload (`BENCH_REUSE_DB=1`). The
-first run imports into `benchmarks/.cache/hexastore-perf-large/`; later runs
-open the SQLite file and skip import when the manifest checksum matches (corpus
-version, schema version, quad count, quads-only import). `Deno.bench` still
-measures `execute()` only.
+Opt-in file cache for **large libsqlStore and denokvStore** preload
+(`BENCH_REUSE_DB=1`). The first run imports into
+`benchmarks/.cache/hexastore-perf-large/` (`libsqlStore-{n}.db` or
+`denokvStore-{n}/`); later runs open cached storage and skip import when the
+manifest checksum matches (corpus version, backend schema version, quad count,
+quads-only import). `Deno.bench` still measures `execute()` only.
 
 ```bash
 # shell or .env
 BENCH_REUSE_DB=1
 deno task bench:hexastore-perf-large-libsql:reuse
+deno task bench:hexastore-perf-large-denokv:reuse
 ```
 
 Published baselines in the table below use default `:memory:` unless labeled
 **file cache**. File-backed execute can differ slightly from `:memory:` (OS page
 cache). Invalidate cache: delete `benchmarks/.cache/hexastore-perf-large/` or
-bump `SYNTHETIC_CORPUS_VERSION` / `BENCH_LIBSQL_SCHEMA_VERSION` in
+bump `SYNTHETIC_CORPUS_VERSION`, `BENCH_LIBSQL_SCHEMA_VERSION`, or
+`BENCH_DENOKV_HEXASTORE_SCHEMA_VERSION` in
 [`shared/hexastore-perf-db-cache.ts`](shared/hexastore-perf-db-cache.ts) and
 [`shared/synthetic-data.ts`](shared/synthetic-data.ts). Override directory:
 `BENCH_DB_CACHE_DIR`.
