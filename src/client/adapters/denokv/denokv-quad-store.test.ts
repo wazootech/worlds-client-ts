@@ -133,6 +133,35 @@ Deno.test("DenokvQuadStore.import - source: serialized parses Turtle successfull
   }
 });
 
+Deno.test("DenokvQuadStore.import - long literals use kv-toolbox batchedAtomic commits", async () => {
+  const kv = await Deno.openKv(":memory:");
+  const store = new DenokvQuadStore({ kv });
+
+  try {
+    const longLiteralQuads = Array.from({ length: 100 }, (_, index) =>
+      quad(
+        namedNode(`urn:entity:${index}`),
+        namedNode(`urn:property:${index % 10}`),
+        literal(
+          `Synthetic crossover-style payload ${index}: ${"word ".repeat(30)}`,
+        ),
+      ));
+
+    await store.import({
+      source: { kind: "quads", quads: longLiteralQuads },
+    });
+
+    const response = await store.export({ format: { kind: "quads" } });
+    if (response.kind !== "quads") {
+      throw new Error("Expected quads format");
+    }
+
+    assertEquals(response.quads.length, 100);
+  } finally {
+    kv.close();
+  }
+});
+
 Deno.test("DenokvQuadStore.export - returns serialized dump", async () => {
   const kv = await Deno.openKv(":memory:");
   const store = new DenokvQuadStore({ kv });

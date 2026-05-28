@@ -33,6 +33,7 @@
     "rdf-canonize": "npm:rdf-canonize@^5.0.0",
     "@langchain/core": "npm:@langchain/core@^1.1.47",
     "@langchain/textsplitters": "npm:@langchain/textsplitters@^1.0.1",
+    "@kitsonk/kv-toolbox": "jsr:@kitsonk/kv-toolbox@^0.31.0",
     "zod": "npm:zod@^4.4.3"
   },
   "links": [
@@ -54,8 +55,13 @@
     "check": "deno check",
     "test": "deno test --allow-all --unstable-kv",
     "bench": "deno bench --allow-all --unstable-kv benchmarks/",
-    "bench:crossover-large": "deno bench --allow-all --v8-flags=--max-old-space-size=8192 benchmarks/sparql-hexastore-crossover-large.bench.ts",
-    "bench:crossover-large:reuse": "deno bench --allow-all --env --v8-flags=--max-old-space-size=8192 benchmarks/sparql-hexastore-crossover-large.bench.ts",
+    "bench:hexastore-perf-libsql": "deno bench --allow-all benchmarks/sparql-hexastore-perf-libsql.bench.ts",
+    "bench:hexastore-perf-libsql:full-scan": "deno bench --allow-all --env benchmarks/sparql-hexastore-perf-libsql.bench.ts",
+    "bench:hexastore-perf-denokv": "deno bench --allow-all --unstable-kv benchmarks/sparql-hexastore-perf-denokv.bench.ts",
+    "bench:hexastore-perf-denokv:full-scan": "deno bench --allow-all --unstable-kv --env benchmarks/sparql-hexastore-perf-denokv.bench.ts",
+    "bench:hexastore-perf-large-libsql": "deno bench --allow-all --v8-flags=--max-old-space-size=8192 benchmarks/sparql-hexastore-perf-large-libsql.bench.ts",
+    "bench:hexastore-perf-large-libsql:reuse": "deno bench --allow-all --env --v8-flags=--max-old-space-size=8192 benchmarks/sparql-hexastore-perf-large-libsql.bench.ts",
+    "bench:hexastore-perf-large-denokv": "deno bench --allow-all --unstable-kv --v8-flags=--max-old-space-size=8192 benchmarks/sparql-hexastore-perf-large-denokv.bench.ts",
     "publish:dry": "deno publish --dry-run --allow-dirty",
     "ci": {
       "description": "Formats, lints, checks, and tests the code",

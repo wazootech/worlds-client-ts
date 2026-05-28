@@ -7,7 +7,7 @@ import type {
   DenokvQuadStoreOptions,
   SerializedQuad,
 } from "./denokv-quad-store.ts";
-import { deserializeTerm } from "./denokv-quad-store.ts";
+import { deserializeTerm, MAX_KV_GET_MANY_SIZE } from "./denokv-quad-store.ts";
 import { hashQuad } from "@/client/quad-store/mod.ts";
 import {
   buildGenerationDataPrefix,
@@ -17,6 +17,7 @@ import {
   DEFAULT_DENOKV_HEXASTORE_INDEXES,
 } from "./denokv-hexastore-index-set.ts";
 import { readActiveGeneration } from "./denokv-dataset-generation.ts";
+import { commitBatchedKvMutations } from "./denokv-kv-limits.ts";
 import { materializeQuadKeys } from "./denokv-quad-keys.ts";
 import {
   buildBestMatchCursor,
@@ -54,60 +55,171 @@ export class DenokvRdfjsStore implements rdfjs.Store {
       graph: graph ?? null,
     };
 
+    const kv = this.options.kv;
+    let scopedDataPrefix: Deno.KvKey | undefined;
+    let cursorKind: "index" | "primary" | undefined;
+    let indexListIterator: AsyncIterator<Deno.KvEntry<string>> | undefined;
+    let primaryListIterator:
+      | AsyncIterator<Deno.KvEntry<SerializedQuad>>
+      | undefined;
+    let pendingIndexQuadIds: string[] = [];
+    let streamFinished = false;
+
     const rowStream = new Readable({
       objectMode: true,
-      read: async () => {
-        try {
-          const generationId = await readActiveGeneration(
-            this.options.kv,
-            keyPrefix,
-          );
-          const scopedDataPrefix = buildGenerationDataPrefix(
-            keyPrefix,
-            generationId,
-          );
-          const cursor = buildBestMatchCursor(
-            scopedDataPrefix,
-            enabledIndexes,
-            pattern,
-          );
+      read() {
+        void pullMatchBatch().catch((error: Error) => {
+          rowStream.destroy(error);
+        });
+      },
+    });
 
-          if (cursor.kind === "index") {
-            for await (
-              const entry of this.options.kv.list<string>(cursor.selector)
-            ) {
-              const quadId = entry.value;
-              const quadEntry = await this.options.kv.get<SerializedQuad>(
-                buildPrimaryQuadKey(scopedDataPrefix, quadId),
-              );
+    const initializeMatchStream = async (): Promise<void> => {
+      const generationId = await readActiveGeneration(kv, keyPrefix);
+      scopedDataPrefix = buildGenerationDataPrefix(keyPrefix, generationId);
+      const cursor = buildBestMatchCursor(
+        scopedDataPrefix,
+        enabledIndexes,
+        pattern,
+      );
+      cursorKind = cursor.kind;
 
-              if (!quadEntry.value) continue;
+      if (cursor.kind === "index") {
+        indexListIterator = kv.list<string>(cursor.selector)[
+          Symbol.asyncIterator
+        ]();
+      } else {
+        primaryListIterator = kv.list<SerializedQuad>(cursor.selector)[
+          Symbol.asyncIterator
+        ]();
+      }
+    };
 
-              const storedQuad = deserializeQuad(quadEntry.value);
-              if (matchesPattern(storedQuad, pattern)) {
-                rowStream.push(storedQuad);
-              }
+    const pushPrimaryQuadsByIds = async (
+      quadIds: readonly string[],
+    ): Promise<boolean> => {
+      if (!scopedDataPrefix) return false;
+
+      for (
+        let offset = 0;
+        offset < quadIds.length;
+        offset += MAX_KV_GET_MANY_SIZE
+      ) {
+        const quadIdBatch = quadIds.slice(
+          offset,
+          offset + MAX_KV_GET_MANY_SIZE,
+        );
+        const keys = quadIdBatch.map((quadId) =>
+          buildPrimaryQuadKey(scopedDataPrefix!, quadId)
+        );
+        const entries = await kv.getMany(keys) as Array<
+          Deno.KvEntryMaybe<SerializedQuad>
+        >;
+
+        for (let entryIndex = 0; entryIndex < entries.length; entryIndex++) {
+          const entry = entries[entryIndex];
+          if (!entry.value) continue;
+          const storedQuad = deserializeQuad(entry.value);
+          if (!matchesPattern(storedQuad, pattern)) continue;
+          if (!rowStream.push(storedQuad)) {
+            pendingIndexQuadIds = quadIdBatch.slice(entryIndex);
+            return false;
+          }
+        }
+      }
+
+      return true;
+    };
+
+    const pullMatchBatch = async (): Promise<void> => {
+      if (streamFinished) return;
+
+      if (!scopedDataPrefix) {
+        await initializeMatchStream();
+      }
+
+      if (pendingIndexQuadIds.length > 0) {
+        const pendingIds = pendingIndexQuadIds;
+        pendingIndexQuadIds = [];
+        const canContinue = await pushPrimaryQuadsByIds(pendingIds);
+        if (!canContinue) return;
+      }
+
+      while (!streamFinished && (indexListIterator || primaryListIterator)) {
+        if (cursorKind === "index" && indexListIterator) {
+          const indexQuadIds: string[] = [];
+
+          for (
+            let batchCount = 0;
+            batchCount < MAX_KV_GET_MANY_SIZE;
+            batchCount += 1
+          ) {
+            const nextEntry = await indexListIterator.next();
+            if (nextEntry.done) {
+              streamFinished = true;
+              break;
             }
-          } else {
-            for await (
-              const entry of this.options.kv.list<SerializedQuad>(
-                cursor.selector,
-              )
-            ) {
-              if (!entry.value) continue;
-              const storedQuad = deserializeQuad(entry.value);
-              if (matchesPattern(storedQuad, pattern)) {
-                rowStream.push(storedQuad);
-              }
+            if (nextEntry.value.value) {
+              indexQuadIds.push(nextEntry.value.value);
             }
           }
 
-          rowStream.push(null);
-        } catch (error) {
-          rowStream.destroy(error as Error);
+          if (indexQuadIds.length > 0) {
+            const canContinue = await pushPrimaryQuadsByIds(indexQuadIds);
+            if (!canContinue) return;
+          }
+
+          if (streamFinished) {
+            rowStream.push(null);
+            return;
+          }
+
+          return;
         }
-      },
-    });
+
+        let pushedAny = false;
+
+        if (!primaryListIterator) {
+          return;
+        }
+
+        for (
+          let batchCount = 0;
+          batchCount < MAX_KV_GET_MANY_SIZE;
+          batchCount += 1
+        ) {
+          const nextEntry = await primaryListIterator.next();
+          if (nextEntry.done) {
+            streamFinished = true;
+            break;
+          }
+          if (!nextEntry.value.value) continue;
+
+          const storedQuad = deserializeQuad(nextEntry.value.value);
+          if (!matchesPattern(storedQuad, pattern)) continue;
+
+          pushedAny = true;
+          if (!rowStream.push(storedQuad)) {
+            return;
+          }
+        }
+
+        if (streamFinished) {
+          rowStream.push(null);
+          return;
+        }
+
+        if (!pushedAny) {
+          continue;
+        }
+
+        return;
+      }
+
+      if (streamFinished) {
+        rowStream.push(null);
+      }
+    };
 
     return rowStream as unknown as rdfjs.Stream<rdfjs.Quad>;
   }
@@ -240,8 +352,8 @@ export class DenokvRdfjsStore implements rdfjs.Store {
       generationId,
     );
 
-    let atomic = this.options.kv.atomic();
-    let mutationCount = 0;
+    const deleteMutations: Deno.KvKey[] = [];
+    const insertMutations: Array<{ key: Deno.KvKey; value: unknown }> = [];
 
     for (const storedQuad of this.deleteBuffer) {
       const quadId = await hashQuad(storedQuad);
@@ -252,17 +364,7 @@ export class DenokvRdfjsStore implements rdfjs.Store {
         quadId,
       });
 
-      atomic.delete(primaryKey);
-      for (const indexKey of indexKeys) {
-        atomic.delete(indexKey);
-      }
-
-      mutationCount += 1 + indexKeys.length;
-      if (mutationCount >= MAX_ATOMIC_MUTATIONS) {
-        await atomic.commit();
-        atomic = this.options.kv.atomic();
-        mutationCount = 0;
-      }
+      deleteMutations.push(primaryKey, ...indexKeys);
     }
 
     for (const storedQuad of this.insertBuffer) {
@@ -274,29 +376,25 @@ export class DenokvRdfjsStore implements rdfjs.Store {
         quadId,
       });
 
-      atomic.set(primaryKey, serializedQuad);
+      insertMutations.push({ key: primaryKey, value: serializedQuad });
       for (const indexKey of indexKeys) {
-        atomic.set(indexKey, quadId);
-      }
-
-      mutationCount += 1 + indexKeys.length;
-      if (mutationCount >= MAX_ATOMIC_MUTATIONS) {
-        await atomic.commit();
-        atomic = this.options.kv.atomic();
-        mutationCount = 0;
+        insertMutations.push({ key: indexKey, value: quadId });
       }
     }
 
-    if (mutationCount > 0) {
-      await atomic.commit();
-    }
+    await commitBatchedKvMutations(this.options.kv, (batch) => {
+      for (const key of deleteMutations) {
+        batch.delete(key);
+      }
+      for (const { key, value } of insertMutations) {
+        batch.set(key, value);
+      }
+    });
 
     this.insertBuffer = [];
     this.deleteBuffer = [];
   }
 }
-
-const MAX_ATOMIC_MUTATIONS = 200;
 
 function deserializeQuad(serializedQuad: SerializedQuad): rdfjs.Quad {
   return quad(

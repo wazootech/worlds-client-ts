@@ -4,49 +4,49 @@ import * as path from "@std/path";
 import { SYNTHETIC_CORPUS_VERSION } from "./synthetic-data.ts";
 
 /**
- * BENCH_LIBSQL_SCHEMA_VERSION bumps when LibSQL hexastore schema or crossover fixture layout changes.
+ * BENCH_LIBSQL_SCHEMA_VERSION bumps when LibSQL hexastore schema or perf fixture layout changes.
  */
 export const BENCH_LIBSQL_SCHEMA_VERSION = 1;
 
-/** DEFAULT_CROSSOVER_CACHE_DIR is the default on-disk cache root for large crossover libsqlStore fixtures. */
+/** DEFAULT_HEXASTORE_PERF_CACHE_DIR is the default on-disk cache root for large libsqlStore perf fixtures. */
 const BENCHMARKS_ROOT = path.fromFileUrl(new URL("../..", import.meta.url));
 
-/** DEFAULT_CROSSOVER_CACHE_DIR stores large crossover libsqlStore database files under benchmarks/.cache. */
-export const DEFAULT_CROSSOVER_CACHE_DIR = path.join(
+/** DEFAULT_HEXASTORE_PERF_CACHE_DIR stores large libsqlStore database files under benchmarks/.cache. */
+export const DEFAULT_HEXASTORE_PERF_CACHE_DIR = path.join(
   BENCHMARKS_ROOT,
   ".cache",
-  "crossover-large",
+  "hexastore-perf-large",
 );
 
 /**
- * CrossoverFixtureChecksumInputs lists manifest fields hashed for bench DB cache identity.
+ * HexastorePerfFixtureChecksumInputs lists manifest fields hashed for bench DB cache identity.
  */
-export interface CrossoverFixtureChecksumInputs {
+export interface HexastorePerfFixtureChecksumInputs {
   /** syntheticCorpusVersion tracks generateSyntheticQuads revisions. */
   syntheticCorpusVersion: number;
-  /** benchLibsqlSchemaVersion tracks LibSQL schema revisions relevant to crossover fixtures. */
+  /** benchLibsqlSchemaVersion tracks LibSQL schema revisions relevant to perf fixtures. */
   benchLibsqlSchemaVersion: number;
   /** quadCount is the synthetic corpus size for this fixture. */
   quadCount: number;
-  /** backend labels the crossover wiring (large cache supports libsqlStore only). */
+  /** backend labels the hexastore wiring (large cache supports libsqlStore only). */
   backend: "libsqlStore";
   /** searchIndexOnImport records the indexing mode used during import. */
   searchIndexOnImport: "disabled";
 }
 
 /**
- * CrossoverFixtureManifest persists checksum inputs plus the computed digest on disk.
+ * HexastorePerfFixtureManifest persists checksum inputs plus the computed digest on disk.
  */
-export interface CrossoverFixtureManifest
-  extends CrossoverFixtureChecksumInputs {
-  /** checksum is the SHA-256 hex digest of canonical CrossoverFixtureChecksumInputs JSON. */
+export interface HexastorePerfFixtureManifest
+  extends HexastorePerfFixtureChecksumInputs {
+  /** checksum is the SHA-256 hex digest of canonical HexastorePerfFixtureChecksumInputs JSON. */
   checksum: string;
 }
 
 /**
- * CrossoverDbCachePaths locates the SQLite file and JSON sidecar for a cached crossover fixture.
+ * HexastorePerfDbCachePaths locates the SQLite file and JSON sidecar for a cached perf fixture.
  */
-export interface CrossoverDbCachePaths {
+export interface HexastorePerfDbCachePaths {
   /** databasePath is the absolute path to the LibSQL SQLite file. */
   databasePath: string;
   /** databaseFileUrl is the libsql client URL for databasePath. */
@@ -56,9 +56,9 @@ export interface CrossoverDbCachePaths {
 }
 
 /**
- * CachedCrossoverFixtureValidation holds expected row counts for a cache hit check.
+ * CachedHexastorePerfFixtureValidation holds expected row counts for a cache hit check.
  */
-export interface CachedCrossoverFixtureValidation {
+export interface CachedHexastorePerfFixtureValidation {
   /** quadCount is the expected number of rows in the quads table. */
   quadCount: number;
   /** expectedChecksum is the digest that must match the manifest sidecar. */
@@ -66,31 +66,39 @@ export interface CachedCrossoverFixtureValidation {
 }
 
 /**
- * isBenchReuseDbEnabled returns true when BENCH_REUSE_DB=1 enables on-disk crossover fixture reuse.
+ * isBenchReuseDbEnabled returns true when BENCH_REUSE_DB=1 enables on-disk libsql perf fixture reuse.
  */
 export function isBenchReuseDbEnabled(): boolean {
   return Deno.env.get("BENCH_REUSE_DB") === "1";
 }
 
 /**
- * resolveCrossoverDbCacheDirectory returns the cache root from BENCH_DB_CACHE_DIR or the default.
+ * isBenchHexastorePerfFullScanEnabled returns true when fullScan benches are registered (opt-in).
  */
-export function resolveCrossoverDbCacheDirectory(): string {
+export function isBenchHexastorePerfFullScanEnabled(): boolean {
+  return Deno.env.get("BENCH_HEXASTORE_PERF_FULL_SCAN") === "1" ||
+    Deno.env.get("BENCH_CROSSOVER_FULL_SCAN") === "1";
+}
+
+/**
+ * resolveHexastorePerfDbCacheDirectory returns the cache root from BENCH_DB_CACHE_DIR or the default.
+ */
+export function resolveHexastorePerfDbCacheDirectory(): string {
   const overrideDirectory = Deno.env.get("BENCH_DB_CACHE_DIR");
   if (overrideDirectory && overrideDirectory.length > 0) {
     return path.resolve(overrideDirectory);
   }
-  return DEFAULT_CROSSOVER_CACHE_DIR;
+  return DEFAULT_HEXASTORE_PERF_CACHE_DIR;
 }
 
 /**
- * resolveCrossoverDbCachePaths builds database and manifest paths for a libsqlStore crossover scale.
+ * resolveHexastorePerfDbCachePaths builds database and manifest paths for a libsqlStore perf scale.
  */
-export function resolveCrossoverDbCachePaths(
+export function resolveHexastorePerfDbCachePaths(
   quadCount: number,
   backend: "libsqlStore",
-): CrossoverDbCachePaths {
-  const cacheDirectory = resolveCrossoverDbCacheDirectory();
+): HexastorePerfDbCachePaths {
+  const cacheDirectory = resolveHexastorePerfDbCacheDirectory();
   const databasePath = path.join(
     cacheDirectory,
     `${backend}-${quadCount}.db`,
@@ -107,11 +115,11 @@ export function resolveCrossoverDbCachePaths(
 }
 
 /**
- * buildCrossoverFixtureChecksumInputs constructs the canonical inputs for a libsqlStore quads-only fixture.
+ * buildHexastorePerfFixtureChecksumInputs constructs the canonical inputs for a libsqlStore quads-only fixture.
  */
-export function buildCrossoverFixtureChecksumInputs(
+export function buildHexastorePerfFixtureChecksumInputs(
   quadCount: number,
-): CrossoverFixtureChecksumInputs {
+): HexastorePerfFixtureChecksumInputs {
   return {
     syntheticCorpusVersion: SYNTHETIC_CORPUS_VERSION,
     benchLibsqlSchemaVersion: BENCH_LIBSQL_SCHEMA_VERSION,
@@ -122,10 +130,10 @@ export function buildCrossoverFixtureChecksumInputs(
 }
 
 /**
- * computeCrossoverFixtureChecksum returns a SHA-256 hex digest of canonical fixture checksum inputs.
+ * computeHexastorePerfFixtureChecksum returns a SHA-256 hex digest of canonical fixture checksum inputs.
  */
-export async function computeCrossoverFixtureChecksum(
-  inputs: CrossoverFixtureChecksumInputs,
+export async function computeHexastorePerfFixtureChecksum(
+  inputs: HexastorePerfFixtureChecksumInputs,
 ): Promise<string> {
   const canonicalJson = JSON.stringify(inputs);
   const encodedInputs = new TextEncoder().encode(canonicalJson);
@@ -134,14 +142,14 @@ export async function computeCrossoverFixtureChecksum(
 }
 
 /**
- * readCrossoverFixtureManifest loads a manifest sidecar when present.
+ * readHexastorePerfFixtureManifest loads a manifest sidecar when present.
  */
-export async function readCrossoverFixtureManifest(
+export async function readHexastorePerfFixtureManifest(
   manifestPath: string,
-): Promise<CrossoverFixtureManifest | undefined> {
+): Promise<HexastorePerfFixtureManifest | undefined> {
   try {
     const manifestText = await Deno.readTextFile(manifestPath);
-    return JSON.parse(manifestText) as CrossoverFixtureManifest;
+    return JSON.parse(manifestText) as HexastorePerfFixtureManifest;
   } catch (error) {
     if (error instanceof Deno.errors.NotFound) {
       return undefined;
@@ -151,11 +159,11 @@ export async function readCrossoverFixtureManifest(
 }
 
 /**
- * writeCrossoverFixtureManifest persists a manifest sidecar after a successful cache build.
+ * writeHexastorePerfFixtureManifest persists a manifest sidecar after a successful cache build.
  */
-export async function writeCrossoverFixtureManifest(
+export async function writeHexastorePerfFixtureManifest(
   manifestPath: string,
-  manifest: CrossoverFixtureManifest,
+  manifest: HexastorePerfFixtureManifest,
 ): Promise<void> {
   await Deno.writeTextFile(
     manifestPath,
@@ -164,19 +172,19 @@ export async function writeCrossoverFixtureManifest(
 }
 
 /**
- * ensureCrossoverCacheDirectoryExists creates the cache directory when missing.
+ * ensureHexastorePerfCacheDirectoryExists creates the cache directory when missing.
  */
-export async function ensureCrossoverCacheDirectoryExists(
+export async function ensureHexastorePerfCacheDirectoryExists(
   cacheDirectory: string,
 ): Promise<void> {
   await Deno.mkdir(cacheDirectory, { recursive: true });
 }
 
 /**
- * removeStaleCrossoverCacheFiles deletes a partial or invalid database and manifest pair.
+ * removeStaleHexastorePerfCacheFiles deletes a partial or invalid database and manifest pair.
  */
-export async function removeStaleCrossoverCacheFiles(
-  cachePaths: CrossoverDbCachePaths,
+export async function removeStaleHexastorePerfCacheFiles(
+  cachePaths: HexastorePerfDbCachePaths,
 ): Promise<void> {
   await Promise.all([
     Deno.remove(cachePaths.databasePath).catch(() => undefined),
@@ -185,11 +193,11 @@ export async function removeStaleCrossoverCacheFiles(
 }
 
 /**
- * validateCachedLibsqlCrossoverDatabase checks quad/chunk counts for a quads-only crossover cache hit.
+ * validateCachedLibsqlHexastorePerfDatabase checks quad/chunk counts for a quads-only cache hit.
  */
-export async function validateCachedLibsqlCrossoverDatabase(
+export async function validateCachedLibsqlHexastorePerfDatabase(
   databaseClient: Client,
-  validation: CachedCrossoverFixtureValidation,
+  validation: CachedHexastorePerfFixtureValidation,
 ): Promise<boolean> {
   const quadCountResult = await databaseClient.execute(
     "SELECT COUNT(*) AS total FROM quads",
@@ -204,14 +212,16 @@ export async function validateCachedLibsqlCrossoverDatabase(
 }
 
 /**
- * tryResolveCrossoverCacheHit validates manifest and database state; logs cache miss reasons.
+ * tryResolveHexastorePerfCacheHit validates manifest and database state; logs cache miss reasons.
  */
-export async function tryResolveCrossoverCacheHit(
-  cachePaths: CrossoverDbCachePaths,
+export async function tryResolveHexastorePerfCacheHit(
+  cachePaths: HexastorePerfDbCachePaths,
   expectedChecksum: string,
   quadCount: number,
 ): Promise<boolean> {
-  const manifest = await readCrossoverFixtureManifest(cachePaths.manifestPath);
+  const manifest = await readHexastorePerfFixtureManifest(
+    cachePaths.manifestPath,
+  );
   if (!manifest) {
     console.log(`cache miss (${cachePaths.manifestPath}: no manifest)`);
     return false;
@@ -231,7 +241,7 @@ export async function tryResolveCrossoverCacheHit(
   const databaseClient = createClient({ url: cachePaths.databaseFileUrl });
 
   try {
-    const isValid = await validateCachedLibsqlCrossoverDatabase(
+    const isValid = await validateCachedLibsqlHexastorePerfDatabase(
       databaseClient,
       {
         quadCount,

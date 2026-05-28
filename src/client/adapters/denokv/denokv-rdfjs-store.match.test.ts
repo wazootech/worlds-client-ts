@@ -1,9 +1,11 @@
 import { assertEquals } from "@std/assert";
 import type * as rdfjs from "@rdfjs/types";
 import { DataFactory } from "n3";
+import { generateSyntheticQuads } from "../../../../benchmarks/shared/synthetic-data.ts";
 import { DenokvQuadStore } from "./denokv-quad-store.ts";
 import { DEFAULT_DENOKV_HEXASTORE_INDEXES } from "./denokv-hexastore-index-set.ts";
 import { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";
+import { buildBestMatchSelector } from "./denokv-match-selector.ts";
 
 const { namedNode, literal, blankNode, quad } = DataFactory;
 
@@ -404,6 +406,51 @@ Deno.test(
         await store.countQuads(namedNode("urn:alice"), null, null, null),
         streamCount,
       );
+    } finally {
+      kv.close();
+    }
+  },
+);
+
+Deno.test("buildBestMatchSelector - fully unbound pattern uses primary quads prefix", () => {
+  const selector = buildBestMatchSelector(
+    ["quads", "g", 0],
+    DEFAULT_DENOKV_HEXASTORE_INDEXES,
+    { subject: null, predicate: null, object: null, graph: null },
+  );
+  assertEquals(selector, { prefix: ["quads", "g", 0, "quads"] });
+});
+
+Deno.test(
+  "DenokvRdfjsStore.match - unbound pattern streams first 100 quads without full corpus scan",
+  async () => {
+    const kv = await Deno.openKv(":memory:");
+    try {
+      await seedQuads(kv, generateSyntheticQuads(800));
+
+      const store = new DenokvRdfjsStore({ kv });
+      const startedAt = performance.now();
+      const earlyQuads = await new Promise<rdfjs.Quad[]>((resolve, reject) => {
+        const collectedQuads: rdfjs.Quad[] = [];
+        const matchStream = store.match(null, null, null, null);
+
+        matchStream.on("data", (matchedQuad: rdfjs.Quad) => {
+          collectedQuads.push(matchedQuad);
+          if (collectedQuads.length >= 100) {
+            (matchStream as unknown as { destroy: () => void }).destroy();
+          }
+        });
+        matchStream.on("close", () => resolve(collectedQuads));
+        matchStream.on("error", reject);
+      });
+
+      const elapsedMilliseconds = performance.now() - startedAt;
+      assertEquals(earlyQuads.length, 100);
+      if (elapsedMilliseconds >= 5_000) {
+        throw new Error(
+          `unbound match took ${elapsedMilliseconds}ms; expected under 5000ms`,
+        );
+      }
     } finally {
       kv.close();
     }

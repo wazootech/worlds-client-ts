@@ -16,6 +16,15 @@ export function buildBestMatchSelector(
     graph: rdfjs.Term | null;
   },
 ): Deno.KvListSelector {
+  if (
+    !pattern.subject &&
+    !pattern.predicate &&
+    !pattern.object &&
+    !pattern.graph
+  ) {
+    return { prefix: [...scopedDataPrefix, "quads"] };
+  }
+
   if (pattern.subject && enabledIndexes.includes("spog")) {
     const parts: Deno.KvKeyPart[] = [...termKeyParts(pattern.subject)];
     if (pattern.predicate) {
@@ -118,10 +127,6 @@ export function buildBestMatchSelector(
       }
     }
     return { prefix: [...scopedDataPrefix, "idx_gspo", ...parts] };
-  }
-
-  if (enabledIndexes.includes("spog")) {
-    return { prefix: [...scopedDataPrefix, "idx_spog"] };
   }
 
   return { prefix: [...scopedDataPrefix, "quads"] };

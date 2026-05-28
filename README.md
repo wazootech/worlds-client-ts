@@ -156,8 +156,9 @@ SPARQL query shape at scale, and bulk import strategies.
 **Agent integration**: search-then-SPARQL two-hop pattern for LLM tool use with
 hybrid retrieval. [-> AGENTS.md](AGENTS.md)
 
-**Benchmarks**: local-only performance captures, crossover methodology, and
-regression policy. [-> benchmarks/README.md](benchmarks/README.md)
+**Benchmarks**: local-only performance captures, hexastore perf methodology
+(LibSQL + Denokv), and regression policy.
+[-> benchmarks/README.md](benchmarks/README.md)
 
 ## Development workflow
 

@@ -317,11 +317,12 @@ options (e.g. `createLibsqlAdapter({ queryEngine })`).
 - **Long-running (Fly.io, DigitalOcean, 24/7 Deno):** one `Client` at process
   boot. See [`examples/libsql-long-running`](examples/libsql-long-running).
 
-Use `benchmarks/sparql-hexastore-crossover.bench.ts`,
-[`benchmarks/README.md`](benchmarks/README.md), and
+Use `benchmarks/sparql-hexastore-perf-libsql.bench.ts` and
+`benchmarks/sparql-hexastore-perf-denokv.bench.ts` (requires `--unstable-kv`) to
+compare LibSQL and Denokv hexastore execute on the same harness;
+[`benchmarks/README.md`](benchmarks/README.md) and
 [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69)
-(post-preload crossover) to compare paths before choosing a factory. Earlier
-context:
+document post-preload methodology. Historical hydrate+N3 vs libsql crossover:
 [discussion #45](https://github.com/wazootech/worlds-client-ts/discussions/45).
 Scale guidance for very large graphs:
 [#68](https://github.com/wazootech/worlds-client-ts/issues/68). SPARQL
@@ -485,12 +486,12 @@ LibSQL uses hexastore indexes at schema init. SPARQL runs on `LibsqlStore`
 
 At millions of quads, pick the topology at integration time.
 
-| Concern         | Production default                                                                                                      |
-| :-------------- | :---------------------------------------------------------------------------------------------------------------------- |
-| LibSQL topology | `createLibsqlAdapter` with hexastore `LibsqlStore`, no full N3 mirror per request                                       |
-| Hot-path SPARQL | Bind at least one term (subject, predicate, or object). Subject-bound property lookups match crossover selective shapes |
-| Avoid at scale  | Unbound `?s ?p ?o` (even with `LIMIT`) on libsqlStore; fullScan degrades to hundreds of ms as quads grow                |
-| Cardinality     | `LibsqlStore.countQuads` is used by Comunica when hexastore SPARQL is wired (no extra adapter config)                   |
+| Concern         | Production default                                                                                                           |
+| :-------------- | :--------------------------------------------------------------------------------------------------------------------------- |
+| LibSQL topology | `createLibsqlAdapter` with hexastore `LibsqlStore`, no full N3 mirror per request                                            |
+| Hot-path SPARQL | Bind at least one term (subject, predicate, or object). Subject-bound property lookups match hexastore perf selective shapes |
+| Avoid at scale  | Unbound `?s ?p ?o` (even with `LIMIT`) on libsqlStore; fullScan degrades to hundreds of ms as quads grow                     |
+| Cardinality     | `LibsqlStore.countQuads` is used by Comunica when hexastore SPARQL is wired (no extra adapter config)                        |
 
 Query helpers (same shapes as benchmarks):
 
@@ -522,10 +523,10 @@ imports where indexing can happen once at the end.
 
 ### Benchmark references
 
-- Canonical crossover write-up:
+- Canonical hexastore perf write-up:
   [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69)
 - Local numbers and methodology: [`benchmarks/README.md`](benchmarks/README.md)
 - Scale roadmap (millions of quads):
   [#68](https://github.com/wazootech/worlds-client-ts/issues/68)
-- Earlier crossover context:
+- Historical hydrate+N3 crossover:
   [discussion #45](https://github.com/wazootech/worlds-client-ts/discussions/45)

@@ -2,18 +2,20 @@ import { createClient } from "@libsql/client";
 import type { Quad } from "@rdfjs/types";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { Client } from "@worlds/client";
+import { createDenokvAdapter } from "@worlds/client/adapters/denokv";
 import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
 import type { SparqlEngineInterface } from "@worlds/client/sparql-engine";
 import {
-  buildCrossoverFixtureChecksumInputs,
-  computeCrossoverFixtureChecksum,
-  ensureCrossoverCacheDirectoryExists,
-  removeStaleCrossoverCacheFiles,
-  resolveCrossoverDbCacheDirectory,
-  resolveCrossoverDbCachePaths,
-  tryResolveCrossoverCacheHit,
-  writeCrossoverFixtureManifest,
-} from "./crossover-db-cache.ts";
+  buildHexastorePerfFixtureChecksumInputs,
+  computeHexastorePerfFixtureChecksum,
+  ensureHexastorePerfCacheDirectoryExists,
+  isBenchHexastorePerfFullScanEnabled,
+  removeStaleHexastorePerfCacheFiles,
+  resolveHexastorePerfDbCacheDirectory,
+  resolveHexastorePerfDbCachePaths,
+  tryResolveHexastorePerfCacheHit,
+  writeHexastorePerfFixtureManifest,
+} from "./hexastore-perf-db-cache.ts";
 import { generateSyntheticQuads } from "./synthetic-data.ts";
 
 /** selectiveSubjectIri is the grounded subject for subject-bound SPARQL benchmarks. */
@@ -29,32 +31,55 @@ export const fullScanSparqlQuery =
 
 const sharedQueryEngine = new QueryEngine();
 
-/** SparqlQueryShape labels the two SPARQL crossover query patterns. */
+/** SparqlQueryShape labels the SPARQL hexastore perf query patterns. */
 export type SparqlQueryShape = "selective" | "fullScan";
 
-/** SparqlBackend labels the hexastore LibsqlStore wiring. */
-export type SparqlBackend = "libsqlStore";
+/** standardHexastorePerfQueryShapes is the default dev iteration set (subject-bound only). */
+export const standardHexastorePerfQueryShapes = [
+  "selective",
+] as const satisfies readonly SparqlQueryShape[];
 
-/** standardCrossoverBackends targets the scalable libsqlStore path. */
-export const standardCrossoverBackends = [
+/** allHexastorePerfQueryShapes includes the unbound dev-scan shape (opt-in via BENCH_HEXASTORE_PERF_FULL_SCAN=1). */
+export const allHexastorePerfQueryShapes = [
+  "selective",
+  "fullScan",
+] as const satisfies readonly SparqlQueryShape[];
+
+/**
+ * resolveHexastorePerfQueryShapes returns query shapes for hexastore perf bench registration.
+ */
+export function resolveHexastorePerfQueryShapes(): readonly SparqlQueryShape[] {
+  return isBenchHexastorePerfFullScanEnabled()
+    ? allHexastorePerfQueryShapes
+    : standardHexastorePerfQueryShapes;
+}
+
+/** SparqlBackend labels the hexastore wiring under test. */
+export type SparqlBackend = "libsqlStore" | "denokvStore";
+
+/** libsqlHexastorePerfBackends targets the production LibsqlStore hexastore path. */
+export const libsqlHexastorePerfBackends = [
   "libsqlStore",
 ] as const satisfies readonly SparqlBackend[];
 
-/** largeCrossoverBackends is the production-scale libsqlStore path only (100k–1M). */
-export const largeCrossoverBackends = [
-  "libsqlStore",
+/** denokvHexastorePerfBackends targets the Deno KV hexastore RDF/JS store path. */
+export const denokvHexastorePerfBackends = [
+  "denokvStore",
 ] as const satisfies readonly SparqlBackend[];
 
-/** PreloadedSparqlFixture holds a warmed SPARQL engine and its database handle. */
+/** PreloadedSparqlFixture holds a warmed SPARQL engine and its storage handle. */
 export interface PreloadedSparqlFixture {
-  databaseClient: ReturnType<typeof createClient>;
   sparqlEngine: SparqlEngineInterface;
+  /** databaseClient is set for libsqlStore fixtures. */
+  databaseClient?: ReturnType<typeof createClient>;
+  /** kv is set for denokvStore fixtures. */
+  kv?: Deno.Kv;
 }
 
 /**
- * PreloadSparqlCrossoverOptions configures crossover module preload behavior.
+ * PreloadSparqlHexastorePerfOptions configures hexastore perf module preload behavior.
  */
-export interface PreloadSparqlCrossoverOptions {
+export interface PreloadSparqlHexastorePerfOptions {
   /** reuseFileCache enables on-disk libsqlStore fixtures when BENCH_REUSE_DB=1. */
   reuseFileCache?: boolean;
 }
@@ -70,7 +95,7 @@ interface LibsqlHexastoreFixtureResult {
 }
 
 /**
- * sparqlEngineCacheKey builds a stable map key for preloaded crossover fixtures.
+ * sparqlEngineCacheKey builds a stable map key for preloaded hexastore perf fixtures.
  */
 export function sparqlEngineCacheKey(
   backend: SparqlBackend,
@@ -80,7 +105,7 @@ export function sparqlEngineCacheKey(
 }
 
 /**
- * sparqlQueryForShape returns the SPARQL string for a crossover query shape.
+ * sparqlQueryForShape returns the SPARQL string for a hexastore perf query shape.
  */
 export function sparqlQueryForShape(queryShape: SparqlQueryShape): string {
   return queryShape === "selective"
@@ -137,13 +162,13 @@ async function createLibsqlHexastoreSparqlEngine(
   }
 
   const quadCount = corpusQuads.length;
-  const cachePaths = resolveCrossoverDbCachePaths(quadCount, "libsqlStore");
-  const checksumInputs = buildCrossoverFixtureChecksumInputs(quadCount);
-  const expectedChecksum = await computeCrossoverFixtureChecksum(
+  const cachePaths = resolveHexastorePerfDbCachePaths(quadCount, "libsqlStore");
+  const checksumInputs = buildHexastorePerfFixtureChecksumInputs(quadCount);
+  const expectedChecksum = await computeHexastorePerfFixtureChecksum(
     checksumInputs,
   );
 
-  const cacheHit = await tryResolveCrossoverCacheHit(
+  const cacheHit = await tryResolveHexastorePerfCacheHit(
     cachePaths,
     expectedChecksum,
     quadCount,
@@ -155,8 +180,10 @@ async function createLibsqlHexastoreSparqlEngine(
     return { fixture, cacheHit: true };
   }
 
-  await ensureCrossoverCacheDirectoryExists(resolveCrossoverDbCacheDirectory());
-  await removeStaleCrossoverCacheFiles(cachePaths);
+  await ensureHexastorePerfCacheDirectoryExists(
+    resolveHexastorePerfDbCacheDirectory(),
+  );
+  await removeStaleHexastorePerfCacheFiles(cachePaths);
 
   const databaseClient = createClient({ url: cachePaths.databaseFileUrl });
   await importCorpusIntoLibsqlHexastore(databaseClient, corpusQuads);
@@ -165,45 +192,89 @@ async function createLibsqlHexastoreSparqlEngine(
     ...checksumInputs,
     checksum: expectedChecksum,
   };
-  await writeCrossoverFixtureManifest(cachePaths.manifestPath, manifest);
+  await writeHexastorePerfFixtureManifest(cachePaths.manifestPath, manifest);
 
   const fixture = await openLibsqlHexastoreSparqlEngine(databaseClient);
   return { fixture, cacheHit: false };
 }
 
-async function createSparqlEngineForBackend(
-  _backend: SparqlBackend,
+/**
+ * importCorpusIntoDenokvHexastore persists quads into Deno KV without timing SPARQL execute.
+ */
+async function importCorpusIntoDenokvHexastore(
+  kv: Deno.Kv,
   corpusQuads: Quad[],
-  preloadOptions?: PreloadSparqlCrossoverOptions,
-): Promise<{ fixture: PreloadedSparqlFixture; cacheHit: boolean }> {
-  const { fixture, cacheHit } = await createLibsqlHexastoreSparqlEngine(
-    corpusQuads,
-    { reuseFileCache: preloadOptions?.reuseFileCache },
-  );
-  return { fixture, cacheHit };
+): Promise<void> {
+  const adapter = createDenokvAdapter({ kv });
+  const worldsClient = new Client(adapter);
+  await worldsClient.import({
+    source: { kind: "quads", quads: corpusQuads },
+  });
 }
 
 /**
- * preloadSparqlCrossoverFixtures builds corpus+engine fixtures at module load.
+ * openDenokvHexastoreSparqlEngine wires Comunica over an existing Deno KV corpus.
+ */
+function openDenokvHexastoreSparqlEngine(kv: Deno.Kv): PreloadedSparqlFixture {
+  const adapter = createDenokvAdapter({
+    kv,
+    queryEngine: sharedQueryEngine,
+  });
+  if (!adapter.sparqlEngine) {
+    throw new Error("denokvStore bench requires queryEngine");
+  }
+  return { kv, sparqlEngine: adapter.sparqlEngine };
+}
+
+/**
+ * createDenokvHexastoreSparqlEngine wires Comunica over DenokvRdfjsStore (in-memory KV).
+ */
+async function createDenokvHexastoreSparqlEngine(
+  corpusQuads: Quad[],
+): Promise<PreloadedSparqlFixture> {
+  const kv = await Deno.openKv(":memory:");
+  await importCorpusIntoDenokvHexastore(kv, corpusQuads);
+  return openDenokvHexastoreSparqlEngine(kv);
+}
+
+async function createSparqlEngineForBackend(
+  backend: SparqlBackend,
+  corpusQuads: Quad[],
+  preloadOptions?: PreloadSparqlHexastorePerfOptions,
+): Promise<{ fixture: PreloadedSparqlFixture; cacheHit: boolean }> {
+  if (backend === "libsqlStore") {
+    const { fixture, cacheHit } = await createLibsqlHexastoreSparqlEngine(
+      corpusQuads,
+      { reuseFileCache: preloadOptions?.reuseFileCache },
+    );
+    return { fixture, cacheHit };
+  }
+
+  const fixture = await createDenokvHexastoreSparqlEngine(corpusQuads);
+  return { fixture, cacheHit: false };
+}
+
+/**
+ * preloadSparqlHexastorePerfFixtures builds corpus+engine fixtures at module load.
  * Generates synthetic quads once per scale and reuses the array across backends.
  */
-export async function preloadSparqlCrossoverFixtures(
-  crossoverScales: readonly number[],
+export async function preloadSparqlHexastorePerfFixtures(
+  perfScales: readonly number[],
   logPrefix: string,
-  crossoverBackends: readonly SparqlBackend[],
-  preloadOptions?: PreloadSparqlCrossoverOptions,
+  perfBackends: readonly SparqlBackend[],
+  preloadOptions?: PreloadSparqlHexastorePerfOptions,
 ): Promise<Map<string, PreloadedSparqlFixture>> {
   const preloadedSparqlEngines = new Map<string, PreloadedSparqlFixture>();
 
-  console.log(`Pre-populating SPARQL crossover engines (${logPrefix})...`);
+  console.log(`Pre-populating SPARQL hexastore perf engines (${logPrefix})...`);
 
-  for (const quadCount of crossoverScales) {
+  for (const quadCount of perfScales) {
     const corpusGenerationLabel = `${logPrefix} generate ${quadCount} quads`;
     console.time(corpusGenerationLabel);
     const corpusQuads = generateSyntheticQuads(quadCount);
     console.timeEnd(corpusGenerationLabel);
 
-    for (const backend of crossoverBackends) {
+    for (const backend of perfBackends) {
       const preloadLabel = `${logPrefix} ${backend} ${quadCount}`;
       console.time(preloadLabel);
       const { fixture, cacheHit } = await createSparqlEngineForBackend(
@@ -226,40 +297,42 @@ export async function preloadSparqlCrossoverFixtures(
     }
   }
 
-  console.log(`SPARQL crossover engines ready (${logPrefix}).`);
+  console.log(`SPARQL hexastore perf engines ready (${logPrefix}).`);
   return preloadedSparqlEngines;
 }
 
 /**
- * registerSparqlCrossoverUnloadCleanup closes database handles when the bench module unloads.
+ * registerSparqlHexastorePerfUnloadCleanup closes database handles when the bench module unloads.
  */
-export function registerSparqlCrossoverUnloadCleanup(
+export function registerSparqlHexastorePerfUnloadCleanup(
   preloadedSparqlEngines: Map<string, PreloadedSparqlFixture>,
 ): void {
   globalThis.addEventListener("unload", () => {
     for (const fixture of preloadedSparqlEngines.values()) {
-      fixture.databaseClient.close();
+      fixture.databaseClient?.close();
+      fixture.kv?.close();
     }
   });
 }
 
 /**
- * registerSparqlCrossoverBenchmarks registers execute-only crossover Deno.bench entries.
+ * registerSparqlHexastorePerfBenchmarks registers execute-only hexastore perf Deno.bench entries.
  */
-export function registerSparqlCrossoverBenchmarks(
-  crossoverScales: readonly number[],
+export function registerSparqlHexastorePerfBenchmarks(
+  perfScales: readonly number[],
   preloadedSparqlEngines: Map<string, PreloadedSparqlFixture>,
-  crossoverBackends: readonly SparqlBackend[],
+  perfBackends: readonly SparqlBackend[],
+  queryShapes: readonly SparqlQueryShape[] = resolveHexastorePerfQueryShapes(),
 ): void {
-  for (const quadCount of crossoverScales) {
-    for (const queryShape of ["selective", "fullScan"] as const) {
-      for (const backend of crossoverBackends) {
+  for (const quadCount of perfScales) {
+    for (const queryShape of queryShapes) {
+      for (const backend of perfBackends) {
         const query = sparqlQueryForShape(queryShape);
         const cacheKey = sparqlEngineCacheKey(backend, quadCount);
         Deno.bench({
           name:
-            `SPARQL Crossover: ${quadCount} quads | ${queryShape} | ${backend}`,
-          group: `SPARQL Crossover (${quadCount})`,
+            `SPARQL Hexastore Perf: ${quadCount} quads | ${queryShape} | ${backend}`,
+          group: `SPARQL Hexastore Perf (${quadCount})`,
           async fn(benchContext) {
             const fixture = preloadedSparqlEngines.get(cacheKey);
             if (!fixture) {

@@ -22,6 +22,7 @@ import {
   garbageCollectOrphanedGenerations,
   readActiveGeneration,
 } from "./denokv-dataset-generation.ts";
+import { commitBatchedKvMutations } from "./denokv-kv-limits.ts";
 import { materializeQuadKeys } from "./denokv-quad-keys.ts";
 
 const { namedNode, blankNode, literal, defaultGraph, quad } = DataFactory;
@@ -95,8 +96,7 @@ export class DenokvQuadStore implements QuadStoreInterface {
       throw new Error("Unsupported import source kind");
     }
 
-    let atomic = this.options.kv.atomic();
-    let mutationCount = 0;
+    const kvMutations: Array<{ key: Deno.KvKey; value: unknown }> = [];
 
     for (const storedQuad of quadsToImport) {
       const quadId = await hashQuad(storedQuad);
@@ -113,24 +113,17 @@ export class DenokvQuadStore implements QuadStoreInterface {
         },
       });
 
-      atomic.set(primaryKey, serializedQuad);
-      mutationCount += 1;
-
+      kvMutations.push({ key: primaryKey, value: serializedQuad });
       for (const indexKey of indexKeys) {
-        atomic.set(indexKey, quadId);
-        mutationCount += 1;
-      }
-
-      if (mutationCount >= MAX_KV_ATOMIC_MUTATIONS) {
-        await atomic.commit();
-        atomic = this.options.kv.atomic();
-        mutationCount = 0;
+        kvMutations.push({ key: indexKey, value: quadId });
       }
     }
 
-    if (mutationCount > 0) {
-      await atomic.commit();
-    }
+    await commitBatchedKvMutations(this.options.kv, (batch) => {
+      for (const { key, value } of kvMutations) {
+        batch.set(key, value);
+      }
+    });
 
     if (mode === "replace") {
       await garbageCollectOrphanedGenerations(this.options.kv, keyPrefix);
@@ -161,7 +154,7 @@ export class DenokvQuadStore implements QuadStoreInterface {
 
       for await (const entry of iter) {
         pendingIds.push(entry.value);
-        if (pendingIds.length >= MAX_KV_BATCH_SIZE) {
+        if (pendingIds.length >= MAX_KV_GET_MANY_SIZE) {
           quads.push(
             ...await resolveQuadsByIds(
               this.options.kv,
@@ -220,25 +213,33 @@ export class DenokvQuadStore implements QuadStoreInterface {
   }
 }
 
-const MAX_KV_BATCH_SIZE = 50;
-const MAX_KV_ATOMIC_MUTATIONS = 200;
+/** MAX_KV_GET_MANY_SIZE is Deno KV's per-call getMany key cap. */
+export const MAX_KV_GET_MANY_SIZE = 10;
 
 async function resolveQuadsByIds(
   kv: Deno.Kv,
   scopedDataPrefix: Deno.KvKey,
   quadIds: readonly string[],
 ): Promise<rdfjs.Quad[]> {
-  const keys = quadIds.map((quadId) =>
-    buildPrimaryQuadKey(scopedDataPrefix, quadId)
-  );
-  const entries = await kv.getMany(keys) as Array<
-    Deno.KvEntryMaybe<SerializedQuad>
-  >;
-
   const resolved: rdfjs.Quad[] = [];
-  for (const entry of entries) {
-    if (!entry.value) continue;
-    resolved.push(deserializeQuad(entry.value));
+
+  for (
+    let offset = 0;
+    offset < quadIds.length;
+    offset += MAX_KV_GET_MANY_SIZE
+  ) {
+    const quadIdBatch = quadIds.slice(offset, offset + MAX_KV_GET_MANY_SIZE);
+    const keys = quadIdBatch.map((quadId) =>
+      buildPrimaryQuadKey(scopedDataPrefix, quadId)
+    );
+    const entries = await kv.getMany(keys) as Array<
+      Deno.KvEntryMaybe<SerializedQuad>
+    >;
+
+    for (const entry of entries) {
+      if (!entry.value) continue;
+      resolved.push(deserializeQuad(entry.value));
+    }
   }
 
   return resolved;
