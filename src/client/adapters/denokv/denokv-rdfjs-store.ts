@@ -112,6 +112,26 @@ export class DenokvRdfjsStore implements rdfjs.Store {
     return rowStream as unknown as rdfjs.Stream<rdfjs.Quad>;
   }
 
+  /**
+   * countQuads returns the number of quads matching the given quad pattern (Comunica cardinality hint).
+   */
+  public countQuads(
+    subject?: rdfjs.Term | null,
+    predicate?: rdfjs.Term | null,
+    object?: rdfjs.Term | null,
+    graph?: rdfjs.Term | null,
+  ): Promise<number> {
+    return new Promise<number>((resolve, reject) => {
+      const stream = this.match(subject, predicate, object, graph);
+      let count = 0;
+      stream.on("data", () => {
+        count += 1;
+      });
+      stream.on("end", () => resolve(count));
+      stream.on("error", reject);
+    });
+  }
+
   public add(quad: rdfjs.Quad): this {
     this.insertBuffer.push(quad);
     return this;

@@ -19,6 +19,7 @@ import {
 } from "./denokv-hexastore-index-set.ts";
 import {
   bumpDatasetGeneration,
+  garbageCollectOrphanedGenerations,
   readActiveGeneration,
 } from "./denokv-dataset-generation.ts";
 import { materializeQuadKeys } from "./denokv-quad-keys.ts";
@@ -129,6 +130,10 @@ export class DenokvQuadStore implements QuadStoreInterface {
 
     if (mutationCount > 0) {
       await atomic.commit();
+    }
+
+    if (mode === "replace") {
+      await garbageCollectOrphanedGenerations(this.options.kv, keyPrefix);
     }
   }
 

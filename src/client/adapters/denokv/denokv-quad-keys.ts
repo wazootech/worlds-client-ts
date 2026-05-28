@@ -68,6 +68,28 @@ export function materializeQuadKeys(
     );
   }
 
+  if (options.enabledIndexes.includes("sopg")) {
+    indexKeys.push(
+      buildIndexKey(
+        options.scopedDataPrefix,
+        "idx_sopg",
+        [...subjectParts, ...objectParts, ...predicateParts, ...graphParts],
+        options.quadId,
+      ),
+    );
+  }
+
+  if (options.enabledIndexes.includes("psog")) {
+    indexKeys.push(
+      buildIndexKey(
+        options.scopedDataPrefix,
+        "idx_psog",
+        [...predicateParts, ...subjectParts, ...objectParts, ...graphParts],
+        options.quadId,
+      ),
+    );
+  }
+
   if (options.enabledIndexes.includes("posg")) {
     indexKeys.push(
       buildIndexKey(
@@ -85,6 +107,17 @@ export function materializeQuadKeys(
         options.scopedDataPrefix,
         "idx_ospg",
         [...objectParts, ...subjectParts, ...predicateParts, ...graphParts],
+        options.quadId,
+      ),
+    );
+  }
+
+  if (options.enabledIndexes.includes("opsg")) {
+    indexKeys.push(
+      buildIndexKey(
+        options.scopedDataPrefix,
+        "idx_opsg",
+        [...objectParts, ...predicateParts, ...subjectParts, ...graphParts],
         options.quadId,
       ),
     );

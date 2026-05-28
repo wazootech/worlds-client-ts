@@ -40,3 +40,40 @@ export async function bumpDatasetGeneration(
     }
   }
 }
+
+const MAX_GARBAGE_COLLECT_ATOMIC_MUTATIONS = 200;
+
+/**
+ * garbageCollectOrphanedGenerations deletes KV rows for generations below the active pointer.
+ */
+export async function garbageCollectOrphanedGenerations(
+  kv: Deno.Kv,
+  keyPrefix: Deno.KvKey,
+): Promise<void> {
+  const activeGeneration = await readActiveGeneration(kv, keyPrefix);
+
+  for (
+    let generationId = 0;
+    generationId < activeGeneration;
+    generationId += 1
+  ) {
+    const generationPrefix: Deno.KvKey = [...keyPrefix, "g", generationId];
+    let atomic = kv.atomic();
+    let mutationCount = 0;
+
+    for await (const entry of kv.list({ prefix: generationPrefix })) {
+      atomic.delete(entry.key);
+      mutationCount += 1;
+
+      if (mutationCount >= MAX_GARBAGE_COLLECT_ATOMIC_MUTATIONS) {
+        await atomic.commit();
+        atomic = kv.atomic();
+        mutationCount = 0;
+      }
+    }
+
+    if (mutationCount > 0) {
+      await atomic.commit();
+    }
+  }
+}

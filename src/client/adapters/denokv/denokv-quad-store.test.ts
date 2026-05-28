@@ -81,7 +81,7 @@ Deno.test("DenokvQuadStore.import - replace mode switches generation and hides p
     ) {
       staleGenerationKeyCount++;
     }
-    assertEquals(staleGenerationKeyCount > 0, true);
+    assertEquals(staleGenerationKeyCount, 0);
   } finally {
     kv.close();
   }

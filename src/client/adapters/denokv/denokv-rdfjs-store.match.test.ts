@@ -2,6 +2,7 @@ import { assertEquals } from "@std/assert";
 import type * as rdfjs from "@rdfjs/types";
 import { DataFactory } from "n3";
 import { DenokvQuadStore } from "./denokv-quad-store.ts";
+import { DEFAULT_DENOKV_HEXASTORE_INDEXES } from "./denokv-hexastore-index-set.ts";
 import { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";
 
 const { namedNode, literal, blankNode, quad } = DataFactory;
@@ -33,6 +34,14 @@ function collectMatch(
     stream.on("error", reject);
   });
 }
+
+Deno.test("DEFAULT_DENOKV_HEXASTORE_INDEXES - enables all seven quad-native families", () => {
+  assertEquals(DEFAULT_DENOKV_HEXASTORE_INDEXES.length, 7);
+  assertEquals(
+    [...DEFAULT_DENOKV_HEXASTORE_INDEXES],
+    ["spog", "sopg", "psog", "posg", "ospg", "opsg", "gspo"],
+  );
+});
 
 Deno.test("DenokvRdfjsStore.match - empty store returns empty stream", async () => {
   const kv = await Deno.openKv(":memory:");
@@ -252,6 +261,154 @@ Deno.test("DenokvRdfjsStore.match - literal with language tag", async () => {
     kv.close();
   }
 });
+
+Deno.test(
+  "DenokvRdfjsStore.match - by subject and object uses SOPG index",
+  async () => {
+    const kv = await Deno.openKv(":memory:");
+    try {
+      await seedQuads(kv, [
+        quad(namedNode("urn:a"), namedNode("urn:p1"), literal("target")),
+        quad(namedNode("urn:a"), namedNode("urn:p2"), literal("other")),
+        quad(namedNode("urn:b"), namedNode("urn:p1"), literal("target")),
+      ]);
+
+      const store = new DenokvRdfjsStore({ kv });
+      const results = await collectMatch(
+        store,
+        namedNode("urn:a"),
+        null,
+        literal("target"),
+        null,
+      );
+
+      assertEquals(results.length, 1);
+      assertEquals(results[0].predicate.value, "urn:p1");
+    } finally {
+      kv.close();
+    }
+  },
+);
+
+Deno.test(
+  "DenokvRdfjsStore.match - by object and predicate uses OPSG index",
+  async () => {
+    const kv = await Deno.openKv(":memory:");
+    try {
+      await seedQuads(kv, [
+        quad(namedNode("urn:a"), namedNode("urn:p1"), literal("target")),
+        quad(namedNode("urn:a"), namedNode("urn:p2"), literal("other")),
+        quad(namedNode("urn:b"), namedNode("urn:p1"), literal("target")),
+      ]);
+
+      const store = new DenokvRdfjsStore({
+        kv,
+        enabledHexastoreIndexes: ["opsg"],
+      });
+      const results = await collectMatch(
+        store,
+        null,
+        namedNode("urn:p1"),
+        literal("target"),
+        null,
+      );
+
+      assertEquals(results.length, 2);
+      for (const result of results) {
+        assertEquals(result.predicate.value, "urn:p1");
+        assertEquals(result.object.value, "target");
+      }
+    } finally {
+      kv.close();
+    }
+  },
+);
+
+Deno.test(
+  "DenokvRdfjsStore.match - by predicate and subject uses PSOG index",
+  async () => {
+    const kv = await Deno.openKv(":memory:");
+    try {
+      await seedQuads(kv, [
+        quad(namedNode("urn:a"), namedNode("urn:p1"), literal("o1")),
+        quad(namedNode("urn:a"), namedNode("urn:p2"), literal("o2")),
+        quad(namedNode("urn:b"), namedNode("urn:p1"), literal("o3")),
+      ]);
+
+      const store = new DenokvRdfjsStore({
+        kv,
+        enabledHexastoreIndexes: ["psog"],
+      });
+      const results = await collectMatch(
+        store,
+        namedNode("urn:a"),
+        namedNode("urn:p1"),
+        null,
+        null,
+      );
+
+      assertEquals(results.length, 1);
+      assertEquals(results[0].subject.value, "urn:a");
+      assertEquals(results[0].predicate.value, "urn:p1");
+      assertEquals(results[0].object.value, "o1");
+    } finally {
+      kv.close();
+    }
+  },
+);
+
+Deno.test(
+  "DenokvRdfjsStore.countQuads - returns exact counts for bound patterns",
+  async () => {
+    const kv = await Deno.openKv(":memory:");
+    try {
+      await seedQuads(kv, [
+        quad(
+          namedNode("urn:alice"),
+          namedNode("urn:knows"),
+          namedNode("urn:bob"),
+        ),
+        quad(namedNode("urn:alice"), namedNode("urn:age"), literal("30")),
+        quad(
+          namedNode("urn:carol"),
+          namedNode("urn:knows"),
+          namedNode("urn:dave"),
+        ),
+      ]);
+
+      const store = new DenokvRdfjsStore({ kv });
+
+      assertEquals(await store.countQuads(null, null, null, null), 3);
+      assertEquals(
+        await store.countQuads(namedNode("urn:alice"), null, null, null),
+        2,
+      );
+      assertEquals(
+        await store.countQuads(
+          namedNode("urn:alice"),
+          namedNode("urn:knows"),
+          null,
+          null,
+        ),
+        1,
+      );
+
+      const streamCount = (await collectMatch(
+        store,
+        namedNode("urn:alice"),
+        null,
+        null,
+        null,
+      )).length;
+      assertEquals(
+        await store.countQuads(namedNode("urn:alice"), null, null, null),
+        streamCount,
+      );
+    } finally {
+      kv.close();
+    }
+  },
+);
 
 Deno.test(
   "DenokvRdfjsStore.match - predicate-only still correct when only spog index enabled",

@@ -7,10 +7,12 @@ const { namedNode } = DataFactory;
  * DenokvHexastoreKeyNamespace is the set of fixed key segments used by the KV hexastore layout.
  */
 export type DenokvHexastoreKeyNamespace =
-  | "quads"
   | "idx_spog"
+  | "idx_sopg"
+  | "idx_psog"
   | "idx_posg"
   | "idx_ospg"
+  | "idx_opsg"
   | "idx_gspo";
 
 /**

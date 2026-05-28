@@ -30,6 +30,54 @@ export function buildBestMatchSelector(
     return { prefix: [...scopedDataPrefix, "idx_spog", ...parts] };
   }
 
+  if (
+    pattern.subject &&
+    pattern.object &&
+    !pattern.predicate &&
+    enabledIndexes.includes("sopg")
+  ) {
+    const parts: Deno.KvKeyPart[] = [
+      ...termKeyParts(pattern.subject),
+      ...termKeyParts(pattern.object),
+    ];
+    if (pattern.graph) {
+      parts.push(...termKeyParts(pattern.graph));
+    }
+    return { prefix: [...scopedDataPrefix, "idx_sopg", ...parts] };
+  }
+
+  if (
+    pattern.object &&
+    pattern.predicate &&
+    !pattern.subject &&
+    enabledIndexes.includes("opsg")
+  ) {
+    const parts: Deno.KvKeyPart[] = [
+      ...termKeyParts(pattern.object),
+      ...termKeyParts(pattern.predicate),
+    ];
+    if (pattern.graph) {
+      parts.push(...termKeyParts(pattern.graph));
+    }
+    return { prefix: [...scopedDataPrefix, "idx_opsg", ...parts] };
+  }
+
+  if (
+    pattern.predicate &&
+    pattern.subject &&
+    !pattern.object &&
+    enabledIndexes.includes("psog")
+  ) {
+    const parts: Deno.KvKeyPart[] = [
+      ...termKeyParts(pattern.predicate),
+      ...termKeyParts(pattern.subject),
+    ];
+    if (pattern.graph) {
+      parts.push(...termKeyParts(pattern.graph));
+    }
+    return { prefix: [...scopedDataPrefix, "idx_psog", ...parts] };
+  }
+
   if (pattern.predicate && enabledIndexes.includes("posg")) {
     const parts: Deno.KvKeyPart[] = [...termKeyParts(pattern.predicate)];
     if (pattern.object) {

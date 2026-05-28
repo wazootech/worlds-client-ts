@@ -13,6 +13,12 @@
   the active generation only.
 - Deno KV hexastore `match()` routing is covered by LibSQL-aligned integration
   tests (predicate-, object-, and graph-first patterns).
+- Deno KV `replace` garbage-collects orphaned generation keys, adds `idx_sopg`
+  (subject+object) index family, and exposes `countQuads` on `DenokvRdfjsStore`
+  for Comunica cardinality hints.
+- Deno KV hexastore defaults to **seven** quad-native index families (`psog`,
+  `opsg` added for full S-P-O-G coverage); re-import or `replace` to backfill
+  index keys on existing KV data.
 
 ### Breaking
 
