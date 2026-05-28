@@ -35,15 +35,12 @@ deno add jsr:@worlds/client
 
 ```typescript
 import { Client } from "@worlds/client";
-import { createComunicaSparqlEngineFactory } from "@worlds/client/adapters/comunica";
 import { createRdfjsAdapter } from "@worlds/client/adapters/rdfjs";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
 const client = new Client(
   createRdfjsAdapter({
-    createSparqlEngine: createComunicaSparqlEngineFactory({
-      queryEngine: new QueryEngine(),
-    }),
+    queryEngine: new QueryEngine(),
   }),
 );
 
@@ -83,25 +80,22 @@ for structured traversal and reasoning.
 
 ## Adapters
 
-| Adapter | Best for                      | Persistence          | SPARQL                           |
-| :------ | :---------------------------- | :------------------- | :------------------------------- |
-| RDFJS   | Dev, tests, demos             | None (in-memory)     | Via Comunica over N3 store       |
-| LibSQL  | Production, scale             | SQLite / Turso Cloud | Hexastore indexes on LibsqlStore |
-| Deno KV | Prototyping, constrained edge | Deno KV store        | Per-query hydration into N3      |
+| Adapter | Best for                      | Persistence          | SPARQL                            |
+| :------ | :---------------------------- | :------------------- | :-------------------------------- |
+| RDFJS   | Dev, tests, demos             | None (in-memory)     | Via Comunica over N3 store        |
+| LibSQL  | Production, scale             | SQLite / Turso Cloud | Hexastore indexes on LibsqlStore  |
+| Deno KV | Prototyping, constrained edge | Deno KV store        | Via Comunica over KV-backed store |
 
 ### RDFJS (in-memory)
 
 ```typescript
 import { Client } from "@worlds/client";
-import { createComunicaSparqlEngineFactory } from "@worlds/client/adapters/comunica";
 import { createRdfjsAdapter } from "@worlds/client/adapters/rdfjs";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
 const client = new Client(
   createRdfjsAdapter({
-    createSparqlEngine: createComunicaSparqlEngineFactory({
-      queryEngine: new QueryEngine(),
-    }),
+    queryEngine: new QueryEngine(),
   }),
 );
 ```
@@ -110,7 +104,6 @@ const client = new Client(
 
 ```typescript
 import { Client } from "@worlds/client";
-import { createComunicaLibsqlSparqlEngineFactory } from "@worlds/client/adapters/comunica";
 import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
 import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
@@ -119,9 +112,7 @@ const db = createClient({ url: "file:./worlds.db" });
 const client = new Client(
   await createLibsqlAdapter({
     client: db,
-    createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
-      queryEngine: new QueryEngine(),
-    }),
+    queryEngine: new QueryEngine(),
   }),
 );
 ```
@@ -130,7 +121,6 @@ const client = new Client(
 
 ```typescript
 import { Client } from "@worlds/client";
-import { createComunicaSparqlEngineFactory } from "@worlds/client/adapters/comunica";
 import { createDenokvAdapter } from "@worlds/client/adapters/denokv";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
@@ -138,25 +128,20 @@ const kv = await Deno.openKv();
 const client = new Client(
   createDenokvAdapter({
     kv,
-    createSparqlEngine: createComunicaSparqlEngineFactory({
-      queryEngine: new QueryEngine(),
-    }),
+    queryEngine: new QueryEngine(),
   }),
 );
 ```
 
 ## Examples
 
-| Example                                                       | Description                                    | Command                                                |
-| :------------------------------------------------------------ | :--------------------------------------------- | :----------------------------------------------------- |
-| [Hello world](examples/hello-world)                           | In-memory graph with search                    | `deno task example:hello-world`                        |
-| [LibSQL hexastore](examples/libsql-long-running)              | Production hexastore for long-running services | `deno task example:libsql-long-running:hexastore`      |
-| [LibSQL N3](examples/libsql-long-running)                     | Hydrate-once N3 path for long-running services | `deno task example:libsql-long-running:n3`             |
-| [LibSQL SPARQL scale](examples/libsql-sparql-scale)           | Subject-bound vs capped-scan query shapes      | `deno task example:libsql-sparql-scale`                |
-| [Warm container hexastore](examples/libsql-n3-warm-container) | Reuse client per warm isolate                  | `deno task example:libsql-n3-warm-container:hexastore` |
-| [Warm container N3](examples/libsql-n3-warm-container)        | Reuse hydrated store per warm isolate          | `deno task example:libsql-n3-warm-container:n3`        |
-| [Deno KV](examples/denokv-hello-world)                        | Stateless per-operation hydration              | `deno task example:denokv-hello-world`                 |
-| [AI SDK](examples/ai-sdk-hello-world)                         | Vercel AI SDK tools with Gemini                | `deno task example:ai-sdk-hello-world`                 |
+| Example                                             | Description                                    | Command                                           |
+| :-------------------------------------------------- | :--------------------------------------------- | :------------------------------------------------ |
+| [Hello world](examples/hello-world)                 | In-memory graph with search                    | `deno task example:hello-world`                   |
+| [LibSQL hexastore](examples/libsql-long-running)    | Production hexastore for long-running services | `deno task example:libsql-long-running:hexastore` |
+| [LibSQL SPARQL scale](examples/libsql-sparql-scale) | Subject-bound vs capped-scan query shapes      | `deno task example:libsql-sparql-scale`           |
+| [Deno KV](examples/denokv-hello-world)              | KV-backed SPARQL + search                      | `deno task example:denokv-hello-world`            |
+| [AI SDK](examples/ai-sdk-hello-world)               | Vercel AI SDK tools with Gemini                | `deno task example:ai-sdk-hello-world`            |
 
 The [agent eval harness](https://github.com/wazootech/worlds-client-evals) lives
 in a separate repository and runs deterministic assertion checks against a

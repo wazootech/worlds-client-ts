@@ -2,7 +2,6 @@ import { assertEquals, assertRejects } from "@std/assert";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory, Store } from "n3";
 import { Client } from "@/client/client.ts";
-import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
 import { createRdfjsAdapter } from "./create-rdfjs-adapter.ts";
 
 const { quad, namedNode, literal } = DataFactory;
@@ -45,12 +44,11 @@ Deno.test(
 );
 
 Deno.test(
-  "createRdfjsAdapter - createSparqlEngine enables SELECT queries",
+  "createRdfjsAdapter - queryEngine enables SELECT queries",
   async () => {
     const client = new Client(
       createRdfjsAdapter({
-        createSparqlEngine: ({ store }) =>
-          new ComunicaSparqlEngine({ queryEngine, store }),
+        queryEngine,
       }),
     );
 
@@ -94,7 +92,7 @@ Deno.test(
 );
 
 Deno.test(
-  "createRdfjsAdapter - sparql rejects when createSparqlEngine is omitted",
+  "createRdfjsAdapter - sparql rejects when queryEngine is omitted",
   async () => {
     const client = new Client(createRdfjsAdapter());
 

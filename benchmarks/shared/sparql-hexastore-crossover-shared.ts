@@ -2,12 +2,7 @@ import { createClient } from "@libsql/client";
 import type { Quad } from "@rdfjs/types";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { Client } from "@worlds/client";
-import {
-  createComunicaLibsqlSparqlEngineFactory,
-  createComunicaSparqlEngineFactory,
-} from "@worlds/client/adapters/comunica";
 import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
-import { createLibsqlN3Adapter } from "@worlds/client/adapters/libsql-n3";
 import type { SparqlEngineInterface } from "@worlds/client/sparql-engine";
 import {
   buildCrossoverFixtureChecksumInputs,
@@ -37,12 +32,11 @@ const sharedQueryEngine = new QueryEngine();
 /** SparqlQueryShape labels the two SPARQL crossover query patterns. */
 export type SparqlQueryShape = "selective" | "fullScan";
 
-/** SparqlBackend labels hydrate+N3 vs hexastore LibsqlStore wiring. */
-export type SparqlBackend = "hydrate+N3" | "libsqlStore";
+/** SparqlBackend labels the hexastore LibsqlStore wiring. */
+export type SparqlBackend = "libsqlStore";
 
-/** standardCrossoverBackends compares hydrate+N3 and libsqlStore at smaller scales. */
+/** standardCrossoverBackends targets the scalable libsqlStore path. */
 export const standardCrossoverBackends = [
-  "hydrate+N3",
   "libsqlStore",
 ] as const satisfies readonly SparqlBackend[];
 
@@ -120,12 +114,10 @@ async function openLibsqlHexastoreSparqlEngine(
   const adapter = await createLibsqlAdapter({
     client: databaseClient,
     searchIndexOnImport: "disabled",
-    createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
-      queryEngine: sharedQueryEngine,
-    }),
+    queryEngine: sharedQueryEngine,
   });
   if (!adapter.sparqlEngine) {
-    throw new Error("libsqlStore bench requires createSparqlEngine");
+    throw new Error("libsqlStore bench requires queryEngine");
   }
   return { databaseClient, sparqlEngine: adapter.sparqlEngine };
 }
@@ -179,39 +171,11 @@ async function createLibsqlHexastoreSparqlEngine(
   return { fixture, cacheHit: false };
 }
 
-/**
- * createHydrateN3SparqlEngine wires Comunica over the hydrated proxied N3 store.
- */
-async function createHydrateN3SparqlEngine(
-  corpusQuads: Quad[],
-): Promise<PreloadedSparqlFixture> {
-  const databaseClient = createClient({ url: ":memory:" });
-  const adapter = await createLibsqlN3Adapter({
-    client: databaseClient,
-    searchIndexOnImport: "disabled",
-    createSparqlEngine: createComunicaSparqlEngineFactory({
-      queryEngine: sharedQueryEngine,
-    }),
-  });
-  const worldsClient = new Client(adapter);
-  await worldsClient.import({
-    source: { kind: "quads", quads: corpusQuads },
-  });
-  if (!adapter.sparqlEngine) {
-    throw new Error("hydrate+N3 bench requires createSparqlEngine");
-  }
-  return { databaseClient, sparqlEngine: adapter.sparqlEngine };
-}
-
 async function createSparqlEngineForBackend(
-  backend: SparqlBackend,
+  _backend: SparqlBackend,
   corpusQuads: Quad[],
   preloadOptions?: PreloadSparqlCrossoverOptions,
 ): Promise<{ fixture: PreloadedSparqlFixture; cacheHit: boolean }> {
-  if (backend === "hydrate+N3") {
-    const fixture = await createHydrateN3SparqlEngine(corpusQuads);
-    return { fixture, cacheHit: false };
-  }
   const { fixture, cacheHit } = await createLibsqlHexastoreSparqlEngine(
     corpusQuads,
     { reuseFileCache: preloadOptions?.reuseFileCache },

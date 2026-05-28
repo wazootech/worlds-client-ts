@@ -17,8 +17,8 @@ Do not comment on closed perf threads
 issue with before/after `deno bench` output instead.
 
 **JSR:** [`@worlds/client`](https://jsr.io/@worlds/client) is published on JSR.
-Tables below reflect **main** branch methodology (module preload, batched
-hydration); they are not a substitute for re-running on your machine.
+Tables below reflect **main** branch methodology (module preload); they are not
+a substitute for re-running on your machine.
 
 ## Layout
 
@@ -45,14 +45,12 @@ deno bench --allow-all --unstable-kv benchmarks/
 deno bench --allow-all benchmarks/sparql-hexastore-crossover.bench.ts
 ```
 
-**Standard (1k–50k):** compares **hydrate+N3** (`createLibsqlN3Adapter` from
-`@worlds/client/adapters/libsql-n3`) vs **libsqlStore** (`createLibsqlAdapter`
-from `@worlds/client/adapters/libsql`).
+**Standard (1k–50k):** **libsqlStore only** — the scalable LibSQL path for
+hybrid search + SPARQL in production.
 
 **Large (100k–1M):** **libsqlStore only** — the scalable LibSQL path for hybrid
 search + SPARQL in production
-([#68](https://github.com/wazootech/worlds-client-ts/issues/68)); does not run
-hydrate+N3.
+([#68](https://github.com/wazootech/worlds-client-ts/issues/68)).
 
 Crossover preload uses `searchIndexOnImport: "disabled"` (quads only; the timed
 slice is `execute()`). Do **not** call `Client.rebuildSearchIndex()` in
@@ -132,9 +130,7 @@ create a fresh database per iteration and use `warmup: 5`, `n: 50`.
 
 **Production (millions of quads):** prefer
 [`createLibsqlAdapter`](../src/client/adapters/libsql/create-libsql-adapter.ts)
-for indexed SPARQL without a full N3 mirror; reuse a warmed
-[`store`](../src/client/adapters/libsql-n3/create-libsql-n3-adapter.ts) on the
-N3 path per container, not per request. Track guidance in
+for indexed SPARQL without a full N3 mirror. Track guidance in
 [#68](https://github.com/wazootech/worlds-client-ts/issues/68).
 
 Baselines in the **pre-preload** table (below) are **not** directly comparable
