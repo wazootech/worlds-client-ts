@@ -30,6 +30,17 @@ integration shape.
 | 25 000 | 2.2 s       | 101 s       |
 | 50 000 | 4.4 s       | 229 s       |
 
+## Time to first useful SPARQL query
+
+The **execute** table below is **post-preload only** (`Deno.bench` after module
+load). Import/preload dominates cold start: LibSQL is much faster at scale (e.g.
+50k quads: **4.4 s** vs **229 s**).
+
+For end-to-end **time to first useful SPARQL query**, **LibSQL wins** unless
+Denokv reuses an on-disk fixture (`BENCH_REUSE_DB=1` on large benches via
+`deno task bench:hexastore-perf-large-denokv:reuse`) or a long-lived process
+that already imported the corpus.
+
 ## Execute (selective SPARQL avg)
 
 | Quads  | libsqlStore | denokvStore |
