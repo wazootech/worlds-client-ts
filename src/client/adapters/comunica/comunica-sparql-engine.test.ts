@@ -21,6 +21,8 @@ import {
   ComunicaSparqlEngine,
   executeSparql,
 } from "./comunica-sparql-engine.ts";
+import { DenokvQuadStore } from "@/client/adapters/denokv/denokv-quad-store.ts";
+import { DenokvRdfjsStore } from "@/client/adapters/denokv/denokv-rdfjs-store.ts";
 
 const queryEngine = new QueryEngine();
 
@@ -53,6 +55,68 @@ Deno.test("Comunica QueryEngine can query an n3 Store (RDFJS)", async () => {
     "https://example.com/o2",
   ]);
 });
+
+Deno.test(
+  "ComunicaSparqlEngine - DenokvRdfjsStore matches N3.Store SELECT bindings (stable order)",
+  async () => {
+    const kv = await Deno.openKv(":memory:");
+    try {
+      const quads: Quad[] = [
+        DataFactory.quad(
+          DataFactory.namedNode("https://example.com/b"),
+          DataFactory.namedNode("https://example.com/p"),
+          DataFactory.literal("two"),
+        ),
+        DataFactory.quad(
+          DataFactory.namedNode("https://example.com/a"),
+          DataFactory.namedNode("https://example.com/p"),
+          DataFactory.literal("one"),
+        ),
+        DataFactory.quad(
+          DataFactory.namedNode("https://example.com/a"),
+          DataFactory.namedNode("https://example.com/q"),
+          DataFactory.namedNode("https://example.com/o"),
+        ),
+      ];
+
+      const n3Store = new Store(quads);
+
+      const quadStore = new DenokvQuadStore({ kv });
+      await quadStore.import({
+        mode: "merge",
+        source: { kind: "quads", quads },
+      });
+
+      const kvStore = new DenokvRdfjsStore({ kv });
+
+      const query = [
+        "SELECT ?s ?p ?o WHERE { ?s ?p ?o }",
+        "ORDER BY ?s ?p ?o",
+      ].join("\n");
+
+      const n3Response = await executeSparql(queryEngine, n3Store, { query });
+      const kvResponse = await executeSparql(queryEngine, kvStore, { query });
+
+      if (n3Response.kind !== "select") throw new Error("Expected select");
+      if (kvResponse.kind !== "select") throw new Error("Expected select");
+
+      const n3Rows = n3Response.data.results.bindings.map((b) => ({
+        s: b.s?.value,
+        p: b.p?.value,
+        o: b.o?.value,
+      }));
+      const kvRows = kvResponse.data.results.bindings.map((b) => ({
+        s: b.s?.value,
+        p: b.p?.value,
+        o: b.o?.value,
+      }));
+
+      assertEquals(kvRows, n3Rows);
+    } finally {
+      kv.close();
+    }
+  },
+);
 
 Deno.test("Same SPARQL query works on bnodes vs processed (canonicalized + subject-skolemized) dataset", async (t) => {
   const ex = "https://example.com/";

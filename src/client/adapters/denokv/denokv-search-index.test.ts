@@ -213,6 +213,53 @@ Deno.test(
 );
 
 Deno.test(
+  "DenokvSearchIndex.search - after replace returns literals from active generation only",
+  async () => {
+    const kv = await Deno.openKv(":memory:");
+    try {
+      const quadStore = new DenokvQuadStore({ kv });
+      await quadStore.import({
+        mode: "merge",
+        source: {
+          kind: "quads",
+          quads: [
+            quad(
+              namedNode("http://example.com/old"),
+              namedNode("http://example.com/p"),
+              literal("stale tacos"),
+            ),
+          ],
+        },
+      });
+
+      await quadStore.import({
+        mode: "replace",
+        source: {
+          kind: "quads",
+          quads: [
+            quad(
+              namedNode("http://example.com/new"),
+              namedNode("http://example.com/p"),
+              literal("fresh tacos"),
+            ),
+          ],
+        },
+      });
+
+      const searchIndex = new DenokvSearchIndex({ kv });
+      const staleResponse = await searchIndex.search({ query: "stale" });
+      assertEquals(staleResponse.results?.length, 0);
+
+      const freshResponse = await searchIndex.search({ query: "fresh" });
+      assertEquals(freshResponse.results?.length, 1);
+      assertEquals(freshResponse.results?.[0].text, "fresh tacos");
+    } finally {
+      kv.close();
+    }
+  },
+);
+
+Deno.test(
   "DenokvSearchIndex.search - respects custom keyPrefix when scanning KV",
   async () => {
     const kv = await Deno.openKv(":memory:");

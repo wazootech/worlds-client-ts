@@ -1,5 +1,6 @@
 import type * as rdfjs from "@rdfjs/types";
 import { DataFactory, Parser, Writer } from "n3";
+
 import type {
   ExportRequest,
   ExportResponse,
@@ -7,6 +8,20 @@ import type {
   QuadStoreInterface,
 } from "@/client/quad-store/mod.ts";
 import { hashQuad } from "@/client/quad-store/mod.ts";
+
+import {
+  buildGenerationDataPrefix,
+  buildPrimaryQuadKey,
+} from "./denokv-hexastore-keys.ts";
+import {
+  DEFAULT_DENOKV_HEXASTORE_INDEXES,
+  type DenokvHexastoreIndex,
+} from "./denokv-hexastore-index-set.ts";
+import {
+  bumpDatasetGeneration,
+  readActiveGeneration,
+} from "./denokv-dataset-generation.ts";
+import { materializeQuadKeys } from "./denokv-quad-keys.ts";
 
 const { namedNode, blankNode, literal, defaultGraph, quad } = DataFactory;
 
@@ -19,6 +34,12 @@ export interface DenokvQuadStoreOptions {
 
   /** keyPrefix is the namespace prefix for stored quads to avoid key collisions. Defaults to ["quads"]. */
   keyPrefix?: Deno.KvKey;
+
+  /**
+   * enabledHexastoreIndexes controls which KV secondary-index families are materialized.
+   * Defaults to all supported index families.
+   */
+  enabledHexastoreIndexes?: readonly DenokvHexastoreIndex[];
 }
 
 /** SerializedTerm represents a flat V8-serializable descriptor of an RDF Term. */
@@ -48,24 +69,17 @@ export class DenokvQuadStore implements QuadStoreInterface {
   public async import(request: ImportRequest): Promise<void> {
     const mode = request.mode ?? "merge";
     const keyPrefix = this.options.keyPrefix ?? ["quads"];
+    const enabledIndexes = this.options.enabledHexastoreIndexes ??
+      DEFAULT_DENOKV_HEXASTORE_INDEXES;
 
-    if (mode === "replace") {
-      const iter = this.options.kv.list({ prefix: keyPrefix });
-      let atomic = this.options.kv.atomic();
-      let count = 0;
-      for await (const entry of iter) {
-        atomic.delete(entry.key);
-        count++;
-        if (count >= MAX_KV_BATCH_SIZE) {
-          await atomic.commit();
-          atomic = this.options.kv.atomic();
-          count = 0;
-        }
-      }
-      if (count > 0) {
-        await atomic.commit();
-      }
-    }
+    const generationId = mode === "replace"
+      ? await bumpDatasetGeneration(this.options.kv, keyPrefix)
+      : await readActiveGeneration(this.options.kv, keyPrefix);
+
+    const scopedDataPrefix = buildGenerationDataPrefix(
+      keyPrefix,
+      generationId,
+    );
 
     let quadsToImport: Iterable<rdfjs.Quad> = [];
     if (request.source.kind === "quads") {
@@ -81,43 +95,97 @@ export class DenokvQuadStore implements QuadStoreInterface {
     }
 
     let atomic = this.options.kv.atomic();
-    let count = 0;
-    for (const q of quadsToImport) {
-      const hash = await hashQuad(q);
-      const key = [...keyPrefix, hash];
-      const val: SerializedQuad = {
-        subject: serializeTerm(q.subject),
-        predicate: serializeTerm(q.predicate),
-        object: serializeTerm(q.object),
-        graph: serializeTerm(q.graph),
-      };
-      atomic.set(key, val);
-      count++;
-      if (count >= MAX_KV_BATCH_SIZE) {
+    let mutationCount = 0;
+
+    for (const storedQuad of quadsToImport) {
+      const quadId = await hashQuad(storedQuad);
+      const { primaryKey, indexKeys, serializedQuad } = materializeQuadKeys({
+        scopedDataPrefix,
+        enabledIndexes,
+        storedQuad,
+        quadId,
+        serializedQuad: {
+          subject: serializeTerm(storedQuad.subject),
+          predicate: serializeTerm(storedQuad.predicate),
+          object: serializeTerm(storedQuad.object),
+          graph: serializeTerm(storedQuad.graph),
+        },
+      });
+
+      atomic.set(primaryKey, serializedQuad);
+      mutationCount += 1;
+
+      for (const indexKey of indexKeys) {
+        atomic.set(indexKey, quadId);
+        mutationCount += 1;
+      }
+
+      if (mutationCount >= MAX_KV_ATOMIC_MUTATIONS) {
         await atomic.commit();
         atomic = this.options.kv.atomic();
-        count = 0;
+        mutationCount = 0;
       }
     }
-    if (count > 0) {
+
+    if (mutationCount > 0) {
       await atomic.commit();
     }
   }
 
   public async export(request: ExportRequest): Promise<ExportResponse> {
     const keyPrefix = this.options.keyPrefix ?? ["quads"];
+    const enabledIndexes = this.options.enabledHexastoreIndexes ??
+      DEFAULT_DENOKV_HEXASTORE_INDEXES;
+    const generationId = await readActiveGeneration(
+      this.options.kv,
+      keyPrefix,
+    );
+    const scopedDataPrefix = buildGenerationDataPrefix(
+      keyPrefix,
+      generationId,
+    );
+
     const quads: rdfjs.Quad[] = [];
-    const iter = this.options.kv.list<SerializedQuad>({ prefix: keyPrefix });
-    for await (const entry of iter) {
-      const sq = entry.value;
-      quads.push(
-        quad(
-          deserializeTerm(sq.subject) as rdfjs.Quad_Subject,
-          deserializeTerm(sq.predicate) as rdfjs.Quad_Predicate,
-          deserializeTerm(sq.object) as rdfjs.Quad_Object,
-          deserializeTerm(sq.graph) as rdfjs.Quad_Graph,
-        ),
-      );
+
+    if (enabledIndexes.includes("spog")) {
+      const pendingIds: string[] = [];
+
+      const iter = this.options.kv.list<string>({
+        prefix: [...scopedDataPrefix, "idx_spog"],
+      });
+
+      for await (const entry of iter) {
+        pendingIds.push(entry.value);
+        if (pendingIds.length >= MAX_KV_BATCH_SIZE) {
+          quads.push(
+            ...await resolveQuadsByIds(
+              this.options.kv,
+              scopedDataPrefix,
+              pendingIds,
+            ),
+          );
+          pendingIds.length = 0;
+        }
+      }
+
+      if (pendingIds.length > 0) {
+        quads.push(
+          ...await resolveQuadsByIds(
+            this.options.kv,
+            scopedDataPrefix,
+            pendingIds,
+          ),
+        );
+      }
+    } else {
+      const iter = this.options.kv.list<SerializedQuad>({
+        prefix: [...scopedDataPrefix, "quads"],
+      });
+
+      for await (const entry of iter) {
+        if (!entry.value) continue;
+        quads.push(deserializeQuad(entry.value));
+      }
     }
 
     if (request.format.kind === "quads") {
@@ -143,11 +211,33 @@ export class DenokvQuadStore implements QuadStoreInterface {
       return { kind: "serialized", data, contentType };
     }
 
-    throw new Error(`Unsupported export format`);
+    throw new Error("Unsupported export format");
   }
 }
 
 const MAX_KV_BATCH_SIZE = 50;
+const MAX_KV_ATOMIC_MUTATIONS = 200;
+
+async function resolveQuadsByIds(
+  kv: Deno.Kv,
+  scopedDataPrefix: Deno.KvKey,
+  quadIds: readonly string[],
+): Promise<rdfjs.Quad[]> {
+  const keys = quadIds.map((quadId) =>
+    buildPrimaryQuadKey(scopedDataPrefix, quadId)
+  );
+  const entries = await kv.getMany(keys) as Array<
+    Deno.KvEntryMaybe<SerializedQuad>
+  >;
+
+  const resolved: rdfjs.Quad[] = [];
+  for (const entry of entries) {
+    if (!entry.value) continue;
+    resolved.push(deserializeQuad(entry.value));
+  }
+
+  return resolved;
+}
 
 function serializeTerm(term: rdfjs.Term): SerializedTerm {
   return {
@@ -172,11 +262,11 @@ export function deserializeTerm(t: SerializedTerm): rdfjs.Term {
     case "BlankNode":
       return blankNode(t.value);
     case "Literal":
-      if (t.datatype) {
-        return literal(t.value, namedNode(t.datatype));
-      }
       if (t.language) {
         return literal(t.value, t.language);
+      }
+      if (t.datatype) {
+        return literal(t.value, namedNode(t.datatype));
       }
       return literal(t.value);
     case "DefaultGraph":
@@ -184,6 +274,15 @@ export function deserializeTerm(t: SerializedTerm): rdfjs.Term {
     default:
       throw new Error(`Unsupported term type: ${t.termType}`);
   }
+}
+
+function deserializeQuad(serializedQuad: SerializedQuad): rdfjs.Quad {
+  return quad(
+    deserializeTerm(serializedQuad.subject) as rdfjs.Quad_Subject,
+    deserializeTerm(serializedQuad.predicate) as rdfjs.Quad_Predicate,
+    deserializeTerm(serializedQuad.object) as rdfjs.Quad_Object,
+    deserializeTerm(serializedQuad.graph) as rdfjs.Quad_Graph,
+  );
 }
 
 /**

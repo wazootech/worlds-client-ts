@@ -8,6 +8,11 @@
   adapter options (no `createSparqlEngine` callback or factory helper).
 - Deno KV SPARQL reads through a KV-backed RDF/JS store (no per-query N3
   hydration).
+- Deno KV `import({ mode: "replace" })` uses an atomic dataset-generation
+  pointer instead of prefix-wide deletes; `match()`, `export`, and search scan
+  the active generation only.
+- Deno KV hexastore `match()` routing is covered by LibSQL-aligned integration
+  tests (predicate-, object-, and graph-first patterns).
 
 ### Breaking
 
