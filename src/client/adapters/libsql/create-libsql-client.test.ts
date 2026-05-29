@@ -1,25 +1,22 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
-import { createLibsqlAdapter } from "./create-libsql-adapter.ts";
-import { Client } from "@/client/client.ts";
+import { createLibsqlClient } from "./create-libsql-client.ts";
 import { DataFactory } from "n3";
 
 const queryEngine = new QueryEngine();
 const { quad, namedNode, literal } = DataFactory;
 
 Deno.test(
-  "createLibsqlAdapter - queryEngine enables SPARQL on LibsqlRdfjsStore",
+  "createLibsqlClient - queryEngine enables SPARQL on LibsqlRdfjsStore",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
-    const adapter = await createLibsqlAdapter({
+    const client = await createLibsqlClient({
       client: databaseClient,
       queryEngine,
     });
 
-    assertExists(adapter.sparqlEngine);
-
-    const client = new Client(adapter);
+    assertExists(client);
     await client.import({
       source: {
         kind: "quads",

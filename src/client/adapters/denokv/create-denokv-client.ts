@@ -1,30 +1,30 @@
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
 import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
-import type { Adapter } from "@/client/client.ts";
-import { createDenokvAdapterFromStores } from "./create-denokv-adapter-from-stores.ts";
+import type { Client } from "@/client/client.ts";
+import { createDenokvClientFromStores } from "./create-denokv-client-from-stores.ts";
 import type { DenokvQuadStoreOptions } from "./denokv-quad-store.ts";
 import { DenokvQuadStore } from "./denokv-quad-store.ts";
 import { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";
 import { DenokvSearchIndex } from "./denokv-search-index.ts";
 
 /**
- * DenokvOptions specifies configuration parameters for Deno Kv adapter contexts.
+ * DenokvClientOptions specifies configuration parameters for Deno KV client contexts.
  */
-export interface DenokvOptions extends DenokvQuadStoreOptions {
+export interface DenokvClientOptions extends DenokvQuadStoreOptions {
   /** queryEngine optionally enables built-in Comunica SPARQL over DenokvRdfjsStore. */
   queryEngine?: ComunicaQueryEngine;
 }
 
 /**
- * createDenokvAdapter synthesizes a client adapter over DenokvQuadStore and DenokvRdfjsStore.
+ * createDenokvClient synthesizes a Client over DenokvQuadStore and DenokvRdfjsStore.
  */
-export function createDenokvAdapter(
-  options: DenokvOptions,
-): Adapter {
+export function createDenokvClient(
+  options: DenokvClientOptions,
+): Client {
   const denokvQuadStore = new DenokvQuadStore(options);
   const denokvRdfjsStore = new DenokvRdfjsStore(options);
 
-  return createDenokvAdapterFromStores({
+  return createDenokvClientFromStores({
     denokvQuadStore,
     denokvRdfjsStore,
     searchIndex: new DenokvSearchIndex(options),

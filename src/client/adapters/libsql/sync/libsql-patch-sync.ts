@@ -46,7 +46,7 @@ export function createLibsqlPatchSyncState(
   const projectSearchIndex = searchIndexOnImport !== "disabled";
   const deferSearchDuringImport = searchIndexOnImport === "deferred";
 
-  const rebuildSearchIndex = createLibsqlSearchIndexRebuilder(dependencies);
+  const reindex = createLibsqlSearchIndexRebuilder(dependencies);
 
   let skipSearchIndexForNextCommit = false;
 
@@ -68,7 +68,7 @@ export function createLibsqlPatchSyncState(
       if (!deferSearchDuringImport) {
         return undefined;
       }
-      return await rebuildSearchIndex();
+      return await reindex();
     },
   };
 }

@@ -39,7 +39,7 @@ export interface LibsqlClientBaseOptions extends QuadFilter {
    *
    * - `"incremental"` (default when omitted): chunks each quad on commit.
    * - `"deferred"`: persists quads on each import, rebuilds FTS/vector chunks in one pass afterward.
-   * - `"disabled"`: skips chunking entirely; caller calls `Client.rebuildSearchIndex()` before searching.
+   * - `"disabled"`: skips chunking entirely; caller calls `client.reindex()` before searching.
    */
   searchIndexOnImport?: "incremental" | "deferred" | "disabled";
 }

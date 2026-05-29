@@ -1,7 +1,7 @@
 import { DataFactory } from "n3";
 import type {
-  RebuildSearchIndexRequest,
-  RebuildSearchIndexResponse,
+  ReindexRequest,
+  ReindexResponse,
   SearchIndexInterface,
   SearchRequest,
   SearchResponse,
@@ -24,7 +24,7 @@ export interface LibsqlSearchIndexOptions extends LibsqlClientBaseOptions {
   /** limit establishes optional page sizing constraints for search result sets, defaulting to 100. */
   limit?: number;
 
-  /** maxWriteBatchSize caps statements per LibSQL batch during rebuildSearchIndex (default 500). */
+  /** maxWriteBatchSize caps statements per LibSQL batch during reindex (default 500). */
   maxWriteBatchSize?: number;
 }
 
@@ -105,15 +105,15 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
   }
 
   /**
-   * rebuildSearchIndex rebuilds FTS/vector chunk rows from durable quads without re-importing graph data.
+   * reindex rebuilds FTS/vector chunk rows from durable quads without re-importing graph data.
    */
-  public async rebuildSearchIndex(
-    request?: RebuildSearchIndexRequest,
-  ): Promise<RebuildSearchIndexResponse> {
+  public async reindex(
+    request?: ReindexRequest,
+  ): Promise<ReindexResponse> {
     const textSplitter = this.options.textSplitter;
     if (!textSplitter) {
       throw new Error(
-        "LibsqlSearchIndex rebuildSearchIndex requires textSplitter in LibsqlSearchIndexOptions",
+        "LibsqlSearchIndex reindex requires textSplitter in LibsqlSearchIndexOptions",
       );
     }
 

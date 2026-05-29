@@ -1,15 +1,15 @@
 # LibSQL long-running service
 
 For **Fly.io**, **DigitalOcean App Platform**, and other **24/7** Deno/Node
-processes: build an `Adapter` once at boot and hold one `Client` for the process
-lifetime.
+processes: build one `Client` once at boot with `createLibsqlClient` and reuse
+it for the process lifetime.
 
 | Entry          | Topology                                          | Command                                           |
 | :------------- | :------------------------------------------------ | :------------------------------------------------ |
 | `hexastore.ts` | Hexastore `LibsqlRdfjsStore` (production default) | `deno task example:libsql-long-running:hexastore` |
 
-SPARQL runs on `LibsqlRdfjsStore` via `createLibsqlAdapter({ queryEngine })` —
-no full N3 mirror per request.
+SPARQL runs on `LibsqlRdfjsStore` via `createLibsqlClient({ queryEngine })` — no
+full N3 mirror per request.
 
 The hexastore example requires local USE artifacts: run
 `deno task download:tfjs-use` before `example:libsql-long-running:hexastore`.

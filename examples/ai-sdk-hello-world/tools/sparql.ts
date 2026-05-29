@@ -1,5 +1,5 @@
 import { tool } from "ai";
-import type { ClientInterface } from "@worlds/client";
+import type { Client } from "@worlds/client";
 import type { SparqlRequest } from "@worlds/client/sparql-engine";
 import { z } from "zod";
 import { EXECUTE_SPARQL_TOOL_DESCRIPTION } from "./agent-tool-descriptions.ts";
@@ -18,12 +18,12 @@ export interface ExecuteSparqlOptions {
 /**
  * createExecuteSparqlTool creates an AI SDK tool for executing SPARQL queries against the knowledge base.
  *
- * @param client The Worlds ClientInterface instance.
+ * @param client The Worlds Client instance.
  * @param options Configuration options for the tool.
  * @returns An AI SDK tool for executing SPARQL queries against the knowledge base.
  */
 export function createExecuteSparqlTool(
-  client: ClientInterface,
+  client: Client,
   options?: ExecuteSparqlOptions,
 ) {
   return tool({

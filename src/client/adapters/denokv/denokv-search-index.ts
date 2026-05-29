@@ -1,6 +1,8 @@
 import type * as rdfjs from "@rdfjs/types";
 import { DataFactory } from "n3";
 import type {
+  ReindexRequest,
+  ReindexResponse,
   SearchIndexInterface,
   SearchRequest,
   SearchResponse,
@@ -94,6 +96,16 @@ export class DenokvSearchIndex implements SearchIndexInterface {
     }
 
     return { results };
+  }
+
+  /**
+   * reindex is a no-op for Deno KV search, which scans quads at query time.
+   */
+  public reindex(_request?: ReindexRequest): Promise<ReindexResponse> {
+    return Promise.resolve({
+      processedQuadCount: 0,
+      chunkRowCount: 0,
+    });
   }
 }
 

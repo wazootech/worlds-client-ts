@@ -1,10 +1,9 @@
 import { createClient } from "@libsql/client";
 import type { Quad } from "@rdfjs/types";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
-import { Client } from "@worlds/client";
-import { createDenokvAdapter } from "@worlds/client/adapters/denokv";
-import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
-import type { SparqlEngineInterface } from "@worlds/client/sparql-engine";
+import type { Client } from "@worlds/client";
+import { createDenokvClient } from "@worlds/client/adapters/denokv";
+import { createLibsqlClient } from "@worlds/client/adapters/libsql";
 import {
   buildHexastorePerfFixtureChecksumInputs,
   computeHexastorePerfFixtureChecksum,
@@ -67,9 +66,10 @@ export const denokvHexastorePerfBackends = [
   "denokvStore",
 ] as const satisfies readonly SparqlBackend[];
 
-/** PreloadedSparqlFixture holds a warmed SPARQL engine and its storage handle. */
+/** PreloadedSparqlFixture holds a warmed Client and its storage handle. */
 export interface PreloadedSparqlFixture {
-  sparqlEngine: SparqlEngineInterface;
+  /** client executes SPARQL against the preloaded corpus. */
+  client: Client;
   /** databaseClient is set for libsqlStore fixtures. */
   databaseClient?: ReturnType<typeof createClient>;
   /** kv is set for denokvStore fixtures. */
@@ -120,11 +120,10 @@ async function importCorpusIntoLibsqlHexastore(
   databaseClient: ReturnType<typeof createClient>,
   corpusQuads: Quad[],
 ): Promise<void> {
-  const adapter = await createLibsqlAdapter({
+  const worldsClient = await createLibsqlClient({
     client: databaseClient,
     searchIndexOnImport: "disabled",
   });
-  const worldsClient = new Client(adapter);
   await worldsClient.import({
     source: { kind: "quads", quads: corpusQuads },
   });
@@ -136,15 +135,12 @@ async function importCorpusIntoLibsqlHexastore(
 async function openLibsqlHexastoreSparqlEngine(
   databaseClient: ReturnType<typeof createClient>,
 ): Promise<PreloadedSparqlFixture> {
-  const adapter = await createLibsqlAdapter({
+  const worldsClient = await createLibsqlClient({
     client: databaseClient,
     searchIndexOnImport: "disabled",
     queryEngine: sharedQueryEngine,
   });
-  if (!adapter.sparqlEngine) {
-    throw new Error("libsqlStore bench requires queryEngine");
-  }
-  return { databaseClient, sparqlEngine: adapter.sparqlEngine };
+  return { databaseClient, client: worldsClient };
 }
 
 /**
@@ -208,8 +204,7 @@ async function importCorpusIntoDenokvHexastore(
   kv: Deno.Kv,
   corpusQuads: Quad[],
 ): Promise<void> {
-  const adapter = createDenokvAdapter({ kv });
-  const worldsClient = new Client(adapter);
+  const worldsClient = createDenokvClient({ kv });
   await worldsClient.import({
     source: { kind: "quads", quads: corpusQuads },
   });
@@ -219,14 +214,11 @@ async function importCorpusIntoDenokvHexastore(
  * openDenokvHexastoreSparqlEngine wires Comunica over an existing Deno KV corpus.
  */
 function openDenokvHexastoreSparqlEngine(kv: Deno.Kv): PreloadedSparqlFixture {
-  const adapter = createDenokvAdapter({
+  const worldsClient = createDenokvClient({
     kv,
     queryEngine: sharedQueryEngine,
   });
-  if (!adapter.sparqlEngine) {
-    throw new Error("denokvStore bench requires queryEngine");
-  }
-  return { kv, sparqlEngine: adapter.sparqlEngine };
+  return { kv, client: worldsClient };
 }
 
 /**
@@ -384,7 +376,7 @@ export function registerSparqlHexastorePerfBenchmarks(
             }
 
             benchContext.start();
-            await fixture.sparqlEngine.execute({ query });
+            await fixture.client.sparql({ query });
             benchContext.end();
           },
         });

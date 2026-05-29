@@ -1,6 +1,6 @@
 import { assertEquals, assertRejects } from "@std/assert";
 import { DataFactory, Store } from "n3";
-import { Client } from "./client.ts";
+import { type Client, createClientFromDependencies } from "./client.ts";
 import { RdfjsQuadStore, RdfjsSearchIndex } from "./adapters/rdfjs/mod.ts";
 import { ComunicaSparqlEngine } from "./adapters/comunica/mod.ts";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
@@ -9,7 +9,7 @@ import { hashQuad } from "./quad-store/mod.ts";
 const queryEngine = new QueryEngine();
 
 function createTestClient(store: Store): Client {
-  return new Client({
+  return createClientFromDependencies({
     quadStore: new RdfjsQuadStore(store),
     sparqlEngine: new ComunicaSparqlEngine({ queryEngine, store }),
     searchIndex: new RdfjsSearchIndex(store),
@@ -61,7 +61,7 @@ Deno.test("Client.sparql delegates to sparqlEngine.execute", async () => {
 
 Deno.test("Client.sparql rejects when sparqlEngine is not configured", async () => {
   const store = new Store();
-  const client = new Client({
+  const client = createClientFromDependencies({
     quadStore: new RdfjsQuadStore(store),
     searchIndex: new RdfjsSearchIndex(store),
   });
@@ -105,4 +105,19 @@ Deno.test("Client.search returns stable hashQuad-based search result ids", async
 
   assertEquals(firstResponse.results?.[0].id, expectedId);
   assertEquals(secondResponse.results?.[0].id, expectedId);
+});
+
+Deno.test("Client.reindex delegates to searchIndex.reindex", async () => {
+  const store = new Store();
+  store.addQuad(
+    DataFactory.namedNode("http://example.com/sub"),
+    DataFactory.namedNode("http://example.com/pred"),
+    DataFactory.literal("Reindex noop on RDF/JS."),
+  );
+
+  const client = createTestClient(store);
+  const response = await client.reindex();
+
+  assertEquals(response.processedQuadCount, store.size);
+  assertEquals(response.chunkRowCount, 0);
 });

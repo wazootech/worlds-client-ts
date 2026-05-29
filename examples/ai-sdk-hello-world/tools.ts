@@ -1,4 +1,4 @@
-import type { ClientInterface } from "@worlds/client";
+import type { Client } from "@worlds/client";
 import {
   createExecuteSparqlTool,
   createExportRdfTool,
@@ -22,14 +22,14 @@ export interface AiSdkToolsOptions {
 }
 
 /**
- * createTools creates AI SDK compatible tools that interact with a Worlds ClientInterface.
+ * createTools creates AI SDK compatible tools that interact with a Worlds Client.
  *
- * @param client The Worlds ClientInterface instance.
+ * @param client The Worlds Client instance.
  * @param options Configuration options for the provided tools.
  * @returns An object containing the AI SDK tools.
  */
 export function createTools(
-  client: ClientInterface,
+  client: Client,
   options?: AiSdkToolsOptions,
 ) {
   return {

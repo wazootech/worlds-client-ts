@@ -8,7 +8,7 @@ Runnable companion to
 deno task example:libsql-sparql-scale
 ```
 
-Uses `createLibsqlAdapter` + `Client` with inline SPARQL strings:
+Uses `createLibsqlClient` + `Client` with inline SPARQL strings:
 
 - **Selective:** subject-bound `SELECT ?p ?o WHERE { <iri> ?p ?o }` — default
   for production hot paths.

@@ -34,15 +34,12 @@ deno add jsr:@worlds/client
 ## Quickstart
 
 ```typescript
-import { Client } from "@worlds/client";
-import { createRdfjsAdapter } from "@worlds/client/adapters/rdfjs";
+import { createRdfjsClient } from "@worlds/client/adapters/rdfjs";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
-const client = new Client(
-  createRdfjsAdapter({
-    queryEngine: new QueryEngine(),
-  }),
-);
+const client = createRdfjsClient({
+  queryEngine: new QueryEngine(),
+});
 
 await client.import({
   source: {
@@ -89,48 +86,39 @@ for structured traversal and reasoning.
 ### RDFJS (in-memory)
 
 ```typescript
-import { Client } from "@worlds/client";
-import { createRdfjsAdapter } from "@worlds/client/adapters/rdfjs";
+import { createRdfjsClient } from "@worlds/client/adapters/rdfjs";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
-const client = new Client(
-  createRdfjsAdapter({
-    queryEngine: new QueryEngine(),
-  }),
-);
+const client = createRdfjsClient({
+  queryEngine: new QueryEngine(),
+});
 ```
 
 ### LibSQL (production)
 
 ```typescript
-import { Client } from "@worlds/client";
-import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
+import { createLibsqlClient } from "@worlds/client/adapters/libsql";
 import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
 const db = createClient({ url: "file:./worlds.db" });
-const client = new Client(
-  await createLibsqlAdapter({
-    client: db,
-    queryEngine: new QueryEngine(),
-  }),
-);
+const client = await createLibsqlClient({
+  client: db,
+  queryEngine: new QueryEngine(),
+});
 ```
 
 ### Deno KV (prototyping)
 
 ```typescript
-import { Client } from "@worlds/client";
-import { createDenokvAdapter } from "@worlds/client/adapters/denokv";
+import { createDenokvClient } from "@worlds/client/adapters/denokv";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
 const kv = await Deno.openKv();
-const client = new Client(
-  createDenokvAdapter({
-    kv,
-    queryEngine: new QueryEngine(),
-  }),
-);
+const client = createDenokvClient({
+  kv,
+  queryEngine: new QueryEngine(),
+});
 ```
 
 ## Examples

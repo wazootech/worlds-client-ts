@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+### Breaking
+
+- Removed exported `Adapter` and the `Client` class. **`Client`** is now the
+  public interface (formerly `ClientInterface`). Factories return `Client`
+  directly: `createLibsqlClient`, `createRdfjsClient`, `createDenokvClient`.
+- Renamed `createLibsqlAdapter` → `createLibsqlClient` (and matching
+  `createLibsqlClientFromStores`, `createLibsqlClientInfrastructure`,
+  `LibsqlClientOptions`, `LibsqlClientInfrastructure`). Same pattern for RDF/JS
+  and Deno KV.
+- Renamed `rebuildSearchIndex` → **`reindex`**; `RebuildSearchIndexRequest` /
+  `RebuildSearchIndexResponse` → `ReindexRequest` / `ReindexResponse`. RDF/JS
+  and Deno KV `reindex()` succeed as documented no-ops.
+
+### Migration
+
+```typescript
+// Before
+import { Client } from "@worlds/client";
+import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
+const client = new Client(
+  await createLibsqlAdapter({ client: db, queryEngine }),
+);
+await client.rebuildSearchIndex();
+
+// After
+import { createLibsqlClient } from "@worlds/client/adapters/libsql";
+const client = await createLibsqlClient({ client: db, queryEngine });
+await client.reindex();
+```
+
 ### Changed
 
 - LibSQL SPARQL is configured by passing a Comunica `queryEngine` directly into
@@ -29,9 +59,9 @@
 - Renamed `LibsqlStore` / `LibsqlStoreOptions` to `LibsqlRdfjsStore` /
   `LibsqlRdfjsStoreOptions`. LibSQL `client.import` / `export` now go through
   `LibsqlQuadStore` instead of generic `RdfjsQuadStore`.
-- Removed `createLibsqlAdapterFromRdfjsStore`; use
-  `createLibsqlAdapterFromStores`.
-- Added `createDenokvAdapterFromStores` for Deno KV adapter assembly.
+- Removed `createLibsqlClientFromRdfjsStore`; use
+  `createLibsqlClientFromStores`.
+- Added `createDenokvClientFromStores` for Deno KV adapter assembly.
 - Flattened `src/client/adapters/libsql/store/` modules to `libsql/` root
   (`libsql-rdfjs-store.ts`, `libsql-query-builder.ts`, etc.).
 
@@ -59,26 +89,26 @@ import {
 } from "@worlds/client/adapters/libsql";
 ```
 
-Most apps keep using `createLibsqlAdapter` unchanged:
+Most apps keep using `createLibsqlClient` unchanged:
 
 ```typescript
-import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
+import { createLibsqlClient } from "@worlds/client/adapters/libsql";
 
-const adapter = await createLibsqlAdapter({ client, queryEngine });
+const adapter = await createLibsqlClient({ client, queryEngine });
 ```
 
-Custom LibSQL assembly (`createLibsqlAdapterFromRdfjsStore` removed):
+Custom LibSQL assembly (`createLibsqlClientFromRdfjsStore` removed):
 
 ```typescript
 import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
 import {
-  createLibsqlAdapterFromStores,
-  createLibsqlAdapterInfrastructure,
+  createLibsqlClientFromStores,
+  createLibsqlClientInfrastructure,
   LibsqlQuadStore,
   LibsqlRdfjsStore,
 } from "@worlds/client/adapters/libsql";
 
-const infrastructure = await createLibsqlAdapterInfrastructure({ client });
+const infrastructure = await createLibsqlClientInfrastructure({ client });
 const libsqlRdfjsStore = new LibsqlRdfjsStore({
   client,
   queryBuilder: infrastructure.queryBuilder,
@@ -88,7 +118,7 @@ const libsqlQuadStore = new LibsqlQuadStore({
   libsqlRdfjsStore,
   patchSync: infrastructure.patchSync,
 });
-const adapter = createLibsqlAdapterFromStores({
+const adapter = createLibsqlClientFromStores({
   infrastructure,
   libsqlQuadStore,
   libsqlRdfjsStore,
@@ -110,9 +140,9 @@ new LibsqlQuadStore({ libsqlRdfjsStore, patchSync });
 Deno KV custom assembly:
 
 ```typescript
-import { createDenokvAdapterFromStores } from "@worlds/client/adapters/denokv";
+import { createDenokvClientFromStores } from "@worlds/client/adapters/denokv";
 
-const adapter = createDenokvAdapterFromStores({
+const adapter = createDenokvClientFromStores({
   denokvQuadStore,
   denokvRdfjsStore,
   searchIndex,
@@ -138,12 +168,12 @@ exported from `@worlds/client/quad-store` (no new export subpath).
   adapter bridging platform-specific infrastructure to the generic `Client`, not
   passive configuration.
 - Renamed all adapter factory functions to match:
-  - `createRdfjsClientOptions` -> `createRdfjsAdapter`
-  - `createLibsqlClientOptions` -> `createLibsqlAdapter`
+  - `createRdfjsClientOptions` -> `createRdfjsClient`
+  - `createLibsqlClientOptions` -> `createLibsqlClient`
   - `createLibsqlN3ClientOptions` -> `createLibsqlN3Adapter`
-  - `createDenokvClientOptions` -> `createDenokvAdapter`
+  - `createDenokvClientOptions` -> `createDenokvClient`
 - Factory source files renamed for file-symbol alignment (e.g.
-  `create-libsql-client.ts` -> `create-libsql-adapter.ts`).
+  `create-libsql-client.ts` -> `create-libsql-client.ts`).
 
 ### Added
 
@@ -166,7 +196,7 @@ import { createLibsqlN3Adapter } from "@worlds/client/adapters/libsql-n3";
 const client = new Client(await createLibsqlClientOptions({ client: db }));
 
 // After
-const client = new Client(await createLibsqlAdapter({ client: db }));
+const client = new Client(await createLibsqlClient({ client: db }));
 ```
 
 ```typescript

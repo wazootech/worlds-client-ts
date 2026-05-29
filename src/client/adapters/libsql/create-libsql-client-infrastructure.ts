@@ -10,9 +10,9 @@ import {
 } from "@/client/adapters/libsql/sync/mod.ts";
 
 /**
- * LibsqlAdapterInfrastructure holds shared LibSQL schema, search, and patch-sync state.
+ * LibsqlClientInfrastructure holds shared LibSQL schema, search, and patch-sync state.
  */
-export interface LibsqlAdapterInfrastructure {
+export interface LibsqlClientInfrastructure {
   /** queryBuilder supplies dimension-aware SQL for commits and reads. */
   queryBuilder: LibsqlQueryBuilder;
 
@@ -24,11 +24,11 @@ export interface LibsqlAdapterInfrastructure {
 }
 
 /**
- * createLibsqlAdapterInfrastructure provisions schema, search index, and patch sync for LibSQL adapters.
+ * createLibsqlClientInfrastructure provisions schema, search index, and patch sync for LibSQL clients.
  */
-export async function createLibsqlAdapterInfrastructure(
+export async function createLibsqlClientInfrastructure(
   options: LibsqlClientBaseOptions,
-): Promise<LibsqlAdapterInfrastructure> {
+): Promise<LibsqlClientInfrastructure> {
   const vectorDimensions = options.vectorDimensions ?? 32;
   const queryBuilder = new LibsqlQueryBuilder(vectorDimensions);
 

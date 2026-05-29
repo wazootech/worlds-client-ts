@@ -1,15 +1,16 @@
-import type { Adapter } from "@/client/client.ts";
+import type { Client } from "@/client/client.ts";
+import { createClientFromDependencies } from "@/client/client.ts";
 import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
 import type { LibsqlQuadStore } from "./libsql-quad-store.ts";
 import type { LibsqlRdfjsStore } from "./libsql-rdfjs-store.ts";
-import type { LibsqlAdapterInfrastructure } from "./create-libsql-adapter-infrastructure.ts";
+import type { LibsqlClientInfrastructure } from "./create-libsql-client-infrastructure.ts";
 
 /**
- * LibsqlAdapterFromStoresOptions configures shared LibSQL adapter assembly over suffixed store facades.
+ * LibsqlClientFromStoresOptions configures shared LibSQL client assembly over suffixed store facades.
  */
-export interface LibsqlAdapterFromStoresOptions {
-  /** infrastructure is shared schema, search, and patch-sync state from createLibsqlAdapterInfrastructure. */
-  infrastructure: LibsqlAdapterInfrastructure;
+export interface LibsqlClientFromStoresOptions {
+  /** infrastructure is shared schema, search, and patch-sync state from createLibsqlClientInfrastructure. */
+  infrastructure: LibsqlClientInfrastructure;
 
   /** libsqlQuadStore serves Client import and export. */
   libsqlQuadStore: LibsqlQuadStore;
@@ -24,17 +25,17 @@ export interface LibsqlAdapterFromStoresOptions {
 }
 
 /**
- * createLibsqlAdapterFromStores assembles Client-facing quad/SPARQL facades over shared LibSQL infrastructure.
+ * createLibsqlClientFromStores assembles a Client over shared LibSQL infrastructure.
  */
-export function createLibsqlAdapterFromStores(
-  options: LibsqlAdapterFromStoresOptions,
-): Adapter {
+export function createLibsqlClientFromStores(
+  options: LibsqlClientFromStoresOptions,
+): Client {
   const { searchIndex } = options.infrastructure;
   const configuredSparqlEngine = options.createSparqlEngine?.({
     store: options.libsqlRdfjsStore,
   });
 
-  return {
+  return createClientFromDependencies({
     quadStore: options.libsqlQuadStore,
     sparqlEngine: configuredSparqlEngine
       ? {
@@ -46,5 +47,5 @@ export function createLibsqlAdapterFromStores(
       }
       : undefined,
     searchIndex,
-  };
+  });
 }

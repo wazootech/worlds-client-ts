@@ -17,17 +17,17 @@ export interface SearchResponse {
 }
 
 /**
- * RebuildSearchIndexRequest scopes repair to quads matching QuadFilter boundaries.
+ * ReindexRequest scopes search-index repair to quads matching QuadFilter boundaries.
  */
-export interface RebuildSearchIndexRequest extends QuadFilter {
+export interface ReindexRequest extends QuadFilter {
   /** readPageSize limits quads per SQL page during scan (default 1000). */
   readPageSize?: number;
 }
 
 /**
- * RebuildSearchIndexResponse reports repair counts (idempotent rerun safe).
+ * ReindexResponse reports repair counts (idempotent rerun safe).
  */
-export interface RebuildSearchIndexResponse {
+export interface ReindexResponse {
   /** processedQuadCount is the number of durable quads scanned during repair. */
   processedQuadCount: number;
   /** chunkRowCount is the number of chunk rows written to FTS/vector tables. */
@@ -72,12 +72,10 @@ export interface SearchIndexInterface {
   search(request: SearchRequest): Promise<SearchResponse>;
 
   /**
-   * rebuildSearchIndex rebuilds FTS/vector chunks from durable quads (LibSQL adapters only).
+   * reindex rebuilds derived search chunks from durable quads where a materialized index exists.
    *
    * @param request optional include/exclude scope and read page size.
    * @returns promise resolving to processed quad and chunk row counts.
    */
-  rebuildSearchIndex?(
-    request?: RebuildSearchIndexRequest,
-  ): Promise<RebuildSearchIndexResponse>;
+  reindex(request?: ReindexRequest): Promise<ReindexResponse>;
 }

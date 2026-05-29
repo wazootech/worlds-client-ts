@@ -1,6 +1,9 @@
 import type * as rdfjs from "@rdfjs/types";
 import { DataFactory } from "n3";
+import type { Store } from "n3";
 import type {
+  ReindexRequest,
+  ReindexResponse,
   SearchIndexInterface,
   SearchRequest,
   SearchResponse,
@@ -19,7 +22,7 @@ const { literal, namedNode, quad: createQuad, defaultGraph } = DataFactory;
  */
 export class RdfjsSearchIndex implements SearchIndexInterface {
   public constructor(
-    private readonly store: rdfjs.Store,
+    private readonly store: Store,
   ) {}
 
   public async search(request: SearchRequest): Promise<SearchResponse> {
@@ -73,5 +76,15 @@ export class RdfjsSearchIndex implements SearchIndexInterface {
     await Promise.all(pendingSearchResultPromises);
 
     return { results };
+  }
+
+  /**
+   * reindex is a no-op for in-memory RDF/JS search, which scans the live store on each query.
+   */
+  public reindex(_request?: ReindexRequest): Promise<ReindexResponse> {
+    return Promise.resolve({
+      processedQuadCount: this.store.size,
+      chunkRowCount: 0,
+    });
   }
 }

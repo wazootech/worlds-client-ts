@@ -3,10 +3,9 @@ import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory } from "n3";
 
-import type { Adapter } from "@/client/client.ts";
-import { Client } from "@/client/client.ts";
-import type { LibsqlAdapterOptions } from "@/client/adapters/libsql/create-libsql-adapter.ts";
-import { createLibsqlAdapter } from "@/client/adapters/libsql/create-libsql-adapter.ts";
+import type { Client } from "@/client/client.ts";
+import type { LibsqlClientOptions } from "@/client/adapters/libsql/create-libsql-client.ts";
+import { createLibsqlClient } from "@/client/adapters/libsql/create-libsql-client.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 const queryEngine = new QueryEngine();
@@ -21,22 +20,22 @@ const expectedHexastoreIndexNames = [
   "idx_quads_gpso",
 ] as const;
 
-interface LibsqlAdapterFixture {
+interface LibsqlClientFixture {
   label: string;
-  createAdapter: (options: LibsqlAdapterOptions) => Promise<Adapter>;
+  createClient: (options: LibsqlClientOptions) => Promise<Client>;
 }
 
-const libsqlAdapterFixtures: LibsqlAdapterFixture[] = [
-  { label: "hexastore", createAdapter: createLibsqlAdapter },
+const libsqlClientFixtures: LibsqlClientFixture[] = [
+  { label: "hexastore", createClient: createLibsqlClient },
 ];
 
-for (const fixture of libsqlAdapterFixtures) {
+for (const fixture of libsqlClientFixtures) {
   Deno.test(
     `${fixture.label} - initializeSchema provisions all hexastore indexes`,
     async () => {
       const databaseClient = createClient({ url: ":memory:" });
 
-      await fixture.createAdapter({ client: databaseClient });
+      await fixture.createClient({ client: databaseClient });
 
       const indexResultSet = await databaseClient.execute(
         "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'quads'",
@@ -50,7 +49,7 @@ for (const fixture of libsqlAdapterFixtures) {
         );
       }
 
-      await fixture.createAdapter({ client: databaseClient });
+      await fixture.createClient({ client: databaseClient });
 
       databaseClient.close();
     },
@@ -61,12 +60,10 @@ for (const fixture of libsqlAdapterFixtures) {
     async () => {
       const databaseClient = createClient({ url: ":memory:" });
 
-      const client = new Client(
-        await fixture.createAdapter({
-          client: databaseClient,
-          queryEngine,
-        }),
-      );
+      const client = await fixture.createClient({
+        client: databaseClient,
+        queryEngine,
+      });
 
       await client.import({
         source: {
@@ -100,13 +97,11 @@ for (const fixture of libsqlAdapterFixtures) {
     async () => {
       const databaseClient = createClient({ url: ":memory:" });
 
-      const client = new Client(
-        await fixture.createAdapter({
-          client: databaseClient,
-          searchIndexOnImport: "disabled",
-          queryEngine,
-        }),
-      );
+      const client = await fixture.createClient({
+        client: databaseClient,
+        searchIndexOnImport: "disabled",
+        queryEngine,
+      });
 
       await client.import({
         source: {
@@ -136,17 +131,15 @@ for (const fixture of libsqlAdapterFixtures) {
   );
 
   Deno.test(
-    `${fixture.label} - rebuildSearchIndex enables search after disabled import`,
+    `${fixture.label} - reindex enables search after disabled import`,
     async () => {
       const databaseClient = createClient({ url: ":memory:" });
 
-      const client = new Client(
-        await fixture.createAdapter({
-          client: databaseClient,
-          searchIndexOnImport: "disabled",
-          queryEngine,
-        }),
-      );
+      const client = await fixture.createClient({
+        client: databaseClient,
+        searchIndexOnImport: "disabled",
+        queryEngine,
+      });
 
       await client.import({
         source: {
@@ -161,7 +154,7 @@ for (const fixture of libsqlAdapterFixtures) {
         },
       });
 
-      const rebuildResponse = await client.rebuildSearchIndex();
+      const rebuildResponse = await client.reindex();
       assertEquals(rebuildResponse.processedQuadCount, 1);
       assertEquals(rebuildResponse.chunkRowCount > 0, true);
 

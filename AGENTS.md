@@ -303,7 +303,7 @@ Public graph persistence facades must use explicit suffixes:
 LibSQL: `client.import` → `LibsqlQuadStore` → `LibsqlRdfjsStore.commit()`. Deno
 KV: `client.import` → `DenokvQuadStore` (native KV bulk path). Both use
 `*RdfjsStore` for Comunica SPARQL. Advanced assembly:
-`createLibsqlAdapterFromStores`, `createDenokvAdapterFromStores`.
+`createLibsqlClientFromStores`, `createDenokvClientFromStores`.
 
 ## Architectural system map
 
@@ -319,20 +319,24 @@ latency during query execution at scale.
 
 ### LibSQL client entry point (hexastore)
 
-Hexastore indexes are provisioned at schema init. **`createLibsqlAdapter`**
-([`create-libsql-adapter.ts`](src/client/adapters/libsql/create-libsql-adapter.ts))
+Hexastore indexes are provisioned at schema init. **`createLibsqlClient`**
+([`create-libsql-client.ts`](src/client/adapters/libsql/create-libsql-client.ts))
 — `LibsqlRdfjsStore` + `LibsqlQuadStore` + hexastore indexes; pass `queryEngine`
 to enable SPARQL. `LibsqlRdfjsStore.match` keyset-pages by `quads.id`
 (`matchPageSize`, default 1000). Optional `countQuads` supplies Comunica join
-cardinality hints. Wrap with `new Client(await createLibsqlAdapter(...))`.
+cardinality hints. Use `await createLibsqlClient({ client, queryEngine })`.
 
 ### Client lifecycle (runtime)
 
-Canonical construction: `new Client(await createXAdapter(...))`. Do not
-reintroduce `createXClient` one-line wrappers.
+Canonical construction: `await createLibsqlClient(...)` /
+`createRdfjsClient(...)` / `createDenokvClient(...)` — factories return the
+`Client` interface directly.
 
-For standard Comunica SPARQL, pass a Comunica `queryEngine` into the adapter
-options (e.g. `createLibsqlAdapter({ queryEngine })`).
+For standard Comunica SPARQL, pass a Comunica `queryEngine` into client factory
+options (e.g. `createLibsqlClient({ queryEngine })`).
+
+Custom assembly uses `createClientFromDependencies` with `ClientDependencies`
+for tests; advanced LibSQL warm-start uses `createLibsqlClientFromStores`.
 
 - **Long-running (Fly.io, DigitalOcean, 24/7 Deno):** one `Client` at process
   boot. See [`examples/libsql-long-running`](examples/libsql-long-running).
@@ -359,14 +363,14 @@ trivial container-level caching across sequential HTTP invocations.
 ### Sterile orchestration via adapters
 
 All active instrumentation (proxies, observers, and transactional mutation
-queues) is isolated strictly inside adapters (e.g. `createLibsqlAdapter`). The
-generalized `Client` is kept completely agnostic and sterile, accepting
-pre-composed adapter options ready for constructor injection.
+queues) is isolated strictly inside adapters (e.g. `createLibsqlClient`). The
+`Client` interface is the portable API; factories wire topology-specific stores
+behind it.
 
 ### Production deployment recommendation
 
 For production deployments and scale, the recommended topology is LibSQL-backed
-infrastructure through `createLibsqlAdapter` + `Client`, especially Turso Cloud.
+infrastructure through `createLibsqlClient`, especially Turso Cloud.
 RDFJS-backed and Deno KV-backed search/index topologies, including deployments
 centered on `RdfjsSearchIndex` and `DenokvSearchIndex`, are appropriate for
 local development, tests, and constrained single-process demos, but they are not
@@ -453,7 +457,7 @@ Built-in label predicates (`rdfs:label`, `skos:prefLabel`, `schema:name`) are
 always indexed. Extend with `labelPredicates` on adapter options:
 
 ```typescript
-await createLibsqlAdapter({
+await createLibsqlClient({
   client: db,
   labelPredicates: ["http://example.org/customLabel"],
 });
@@ -467,7 +471,7 @@ alias tokens in `fts_value`.
 After a schema upgrade or bulk ontology import, rebuild all search chunks:
 
 ```typescript
-await client.rebuildSearchIndex({
+await client.reindex({
   include: { graphs: ["http://example.org/ontology"] },
 });
 ```
@@ -509,7 +513,7 @@ At millions of quads, pick the topology at integration time.
 
 | Concern         | Production default                                                                                                           |
 | :-------------- | :--------------------------------------------------------------------------------------------------------------------------- |
-| LibSQL topology | `createLibsqlAdapter` with `LibsqlRdfjsStore` + `LibsqlQuadStore`, no full N3 mirror per request                             |
+| LibSQL topology | `createLibsqlClient` with `LibsqlRdfjsStore` + `LibsqlQuadStore`, no full N3 mirror per request                              |
 | Hot-path SPARQL | Bind at least one term (subject, predicate, or object). Subject-bound property lookups match hexastore perf selective shapes |
 | Avoid at scale  | Unbound `?s ?p ?o` (even with `LIMIT`) on libsqlStore; fullScan degrades to hundreds of ms as quads grow                     |
 | Cardinality     | `LibsqlRdfjsStore.countQuads` is used by Comunica when hexastore SPARQL is wired (no extra adapter config)                   |
@@ -525,8 +529,8 @@ const devScanQuery =
 
 ### Warm container patterns
 
-- **Serverless / edge (warm isolate):** build `Adapter` or `Client` once in
-  module scope per isolate; reuse across HTTP requests.
+- **Serverless / edge (warm isolate):** build one `Client` once in module scope
+  per isolate; reuse across HTTP requests.
 - **Long-running (Fly.io, DigitalOcean, 24/7 Deno):** one `Client` at process
   boot. LibSQL does not require N3 hydration; build one `Client` per
   process/isolate and reuse it across requests.
@@ -537,7 +541,7 @@ const devScanQuery =
 | :----------------------------------- | :------------------------------------------------------------------------------- |
 | `searchIndexOnImport: "incremental"` | Default. Chunks each quad on commit (inline FTS/vector projection).              |
 | `searchIndexOnImport: "deferred"`    | Persists quads on each import, rebuilds FTS/vector chunks in one pass afterward. |
-| `searchIndexOnImport: "disabled"`    | Skips chunking entirely. Call `client.rebuildSearchIndex()` before searching.    |
+| `searchIndexOnImport: "disabled"`    | Skips chunking entirely. Call `client.reindex()` before searching.               |
 
 Use `"deferred"` or `"disabled"` for SPARQL-only bulk loads or large initial
 imports where indexing can happen once at the end.

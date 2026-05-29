@@ -90,14 +90,14 @@ deno task bench:hexastore-perf-large-denokv:full-scan
 for repeat captures, not day-to-day iteration.
 
 Hexastore perf preload uses `searchIndexOnImport: "disabled"` (quads only; the
-timed slice is `execute()`). Do **not** call `Client.rebuildSearchIndex()` in
-these harnesses — it rebuilds FTS/chunks and does not affect execute timings.
-Batched quad `INSERT`s speed the untimed preload / `BENCH_REUSE_DB` cache build.
+timed slice is `execute()`). Do **not** call `Client.reindex()` in these
+harnesses — it rebuilds FTS/chunks and does not affect execute timings. Batched
+quad `INSERT`s speed the untimed preload / `BENCH_REUSE_DB` cache build.
 
 Apps that need `search()` at scale use normal import with inline indexing
 (`"incremental"`, the default), `searchIndexOnImport: "deferred"` (rebuild after
-each import), or `searchIndexOnImport: "disabled"` plus
-`await client.rebuildSearchIndex()` once after bulk load.
+each import), or `searchIndexOnImport: "disabled"` plus `await client.reindex()`
+once after bulk load.
 
 ### SPARQL hexastore perf at 100k–1M (opt-in, local only)
 
@@ -134,8 +134,8 @@ Only `sparqlEngine.execute()` is timed inside `Deno.bench`. Paste results into
 For full import + search preload timing (not the hexastore perf execute table),
 use `searchIndexOnImport: "deferred"` on a dedicated bulk-load client (quads
 first, search index rebuilt after import), or `searchIndexOnImport: "disabled"`
-followed by `await client.rebuildSearchIndex()` when you want quads and search
-repair as separate timed steps.
+followed by `await client.reindex()` when you want quads and search repair as
+separate timed steps.
 
 #### Reusing large fixtures (dev only)
 
@@ -180,7 +180,7 @@ create a fresh database per iteration and use `warmup: 5`, `n: 50`.
   ```
 
 **Production (millions of quads):** prefer
-[`createLibsqlAdapter`](../src/client/adapters/libsql/create-libsql-adapter.ts)
+[`createLibsqlClient`](../src/client/adapters/libsql/create-libsql-client.ts)
 for indexed SPARQL without a full N3 mirror. Track guidance in
 [#68](https://github.com/wazootech/worlds-client-ts/issues/68).
 

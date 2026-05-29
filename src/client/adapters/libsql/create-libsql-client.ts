@@ -1,28 +1,28 @@
-import type { Adapter } from "@/client/client.ts";
+import type { Client } from "@/client/client.ts";
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
 import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
 
 import type { LibsqlClientBaseOptions } from "./libsql-client-base-options.ts";
-import { createLibsqlAdapterFromStores } from "./create-libsql-adapter-from-stores.ts";
-import { createLibsqlAdapterInfrastructure } from "./create-libsql-adapter-infrastructure.ts";
+import { createLibsqlClientFromStores } from "./create-libsql-client-from-stores.ts";
+import { createLibsqlClientInfrastructure } from "./create-libsql-client-infrastructure.ts";
 import { LibsqlQuadStore } from "./libsql-quad-store.ts";
 import { LibsqlRdfjsStore } from "./libsql-rdfjs-store.ts";
 
 /**
- * LibsqlAdapterOptions configures LibSQL execution through LibsqlRdfjsStore and hexastore indexes.
+ * LibsqlClientOptions configures LibSQL execution through LibsqlRdfjsStore and hexastore indexes.
  */
-export interface LibsqlAdapterOptions extends LibsqlClientBaseOptions {
+export interface LibsqlClientOptions extends LibsqlClientBaseOptions {
   /** queryEngine optionally enables built-in Comunica SPARQL over LibsqlRdfjsStore. */
   queryEngine?: ComunicaQueryEngine;
 }
 
 /**
- * createLibsqlAdapter synthesizes a Adapter for LibsqlRdfjsStore + LibsqlQuadStore hexastore indexes.
+ * createLibsqlClient synthesizes a Client for LibsqlRdfjsStore + LibsqlQuadStore hexastore indexes.
  */
-export async function createLibsqlAdapter(
-  options: LibsqlAdapterOptions,
-): Promise<Adapter> {
-  const infrastructure = await createLibsqlAdapterInfrastructure(options);
+export async function createLibsqlClient(
+  options: LibsqlClientOptions,
+): Promise<Client> {
+  const infrastructure = await createLibsqlClientInfrastructure(options);
 
   const libsqlRdfjsStore = new LibsqlRdfjsStore({
     client: options.client,
@@ -36,7 +36,7 @@ export async function createLibsqlAdapter(
     patchSync: infrastructure.patchSync,
   });
 
-  return createLibsqlAdapterFromStores({
+  return createLibsqlClientFromStores({
     infrastructure,
     libsqlQuadStore,
     libsqlRdfjsStore,

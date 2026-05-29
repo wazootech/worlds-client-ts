@@ -1,5 +1,6 @@
 import { Store } from "n3";
-import type { Adapter } from "@/client/client.ts";
+import type { Client } from "@/client/client.ts";
+import { createClientFromDependencies } from "@/client/client.ts";
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
 import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
 import { RdfjsQuadStore } from "./rdfjs-quad-store.ts";
@@ -19,23 +20,23 @@ export interface RdfjsOptions {
 }
 
 /**
- * createRdfjsAdapter synthesizes a lightweight, in-memory client adapter backed entirely by
+ * createRdfjsClient synthesizes a lightweight, in-memory Client backed entirely by
  * local RDFJS primitives. It is the fastest path to a working Client for development, tests,
  * and single-process demos where no external persistence is needed.
  *
- * Unlike createLibsqlAdapter and createDenokvAdapter, there is no synchronization layer — all data exists
+ * Unlike createLibsqlClient and createDenokvClient, there is no synchronization layer — all data exists
  * transiently in the N3 Store and is lost when the process exits.
  */
-export function createRdfjsAdapter(
+export function createRdfjsClient(
   options?: RdfjsOptions,
-): Adapter {
+): Client {
   const store = options?.store ?? new Store();
 
-  return {
+  return createClientFromDependencies({
     quadStore: new RdfjsQuadStore(store),
     searchIndex: new RdfjsSearchIndex(store),
     sparqlEngine: options?.queryEngine
       ? new ComunicaSparqlEngine({ queryEngine: options.queryEngine, store })
       : undefined,
-  };
+  });
 }

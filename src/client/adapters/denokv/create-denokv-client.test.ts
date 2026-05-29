@@ -2,9 +2,8 @@ import { assertEquals, assertExists, assertRejects } from "@std/assert";
 import type * as rdfjs from "@rdfjs/types";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory } from "n3";
-import { Client } from "@/client/client.ts";
 import { DenokvQuadStore } from "./denokv-quad-store.ts";
-import { createDenokvAdapter } from "./create-denokv-adapter.ts";
+import { createDenokvClient } from "./create-denokv-client.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 const queryEngine = new QueryEngine();
@@ -24,11 +23,11 @@ async function seedQuads(
 }
 
 Deno.test(
-  "createDenokvAdapter - import delivers search hits from Deno Kv",
+  "createDenokvClient - import delivers search hits from Deno Kv",
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
-      const client = new Client(createDenokvAdapter({ kv }));
+      const client = createDenokvClient({ kv });
       const testQuad = quad(
         namedNode("urn:person:alice"),
         namedNode("urn:bio"),
@@ -48,11 +47,11 @@ Deno.test(
 );
 
 Deno.test(
-  "createDenokvAdapter - export round-trips imported quads",
+  "createDenokvClient - export round-trips imported quads",
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
-      const client = new Client(createDenokvAdapter({ kv }));
+      const client = createDenokvClient({ kv });
       const testQuad = quad(
         namedNode("urn:doc:1"),
         namedNode("urn:title"),
@@ -75,16 +74,14 @@ Deno.test(
 );
 
 Deno.test(
-  "createDenokvAdapter - queryEngine SPARQL reads from Deno Kv without N3 hydration",
+  "createDenokvClient - queryEngine SPARQL reads from Deno Kv without N3 hydration",
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
-      const client = new Client(
-        createDenokvAdapter({
-          kv,
-          queryEngine,
-        }),
-      );
+      const client = createDenokvClient({
+        kv,
+        queryEngine,
+      });
 
       await client.import({
         source: {
@@ -119,16 +116,14 @@ Deno.test(
 );
 
 Deno.test(
-  "createDenokvAdapter - hydration SPARQL reads latest Deno Kv state",
+  "createDenokvClient - hydration SPARQL reads latest Deno Kv state",
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
-      const client = new Client(
-        createDenokvAdapter({
-          kv,
-          queryEngine,
-        }),
-      );
+      const client = createDenokvClient({
+        kv,
+        queryEngine,
+      });
 
       await seedQuads(kv, [
         quad(
@@ -153,16 +148,14 @@ Deno.test(
 );
 
 Deno.test(
-  "createDenokvAdapter - hydration SPARQL sees quads imported after client construction",
+  "createDenokvClient - hydration SPARQL sees quads imported after client construction",
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
-      const client = new Client(
-        createDenokvAdapter({
-          kv,
-          queryEngine,
-        }),
-      );
+      const client = createDenokvClient({
+        kv,
+        queryEngine,
+      });
 
       await client.import({
         source: {
@@ -196,11 +189,11 @@ Deno.test(
 );
 
 Deno.test(
-  "createDenokvAdapter - sparql rejects when queryEngine is omitted",
+  "createDenokvClient - sparql rejects when queryEngine is omitted",
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
-      const client = new Client(createDenokvAdapter({ kv }));
+      const client = createDenokvClient({ kv });
 
       await assertRejects(
         () => client.sparql({ query: "ASK WHERE { ?s ?p ?o }" }),
