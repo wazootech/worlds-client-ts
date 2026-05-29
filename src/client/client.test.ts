@@ -1,15 +1,16 @@
 import { assertEquals, assertRejects } from "@std/assert";
 import { DataFactory, Store } from "n3";
-import { type Client, createClientFromDependencies } from "./client.ts";
+import { Client } from "./client.ts";
 import { RdfjsQuadStore, RdfjsSearchIndex } from "./adapters/rdfjs/mod.ts";
 import { ComunicaSparqlEngine } from "./adapters/comunica/mod.ts";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { hashQuad } from "./quad-store/mod.ts";
 
+const { quad, namedNode, literal } = DataFactory;
 const queryEngine = new QueryEngine();
 
 function createTestClient(store: Store): Client {
-  return createClientFromDependencies({
+  return new Client({
     quadStore: new RdfjsQuadStore(store),
     sparqlEngine: new ComunicaSparqlEngine({ queryEngine, store }),
     searchIndex: new RdfjsSearchIndex(store),
@@ -61,7 +62,7 @@ Deno.test("Client.sparql delegates to sparqlEngine.execute", async () => {
 
 Deno.test("Client.sparql rejects when sparqlEngine is not configured", async () => {
   const store = new Store();
-  const client = createClientFromDependencies({
+  const client = new Client({
     quadStore: new RdfjsQuadStore(store),
     searchIndex: new RdfjsSearchIndex(store),
   });
@@ -73,12 +74,47 @@ Deno.test("Client.sparql rejects when sparqlEngine is not configured", async () 
   );
 });
 
+Deno.test("Client.import rejects when quadStore is not configured", async () => {
+  const client = new Client({
+    searchIndex: new RdfjsSearchIndex(new Store()),
+  });
+
+  await assertRejects(
+    async () => {
+      await client.import({
+        mode: "merge",
+        source: {
+          kind: "serialized",
+          data: `<http://example.com/s> <http://example.com/p> "x" .`,
+          contentType: "text/turtle",
+        },
+      });
+    },
+    Error,
+    "Quad store is not configured.",
+  );
+});
+
+Deno.test("Client.search rejects when searchIndex is not configured", async () => {
+  const client = new Client({
+    quadStore: new RdfjsQuadStore(new Store()),
+  });
+
+  await assertRejects(
+    async () => {
+      await client.search({ query: "test" });
+    },
+    Error,
+    "Search index is not configured.",
+  );
+});
+
 Deno.test("Client.search delegates to searchIndex.search", async () => {
   const store = new Store();
   store.addQuad(
-    DataFactory.namedNode("http://example.com/sub"),
-    DataFactory.namedNode("http://example.com/pred"),
-    DataFactory.literal("Integrate all systems."),
+    namedNode("http://example.com/sub"),
+    namedNode("http://example.com/pred"),
+    literal("Integrate all systems."),
   );
 
   const client = createTestClient(store);
@@ -90,10 +126,10 @@ Deno.test("Client.search delegates to searchIndex.search", async () => {
 
 Deno.test("Client.search returns stable hashQuad-based search result ids", async () => {
   const store = new Store();
-  const indexedQuad = DataFactory.quad(
-    DataFactory.namedNode("http://example.com/sub"),
-    DataFactory.namedNode("http://example.com/pred"),
-    DataFactory.literal("Integrate all systems."),
+  const indexedQuad = quad(
+    namedNode("http://example.com/sub"),
+    namedNode("http://example.com/pred"),
+    literal("Integrate all systems."),
   );
   store.addQuad(indexedQuad);
 
@@ -110,9 +146,9 @@ Deno.test("Client.search returns stable hashQuad-based search result ids", async
 Deno.test("Client.reindex delegates to searchIndex.reindex", async () => {
   const store = new Store();
   store.addQuad(
-    DataFactory.namedNode("http://example.com/sub"),
-    DataFactory.namedNode("http://example.com/pred"),
-    DataFactory.literal("Reindex noop on RDF/JS."),
+    namedNode("http://example.com/sub"),
+    namedNode("http://example.com/pred"),
+    literal("Reindex noop on RDF/JS."),
   );
 
   const client = createTestClient(store);
@@ -120,4 +156,77 @@ Deno.test("Client.reindex delegates to searchIndex.reindex", async () => {
 
   assertEquals(response.processedQuadCount, store.size);
   assertEquals(response.chunkRowCount, 0);
+});
+
+Deno.test("Client - import delivers immediate search hits", async () => {
+  const store = new Store();
+  const client = new Client({
+    quadStore: new RdfjsQuadStore(store),
+    searchIndex: new RdfjsSearchIndex(store),
+  });
+
+  const testQuad = quad(
+    namedNode("http://example.com/sub"),
+    namedNode("http://example.com/pred"),
+    literal("Factory wiring works."),
+  );
+
+  await client.import({
+    source: { kind: "quads", quads: [testQuad] },
+  });
+
+  const response = await client.search({ query: "wiring" });
+  assertEquals(response.results?.length, 1);
+  assertEquals(response.results?.[0].text, "Factory wiring works.");
+});
+
+Deno.test("Client - preloaded store is shared with the client", async () => {
+  const store = new Store();
+  store.addQuad(
+    namedNode("http://example.com/existing"),
+    namedNode("http://example.com/pred"),
+    literal("Preloaded fact."),
+  );
+
+  const client = new Client({
+    quadStore: new RdfjsQuadStore(store),
+    searchIndex: new RdfjsSearchIndex(store),
+  });
+
+  const response = await client.search({ query: "preloaded" });
+  assertEquals(response.results?.length, 1);
+  assertEquals(store.size, 1);
+});
+
+Deno.test("Client - queryEngine enables SELECT queries", async () => {
+  const store = new Store();
+  const client = new Client({
+    quadStore: new RdfjsQuadStore(store),
+    searchIndex: new RdfjsSearchIndex(store),
+    sparqlEngine: new ComunicaSparqlEngine({ queryEngine, store }),
+  });
+
+  await client.import({
+    source: {
+      kind: "quads",
+      quads: [
+        quad(
+          namedNode("http://example.com/s"),
+          namedNode("http://example.com/p"),
+          literal("hello"),
+        ),
+      ],
+    },
+  });
+
+  const response = await client.sparql({
+    query:
+      "SELECT ?text WHERE { <http://example.com/s> <http://example.com/p> ?text }",
+  });
+
+  if (response.kind !== "select") {
+    throw new Error("Expected select response kind");
+  }
+  assertEquals(response.data.results.bindings.length, 1);
+  assertEquals(response.data.results.bindings[0].text?.value, "hello");
 });

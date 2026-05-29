@@ -1,5 +1,5 @@
 import { tool } from "ai";
-import type { Client } from "@worlds/client";
+import type { ClientInterface } from "@worlds/client";
 import type { ImportRequest } from "@worlds/client/quad-store";
 import { z } from "zod";
 
@@ -16,7 +16,7 @@ export type SerializedImportRequest = Omit<ImportRequest, "source"> & {
  * @param client The Worlds Client instance.
  * @returns An AI SDK tool for importing data into the knowledge base.
  */
-export function createImportRdfTool(client: Client) {
+export function createImportRdfTool(client: ClientInterface) {
   return tool({
     description:
       "Import serialized RDF data (like Turtle or N-Triples) into the knowledge base. Useful for storing new factual statements or relations.",

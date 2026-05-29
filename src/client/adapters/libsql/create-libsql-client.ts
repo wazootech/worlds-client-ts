@@ -1,4 +1,4 @@
-import type { Client } from "@/client/client.ts";
+import type { ClientInterface } from "@/client/client.ts";
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
 import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
 
@@ -21,7 +21,7 @@ export interface LibsqlClientOptions extends LibsqlClientBaseOptions {
  */
 export async function createLibsqlClient(
   options: LibsqlClientOptions,
-): Promise<Client> {
+): Promise<ClientInterface> {
   const infrastructure = await createLibsqlClientInfrastructure(options);
 
   const libsqlRdfjsStore = new LibsqlRdfjsStore({

@@ -1,7 +1,7 @@
 import { createClient } from "@libsql/client";
 import type { Quad } from "@rdfjs/types";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
-import type { Client } from "@worlds/client";
+import type { ClientInterface } from "@worlds/client";
 import { createDenokvClient } from "@worlds/client/adapters/denokv";
 import { createLibsqlClient } from "@worlds/client/adapters/libsql";
 import {
@@ -69,7 +69,7 @@ export const denokvHexastorePerfBackends = [
 /** PreloadedSparqlFixture holds a warmed Client and its storage handle. */
 export interface PreloadedSparqlFixture {
   /** client executes SPARQL against the preloaded corpus. */
-  client: Client;
+  client: ClientInterface;
   /** databaseClient is set for libsqlStore fixtures. */
   databaseClient?: ReturnType<typeof createClient>;
   /** kv is set for denokvStore fixtures. */

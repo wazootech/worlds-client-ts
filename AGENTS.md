@@ -328,15 +328,19 @@ cardinality hints. Use `await createLibsqlClient({ client, queryEngine })`.
 
 ### Client lifecycle (runtime)
 
-Canonical construction: `await createLibsqlClient(...)` /
-`createRdfjsClient(...)` / `createDenokvClient(...)` — factories return the
-`Client` interface directly.
+**In-memory:**
+`new Client({ quadStore: new RdfjsQuadStore(store), searchIndex: new RdfjsSearchIndex(store), sparqlEngine? })`
+with an N3 `Store`.
 
-For standard Comunica SPARQL, pass a Comunica `queryEngine` into client factory
-options (e.g. `createLibsqlClient({ queryEngine })`).
+**Durable:** `await createLibsqlClient(...)` / `createDenokvClient(...)` —
+factories return `ClientInterface` instances (`new Client` internally).
 
-Custom assembly uses `createClientFromDependencies` with `ClientDependencies`
-for tests; advanced LibSQL warm-start uses `createLibsqlClientFromStores`.
+For standard Comunica SPARQL, pass a Comunica `queryEngine` into factory options
+(e.g. `createLibsqlClient({ queryEngine })`) or wire `ComunicaSparqlEngine` when
+assembling `new Client` manually.
+
+Custom assembly uses `new Client` with `ClientOptions`; advanced LibSQL
+warm-start uses `createLibsqlClientFromStores`.
 
 - **Long-running (Fly.io, DigitalOcean, 24/7 Deno):** one `Client` at process
   boot. See [`examples/libsql-long-running`](examples/libsql-long-running).
@@ -364,17 +368,26 @@ trivial container-level caching across sequential HTTP invocations.
 
 All active instrumentation (proxies, observers, and transactional mutation
 queues) is isolated strictly inside adapters (e.g. `createLibsqlClient`). The
-`Client` interface is the portable API; factories wire topology-specific stores
-behind it.
+`ClientInterface` contract is the portable API; `Client` and durable factories
+wire topology-specific stores behind it.
 
-### Production deployment recommendation
+### Topology decision (LibSQL vs Deno KV vs in-memory)
 
-For production deployments and scale, the recommended topology is LibSQL-backed
-infrastructure through `createLibsqlClient`, especially Turso Cloud.
-RDFJS-backed and Deno KV-backed search/index topologies, including deployments
-centered on `RdfjsSearchIndex` and `DenokvSearchIndex`, are appropriate for
-local development, tests, and constrained single-process demos, but they are not
-the recommended production path.
+**Production default:** `createLibsqlClient` when you need hybrid FTS/vector
+search, Turso/SQLite operations, and fast cold hexastore preload at scale (see
+[`benchmarks/README.md`](benchmarks/README.md) and
+[discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69)).
+
+**Consider Deno KV** when Deno Deploy / KV is fixed, the graph is warm or
+preloaded (`BENCH_REUSE_DB`-style reuse), and the hot path is subject-bound
+SPARQL execute — benchmarks show faster post-preload execute at 10k+ quads vs
+LibSQL, but much slower cold import/preload.
+
+**Avoid Deno KV for** cold large imports, hybrid search at scale, and workloads
+needing FTS5 + vectors (`DenokvSearchIndex` is O(N) scan).
+
+**In-memory RDF/JS:** `new Client` + `RdfjsQuadStore` / `RdfjsSearchIndex` for
+tests, local dev, and single-process demos only.
 
 ### Resilient hybrid search with vectorless fallbacks
 

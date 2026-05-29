@@ -1,6 +1,6 @@
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
 import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
-import type { Client } from "@/client/client.ts";
+import type { ClientInterface } from "@/client/client.ts";
 import { createDenokvClientFromStores } from "./create-denokv-client-from-stores.ts";
 import type { DenokvQuadStoreOptions } from "./denokv-quad-store.ts";
 import { DenokvQuadStore } from "./denokv-quad-store.ts";
@@ -20,7 +20,7 @@ export interface DenokvClientOptions extends DenokvQuadStoreOptions {
  */
 export function createDenokvClient(
   options: DenokvClientOptions,
-): Client {
+): ClientInterface {
   const denokvQuadStore = new DenokvQuadStore(options);
   const denokvRdfjsStore = new DenokvRdfjsStore(options);
 

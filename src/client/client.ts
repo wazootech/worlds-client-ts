@@ -18,9 +18,9 @@ import type {
 } from "./search-index/mod.ts";
 
 /**
- * Client is the public contract for the Worlds API.
+ * ClientInterface is the public contract for the Worlds API.
  */
-export interface Client {
+export interface ClientInterface {
   /**
    * import imports data into the Worlds API.
    * @param request The import request body.
@@ -58,35 +58,59 @@ export interface Client {
 }
 
 /**
- * ClientDependencies wires quad, SPARQL, and search facades for custom assembly and tests.
+ * ClientOptions wires quad, SPARQL, and search facades for custom assembly and tests.
  */
-export interface ClientDependencies {
+export interface ClientOptions {
   /** quadStore manages the ingestion and extraction of triple/quad data. */
-  quadStore: QuadStoreInterface;
+  quadStore?: QuadStoreInterface;
 
   /** sparqlEngine evaluates declarative queries and updates against the graph. */
   sparqlEngine?: SparqlEngineInterface;
 
   /** searchIndex enables high-performance keyword search across the graph literals. */
-  searchIndex: SearchIndexInterface;
+  searchIndex?: SearchIndexInterface;
 }
 
 /**
- * createClientFromDependencies synthesizes a Client from wired subsystems.
+ * Client synthesizes a Worlds API facade from wired quad, SPARQL, and search subsystems.
  */
-export function createClientFromDependencies(
-  dependencies: ClientDependencies,
-): Client {
-  return {
-    import: (request) => dependencies.quadStore.import(request),
-    export: (request) => dependencies.quadStore.export(request),
-    sparql: async (request) => {
-      if (!dependencies.sparqlEngine) {
-        throw new Error("SPARQL engine is not configured.");
-      }
-      return await dependencies.sparqlEngine.execute(request);
-    },
-    search: (request) => dependencies.searchIndex.search(request),
-    reindex: (request) => dependencies.searchIndex.reindex(request),
-  };
+export class Client implements ClientInterface {
+  public constructor(
+    private readonly options: ClientOptions,
+  ) {}
+
+  public import(request: ImportRequest): Promise<void> {
+    if (!this.options.quadStore) {
+      throw new Error("Quad store is not configured.");
+    }
+    return this.options.quadStore.import(request);
+  }
+
+  public export(request: ExportRequest): Promise<ExportResponse> {
+    if (!this.options.quadStore) {
+      throw new Error("Quad store is not configured.");
+    }
+    return this.options.quadStore.export(request);
+  }
+
+  public async sparql(request: SparqlRequest): Promise<SparqlResponse> {
+    if (!this.options.sparqlEngine) {
+      throw new Error("SPARQL engine is not configured.");
+    }
+    return await this.options.sparqlEngine.execute(request);
+  }
+
+  public search(request: SearchRequest): Promise<SearchResponse> {
+    if (!this.options.searchIndex) {
+      throw new Error("Search index is not configured.");
+    }
+    return this.options.searchIndex.search(request);
+  }
+
+  public reindex(request?: ReindexRequest): Promise<ReindexResponse> {
+    if (!this.options.searchIndex) {
+      throw new Error("Search index is not configured.");
+    }
+    return this.options.searchIndex.reindex(request);
+  }
 }

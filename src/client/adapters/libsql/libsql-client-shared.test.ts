@@ -3,7 +3,7 @@ import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory } from "n3";
 
-import type { Client } from "@/client/client.ts";
+import type { ClientInterface } from "@/client/client.ts";
 import type { LibsqlClientOptions } from "@/client/adapters/libsql/create-libsql-client.ts";
 import { createLibsqlClient } from "@/client/adapters/libsql/create-libsql-client.ts";
 
@@ -22,7 +22,7 @@ const expectedHexastoreIndexNames = [
 
 interface LibsqlClientFixture {
   label: string;
-  createClient: (options: LibsqlClientOptions) => Promise<Client>;
+  createClient: (options: LibsqlClientOptions) => Promise<ClientInterface>;
 }
 
 const libsqlClientFixtures: LibsqlClientFixture[] = [

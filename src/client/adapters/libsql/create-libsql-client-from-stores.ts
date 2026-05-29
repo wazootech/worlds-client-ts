@@ -1,5 +1,5 @@
-import type { Client } from "@/client/client.ts";
-import { createClientFromDependencies } from "@/client/client.ts";
+import { Client } from "@/client/client.ts";
+import type { ClientInterface } from "@/client/client.ts";
 import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
 import type { LibsqlQuadStore } from "./libsql-quad-store.ts";
 import type { LibsqlRdfjsStore } from "./libsql-rdfjs-store.ts";
@@ -29,13 +29,13 @@ export interface LibsqlClientFromStoresOptions {
  */
 export function createLibsqlClientFromStores(
   options: LibsqlClientFromStoresOptions,
-): Client {
+): ClientInterface {
   const { searchIndex } = options.infrastructure;
   const configuredSparqlEngine = options.createSparqlEngine?.({
     store: options.libsqlRdfjsStore,
   });
 
-  return createClientFromDependencies({
+  return new Client({
     quadStore: options.libsqlQuadStore,
     sparqlEngine: configuredSparqlEngine
       ? {

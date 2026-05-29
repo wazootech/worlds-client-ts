@@ -1,5 +1,5 @@
 import { tool } from "ai";
-import type { Client } from "@worlds/client";
+import type { ClientInterface } from "@worlds/client";
 import type {
   SearchRequest,
   SearchResponse,
@@ -13,7 +13,7 @@ import { SEARCH_WORLD_TOOL_DESCRIPTION } from "./agent-tool-descriptions.ts";
  * @param client The Worlds Client instance.
  * @returns An AI SDK tool for searching the knowledge base.
  */
-export function createSearchWorldTool(client: Client) {
+export function createSearchWorldTool(client: ClientInterface) {
   return tool({
     description: SEARCH_WORLD_TOOL_DESCRIPTION,
     inputSchema: z.object({

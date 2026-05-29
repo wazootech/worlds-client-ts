@@ -1,4 +1,4 @@
-import type { Client } from "@worlds/client";
+import type { ClientInterface } from "@worlds/client";
 import { createDenokvClient } from "@worlds/client/adapters/denokv";
 import { generateSyntheticQuads } from "./shared/synthetic-data.ts";
 
@@ -15,7 +15,7 @@ const writeBenchIterations = 50;
  * setupIsolatedClient establishes an ephemeral in-memory Deno.Kv and returns a client.
  */
 async function setupIsolatedClient(): Promise<{
-  client: Client;
+  client: ClientInterface;
   kv: Deno.Kv;
 }> {
   const kv = await Deno.openKv(":memory:");
@@ -27,7 +27,7 @@ async function setupIsolatedClient(): Promise<{
  * createPreloadedClient persists a specified number of quads prior to timing trials.
  */
 async function createPreloadedClient(count: number): Promise<{
-  client: Client;
+  client: ClientInterface;
   kv: Deno.Kv;
 }> {
   const { client, kv } = await setupIsolatedClient();

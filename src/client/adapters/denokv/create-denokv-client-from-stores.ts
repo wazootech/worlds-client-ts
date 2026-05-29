@@ -1,5 +1,5 @@
-import type { Client } from "@/client/client.ts";
-import { createClientFromDependencies } from "@/client/client.ts";
+import { Client } from "@/client/client.ts";
+import type { ClientInterface } from "@/client/client.ts";
 import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
 import type { SearchIndexInterface } from "@/client/search-index/mod.ts";
 import type { DenokvQuadStore } from "./denokv-quad-store.ts";
@@ -27,8 +27,8 @@ export interface DenokvClientFromStoresOptions {
  */
 export function createDenokvClientFromStores(
   options: DenokvClientFromStoresOptions,
-): Client {
-  return createClientFromDependencies({
+): ClientInterface {
+  return new Client({
     quadStore: options.denokvQuadStore,
     searchIndex: options.searchIndex,
     sparqlEngine: options.sparqlEngine,

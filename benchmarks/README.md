@@ -41,10 +41,11 @@ deno bench --allow-all --unstable-kv benchmarks/
 
 ### SPARQL hexastore performance (LibSQL + Denokv)
 
-The LibSQL bench is the existing production hexastore execute harness. The
-Denokv bench runs the **same** preload + selective SPARQL execute methodology
-against `DenokvRdfjsStore` (local / single-process; not a production
-recommendation).
+The LibSQL bench is the production-default hexastore execute harness. The Denokv
+bench runs the **same** preload + selective SPARQL execute methodology against
+`DenokvRdfjsStore` — useful for Deno-native comparisons; not the default when
+you need hybrid search or fast cold bulk load (see tables below and discussion
+#69).
 
 LibSQL:
 
@@ -179,10 +180,11 @@ create a fresh database per iteration and use `warmup: 5`, `n: 50`.
   deno bench --allow-all --v8-flags=--trace-gc benchmarks/sparql-hexastore-perf-libsql.bench.ts
   ```
 
-**Production (millions of quads):** prefer
+**Production (millions of quads):** default to
 [`createLibsqlClient`](../src/client/adapters/libsql/create-libsql-client.ts)
-for indexed SPARQL without a full N3 mirror. Track guidance in
-[#68](https://github.com/wazootech/worlds-client-ts/issues/68).
+for hybrid search and faster preload; consider `createDenokvClient` only when
+benchmark tradeoffs match your deployment (warm graph, selective SPARQL). Track
+guidance in [#68](https://github.com/wazootech/worlds-client-ts/issues/68).
 
 Baselines in the **pre-preload** table (below) are **not** directly comparable
 to **post-preload** captures.

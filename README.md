@@ -34,11 +34,23 @@ deno add jsr:@worlds/client
 ## Quickstart
 
 ```typescript
-import { createRdfjsClient } from "@worlds/client/adapters/rdfjs";
+import { Client } from "@worlds/client";
+import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import {
+  RdfjsQuadStore,
+  RdfjsSearchIndex,
+} from "@worlds/client/adapters/rdfjs";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
+import { Store } from "n3";
 
-const client = createRdfjsClient({
-  queryEngine: new QueryEngine(),
+const store = new Store();
+const client = new Client({
+  quadStore: new RdfjsQuadStore(store),
+  searchIndex: new RdfjsSearchIndex(store),
+  sparqlEngine: new ComunicaSparqlEngine({
+    queryEngine: new QueryEngine(),
+    store,
+  }),
 });
 
 await client.import({
@@ -61,8 +73,9 @@ console.log(sparqlResponse);
 ```
 
 > [!TIP]
-> For production, use the LibSQL adapter with Turso Cloud. See
-> [Adapters](#adapters) below.
+> For production search and scale, use LibSQL with Turso Cloud. Deno KV can win
+> on selective post-preload SPARQL in warm Deno deployments — see
+> [Adapters](#adapters) and [benchmarks](benchmarks/README.md).
 
 ## Core concepts
 
@@ -77,24 +90,42 @@ for structured traversal and reasoning.
 
 ## Adapters
 
-| Adapter | Best for                      | Persistence          | SPARQL                             |
-| :------ | :---------------------------- | :------------------- | :--------------------------------- |
-| RDFJS   | Dev, tests, demos             | None (in-memory)     | Via Comunica over N3 store         |
-| LibSQL  | Production, scale             | SQLite / Turso Cloud | LibsqlRdfjsStore hexastore indexes |
-| Deno KV | Prototyping, constrained edge | Deno KV store        | Via Comunica over KV-backed store  |
+| Adapter               | Best for                                  | Persistence          | SPARQL                             |
+| :-------------------- | :---------------------------------------- | :------------------- | :--------------------------------- |
+| RDF/JS (in-memory N3) | Dev, tests, demos                         | None (in-memory)     | Comunica over N3 `Store`           |
+| LibSQL                | Production default (search + bulk load)   | SQLite / Turso Cloud | LibsqlRdfjsStore hexastore indexes |
+| Deno KV               | Deno-native, warm graph, selective SPARQL | Deno KV store        | DenokvRdfjsStore hexastore indexes |
 
-### RDFJS (in-memory)
+**Choosing LibSQL vs Deno KV:** LibSQL is the default for hybrid FTS/vector
+search and faster cold hexastore preload at scale. Deno KV can be faster on
+selective SPARQL execute after preload in long-lived or cached processes —
+compare backends in [benchmarks/README.md](benchmarks/README.md) and
+[discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69).
+
+### RDF/JS (in-memory N3)
 
 ```typescript
-import { createRdfjsClient } from "@worlds/client/adapters/rdfjs";
+import { Client } from "@worlds/client";
+import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import {
+  RdfjsQuadStore,
+  RdfjsSearchIndex,
+} from "@worlds/client/adapters/rdfjs";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
+import { Store } from "n3";
 
-const client = createRdfjsClient({
-  queryEngine: new QueryEngine(),
+const store = new Store();
+const client = new Client({
+  quadStore: new RdfjsQuadStore(store),
+  searchIndex: new RdfjsSearchIndex(store),
+  sparqlEngine: new ComunicaSparqlEngine({
+    queryEngine: new QueryEngine(),
+    store,
+  }),
 });
 ```
 
-### LibSQL (production)
+### LibSQL (production default)
 
 ```typescript
 import { createLibsqlClient } from "@worlds/client/adapters/libsql";
@@ -108,7 +139,7 @@ const client = await createLibsqlClient({
 });
 ```
 
-### Deno KV (prototyping)
+### Deno KV (Deno-native durable)
 
 ```typescript
 import { createDenokvClient } from "@worlds/client/adapters/denokv";

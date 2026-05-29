@@ -4,9 +4,12 @@
 
 ### Breaking
 
-- Removed exported `Adapter` and the `Client` class. **`Client`** is now the
-  public interface (formerly `ClientInterface`). Factories return `Client`
-  directly: `createLibsqlClient`, `createRdfjsClient`, `createDenokvClient`.
+- Removed exported `Adapter`. **`ClientInterface`** is the public contract;
+  **`Client`** is the exported class
+  (`new Client({ quadStore, searchIndex,
+  sparqlEngine? })`). Durable backends:
+  `createLibsqlClient`, `createDenokvClient`. **Removed `createRdfjsClient`** —
+  wire in-memory N3 with `RdfjsQuadStore` / `RdfjsSearchIndex` explicitly.
 - Renamed `createLibsqlAdapter` → `createLibsqlClient` (and matching
   `createLibsqlClientFromStores`, `createLibsqlClientInfrastructure`,
   `LibsqlClientOptions`, `LibsqlClientInfrastructure`). Same pattern for RDF/JS
@@ -30,6 +33,22 @@ await client.rebuildSearchIndex();
 import { createLibsqlClient } from "@worlds/client/adapters/libsql";
 const client = await createLibsqlClient({ client: db, queryEngine });
 await client.reindex();
+
+// In-memory (replaces createRdfjsClient)
+import { Client } from "@worlds/client";
+import {
+  RdfjsQuadStore,
+  RdfjsSearchIndex,
+} from "@worlds/client/adapters/rdfjs";
+import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import { Store } from "n3";
+
+const store = new Store();
+const memoryClient = new Client({
+  quadStore: new RdfjsQuadStore(store),
+  searchIndex: new RdfjsSearchIndex(store),
+  sparqlEngine: new ComunicaSparqlEngine({ queryEngine, store }),
+});
 ```
 
 ### Changed
