@@ -1,5 +1,4 @@
 import { createClient } from "@libsql/client";
-import { createComunicaLibsqlSparqlEngineFactory } from "@worlds/client/adapters/comunica";
 import { Client } from "@worlds/client";
 import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
 import { UniversalSentenceEncoderEmbeddingService } from "@worlds/client/adapters/tfjs-universal-sentence-encoder";
@@ -57,9 +56,7 @@ if (import.meta.main) {
       client: databaseClient,
       embeddingService,
       vectorDimensions: USE_LITE_VECTOR_DIMENSIONS,
-      createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
-        queryEngine,
-      }),
+      queryEngine,
     }),
   );
   console.log("Gateway operational.");

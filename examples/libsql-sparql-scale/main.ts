@@ -1,7 +1,6 @@
 import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { Client } from "@worlds/client";
-import { createComunicaLibsqlSparqlEngineFactory } from "@worlds/client/adapters/comunica";
 import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
 import { DataFactory } from "n3";
 
@@ -21,9 +20,7 @@ if (import.meta.main) {
   const client = new Client(
     await createLibsqlAdapter({
       client: databaseClient,
-      createSparqlEngine: createComunicaLibsqlSparqlEngineFactory({
-        queryEngine,
-      }),
+      queryEngine,
     }),
   );
 
@@ -62,7 +59,5 @@ if (import.meta.main) {
   const scanResponse = await client.sparql({ query: devOnlyScanQuery });
   console.log(JSON.stringify(scanResponse, null, 2));
 
-  console.log(
-    "\nFor warm isolates: deno task example:libsql-n3-warm-container:n3",
-  );
+  // (intentionally no warm-isolate N3 guidance; hexastore is the single LibSQL path)
 }

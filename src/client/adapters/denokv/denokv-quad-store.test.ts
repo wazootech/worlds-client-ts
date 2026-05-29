@@ -48,9 +48,10 @@ Deno.test("DenokvQuadStore.import - [Tracer Bullet] merge mode stores and export
   }
 });
 
-Deno.test("DenokvQuadStore.import - replace mode wipes existing data before importing", async () => {
+Deno.test("DenokvQuadStore.import - replace mode switches generation and hides prior quads", async () => {
   const kv = await Deno.openKv(":memory:");
-  const store = new DenokvQuadStore({ kv });
+  const keyPrefix = ["quads"];
+  const store = new DenokvQuadStore({ kv, keyPrefix });
 
   try {
     await store.import({
@@ -73,6 +74,14 @@ Deno.test("DenokvQuadStore.import - replace mode wipes existing data before impo
 
     assertEquals(response.quads.length, 1);
     assertEquals(response.quads[0].subject.value, q2.subject.value);
+
+    let staleGenerationKeyCount = 0;
+    for await (
+      const _entry of kv.list({ prefix: [...keyPrefix, "g", 0] })
+    ) {
+      staleGenerationKeyCount++;
+    }
+    assertEquals(staleGenerationKeyCount, 0);
   } finally {
     kv.close();
   }
@@ -119,6 +128,35 @@ Deno.test("DenokvQuadStore.import - source: serialized parses Turtle successfull
 
     assertEquals(response.quads.length, 1);
     assertEquals(response.quads[0].subject.value, "http://example.org/s3");
+  } finally {
+    kv.close();
+  }
+});
+
+Deno.test("DenokvQuadStore.import - long literals use kv-toolbox batchedAtomic commits", async () => {
+  const kv = await Deno.openKv(":memory:");
+  const store = new DenokvQuadStore({ kv });
+
+  try {
+    const longLiteralQuads = Array.from({ length: 100 }, (_, index) =>
+      quad(
+        namedNode(`urn:entity:${index}`),
+        namedNode(`urn:property:${index % 10}`),
+        literal(
+          `Synthetic crossover-style payload ${index}: ${"word ".repeat(30)}`,
+        ),
+      ));
+
+    await store.import({
+      source: { kind: "quads", quads: longLiteralQuads },
+    });
+
+    const response = await store.export({ format: { kind: "quads" } });
+    if (response.kind !== "quads") {
+      throw new Error("Expected quads format");
+    }
+
+    assertEquals(response.quads.length, 100);
   } finally {
     kv.close();
   }

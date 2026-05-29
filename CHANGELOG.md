@@ -2,6 +2,44 @@
 
 ## Unreleased
 
+### Changed
+
+- LibSQL SPARQL is configured by passing a Comunica `queryEngine` directly into
+  adapter options (no `createSparqlEngine` callback or factory helper).
+- Deno KV SPARQL reads through a KV-backed RDF/JS store (no per-query N3
+  hydration).
+- Deno KV `import({ mode: "replace" })` uses an atomic dataset-generation
+  pointer instead of prefix-wide deletes; `match()`, `export`, and search scan
+  the active generation only.
+- Deno KV hexastore `match()` routing is covered by LibSQL-aligned integration
+  tests (predicate-, object-, and graph-first patterns).
+- Deno KV `replace` garbage-collects orphaned generation keys, adds `idx_sopg`
+  (subject+object) index family, and exposes `countQuads` on `DenokvRdfjsStore`
+  for Comunica cardinality hints.
+- Deno KV hexastore defaults to **seven** quad-native index families (`psog`,
+  `opsg` added for full S-P-O-G coverage); re-import or `replace` to backfill
+  index keys on existing KV data.
+
+### Breaking
+
+- Removed `@worlds/client/adapters/libsql-n3` (`createLibsqlN3Adapter`) and
+  `@worlds/client/quad-store/n3` (`createProxiedN3Store`).
+- Removed `createComunicaSparqlEngineFactory` and `createSparqlEngine` adapter
+  callbacks; pass `queryEngine` into adapter options instead.
+
+### Migration
+
+```typescript
+// Before
+import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+
+createSparqlEngine: ({ store }) =>
+  new ComunicaSparqlEngine({ queryEngine, store }),
+
+// After
+queryEngine,
+```
+
 ## 0.0.15
 
 ### Breaking

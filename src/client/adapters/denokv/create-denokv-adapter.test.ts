@@ -3,7 +3,6 @@ import type * as rdfjs from "@rdfjs/types";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory } from "n3";
 import { Client } from "@/client/client.ts";
-import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
 import { DenokvQuadStore } from "./denokv-quad-store.ts";
 import { createDenokvAdapter } from "./create-denokv-adapter.ts";
 
@@ -76,6 +75,50 @@ Deno.test(
 );
 
 Deno.test(
+  "createDenokvAdapter - queryEngine SPARQL reads from Deno Kv without N3 hydration",
+  async () => {
+    const kv = await Deno.openKv(":memory:");
+    try {
+      const client = new Client(
+        createDenokvAdapter({
+          kv,
+          queryEngine,
+        }),
+      );
+
+      await client.import({
+        source: {
+          kind: "quads",
+          quads: [
+            quad(
+              namedNode("urn:person:dana"),
+              namedNode("urn:bio"),
+              literal("Dana surveys alpine ridgelines."),
+            ),
+          ],
+        },
+      });
+
+      const response = await client.sparql({
+        query: "SELECT ?text WHERE { <urn:person:dana> <urn:bio> ?text }",
+      });
+
+      if (response.kind !== "select") {
+        throw new Error("Expected select response kind");
+      }
+
+      assertEquals(response.data.results.bindings.length, 1);
+      assertEquals(
+        response.data.results.bindings[0].text?.value,
+        "Dana surveys alpine ridgelines.",
+      );
+    } finally {
+      kv.close();
+    }
+  },
+);
+
+Deno.test(
   "createDenokvAdapter - hydration SPARQL reads latest Deno Kv state",
   async () => {
     const kv = await Deno.openKv(":memory:");
@@ -83,8 +126,7 @@ Deno.test(
       const client = new Client(
         createDenokvAdapter({
           kv,
-          createSparqlEngine: ({ store }) =>
-            new ComunicaSparqlEngine({ queryEngine, store }),
+          queryEngine,
         }),
       );
 
@@ -118,8 +160,7 @@ Deno.test(
       const client = new Client(
         createDenokvAdapter({
           kv,
-          createSparqlEngine: ({ store }) =>
-            new ComunicaSparqlEngine({ queryEngine, store }),
+          queryEngine,
         }),
       );
 
@@ -155,7 +196,7 @@ Deno.test(
 );
 
 Deno.test(
-  "createDenokvAdapter - sparql rejects when createSparqlEngine is omitted",
+  "createDenokvAdapter - sparql rejects when queryEngine is omitted",
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {

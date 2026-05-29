@@ -1,6 +1,7 @@
 import { Store } from "n3";
 import type { Adapter } from "@/client/client.ts";
-import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
+import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
+import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
 import { RdfjsQuadStore } from "./rdfjs-quad-store.ts";
 import { RdfjsSearchIndex } from "./rdfjs-search-index.ts";
 
@@ -13,12 +14,8 @@ export interface RdfjsOptions {
    */
   store?: Store;
 
-  /**
-   * createSparqlEngine optionally attaches a caller-provided SPARQL engine over the adapter-managed store.
-   */
-  createSparqlEngine?: (
-    options: { store: Store },
-  ) => SparqlEngineInterface;
+  /** queryEngine optionally enables built-in Comunica SPARQL over the adapter-managed store. */
+  queryEngine?: ComunicaQueryEngine;
 }
 
 /**
@@ -37,6 +34,8 @@ export function createRdfjsAdapter(
   return {
     quadStore: new RdfjsQuadStore(store),
     searchIndex: new RdfjsSearchIndex(store),
-    sparqlEngine: options?.createSparqlEngine?.({ store }),
+    sparqlEngine: options?.queryEngine
+      ? new ComunicaSparqlEngine({ queryEngine: options.queryEngine, store })
+      : undefined,
   };
 }

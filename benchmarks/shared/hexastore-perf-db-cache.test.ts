@@ -5,13 +5,13 @@ import { Client } from "@worlds/client";
 import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
 import type { Quad } from "@rdfjs/types";
 import {
-  buildCrossoverFixtureChecksumInputs,
-  computeCrossoverFixtureChecksum,
-  readCrossoverFixtureManifest,
-  resolveCrossoverDbCachePaths,
-  validateCachedLibsqlCrossoverDatabase,
-  writeCrossoverFixtureManifest,
-} from "./crossover-db-cache.ts";
+  buildHexastorePerfFixtureChecksumInputs,
+  computeHexastorePerfFixtureChecksum,
+  readHexastorePerfFixtureManifest,
+  resolveHexastorePerfDbCachePaths,
+  validateCachedLibsqlHexastorePerfDatabase,
+  writeHexastorePerfFixtureManifest,
+} from "./hexastore-perf-db-cache.ts";
 import { generateSyntheticQuads } from "./synthetic-data.ts";
 
 async function importCorpusIntoLibsqlHexastoreForTest(
@@ -29,11 +29,16 @@ async function importCorpusIntoLibsqlHexastoreForTest(
 }
 
 Deno.test(
-  "computeCrossoverFixtureChecksum - stable digest for identical inputs",
+  "computeHexastorePerfFixtureChecksum - stable digest for identical inputs",
   async () => {
-    const checksumInputs = buildCrossoverFixtureChecksumInputs(1000);
-    const firstChecksum = await computeCrossoverFixtureChecksum(checksumInputs);
-    const secondChecksum = await computeCrossoverFixtureChecksum(
+    const checksumInputs = buildHexastorePerfFixtureChecksumInputs(
+      1000,
+      "libsqlStore",
+    );
+    const firstChecksum = await computeHexastorePerfFixtureChecksum(
+      checksumInputs,
+    );
+    const secondChecksum = await computeHexastorePerfFixtureChecksum(
       checksumInputs,
     );
     assertEquals(firstChecksum, secondChecksum);
@@ -41,17 +46,20 @@ Deno.test(
 );
 
 Deno.test(
-  "computeCrossoverFixtureChecksum - different corpus version changes digest",
+  "computeHexastorePerfFixtureChecksum - different corpus version changes digest",
   async () => {
-    const baselineInputs = buildCrossoverFixtureChecksumInputs(1000);
-    const baselineChecksum = await computeCrossoverFixtureChecksum(
+    const baselineInputs = buildHexastorePerfFixtureChecksumInputs(
+      1000,
+      "libsqlStore",
+    );
+    const baselineChecksum = await computeHexastorePerfFixtureChecksum(
       baselineInputs,
     );
     const alteredInputs = {
       ...baselineInputs,
       syntheticCorpusVersion: baselineInputs.syntheticCorpusVersion + 1,
     };
-    const alteredChecksum = await computeCrossoverFixtureChecksum(
+    const alteredChecksum = await computeHexastorePerfFixtureChecksum(
       alteredInputs,
     );
     assertNotEquals(baselineChecksum, alteredChecksum);
@@ -59,9 +67,9 @@ Deno.test(
 );
 
 Deno.test(
-  "resolveCrossoverDbCachePaths - names libsqlStore database and manifest files",
+  "resolveHexastorePerfDbCachePaths - names libsqlStore database and manifest files",
   () => {
-    const cachePaths = resolveCrossoverDbCachePaths(10, "libsqlStore");
+    const cachePaths = resolveHexastorePerfDbCachePaths(10, "libsqlStore");
     assertEquals(cachePaths.databasePath.endsWith("libsqlStore-10.db"), true);
     assertEquals(cachePaths.manifestPath.endsWith("libsqlStore-10.json"), true);
     assertEquals(
@@ -72,7 +80,19 @@ Deno.test(
 );
 
 Deno.test(
-  "validateCachedLibsqlCrossoverDatabase - accepts quads-only in-memory fixture",
+  "resolveHexastorePerfDbCachePaths - names denokvStore KV directory and manifest files",
+  () => {
+    const cachePaths = resolveHexastorePerfDbCachePaths(10, "denokvStore");
+    assertEquals(
+      cachePaths.kvDirectoryPath.endsWith("denokvStore-10"),
+      true,
+    );
+    assertEquals(cachePaths.manifestPath.endsWith("denokvStore-10.json"), true);
+  },
+);
+
+Deno.test(
+  "validateCachedLibsqlHexastorePerfDatabase - accepts quads-only in-memory fixture",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
     try {
@@ -80,10 +100,10 @@ Deno.test(
         databaseClient,
         generateSyntheticQuads(10),
       );
-      const expectedChecksum = await computeCrossoverFixtureChecksum(
-        buildCrossoverFixtureChecksumInputs(10),
+      const expectedChecksum = await computeHexastorePerfFixtureChecksum(
+        buildHexastorePerfFixtureChecksumInputs(10, "libsqlStore"),
       );
-      const isValid = await validateCachedLibsqlCrossoverDatabase(
+      const isValid = await validateCachedLibsqlHexastorePerfDatabase(
         databaseClient,
         { quadCount: 10, expectedChecksum },
       );
@@ -95,18 +115,23 @@ Deno.test(
 );
 
 Deno.test(
-  "writeCrossoverFixtureManifest - round-trips manifest JSON",
+  "writeHexastorePerfFixtureManifest - round-trips manifest JSON",
   async () => {
     const temporaryDirectory = await Deno.makeTempDir();
     const manifestPath = path.join(temporaryDirectory, "libsqlStore-10.json");
     try {
-      const checksumInputs = buildCrossoverFixtureChecksumInputs(10);
-      const expectedChecksum = await computeCrossoverFixtureChecksum(
+      const checksumInputs = buildHexastorePerfFixtureChecksumInputs(
+        10,
+        "libsqlStore",
+      );
+      const expectedChecksum = await computeHexastorePerfFixtureChecksum(
         checksumInputs,
       );
       const manifest = { ...checksumInputs, checksum: expectedChecksum };
-      await writeCrossoverFixtureManifest(manifestPath, manifest);
-      const parsedManifest = await readCrossoverFixtureManifest(manifestPath);
+      await writeHexastorePerfFixtureManifest(manifestPath, manifest);
+      const parsedManifest = await readHexastorePerfFixtureManifest(
+        manifestPath,
+      );
       assertExists(parsedManifest);
       assertEquals(parsedManifest.checksum, expectedChecksum);
       assertEquals(parsedManifest.quadCount, 10);

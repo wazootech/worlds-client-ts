@@ -3,7 +3,8 @@ node_modules
 .env
 *.log
 bench-output*.txt
-benchmarks/crossover-large-run.log
+benchmarks/hexastore-perf-*-run.log
+benchmarks/crossover-*-run.log
 benchmarks/.cache/
 .bench-large.db
 gq-*.txt

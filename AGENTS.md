@@ -10,17 +10,18 @@ the client-side edge semantic environments:
 
 ### Graph store
 
-The transient in-memory representation of RDF facts, currently backed by an
-`N3.Store`. It facilitates high-speed, queryable operations without recurring
-network hop penalties.
+The in-memory RDF surface used by adapters and Comunica. Production LibSQL and
+Deno KV paths query **persistent hexastore** stores (`LibsqlStore`,
+`DenokvRdfjsStore`) without hydrating a full N3 mirror per request. The RDF/JS
+adapter still uses `N3.Store` for local development and tests.
 
 ### Hydration
 
-The bootstrapping process that reconstructs the Graph Store's ephemeral state by
-deserializing master relational tuples from stable external persistence
-(currently LibSQL) into reactive memory nodes. LibSQL hydration uses batched
-`addQuads` (`DEFAULT_HYDRATION_BATCH_SIZE = 1000` in
-`hydrate-store-from-libsql.ts`) to limit peak memory during large graph loads.
+For **RDF/JS** and historical **libsql-n3** topologies, hydration bootstrapped
+an ephemeral `N3.Store` from durable quads. **Production LibSQL and Denokv**
+skip that path: SPARQL and search read through persistent stores directly. Deno
+KV lazy reads still fetch quads from KV on demand without a process-wide N3
+mirror.
 
 ### Synchronization
 
@@ -122,8 +123,7 @@ mathematical brevity.
    children.
 3. **Nested folder, parent barrel.** `@/client/adapters/libsql/mod.ts` or
    `@/client/adapters/libsql/store/mod.ts` from `libsql/search/` or
-   `libsql/sync/` — not `../` and not `@worlds/client/...`. From `libsql-n3/`,
-   use `@/client/adapters/libsql/mod.ts` (not `../libsql/...`).
+   `libsql/sync/` — not `../` and not `@worlds/client/...`.
 
 Never use parent-relative `../` to reach another domain. Never import
 `@worlds/client/...` anywhere under `src/`.
@@ -138,7 +138,6 @@ Never use parent-relative `../` to reach another domain. Never import
 - ✅ `@/client/quad-store/mod.ts` (from `search-index/quad-chunker/`)
 - ✅ `import { Client } from "@/client/client.ts"` (adapter factories — not
   `@/mod.ts`, avoids root barrel cycles)
-- ✅ `@/client/adapters/libsql/mod.ts` (from `adapters/libsql-n3/`)
 - ✅ `./string-to-chars.ts` (from `tokenizer/tokenizer.ts`)
 - ✅ `./client.ts`, `./adapters/rdfjs/mod.ts` (from `src/client/client.test.ts`)
 - ✅ `@worlds/client/adapters/libsql` (from `examples/`, benchmarks, other
@@ -158,9 +157,7 @@ would cycle — e.g. `chunk-quads.ts` uses `@/client/quad-store/mod.ts`, not
 
 When adding a new importable subpath, add it to `exports` in `deno.json` for
 `@worlds/client/...` consumers. Mirror the file path under `@/client/...` for
-in-repo imports (no duplicate `@worlds/client/*` entries in `imports`). Keep
-`adapters/libsql-n3` separate from `adapters/libsql` so hexastore-only consumers
-stay free of N3 hydration (see architectural map below). Under
+in-repo imports (no duplicate `@worlds/client/*` entries in `imports`). Under
 `adapters/libsql/`, use `store/`, `search/`, and `sync/` subfolders (each with a
 `mod.ts` barrel); keep shared options and factories at the libsql root.
 
@@ -293,65 +290,37 @@ adhere to the core architectural pillars of the system:
 
 ### Ephemeral in-memory execution model
 
-The active Graph Store runtime is anchored on high-speed, transient in-memory
-RDF processing using `N3.Store` with optional SPARQL via an injected Comunica
-adapter. This maximizes edge query execution speeds and eliminates recurrent
-network hop latency during query execution.
+Local RDF/JS workflows use high-speed in-memory `N3.Store` processing.
+Production LibSQL and Deno KV adapters run SPARQL on persistent hexastore
+indexes (no full N3 hydration per query), which removes recurrent network hop
+latency during query execution at scale.
 
-### LibSQL client entry points (hexastore vs hydrated N3)
+### LibSQL client entry point (hexastore)
 
-Hexastore indexes are provisioned at schema init for all LibSQL clients. Use
-separate modules so hexastore deployments do not import N3 hydration:
-
-- **`createLibsqlAdapter`**
-  ([`create-libsql-adapter.ts`](src/client/adapters/libsql/create-libsql-adapter.ts))
-  — `LibsqlStore` + hexastore indexes; `createSparqlEngine({ libsqlStore })`.
-  `LibsqlStore.match` keyset-pages by `quads.id` (`matchPageSize`, default
-  1000). Optional `countQuads` supplies Comunica join cardinality hints. Wrap
-  with `new Client(await createLibsqlAdapter(...))`.
-- **`createLibsqlN3Adapter`** — import `@worlds/client/adapters/libsql-n3`
-  ([`create-libsql-n3-adapter.ts`](src/client/adapters/libsql-n3/create-libsql-n3-adapter.ts));
-  hydrate → `createProxiedN3Store` → `mergePatches` → `persistPatch` to LibSQL;
-  `createSparqlEngine({ store })` receives proxied N3. Not re-exported from
-  `@worlds/client/adapters/libsql` (keeps hexastore-only imports free of N3).
-
-### N3 patch capture (libsql-n3 sync path)
-
-`createLibsqlN3Adapter` synchronizes durable LibSQL state from an in-memory N3
-store:
-
-1. `hydrateStoreFromLibsql` (skipped when reusing a warmed `store`)
-2. `createProxiedN3Store` from `@worlds/client/quad-store/n3` — captures
-   mutation deltas with idempotency guards
-3. `mergePatches` on `@worlds/client/quad-store` — concatenates drained patches
-   before persist (no deduplication)
-4. `persistPatch` via libsql sync — writes quads and search-index projections
-
-`createRdfjsAdapter` does not use patch capture; data is transient in memory
-only.
+Hexastore indexes are provisioned at schema init. **`createLibsqlAdapter`**
+([`create-libsql-adapter.ts`](src/client/adapters/libsql/create-libsql-adapter.ts))
+— `LibsqlStore` + hexastore indexes; pass `queryEngine` to enable SPARQL.
+`LibsqlStore.match` keyset-pages by `quads.id` (`matchPageSize`, default 1000).
+Optional `countQuads` supplies Comunica join cardinality hints. Wrap with
+`new Client(await createLibsqlAdapter(...))`.
 
 ### Client lifecycle (runtime)
 
 Canonical construction: `new Client(await createXAdapter(...))`. Do not
 reintroduce `createXClient` one-line wrappers.
 
-For standard Comunica SPARQL, pass `createComunicaSparqlEngineFactory` or
-`createComunicaLibsqlSparqlEngineFactory` from
-`@worlds/client/adapters/comunica` as the adapter's `createSparqlEngine` option.
+For standard Comunica SPARQL, pass a Comunica `queryEngine` into the adapter
+options (e.g. `createLibsqlAdapter({ queryEngine })`).
 
-- **Serverless / edge (warm isolate):** build `Adapter` or `Client` once in
-  module scope per isolate; reuse across HTTP requests. See
-  [`examples/libsql-n3-warm-container`](examples/libsql-n3-warm-container).
 - **Long-running (Fly.io, DigitalOcean, 24/7 Deno):** one `Client` at process
   boot. See [`examples/libsql-long-running`](examples/libsql-long-running).
-- When reusing a warmed N3 `store`, do **not** call `createLibsqlN3Adapter` on
-  every request — that rebuilds proxy, search index, and patch sync.
 
-Use `benchmarks/sparql-hexastore-crossover.bench.ts`,
-[`benchmarks/README.md`](benchmarks/README.md), and
+Use `benchmarks/sparql-hexastore-perf-libsql.bench.ts` and
+`benchmarks/sparql-hexastore-perf-denokv.bench.ts` (requires `--unstable-kv`) to
+compare LibSQL and Denokv hexastore execute on the same harness;
+[`benchmarks/README.md`](benchmarks/README.md) and
 [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69)
-(post-preload crossover) to compare paths before choosing a factory. Earlier
-context:
+document post-preload methodology. Historical hydrate+N3 vs libsql crossover:
 [discussion #45](https://github.com/wazootech/worlds-client-ts/discussions/45).
 Scale guidance for very large graphs:
 [#68](https://github.com/wazootech/worlds-client-ts/issues/68). SPARQL
@@ -508,30 +477,19 @@ Keep AI tool descriptions and system prompts aligned with
 
 ### Choosing a LibSQL topology
 
-Both options builders provision hexastore indexes at schema init. Pick by how
-much graph you mirror in memory and how you run SPARQL.
-
-| Options builder         | Module                              | When to use                                                                                                                  |
-| :---------------------- | :---------------------------------- | :--------------------------------------------------------------------------------------------------------------------------- |
-| `createLibsqlAdapter`   | `@worlds/client/adapters/libsql`    | **Production and large graphs.** SPARQL runs on `LibsqlStore` (hexastore). No full N3 hydration per request.                 |
-| `createLibsqlN3Adapter` | `@worlds/client/adapters/libsql-n3` | **Selective workloads** where hydrating into N3 is acceptable. Reuse one warmed `store` per container, not per HTTP request. |
-
-Post-preload benchmarks (1k-50k quads) show hydrate+N3 can win selective queries
-when the graph is already in memory; libsqlStore avoids full hydration cost and
-is the better default as graphs grow. Avoid unbound full-graph scans at
-production scale.
+LibSQL uses hexastore indexes at schema init. SPARQL runs on `LibsqlStore`
+(hexastore) with no full N3 hydration per request.
 
 ### SPARQL query shape at scale
 
 At millions of quads, pick the topology at integration time.
 
-| Concern         | Production default                                                                                                               |
-| :-------------- | :------------------------------------------------------------------------------------------------------------------------------- |
-| LibSQL topology | `createLibsqlAdapter` with hexastore `LibsqlStore`, no full N3 mirror per request                                                |
-| Hot-path SPARQL | Bind at least one term (subject, predicate, or object). Subject-bound property lookups match crossover selective shapes          |
-| Avoid at scale  | Unbound `?s ?p ?o` (even with `LIMIT`) on libsqlStore; fullScan degrades to hundreds of ms as quads grow                         |
-| N3 + Comunica   | `createLibsqlN3Adapter` only when you need in-memory N3; pass a warmed `store` hydrated once per container, not per HTTP request |
-| Cardinality     | `LibsqlStore.countQuads` is used by Comunica when hexastore SPARQL is wired (no extra adapter config)                            |
+| Concern         | Production default                                                                                                           |
+| :-------------- | :--------------------------------------------------------------------------------------------------------------------------- |
+| LibSQL topology | `createLibsqlAdapter` with hexastore `LibsqlStore`, no full N3 mirror per request                                            |
+| Hot-path SPARQL | Bind at least one term (subject, predicate, or object). Subject-bound property lookups match hexastore perf selective shapes |
+| Avoid at scale  | Unbound `?s ?p ?o` (even with `LIMIT`) on libsqlStore; fullScan degrades to hundreds of ms as quads grow                     |
+| Cardinality     | `LibsqlStore.countQuads` is used by Comunica when hexastore SPARQL is wired (no extra adapter config)                        |
 
 Query helpers (same shapes as benchmarks):
 
@@ -547,9 +505,8 @@ const devScanQuery =
 - **Serverless / edge (warm isolate):** build `Adapter` or `Client` once in
   module scope per isolate; reuse across HTTP requests.
 - **Long-running (Fly.io, DigitalOcean, 24/7 Deno):** one `Client` at process
-  boot.
-- When reusing a warmed N3 `store`, do **not** call `createLibsqlN3Adapter` on
-  every request; that rebuilds proxy, search index, and patch sync.
+  boot. LibSQL does not require N3 hydration; build one `Client` per
+  process/isolate and reuse it across requests.
 
 ### Bulk import strategies
 
@@ -564,10 +521,10 @@ imports where indexing can happen once at the end.
 
 ### Benchmark references
 
-- Canonical crossover write-up:
+- Canonical hexastore perf write-up:
   [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69)
 - Local numbers and methodology: [`benchmarks/README.md`](benchmarks/README.md)
 - Scale roadmap (millions of quads):
   [#68](https://github.com/wazootech/worlds-client-ts/issues/68)
-- Earlier crossover context:
+- Historical hydrate+N3 crossover:
   [discussion #45](https://github.com/wazootech/worlds-client-ts/discussions/45)

@@ -13,8 +13,15 @@ import {
 } from "@/client/quad-store/mod.ts";
 import type { SerializedQuad } from "./denokv-quad-store.ts";
 import { deserializeTerm } from "./denokv-quad-store.ts";
+import {
+  buildGenerationDataPrefix,
+  buildPrimaryQuadKey,
+} from "./denokv-hexastore-keys.ts";
+import { readActiveGeneration } from "./denokv-dataset-generation.ts";
 
 const { quad } = DataFactory;
+
+const MAX_KV_BATCH_SIZE = 50;
 
 /**
  * DenokvSearchIndexOptions provides configurations for operating direct Kv search scans.
@@ -28,7 +35,7 @@ export interface DenokvSearchIndexOptions {
 }
 
 /**
- * DenokvSearchIndex implements keyword search by scanning every quad under a KV prefix.
+ * DenokvSearchIndex implements keyword search by scanning quads in the active dataset generation.
  * Each entry is deserialized and matched with a naive case-insensitive includes() check.
  * This avoids building a full in-memory N3 graph (unlike SPARQL hydration) but is O(N)
  * per query with no index and no early exit when a match is found.
@@ -43,44 +50,95 @@ export class DenokvSearchIndex implements SearchIndexInterface {
     const keyPrefix = this.options.keyPrefix ?? ["quads"];
     const results: Array<SearchResult> = [];
 
-    // 🛡️ Compile the centralized O(1) filter gate
     const matcher = filterQuads(request);
 
-    const iter = this.options.kv.list<SerializedQuad>({ prefix: keyPrefix });
+    const generationId = await readActiveGeneration(
+      this.options.kv,
+      keyPrefix,
+    );
+    const scopedDataPrefix = buildGenerationDataPrefix(
+      keyPrefix,
+      generationId,
+    );
 
-    for await (const entry of iter) {
-      const serialized = entry.value;
-      if (!serialized) continue;
+    const pendingIds: string[] = [];
 
-      // 1. Ephemeral deserialization for evaluation boundaries
-      const q = quad(
-        deserializeTerm(serialized.subject) as rdfjs.Quad_Subject,
-        deserializeTerm(serialized.predicate) as rdfjs.Quad_Predicate,
-        deserializeTerm(serialized.object) as rdfjs.Quad_Object,
-        deserializeTerm(serialized.graph) as rdfjs.Quad_Graph,
-      );
+    const indexIter = this.options.kv.list<string>({
+      prefix: [...scopedDataPrefix, "idx_spog"],
+    });
 
-      // 2. Filter Scope evaluation
-      if (!matcher(q)) {
-        continue;
-      }
-
-      // 3. Case-insensitive text scans
-      if (isTextualLiteral(q.object)) {
-        const value = q.object.value;
-        if (value.toLowerCase().includes(query)) {
-          results.push({
-            id: await hashQuad(q),
-            subject: q.subject.value,
-            predicate: q.predicate.value,
-            graph: q.graph.value,
-            text: value,
-            score: 1.0,
-          });
-        }
+    for await (const entry of indexIter) {
+      pendingIds.push(entry.value);
+      if (pendingIds.length >= MAX_KV_BATCH_SIZE) {
+        await scanQuadBatch(
+          this.options.kv,
+          scopedDataPrefix,
+          pendingIds,
+          query,
+          matcher,
+          results,
+        );
+        pendingIds.length = 0;
       }
     }
 
+    if (pendingIds.length > 0) {
+      await scanQuadBatch(
+        this.options.kv,
+        scopedDataPrefix,
+        pendingIds,
+        query,
+        matcher,
+        results,
+      );
+    }
+
     return { results };
+  }
+}
+
+async function scanQuadBatch(
+  kv: Deno.Kv,
+  scopedDataPrefix: Deno.KvKey,
+  quadIds: readonly string[],
+  query: string,
+  matcher: (quad: rdfjs.Quad) => boolean,
+  results: SearchResult[],
+): Promise<void> {
+  const keys = quadIds.map((quadId) =>
+    buildPrimaryQuadKey(scopedDataPrefix, quadId)
+  );
+  const entries = await kv.getMany(keys) as Array<
+    Deno.KvEntryMaybe<SerializedQuad>
+  >;
+
+  for (const entry of entries) {
+    const serialized = entry.value;
+    if (!serialized) continue;
+
+    const storedQuad = quad(
+      deserializeTerm(serialized.subject) as rdfjs.Quad_Subject,
+      deserializeTerm(serialized.predicate) as rdfjs.Quad_Predicate,
+      deserializeTerm(serialized.object) as rdfjs.Quad_Object,
+      deserializeTerm(serialized.graph) as rdfjs.Quad_Graph,
+    );
+
+    if (!matcher(storedQuad)) {
+      continue;
+    }
+
+    if (isTextualLiteral(storedQuad.object)) {
+      const value = storedQuad.object.value;
+      if (value.toLowerCase().includes(query)) {
+        results.push({
+          id: await hashQuad(storedQuad),
+          subject: storedQuad.subject.value,
+          predicate: storedQuad.predicate.value,
+          graph: storedQuad.graph.value,
+          text: value,
+          score: 1.0,
+        });
+      }
+    }
   }
 }

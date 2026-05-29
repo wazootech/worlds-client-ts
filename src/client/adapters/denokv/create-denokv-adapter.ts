@@ -1,18 +1,17 @@
-import { Store } from "n3";
 import type { Adapter } from "@/client/client.ts";
-import type { SparqlEngineInterface } from "@/client/sparql-engine/mod.ts";
+import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
+import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
 import { DenokvSearchIndex } from "./denokv-search-index.ts";
 import type { DenokvQuadStoreOptions } from "./denokv-quad-store.ts";
 import { DenokvQuadStore } from "./denokv-quad-store.ts";
+import { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";
 
 /**
  * DenokvOptions specifies configuration parameters for Deno Kv adapter contexts.
  */
 export interface DenokvOptions extends DenokvQuadStoreOptions {
-  /** createSparqlEngine optionally attaches a caller-provided SPARQL engine over each hydrated workspace. */
-  createSparqlEngine?: (
-    options: { store: Store },
-  ) => SparqlEngineInterface;
+  /** queryEngine optionally enables built-in Comunica SPARQL over the hydrated workspace store. */
+  queryEngine?: ComunicaQueryEngine;
 }
 
 /**
@@ -25,36 +24,24 @@ export function createDenokvAdapter(
   options: DenokvOptions,
 ): Adapter {
   const quadStore = new DenokvQuadStore(options);
-
-  /**
-   * hydrateWorkspace fetches the absolute latest dataset state from Deno Kv
-   * and materializes it inside an ephemeral, fast in-memory N3 workspace.
-   */
-  const hydrateWorkspace = async (): Promise<Store> => {
-    const store = new Store();
-    const dump = await quadStore.export({ format: { kind: "quads" } });
-    if (dump.kind === "quads") {
-      for (const q of dump.quads) {
-        store.add(q);
-      }
-    }
-    return store;
-  };
+  const rdfjsStore = new DenokvRdfjsStore(options);
 
   return {
     quadStore,
 
     searchIndex: new DenokvSearchIndex(options),
 
-    sparqlEngine: options.createSparqlEngine
+    sparqlEngine: options.queryEngine
       ? {
         execute: async (request) => {
-          const workspace = await hydrateWorkspace();
-          const engine = options.createSparqlEngine?.({ store: workspace });
-          if (!engine) {
-            throw new Error("SPARQL engine is not configured.");
-          }
-          return await engine.execute(request);
+          const engine = new ComunicaSparqlEngine({
+            queryEngine: options.queryEngine!,
+            store: rdfjsStore,
+            onVoid: () => rdfjsStore.commit(),
+          });
+          const response = await engine.execute(request);
+          await rdfjsStore.commit();
+          return response;
         },
       }
       : undefined,
