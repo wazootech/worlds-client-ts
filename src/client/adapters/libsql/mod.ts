@@ -7,4 +7,5 @@ export * from "./initialize-libsql-schema.ts";
 export * from "./search/mod.ts";
 export * from "./sync/mod.ts";
 export * from "./create-libsql-adapter.ts";
+export * from "./create-libsql-adapter-infrastructure.ts";
 export * from "./create-libsql-adapter-from-stores.ts";

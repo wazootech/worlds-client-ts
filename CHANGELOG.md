@@ -59,6 +59,70 @@ import {
 } from "@worlds/client/adapters/libsql";
 ```
 
+Most apps keep using `createLibsqlAdapter` unchanged:
+
+```typescript
+import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
+
+const adapter = await createLibsqlAdapter({ client, queryEngine });
+```
+
+Custom LibSQL assembly (`createLibsqlAdapterFromRdfjsStore` removed):
+
+```typescript
+import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import {
+  createLibsqlAdapterFromStores,
+  createLibsqlAdapterInfrastructure,
+  LibsqlQuadStore,
+  LibsqlRdfjsStore,
+} from "@worlds/client/adapters/libsql";
+
+const infrastructure = await createLibsqlAdapterInfrastructure({ client });
+const libsqlRdfjsStore = new LibsqlRdfjsStore({
+  client,
+  queryBuilder: infrastructure.queryBuilder,
+  commitHandler: infrastructure.patchSync.persistPatch,
+});
+const libsqlQuadStore = new LibsqlQuadStore({
+  libsqlRdfjsStore,
+  patchSync: infrastructure.patchSync,
+});
+const adapter = createLibsqlAdapterFromStores({
+  infrastructure,
+  libsqlQuadStore,
+  libsqlRdfjsStore,
+  createSparqlEngine: ({ store }) =>
+    new ComunicaSparqlEngine({ queryEngine, store }),
+});
+```
+
+If you wrapped `LibsqlStore` with `RdfjsQuadStore` for `client.import`:
+
+```typescript
+// Before
+new RdfjsQuadStore({ rdfjsStore: libsqlStore, patchSync });
+
+// After
+new LibsqlQuadStore({ libsqlRdfjsStore, patchSync });
+```
+
+Deno KV custom assembly:
+
+```typescript
+import { createDenokvAdapterFromStores } from "@worlds/client/adapters/denokv";
+
+const adapter = createDenokvAdapterFromStores({
+  denokvQuadStore,
+  denokvRdfjsStore,
+  searchIndex,
+  sparqlEngine,
+});
+```
+
+Shared import helpers (`getFormat`, `parseQuads`, `materializeImportQuads`) are
+exported from `@worlds/client/quad-store` (no new export subpath).
+
 ## 0.0.15
 
 ### Breaking

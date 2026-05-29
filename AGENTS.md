@@ -157,8 +157,9 @@ would cycle — e.g. `chunk-quads.ts` uses `@/client/quad-store/mod.ts`, not
 When adding a new importable subpath, add it to `exports` in `deno.json` for
 `@worlds/client/...` consumers. Mirror the file path under `@/client/...` for
 in-repo imports (no duplicate `@worlds/client/*` entries in `imports`). Under
-`adapters/libsql/`, use `store/`, `search/`, and `sync/` subfolders (each with a
-`mod.ts` barrel); keep shared options and factories at the libsql root.
+`adapters/libsql/`, keep `search/` and `sync/` subfolders (each with a `mod.ts`
+barrel); RDF/JS and quad facades live at the `libsql/` root
+(`libsql-rdfjs-store.ts`, `libsql-quad-store.ts`, factories).
 
 ### No inline imports
 
@@ -221,6 +222,11 @@ green-passing integration pipeline runs:
   (`CRLF` / `\r\n`) is strictly prohibited. You MUST run `deno fmt` before
   staging any changes to auto-format text line endings and keep the CI formatter
   checks green.
+- **UTF-8 source encoding:** Text sources use `.gitattributes`
+  `working-tree-encoding=UTF-8` (see [`.gitattributes`](.gitattributes)). Never
+  save TypeScript or markdown as UTF-16; on Windows that corrupts `deno fmt`
+  (files collapse to a single line). After changing encoding attributes, run
+  `git add --renormalize .` so the index stores UTF-8.
 
 - **Mandatory execution flags:**
   - **Unstable KV:** Any execution task, example, or test interacting with the
