@@ -1,16 +1,19 @@
 # LibSQL long-running service
 
 For **Fly.io**, **DigitalOcean App Platform**, and other **24/7** Deno/Node
-processes: build a `Adapter` once at boot and hold one `Client` for the process
+processes: build an `Adapter` once at boot and hold one `Client` for the process
 lifetime.
 
 | Entry          | Topology                                     | Command                                           |
 | :------------- | :------------------------------------------- | :------------------------------------------------ |
 | `hexastore.ts` | Hexastore `LibsqlStore` (production default) | `deno task example:libsql-long-running:hexastore` |
-| `n3.ts`        | Hydrate → N3 + patch sync                    | `deno task example:libsql-long-running:n3`        |
 
-Hexastore example requires local USE artifacts: `deno task download:tfjs-use`
-before `example:libsql-long-running:hexastore`.
+SPARQL runs on `LibsqlStore` via `createLibsqlAdapter({ queryEngine })` — no
+full N3 mirror per request.
 
-Contrast with serverless warm isolates:
-[`examples/libsql-n3-warm-container`](../libsql-n3-warm-container/README.md).
+The hexastore example requires local USE artifacts: run
+`deno task download:tfjs-use` before `example:libsql-long-running:hexastore`.
+
+For SPARQL query-shape guidance at scale, see
+[`examples/libsql-sparql-scale`](../libsql-sparql-scale/main.ts) and
+[#68](https://github.com/wazootech/worlds-client-ts/issues/68).

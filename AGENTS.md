@@ -10,17 +10,18 @@ the client-side edge semantic environments:
 
 ### Graph store
 
-The transient in-memory representation of RDF facts, currently backed by an
-`N3.Store`. It facilitates high-speed, queryable operations without recurring
-network hop penalties.
+The in-memory RDF surface used by adapters and Comunica. Production LibSQL and
+Deno KV paths query **persistent hexastore** stores (`LibsqlStore`,
+`DenokvRdfjsStore`) without hydrating a full N3 mirror per request. The RDF/JS
+adapter still uses `N3.Store` for local development and tests.
 
 ### Hydration
 
-The bootstrapping process that reconstructs the Graph Store's ephemeral state by
-deserializing master relational tuples from stable external persistence
-(currently LibSQL) into reactive memory nodes. LibSQL hydration uses batched
-`addQuads` (`DEFAULT_HYDRATION_BATCH_SIZE = 1000` in
-`hydrate-store-from-libsql.ts`) to limit peak memory during large graph loads.
+For **RDF/JS** and historical **libsql-n3** topologies, hydration bootstrapped
+an ephemeral `N3.Store` from durable quads. **Production LibSQL and Denokv**
+skip that path: SPARQL and search read through persistent stores directly. Deno
+KV lazy reads still fetch quads from KV on demand without a process-wide N3
+mirror.
 
 ### Synchronization
 
@@ -289,22 +290,19 @@ adhere to the core architectural pillars of the system:
 
 ### Ephemeral in-memory execution model
 
-The active Graph Store runtime is anchored on high-speed, transient in-memory
-RDF processing using `N3.Store` with optional SPARQL via an injected Comunica
-adapter. This maximizes edge query execution speeds and eliminates recurrent
-network hop latency during query execution.
+Local RDF/JS workflows use high-speed in-memory `N3.Store` processing.
+Production LibSQL and Deno KV adapters run SPARQL on persistent hexastore
+indexes (no full N3 hydration per query), which removes recurrent network hop
+latency during query execution at scale.
 
-### LibSQL client entry points (hexastore vs hydrated N3)
+### LibSQL client entry point (hexastore)
 
-Hexastore indexes are provisioned at schema init for all LibSQL clients. Use
-separate modules so hexastore deployments do not import N3 hydration:
-
-- **`createLibsqlAdapter`**
-  ([`create-libsql-adapter.ts`](src/client/adapters/libsql/create-libsql-adapter.ts))
-  — `LibsqlStore` + hexastore indexes; pass `queryEngine` to enable SPARQL.
-  `LibsqlStore.match` keyset-pages by `quads.id` (`matchPageSize`, default
-  1000). Optional `countQuads` supplies Comunica join cardinality hints. Wrap
-  with `new Client(await createLibsqlAdapter(...))`.
+Hexastore indexes are provisioned at schema init. **`createLibsqlAdapter`**
+([`create-libsql-adapter.ts`](src/client/adapters/libsql/create-libsql-adapter.ts))
+— `LibsqlStore` + hexastore indexes; pass `queryEngine` to enable SPARQL.
+`LibsqlStore.match` keyset-pages by `quads.id` (`matchPageSize`, default 1000).
+Optional `countQuads` supplies Comunica join cardinality hints. Wrap with
+`new Client(await createLibsqlAdapter(...))`.
 
 ### Client lifecycle (runtime)
 
