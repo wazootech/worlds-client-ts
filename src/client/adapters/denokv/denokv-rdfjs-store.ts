@@ -3,11 +3,10 @@ import { DataFactory } from "n3";
 import { Readable } from "node:stream";
 import { EventEmitter } from "node:events";
 
-import type {
-  DenokvQuadStoreOptions,
-  SerializedQuad,
-} from "./denokv-quad-store.ts";
-import { deserializeTerm, MAX_KV_GET_MANY_SIZE } from "./denokv-quad-store.ts";
+import type { DenokvQuadStoreOptions } from "./denokv-quad-store.ts";
+import { MAX_KV_GET_MANY_SIZE } from "./denokv-quad-store.ts";
+import type { SerializedQuad } from "./denokv-serialization.ts";
+import { deserializeQuad } from "./denokv-serialization.ts";
 import { hashQuad } from "@/client/quad-store/mod.ts";
 import {
   buildGenerationDataPrefix,
@@ -24,7 +23,7 @@ import {
   matchesPattern,
 } from "./denokv-match-selector.ts";
 
-const { quad, namedNode } = DataFactory;
+const { namedNode } = DataFactory;
 
 /**
  * DenokvRdfjsStore is an RDF/JS Store implementation backed by Deno KV.
@@ -394,13 +393,4 @@ export class DenokvRdfjsStore implements rdfjs.Store {
     this.insertBuffer = [];
     this.deleteBuffer = [];
   }
-}
-
-function deserializeQuad(serializedQuad: SerializedQuad): rdfjs.Quad {
-  return quad(
-    deserializeTerm(serializedQuad.subject) as rdfjs.Quad_Subject,
-    deserializeTerm(serializedQuad.predicate) as rdfjs.Quad_Predicate,
-    deserializeTerm(serializedQuad.object) as rdfjs.Quad_Object,
-    deserializeTerm(serializedQuad.graph) as rdfjs.Quad_Graph,
-  );
 }

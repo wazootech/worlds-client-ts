@@ -9,7 +9,7 @@ const queryEngine = new QueryEngine();
 const { quad, namedNode, literal } = DataFactory;
 
 Deno.test(
-  "createLibsqlAdapter - queryEngine enables SPARQL on LibsqlStore",
+  "createLibsqlAdapter - queryEngine enables SPARQL on LibsqlRdfjsStore",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
     const adapter = await createLibsqlAdapter({

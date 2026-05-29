@@ -80,11 +80,11 @@ for structured traversal and reasoning.
 
 ## Adapters
 
-| Adapter | Best for                      | Persistence          | SPARQL                            |
-| :------ | :---------------------------- | :------------------- | :-------------------------------- |
-| RDFJS   | Dev, tests, demos             | None (in-memory)     | Via Comunica over N3 store        |
-| LibSQL  | Production, scale             | SQLite / Turso Cloud | Hexastore indexes on LibsqlStore  |
-| Deno KV | Prototyping, constrained edge | Deno KV store        | Via Comunica over KV-backed store |
+| Adapter | Best for                      | Persistence          | SPARQL                             |
+| :------ | :---------------------------- | :------------------- | :--------------------------------- |
+| RDFJS   | Dev, tests, demos             | None (in-memory)     | Via Comunica over N3 store         |
+| LibSQL  | Production, scale             | SQLite / Turso Cloud | LibsqlRdfjsStore hexastore indexes |
+| Deno KV | Prototyping, constrained edge | Deno KV store        | Via Comunica over KV-backed store  |
 
 ### RDFJS (in-memory)
 

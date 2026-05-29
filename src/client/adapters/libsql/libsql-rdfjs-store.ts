@@ -16,9 +16,9 @@ const { namedNode } = DataFactory;
 export type CommitHandler = (patch: Patch) => Promise<void>;
 
 /**
- * LibsqlStoreOptions configures LibsqlStore dependencies and read behavior.
+ * LibsqlRdfjsStoreOptions configures LibsqlRdfjsStore dependencies and read behavior.
  */
-export interface LibsqlStoreOptions {
+export interface LibsqlRdfjsStoreOptions {
   /** client is the LibSQL client. */
   client: Client;
 
@@ -33,10 +33,10 @@ export interface LibsqlStoreOptions {
 }
 
 /**
- * LibsqlStore is a full RDF/JS Store implementation backed by LibSQL and hexastore covering indexes.
+ * LibsqlRdfjsStore is a full RDF/JS Store implementation backed by LibSQL and hexastore covering indexes.
  * All triple/quad patterns resolve via a single SQL index seek with no in-memory hydration needed.
  */
-export class LibsqlStore implements rdfjs.Store {
+export class LibsqlRdfjsStore implements rdfjs.Store {
   /**
    * insertBuffer collects quads queued for insertion. Committed atomically via commit().
    */
@@ -50,7 +50,7 @@ export class LibsqlStore implements rdfjs.Store {
   private readonly matchPageSize: number;
 
   public constructor(
-    private readonly options: LibsqlStoreOptions,
+    private readonly options: LibsqlRdfjsStoreOptions,
   ) {
     const configuredPageSize = options.matchPageSize ??
       DEFAULT_LIBSQL_MATCH_PAGE_SIZE;

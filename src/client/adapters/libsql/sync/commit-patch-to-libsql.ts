@@ -12,8 +12,8 @@ import {
   isTextualLiteral,
 } from "@/client/quad-store/mod.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
-import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/store/mod.ts";
-import { quadFromLibsqlRow } from "@/client/adapters/libsql/store/libsql-quad-row.ts";
+import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/libsql-query-builder.ts";
+import { quadFromLibsqlRow } from "@/client/adapters/libsql/libsql-quad-row.ts";
 import {
   buildChunkFtsValue,
   resolveLabelPredicates,

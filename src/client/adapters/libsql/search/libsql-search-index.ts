@@ -9,7 +9,7 @@ import type {
 } from "@/client/search-index/mod.ts";
 import { hashQuad } from "@/client/quad-store/mod.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
-import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/store/mod.ts";
+import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/libsql-query-builder.ts";
 import { rebuildLibsqlSearchIndexFromQuads } from "./rebuild-libsql-search-index-from-quads.ts";
 
 const { literal, namedNode, quad: createQuad, defaultGraph } = DataFactory;

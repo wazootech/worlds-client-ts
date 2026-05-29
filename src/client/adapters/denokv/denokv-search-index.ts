@@ -11,8 +11,8 @@ import {
   hashQuad,
   isTextualLiteral,
 } from "@/client/quad-store/mod.ts";
-import type { SerializedQuad } from "./denokv-quad-store.ts";
-import { deserializeTerm } from "./denokv-quad-store.ts";
+import type { SerializedQuad } from "./denokv-serialization.ts";
+import { deserializeTerm } from "./denokv-serialization.ts";
 import {
   buildGenerationDataPrefix,
   buildPrimaryQuadKey,

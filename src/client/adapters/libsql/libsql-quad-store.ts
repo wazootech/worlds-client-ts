@@ -10,38 +10,61 @@ import {
   getFormat,
   materializeImportQuads,
 } from "@/client/quad-store/rdf-formats.ts";
+import type { LibsqlPatchSyncState } from "@/client/adapters/libsql/sync/mod.ts";
+import type { LibsqlRdfjsStore } from "./libsql-rdfjs-store.ts";
 
 /**
- * RdfjsQuadStore is the standard implementation of the QuadStoreInterface that uses
- * an underlying in-memory or compatible RDFJS Store.
+ * LibsqlQuadStoreOptions configures LibsqlQuadStore dependencies.
  */
-export class RdfjsQuadStore implements QuadStoreInterface {
-  constructor(private readonly store: rdfjs.Store) {}
+export interface LibsqlQuadStoreOptions {
+  /** libsqlRdfjsStore is the hexastore-backed RDF/JS store receiving buffered mutations. */
+  libsqlRdfjsStore: LibsqlRdfjsStore;
+
+  /** patchSync coordinates deferred search indexing around import commits. */
+  patchSync: LibsqlPatchSyncState;
+}
+
+/**
+ * LibsqlQuadStore implements QuadStoreInterface over LibsqlRdfjsStore with LibSQL patch-sync orchestration.
+ */
+export class LibsqlQuadStore implements QuadStoreInterface {
+  public constructor(
+    private readonly options: LibsqlQuadStoreOptions,
+  ) {}
 
   public async import(request: ImportRequest): Promise<void> {
     const mode = request.mode ?? "merge";
     const quads = await materializeImportQuads(request.source);
 
+    this.options.patchSync.beforeImport();
+
     if (mode === "replace") {
       await new Promise<void>((resolve, reject) => {
-        const removalStream = this.store.removeMatches(null, null, null, null);
+        const removalStream = this.options.libsqlRdfjsStore.removeMatches(
+          null,
+          null,
+          null,
+          null,
+        );
         removalStream.on("end", resolve);
         removalStream.on("error", reject);
       });
     }
 
     for (const quad of quads) {
-      // deno-lint-ignore no-explicit-any
-      (this.store as any).addQuad(quad);
+      this.options.libsqlRdfjsStore.addQuad(quad);
     }
+
+    await this.options.libsqlRdfjsStore.commit();
+    await this.options.patchSync.afterImport();
   }
 
   public async export(request: ExportRequest): Promise<ExportResponse> {
-    const stream = this.store.match(null, null, null, null);
+    const stream = this.options.libsqlRdfjsStore.match(null, null, null, null);
     const quads: rdfjs.Quad[] = [];
 
     await new Promise<void>((resolve, reject) => {
-      stream.on("data", (q: rdfjs.Quad) => quads.push(q));
+      stream.on("data", (quad) => quads.push(quad));
       stream.on("end", resolve);
       stream.on("error", reject);
     });
@@ -55,8 +78,8 @@ export class RdfjsQuadStore implements QuadStoreInterface {
       const { n3Format } = getFormat(contentType);
 
       const writer = new Writer({ format: n3Format });
-      for (const q of quads) {
-        writer.addQuad(q);
+      for (const quad of quads) {
+        writer.addQuad(quad);
       }
 
       const data = await new Promise<string>((resolve, reject) => {

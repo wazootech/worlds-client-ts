@@ -6,7 +6,7 @@ import type { EmbeddingService } from "@/client/search-index/embedding-service/m
 import {
   initializeLibsqlSchema,
   LibsqlQueryBuilder,
-} from "@/client/adapters/libsql/store/mod.ts";
+} from "@/client/adapters/libsql/mod.ts";
 
 // --- Helpers ---
 

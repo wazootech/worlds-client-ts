@@ -3,7 +3,7 @@ import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 
 /**
  * initializeLibsqlSchema synchronously checks and creates the full set of persistent tables needed.
- * Hexastore covering indexes enable LibsqlStore selective SPARQL without full hydration
+ * Hexastore covering indexes enable LibsqlRdfjsStore selective SPARQL without full hydration
  * (see https://github.com/wazootech/worlds-client-ts/discussions/45).
  */
 export async function initializeLibsqlSchema(

@@ -5,8 +5,10 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import { rebuildLibsqlSearchIndexFromQuads } from "@/client/adapters/libsql/search/rebuild-libsql-search-index-from-quads.ts";
 import { FakeEmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
-import { LibsqlQueryBuilder } from "@/client/adapters/libsql/store/mod.ts";
-import { initializeLibsqlSchema } from "@/client/adapters/libsql/store/mod.ts";
+import {
+  initializeLibsqlSchema,
+  LibsqlQueryBuilder,
+} from "@/client/adapters/libsql/mod.ts";
 import { buildChunkFtsValue } from "@/client/adapters/libsql/search/search-chunk-fts.ts";
 
 const { quad, namedNode, literal } = DataFactory;

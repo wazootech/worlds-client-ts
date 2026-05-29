@@ -1,5 +1,5 @@
 import type * as rdfjs from "@rdfjs/types";
-import { DataFactory, Parser, Writer } from "n3";
+import { Writer } from "n3";
 
 import type {
   ExportRequest,
@@ -8,6 +8,10 @@ import type {
   QuadStoreInterface,
 } from "@/client/quad-store/mod.ts";
 import { hashQuad } from "@/client/quad-store/mod.ts";
+import {
+  getFormat,
+  materializeImportQuads,
+} from "@/client/quad-store/rdf-formats.ts";
 
 import {
   buildGenerationDataPrefix,
@@ -24,8 +28,11 @@ import {
 } from "./denokv-dataset-generation.ts";
 import { commitBatchedKvMutations } from "./denokv-kv-limits.ts";
 import { materializeQuadKeys } from "./denokv-quad-keys.ts";
+import type { SerializedQuad } from "./denokv-serialization.ts";
+import { deserializeQuad, serializeTerm } from "./denokv-serialization.ts";
 
-const { namedNode, blankNode, literal, defaultGraph, quad } = DataFactory;
+export type { SerializedQuad, SerializedTerm } from "./denokv-serialization.ts";
+export { deserializeTerm } from "./denokv-serialization.ts";
 
 /**
  * DenokvQuadStoreOptions specifies the configuration for the Deno Kv adapter.
@@ -42,22 +49,6 @@ export interface DenokvQuadStoreOptions {
    * Defaults to all supported index families.
    */
   enabledHexastoreIndexes?: readonly DenokvHexastoreIndex[];
-}
-
-/** SerializedTerm represents a flat V8-serializable descriptor of an RDF Term. */
-export interface SerializedTerm {
-  termType: string;
-  value: string;
-  language?: string;
-  datatype?: string;
-}
-
-/** SerializedQuad bundles four serialized terms representing an RDF quad. */
-export interface SerializedQuad {
-  subject: SerializedTerm;
-  predicate: SerializedTerm;
-  object: SerializedTerm;
-  graph: SerializedTerm;
 }
 
 /**
@@ -83,18 +74,7 @@ export class DenokvQuadStore implements QuadStoreInterface {
       generationId,
     );
 
-    let quadsToImport: Iterable<rdfjs.Quad> = [];
-    if (request.source.kind === "quads") {
-      quadsToImport = request.source.quads;
-    } else if (request.source.kind === "dataset") {
-      quadsToImport = request.source.dataset;
-    } else if (request.source.kind === "serialized") {
-      const { n3Format } = getFormat(request.source.contentType);
-      const parser = new Parser({ format: n3Format });
-      quadsToImport = parser.parse(request.source.data);
-    } else {
-      throw new Error("Unsupported import source kind");
-    }
+    const quadsToImport = await materializeImportQuads(request.source);
 
     const kvMutations: Array<{ key: Deno.KvKey; value: unknown }> = [];
 
@@ -243,82 +223,4 @@ async function resolveQuadsByIds(
   }
 
   return resolved;
-}
-
-function serializeTerm(term: rdfjs.Term): SerializedTerm {
-  return {
-    termType: term.termType,
-    value: term.value,
-    language: term.termType === "Literal"
-      ? (term as rdfjs.Literal).language
-      : undefined,
-    datatype: term.termType === "Literal"
-      ? (term as rdfjs.Literal).datatype.value
-      : undefined,
-  };
-}
-
-/**
- * deserializeTerm reconstitutes a rich RDF/JS Term from a flat, persisted serialization.
- */
-export function deserializeTerm(t: SerializedTerm): rdfjs.Term {
-  switch (t.termType) {
-    case "NamedNode":
-      return namedNode(t.value);
-    case "BlankNode":
-      return blankNode(t.value);
-    case "Literal":
-      if (t.language) {
-        return literal(t.value, t.language);
-      }
-      if (t.datatype) {
-        return literal(t.value, namedNode(t.datatype));
-      }
-      return literal(t.value);
-    case "DefaultGraph":
-      return defaultGraph();
-    default:
-      throw new Error(`Unsupported term type: ${t.termType}`);
-  }
-}
-
-function deserializeQuad(serializedQuad: SerializedQuad): rdfjs.Quad {
-  return quad(
-    deserializeTerm(serializedQuad.subject) as rdfjs.Quad_Subject,
-    deserializeTerm(serializedQuad.predicate) as rdfjs.Quad_Predicate,
-    deserializeTerm(serializedQuad.object) as rdfjs.Quad_Object,
-    deserializeTerm(serializedQuad.graph) as rdfjs.Quad_Graph,
-  );
-}
-
-/**
- * RdfFormat specifies content type configuration mapping for parser/writer facilities.
- */
-export interface RdfFormat {
-  contentType: string;
-  n3Format: string;
-}
-
-/**
- * FORMATS is a map of content types to supported RdfFormats.
- */
-export const FORMATS: Record<string, RdfFormat> = {
-  "text/turtle": { contentType: "text/turtle", n3Format: "Turtle" },
-  "application/n-quads": {
-    contentType: "application/n-quads",
-    n3Format: "N-Quads",
-  },
-  "application/n-triples": {
-    contentType: "application/n-triples",
-    n3Format: "N-Triples",
-  },
-  "text/n3": { contentType: "text/n3", n3Format: "N3" },
-};
-
-/**
- * getFormat resolves the appropriate RdfFormat mapping for the given content type, defaulting to N-Quads.
- */
-export function getFormat(contentType: string | undefined): RdfFormat {
-  const format = contentType?.toLowerCase() || "application/n-quads";
-  return FORMATS[format] || FORMATS["application/n-quads"];
 }

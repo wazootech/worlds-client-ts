@@ -11,7 +11,7 @@ the client-side edge semantic environments:
 ### Graph store
 
 The in-memory RDF surface used by adapters and Comunica. Production LibSQL and
-Deno KV paths query **persistent hexastore** stores (`LibsqlStore`,
+Deno KV paths query **persistent hexastore** stores (`LibsqlRdfjsStore`,
 `DenokvRdfjsStore`) without hydrating a full N3 mirror per request. The RDF/JS
 adapter still uses `N3.Store` for local development and tests.
 
@@ -121,9 +121,8 @@ mathematical brevity.
    `@/client/adapters/libsql/mod.ts`.
 2. **Same domain folder.** `./file.ts` or `./subfolder/mod.ts` for siblings and
    children.
-3. **Nested folder, parent barrel.** `@/client/adapters/libsql/mod.ts` or
-   `@/client/adapters/libsql/store/mod.ts` from `libsql/search/` or
-   `libsql/sync/` — not `../` and not `@worlds/client/...`.
+3. **Nested folder, parent barrel.** `@/client/adapters/libsql/mod.ts` from
+   `libsql/search/` or `libsql/sync/` — not `../` and not `@worlds/client/...`.
 
 Never use parent-relative `../` to reach another domain. Never import
 `@worlds/client/...` anywhere under `src/`.
@@ -283,6 +282,23 @@ green-passing integration pipeline runs:
   - **Packaging:** JSR strips `links` and `exclude` from `deno.json`; the
     vendored `jsonld-context-parser` redirect is local-only (see below).
 
+## Store naming conventions
+
+Public graph persistence facades must use explicit suffixes:
+
+- **`*RdfjsStore`** — implements `rdfjs.Store` (e.g. `LibsqlRdfjsStore`,
+  `DenokvRdfjsStore`). File name: `libsql-rdfjs-store.ts`.
+- **`*QuadStore`** — implements `QuadStoreInterface` (e.g. `LibsqlQuadStore`,
+  `DenokvQuadStore`, in-memory `RdfjsQuadStore`). File name:
+  `libsql-quad-store.ts`.
+- **No bare `*Store`** names on public graph classes (`LibsqlStore`,
+  `DenokvStore`).
+
+LibSQL: `client.import` → `LibsqlQuadStore` → `LibsqlRdfjsStore.commit()`. Deno
+KV: `client.import` → `DenokvQuadStore` (native KV bulk path). Both use
+`*RdfjsStore` for Comunica SPARQL. Advanced assembly:
+`createLibsqlAdapterFromStores`, `createDenokvAdapterFromStores`.
+
 ## Architectural system map
 
 To maintain absolute alignment and prevent context drift, all development must
@@ -299,10 +315,10 @@ latency during query execution at scale.
 
 Hexastore indexes are provisioned at schema init. **`createLibsqlAdapter`**
 ([`create-libsql-adapter.ts`](src/client/adapters/libsql/create-libsql-adapter.ts))
-— `LibsqlStore` + hexastore indexes; pass `queryEngine` to enable SPARQL.
-`LibsqlStore.match` keyset-pages by `quads.id` (`matchPageSize`, default 1000).
-Optional `countQuads` supplies Comunica join cardinality hints. Wrap with
-`new Client(await createLibsqlAdapter(...))`.
+— `LibsqlRdfjsStore` + `LibsqlQuadStore` + hexastore indexes; pass `queryEngine`
+to enable SPARQL. `LibsqlRdfjsStore.match` keyset-pages by `quads.id`
+(`matchPageSize`, default 1000). Optional `countQuads` supplies Comunica join
+cardinality hints. Wrap with `new Client(await createLibsqlAdapter(...))`.
 
 ### Client lifecycle (runtime)
 
@@ -477,8 +493,9 @@ Keep AI tool descriptions and system prompts aligned with
 
 ### Choosing a LibSQL topology
 
-LibSQL uses hexastore indexes at schema init. SPARQL runs on `LibsqlStore`
-(hexastore) with no full N3 hydration per request.
+LibSQL uses hexastore indexes at schema init. SPARQL runs on `LibsqlRdfjsStore`
+(hexastore) with no full N3 hydration per request. Client import/export uses
+`LibsqlQuadStore`.
 
 ### SPARQL query shape at scale
 
@@ -486,10 +503,10 @@ At millions of quads, pick the topology at integration time.
 
 | Concern         | Production default                                                                                                           |
 | :-------------- | :--------------------------------------------------------------------------------------------------------------------------- |
-| LibSQL topology | `createLibsqlAdapter` with hexastore `LibsqlStore`, no full N3 mirror per request                                            |
+| LibSQL topology | `createLibsqlAdapter` with `LibsqlRdfjsStore` + `LibsqlQuadStore`, no full N3 mirror per request                             |
 | Hot-path SPARQL | Bind at least one term (subject, predicate, or object). Subject-bound property lookups match hexastore perf selective shapes |
 | Avoid at scale  | Unbound `?s ?p ?o` (even with `LIMIT`) on libsqlStore; fullScan degrades to hundreds of ms as quads grow                     |
-| Cardinality     | `LibsqlStore.countQuads` is used by Comunica when hexastore SPARQL is wired (no extra adapter config)                        |
+| Cardinality     | `LibsqlRdfjsStore.countQuads` is used by Comunica when hexastore SPARQL is wired (no extra adapter config)                   |
 
 Query helpers (same shapes as benchmarks):
 

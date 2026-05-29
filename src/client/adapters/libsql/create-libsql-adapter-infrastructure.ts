@@ -2,10 +2,8 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
 import type { LibsqlClientBaseOptions } from "./libsql-client-base-options.ts";
 import { LibsqlSearchIndex } from "@/client/adapters/libsql/search/mod.ts";
-import {
-  initializeLibsqlSchema,
-  LibsqlQueryBuilder,
-} from "@/client/adapters/libsql/store/mod.ts";
+import { initializeLibsqlSchema } from "./initialize-libsql-schema.ts";
+import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import {
   createLibsqlPatchSyncState,
   type LibsqlPatchSyncState,

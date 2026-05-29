@@ -7,7 +7,7 @@ import {
   commitPatchToLibsql,
   initializeLibsqlSchema,
   LibsqlQueryBuilder,
-  LibsqlStore,
+  LibsqlRdfjsStore,
 } from "@/client/adapters/libsql/mod.ts";
 import { canonize } from "rdf-canonize";
 import { encodeBase64Url } from "@std/encoding/base64url";
@@ -447,7 +447,7 @@ function createNonBooleanAskEngine(): ComunicaQueryEngine {
 }
 
 Deno.test(
-  "ComunicaSparqlEngine - LibsqlStore countQuads supports selective SPARQL",
+  "ComunicaSparqlEngine - LibsqlRdfjsStore countQuads supports selective SPARQL",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
     const libsqlQueryBuilder = new LibsqlQueryBuilder(32);
@@ -456,7 +456,7 @@ Deno.test(
     const textSplitter = new RecursiveCharacterTextSplitter({
       chunkSize: 1000,
     });
-    const libsqlStore = new LibsqlStore({
+    const libsqlRdfjsStore = new LibsqlRdfjsStore({
       client: databaseClient,
       queryBuilder: libsqlQueryBuilder,
       commitHandler: async (patch) => {
@@ -470,17 +470,17 @@ Deno.test(
     });
 
     const subjectIri = "urn:libsql:entity:0";
-    libsqlStore.addQuad(
+    libsqlRdfjsStore.addQuad(
       DataFactory.quad(
         DataFactory.namedNode(subjectIri),
         DataFactory.namedNode("urn:libsql:predicate"),
-        DataFactory.literal("LibsqlStore cardinality hint path"),
+        DataFactory.literal("LibsqlRdfjsStore cardinality hint path"),
       ),
     );
-    await libsqlStore.commit();
+    await libsqlRdfjsStore.commit();
 
     assertEquals(
-      await libsqlStore.countQuads(
+      await libsqlRdfjsStore.countQuads(
         DataFactory.namedNode(subjectIri),
         null,
         null,
@@ -491,7 +491,7 @@ Deno.test(
 
     const sparqlEngine = new ComunicaSparqlEngine({
       queryEngine,
-      store: libsqlStore,
+      store: libsqlRdfjsStore,
     });
     const response = await sparqlEngine.execute({
       query:
@@ -504,7 +504,7 @@ Deno.test(
     assertEquals(response.data.results.bindings.length, 1);
     assertEquals(
       response.data.results.bindings[0]?.object?.value,
-      "LibsqlStore cardinality hint path",
+      "LibsqlRdfjsStore cardinality hint path",
     );
   },
 );

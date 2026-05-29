@@ -26,6 +26,14 @@
   `@worlds/client/quad-store/n3` (`createProxiedN3Store`).
 - Removed `createComunicaSparqlEngineFactory` and `createSparqlEngine` adapter
   callbacks; pass `queryEngine` into adapter options instead.
+- Renamed `LibsqlStore` / `LibsqlStoreOptions` to `LibsqlRdfjsStore` /
+  `LibsqlRdfjsStoreOptions`. LibSQL `client.import` / `export` now go through
+  `LibsqlQuadStore` instead of generic `RdfjsQuadStore`.
+- Removed `createLibsqlAdapterFromRdfjsStore`; use
+  `createLibsqlAdapterFromStores`.
+- Added `createDenokvAdapterFromStores` for Deno KV adapter assembly.
+- Flattened `src/client/adapters/libsql/store/` modules to `libsql/` root
+  (`libsql-rdfjs-store.ts`, `libsql-query-builder.ts`, etc.).
 
 ### Migration
 
@@ -38,6 +46,17 @@ createSparqlEngine: ({ store }) =>
 
 // After
 queryEngine,
+```
+
+```typescript
+// Before
+import { LibsqlStore } from "@worlds/client/adapters/libsql";
+
+// After
+import {
+  LibsqlQuadStore,
+  LibsqlRdfjsStore,
+} from "@worlds/client/adapters/libsql";
 ```
 
 ## 0.0.15

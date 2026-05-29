@@ -57,7 +57,7 @@ export function resolveHexastorePerfQueryShapes(): readonly SparqlQueryShape[] {
 /** SparqlBackend labels the hexastore wiring under test. */
 export type SparqlBackend = "libsqlStore" | "denokvStore";
 
-/** libsqlHexastorePerfBackends targets the production LibsqlStore hexastore path. */
+/** libsqlHexastorePerfBackends targets the production LibsqlRdfjsStore hexastore path. */
 export const libsqlHexastorePerfBackends = [
   "libsqlStore",
 ] as const satisfies readonly SparqlBackend[];
@@ -131,7 +131,7 @@ async function importCorpusIntoLibsqlHexastore(
 }
 
 /**
- * openLibsqlHexastoreSparqlEngine wires Comunica over an existing LibsqlStore database.
+ * openLibsqlHexastoreSparqlEngine wires Comunica over an existing LibsqlRdfjsStore database.
  */
 async function openLibsqlHexastoreSparqlEngine(
   databaseClient: ReturnType<typeof createClient>,
@@ -148,7 +148,7 @@ async function openLibsqlHexastoreSparqlEngine(
 }
 
 /**
- * createLibsqlHexastoreSparqlEngine wires Comunica over LibsqlStore (no N3 hydration).
+ * createLibsqlHexastoreSparqlEngine wires Comunica over LibsqlRdfjsStore (no N3 hydration).
  */
 async function createLibsqlHexastoreSparqlEngine(
   corpusQuads: Quad[],

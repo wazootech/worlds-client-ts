@@ -25,7 +25,7 @@ export interface LibsqlClientBaseOptions extends QuadFilter {
   vectorDimensions?: number;
 
   /**
-   * matchPageSize limits rows per LibsqlStore.match SQL round-trip on hexastore reads (default 1000).
+   * matchPageSize limits rows per LibsqlRdfjsStore.match SQL round-trip on hexastore reads (default 1000).
    */
   matchPageSize?: number;
 

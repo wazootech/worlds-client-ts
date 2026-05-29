@@ -2,7 +2,7 @@ import type { TextSplitterInterface } from "@/client/search-index/quad-chunker/m
 import type { Patch } from "@/client/quad-store/mod.ts";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
-import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/store/mod.ts";
+import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/libsql-query-builder.ts";
 import {
   createLibsqlSearchIndexRebuilder,
   type RebuildLibsqlSearchIndexFromQuadsResult,

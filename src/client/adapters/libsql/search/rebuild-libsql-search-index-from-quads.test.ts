@@ -3,8 +3,10 @@ import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { commitPatchToLibsql } from "@/client/adapters/libsql/sync/commit-patch-to-libsql.ts";
-import { LibsqlQueryBuilder } from "@/client/adapters/libsql/store/mod.ts";
-import { initializeLibsqlSchema } from "@/client/adapters/libsql/store/mod.ts";
+import {
+  initializeLibsqlSchema,
+  LibsqlQueryBuilder,
+} from "@/client/adapters/libsql/mod.ts";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { rebuildLibsqlSearchIndexFromQuads } from "./rebuild-libsql-search-index-from-quads.ts";
 import { resolveLabelPredicates } from "./search-chunk-fts.ts";
