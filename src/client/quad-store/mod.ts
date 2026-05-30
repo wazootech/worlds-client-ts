@@ -5,6 +5,6 @@ export * from "./commit-handler.ts";
 export * from "./quad-filter.ts";
 export * from "./is-textual-literal.ts";
 export * from "./hash-quad.ts";
-export * from "./rdf-flat-term.ts";
+export * from "./term.ts";
 export * from "./rdf-formats.ts";
 export * from "./patch-sync-state.ts";

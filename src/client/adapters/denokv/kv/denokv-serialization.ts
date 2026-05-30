@@ -1,15 +1,12 @@
 import type * as rdfjs from "@rdfjs/types";
 import { DataFactory } from "n3";
-import type { RdfFlatTerm } from "@/client/quad-store/rdf-flat-term.ts";
-import {
-  rdfTermFromFlatDescriptor,
-  rdfTermToFlatDescriptor,
-} from "@/client/quad-store/rdf-flat-term.ts";
+import type { Term } from "@/client/quad-store/term.ts";
+import { fromRdfjsTerm, toRdfjsTerm } from "@/client/quad-store/term.ts";
 
 const { quad } = DataFactory;
 
-/** SerializedTerm is the Deno KV wire alias for a backend-neutral flat term descriptor. */
-export type SerializedTerm = RdfFlatTerm;
+/** SerializedTerm is the Deno KV wire alias for a backend-neutral Term. */
+export type SerializedTerm = Term;
 
 /** SerializedQuad bundles four serialized terms representing an RDF quad. */
 export interface SerializedQuad {
@@ -23,14 +20,14 @@ export interface SerializedQuad {
  * serializeTerm flattens an RDF/JS term for Deno KV persistence.
  */
 export function serializeTerm(term: rdfjs.Term): SerializedTerm {
-  return rdfTermToFlatDescriptor(term);
+  return fromRdfjsTerm(term);
 }
 
 /**
  * deserializeTerm reconstitutes a rich RDF/JS Term from a flat, persisted serialization.
  */
 export function deserializeTerm(serializedTerm: SerializedTerm): rdfjs.Term {
-  return rdfTermFromFlatDescriptor(serializedTerm);
+  return toRdfjsTerm(serializedTerm);
 }
 
 /**

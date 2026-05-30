@@ -8,8 +8,8 @@ import type * as rdfjs from "@rdfjs/types";
 import type { Patch } from "@/client/quad-store/mod.ts";
 import {
   filterQuads,
+  fromRdfjsTerm,
   hashQuads,
-  rdfTermToFlatDescriptor,
 } from "@/client/quad-store/mod.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
 import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/sql/libsql-query-builder.ts";
@@ -396,9 +396,9 @@ function buildRelationalStatements(
   queryBuilder: LibsqlQueryBuilder,
 ): InStatement[] {
   const insertQuadRows = quads.map((quad, index) => {
-    const subject = rdfTermToFlatDescriptor(quad.subject);
-    const object = rdfTermToFlatDescriptor(quad.object);
-    const graph = rdfTermToFlatDescriptor(quad.graph);
+    const subject = fromRdfjsTerm(quad.subject);
+    const object = fromRdfjsTerm(quad.object);
+    const graph = fromRdfjsTerm(quad.graph);
 
     return {
       quad_id: quadIds[index],
