@@ -5,15 +5,16 @@ import { Readable } from "node:stream";
 import { EventEmitter } from "node:events";
 import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
 import { DEFAULT_LIBSQL_MATCH_PAGE_SIZE } from "./libsql-query-builder.ts";
-import type { Patch } from "@/client/quad-store/mod.ts";
+import type {
+  CommitHandler,
+  PatchCommitContext,
+} from "@/client/quad-store/mod.ts";
+import { deduplicatePatchBuffers } from "@/client/quad-store/mod.ts";
 import { quadFromLibsqlRow } from "./libsql-quad-row.ts";
 
-const { namedNode } = DataFactory;
+export type { CommitHandler, PatchCommitContext };
 
-/**
- * CommitHandler is a callback that atomically persists a patch of buffered mutations.
- */
-export type CommitHandler = (patch: Patch) => Promise<void>;
+const { namedNode } = DataFactory;
 
 /**
  * LibsqlRdfjsStoreOptions configures LibsqlRdfjsStore dependencies and read behavior.
@@ -239,8 +240,8 @@ export class LibsqlRdfjsStore implements rdfjs.Store {
    * the configured CommitHandler. Deduplicates quads that appear in both
    * buffers before invoking the handler.
    */
-  public async commit(): Promise<void> {
-    this.deduplicateBuffers();
+  public async commit(context?: PatchCommitContext): Promise<void> {
+    deduplicatePatchBuffers(this.insertBuffer, this.deleteBuffer);
     if (this.insertBuffer.length === 0 && this.deleteBuffer.length === 0) {
       return;
     }
@@ -248,30 +249,9 @@ export class LibsqlRdfjsStore implements rdfjs.Store {
       await this.options.commitHandler({
         insertions: this.insertBuffer,
         deletions: this.deleteBuffer,
-      });
+      }, context);
     }
     this.clearBuffer();
-  }
-
-  /**
-   * deduplicateBuffers removes entries that appear in both insert and delete
-   * buffers, since adding then deleting the same quad before commit should
-   * be a semantic no-op.
-   */
-  private deduplicateBuffers(): void {
-    const removeFromInsert: number[] = [];
-    for (let i = this.insertBuffer.length - 1; i >= 0; i--) {
-      for (let j = this.deleteBuffer.length - 1; j >= 0; j--) {
-        if (this.insertBuffer[i].equals(this.deleteBuffer[j])) {
-          removeFromInsert.push(i);
-          this.deleteBuffer.splice(j, 1);
-          break;
-        }
-      }
-    }
-    for (const idx of removeFromInsert) {
-      this.insertBuffer.splice(idx, 1);
-    }
   }
 
   /**

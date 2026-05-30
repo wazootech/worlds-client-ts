@@ -1,5 +1,7 @@
 export * from "./quad-store-interface.ts";
+export * from "./import-lifecycle.ts";
 export * from "./patch.ts";
+export * from "./commit-handler.ts";
 export * from "./quad-filter.ts";
 export * from "./is-textual-literal.ts";
 export * from "./hash-quad.ts";

@@ -3,27 +3,54 @@ import { DataFactory } from "n3";
 import { Readable } from "node:stream";
 import { EventEmitter } from "node:events";
 
-import type { DenokvQuadStoreOptions } from "./denokv-quad-store.ts";
-import { MAX_KV_GET_MANY_SIZE } from "./denokv-quad-store.ts";
-import type { SerializedQuad } from "./denokv-serialization.ts";
-import { deserializeQuad } from "./denokv-serialization.ts";
-import { hashQuad } from "@/client/quad-store/mod.ts";
+import type {
+  CommitHandler,
+  PatchCommitContext,
+} from "@/client/quad-store/mod.ts";
+import { deduplicatePatchBuffers } from "@/client/quad-store/mod.ts";
 import {
   buildGenerationDataPrefix,
   buildPrimaryQuadKey,
 } from "./denokv-hexastore-keys.ts";
 import {
   DEFAULT_DENOKV_HEXASTORE_INDEXES,
+  type DenokvHexastoreIndex,
 } from "./denokv-hexastore-index-set.ts";
 import { readActiveGeneration } from "./denokv-dataset-generation.ts";
-import { commitBatchedKvMutations } from "./denokv-kv-limits.ts";
-import { materializeQuadKeys } from "./denokv-quad-keys.ts";
+import type { SerializedQuad } from "./denokv-serialization.ts";
+import { deserializeQuad } from "./denokv-serialization.ts";
+import { commitPatchToDenokv } from "./sync/commit-patch-to-denokv.ts";
 import {
   buildBestMatchCursor,
   matchesPattern,
 } from "./denokv-match-selector.ts";
 
 const { namedNode } = DataFactory;
+
+/** MAX_KV_GET_MANY_SIZE is Deno KV's per-call getMany key cap. */
+export const MAX_KV_GET_MANY_SIZE = 10;
+
+/**
+ * DenokvRdfjsStoreOptions configures DenokvRdfjsStore dependencies.
+ */
+export interface DenokvRdfjsStoreOptions {
+  /** kv is the underlying Deno KV database instance. */
+  kv: Deno.Kv;
+
+  /** keyPrefix is the namespace prefix for stored quads. Defaults to ["quads"]. */
+  keyPrefix?: Deno.KvKey;
+
+  /**
+   * enabledHexastoreIndexes controls which KV secondary-index families are materialized.
+   * Defaults to all supported index families.
+   */
+  enabledHexastoreIndexes?: readonly DenokvHexastoreIndex[];
+
+  /** commitHandler atomically persists buffered patches on commit(). */
+  commitHandler?: CommitHandler;
+}
+
+export type { CommitHandler, PatchCommitContext };
 
 /**
  * DenokvRdfjsStore is an RDF/JS Store implementation backed by Deno KV.
@@ -34,7 +61,7 @@ export class DenokvRdfjsStore implements rdfjs.Store {
   private deleteBuffer: rdfjs.Quad[] = [];
 
   public constructor(
-    private readonly options: DenokvQuadStoreOptions,
+    private readonly options: DenokvRdfjsStoreOptions,
   ) {}
 
   public match(
@@ -332,63 +359,29 @@ export class DenokvRdfjsStore implements rdfjs.Store {
   }
 
   /**
-   * commit persists buffered insertions and deletions to Deno KV (primary + enabled secondary indexes).
+   * commit persists buffered insertions and deletions through the configured CommitHandler.
    */
-  public async commit(): Promise<void> {
+  public async commit(context?: PatchCommitContext): Promise<void> {
+    deduplicatePatchBuffers(this.insertBuffer, this.deleteBuffer);
     if (this.insertBuffer.length === 0 && this.deleteBuffer.length === 0) {
       return;
     }
 
-    const keyPrefix = this.options.keyPrefix ?? ["quads"];
-    const enabledIndexes = this.options.enabledHexastoreIndexes ??
-      DEFAULT_DENOKV_HEXASTORE_INDEXES;
-    const generationId = await readActiveGeneration(
-      this.options.kv,
-      keyPrefix,
-    );
-    const scopedDataPrefix = buildGenerationDataPrefix(
-      keyPrefix,
-      generationId,
-    );
+    const patch = {
+      insertions: this.insertBuffer,
+      deletions: this.deleteBuffer,
+    };
+    const commitOptions = {
+      kv: this.options.kv,
+      keyPrefix: this.options.keyPrefix,
+      enabledHexastoreIndexes: this.options.enabledHexastoreIndexes,
+    };
 
-    const deleteMutations: Deno.KvKey[] = [];
-    const insertMutations: Array<{ key: Deno.KvKey; value: unknown }> = [];
-
-    for (const storedQuad of this.deleteBuffer) {
-      const quadId = await hashQuad(storedQuad);
-      const { primaryKey, indexKeys } = materializeQuadKeys({
-        scopedDataPrefix,
-        enabledIndexes,
-        storedQuad,
-        quadId,
-      });
-
-      deleteMutations.push(primaryKey, ...indexKeys);
+    if (this.options.commitHandler) {
+      await this.options.commitHandler(patch, context);
+    } else {
+      await commitPatchToDenokv(patch, commitOptions, context);
     }
-
-    for (const storedQuad of this.insertBuffer) {
-      const quadId = await hashQuad(storedQuad);
-      const { primaryKey, indexKeys, serializedQuad } = materializeQuadKeys({
-        scopedDataPrefix,
-        enabledIndexes,
-        storedQuad,
-        quadId,
-      });
-
-      insertMutations.push({ key: primaryKey, value: serializedQuad });
-      for (const indexKey of indexKeys) {
-        insertMutations.push({ key: indexKey, value: quadId });
-      }
-    }
-
-    await commitBatchedKvMutations(this.options.kv, (batch) => {
-      for (const key of deleteMutations) {
-        batch.delete(key);
-      }
-      for (const { key, value } of insertMutations) {
-        batch.set(key, value);
-      }
-    });
 
     this.insertBuffer = [];
     this.deleteBuffer = [];

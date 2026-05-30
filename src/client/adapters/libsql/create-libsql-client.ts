@@ -33,7 +33,7 @@ export async function createLibsqlClient(
 
   const libsqlQuadStore = new LibsqlQuadStore({
     libsqlRdfjsStore,
-    patchSync: infrastructure.patchSync,
+    importLifecycle: infrastructure.patchSync,
   });
 
   return createLibsqlClientFromStores({

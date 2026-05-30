@@ -3,6 +3,7 @@ import { Writer } from "n3";
 import type {
   ExportRequest,
   ExportResponse,
+  ImportLifecycle,
   ImportRequest,
   QuadStoreInterface,
 } from "@/client/quad-store/mod.ts";
@@ -10,7 +11,7 @@ import {
   getFormat,
   materializeImportQuads,
 } from "@/client/quad-store/rdf-formats.ts";
-import type { LibsqlPatchSyncState } from "@/client/adapters/libsql/sync/mod.ts";
+import { runImportWithLifecycle } from "@/client/quad-store/mod.ts";
 import type { LibsqlRdfjsStore } from "./libsql-rdfjs-store.ts";
 
 /**
@@ -20,12 +21,12 @@ export interface LibsqlQuadStoreOptions {
   /** libsqlRdfjsStore is the hexastore-backed RDF/JS store receiving buffered mutations. */
   libsqlRdfjsStore: LibsqlRdfjsStore;
 
-  /** patchSync coordinates deferred search indexing around import commits. */
-  patchSync: LibsqlPatchSyncState;
+  /** importLifecycle coordinates deferred search indexing around import commits. */
+  importLifecycle: ImportLifecycle;
 }
 
 /**
- * LibsqlQuadStore implements QuadStoreInterface over LibsqlRdfjsStore with LibSQL patch-sync orchestration.
+ * LibsqlQuadStore implements QuadStoreInterface over LibsqlRdfjsStore with LibSQL import lifecycle orchestration.
  */
 export class LibsqlQuadStore implements QuadStoreInterface {
   public constructor(
@@ -33,30 +34,32 @@ export class LibsqlQuadStore implements QuadStoreInterface {
   ) {}
 
   public async import(request: ImportRequest): Promise<void> {
-    const mode = request.mode ?? "merge";
-    const quads = await materializeImportQuads(request.source);
+    await runImportWithLifecycle(
+      this.options.importLifecycle,
+      async () => {
+        const mode = request.mode ?? "merge";
+        const quads = await materializeImportQuads(request.source);
 
-    this.options.patchSync.beforeImport();
+        if (mode === "replace") {
+          await new Promise<void>((resolve, reject) => {
+            const removalStream = this.options.libsqlRdfjsStore.removeMatches(
+              null,
+              null,
+              null,
+              null,
+            );
+            removalStream.on("end", resolve);
+            removalStream.on("error", reject);
+          });
+        }
 
-    if (mode === "replace") {
-      await new Promise<void>((resolve, reject) => {
-        const removalStream = this.options.libsqlRdfjsStore.removeMatches(
-          null,
-          null,
-          null,
-          null,
-        );
-        removalStream.on("end", resolve);
-        removalStream.on("error", reject);
-      });
-    }
+        for (const quad of quads) {
+          this.options.libsqlRdfjsStore.addQuad(quad);
+        }
 
-    for (const quad of quads) {
-      this.options.libsqlRdfjsStore.addQuad(quad);
-    }
-
-    await this.options.libsqlRdfjsStore.commit();
-    await this.options.patchSync.afterImport();
+        await this.options.libsqlRdfjsStore.commit();
+      },
+    );
   }
 
   public async export(request: ExportRequest): Promise<ExportResponse> {

@@ -2,8 +2,10 @@ import { assertEquals, assertExists, assertRejects } from "@std/assert";
 import type * as rdfjs from "@rdfjs/types";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory } from "n3";
-import { DenokvQuadStore } from "./denokv-quad-store.ts";
-import { createDenokvClient } from "./create-denokv-client.ts";
+import {
+  createDenokvClient,
+  createDenokvStores,
+} from "./create-denokv-client.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 const queryEngine = new QueryEngine();
@@ -15,8 +17,8 @@ async function seedQuads(
   kv: Deno.Kv,
   quads: rdfjs.Quad[],
 ): Promise<void> {
-  const quadStore = new DenokvQuadStore({ kv });
-  await quadStore.import({
+  const { denokvQuadStore } = createDenokvStores({ kv });
+  await denokvQuadStore.import({
     mode: "merge",
     source: { kind: "quads", quads },
   });

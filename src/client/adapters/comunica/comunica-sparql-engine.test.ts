@@ -21,8 +21,7 @@ import {
   ComunicaSparqlEngine,
   executeSparql,
 } from "./comunica-sparql-engine.ts";
-import { DenokvQuadStore } from "@/client/adapters/denokv/denokv-quad-store.ts";
-import { DenokvRdfjsStore } from "@/client/adapters/denokv/denokv-rdfjs-store.ts";
+import { createDenokvStores } from "@/client/adapters/denokv/create-denokv-client.ts";
 
 const queryEngine = new QueryEngine();
 
@@ -81,13 +80,15 @@ Deno.test(
 
       const n3Store = new Store(quads);
 
-      const quadStore = new DenokvQuadStore({ kv });
-      await quadStore.import({
+      const { denokvQuadStore, denokvRdfjsStore: kvStore } = createDenokvStores(
+        {
+          kv,
+        },
+      );
+      await denokvQuadStore.import({
         mode: "merge",
         source: { kind: "quads", quads },
       });
-
-      const kvStore = new DenokvRdfjsStore({ kv });
 
       const query = [
         "SELECT ?s ?p ?o WHERE { ?s ?p ?o }",

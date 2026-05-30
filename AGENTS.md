@@ -340,7 +340,12 @@ For standard Comunica SPARQL, pass a Comunica `queryEngine` into factory options
 assembling `new Client` manually.
 
 Custom assembly uses `new Client` with `ClientOptions`; advanced LibSQL
-warm-start uses `createLibsqlClientFromStores`.
+warm-start uses `createLibsqlClientFromStores`. Durable backends share buffer →
+`commit()` → `persistPatch` for import and SPARQL UPDATE; all quad stores run
+`ImportLifecycle` (`beforeImport` / `afterImport`) around `import`. LibSQL
+defers built-in chunk projection via `searchIndexOnImport: "deferred"`; Deno KV
+supports the same defer hooks for external search indexes via
+`createDenokvPatchSyncState({ searchIndexOnImport: "deferred", reindex })`.
 
 - **Long-running (Fly.io, DigitalOcean, 24/7 Deno):** one `Client` at process
   boot. See [`examples/libsql-long-running`](examples/libsql-long-running).

@@ -229,7 +229,10 @@ export async function commitPatchToLibsql(
     targetedDeletions,
     resolvedLabelPredicates,
   );
-  if (labelTouchedSubjects.length > 0) {
+  if (
+    labelTouchedSubjects.length > 0 &&
+    !options.skipSearchIndexProjection
+  ) {
     await refreshSearchChunksForSubjects(labelTouchedSubjects, options);
   }
 }

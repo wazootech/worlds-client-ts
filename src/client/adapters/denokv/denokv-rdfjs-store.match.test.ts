@@ -2,7 +2,7 @@ import { assertEquals } from "@std/assert";
 import type * as rdfjs from "@rdfjs/types";
 import { DataFactory } from "n3";
 import { generateSyntheticQuads } from "../../../../benchmarks/shared/synthetic-data.ts";
-import { DenokvQuadStore } from "./denokv-quad-store.ts";
+import { createDenokvStores } from "./create-denokv-client.ts";
 import { DEFAULT_DENOKV_HEXASTORE_INDEXES } from "./denokv-hexastore-index-set.ts";
 import { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";
 import { buildBestMatchSelector } from "./denokv-match-selector.ts";
@@ -14,8 +14,11 @@ async function seedQuads(
   quads: rdfjs.Quad[],
   options?: { keyPrefix?: Deno.KvKey },
 ): Promise<void> {
-  const quadStore = new DenokvQuadStore({ kv, keyPrefix: options?.keyPrefix });
-  await quadStore.import({
+  const { denokvQuadStore } = createDenokvStores({
+    kv,
+    keyPrefix: options?.keyPrefix,
+  });
+  await denokvQuadStore.import({
     mode: "merge",
     source: { kind: "quads", quads },
   });

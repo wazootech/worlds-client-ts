@@ -1,6 +1,6 @@
 import type * as rdfjs from "@rdfjs/types";
 
-import type { SerializedQuad } from "./denokv-quad-store.ts";
+import type { SerializedQuad } from "./denokv-serialization.ts";
 import {
   buildIndexKey,
   buildPrimaryQuadKey,

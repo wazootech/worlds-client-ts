@@ -17,6 +17,11 @@
 - Renamed `rebuildSearchIndex` → **`reindex`**; `RebuildSearchIndexRequest` /
   `RebuildSearchIndexResponse` → `ReindexRequest` / `ReindexResponse`. RDF/JS
   and Deno KV `reindex()` succeed as documented no-ops.
+- **`ImportLifecycle`** (`beforeImport` / `afterImport`) wraps every
+  `QuadStoreInterface.import`. `LibsqlQuadStore` and `DenokvQuadStore` take
+  `importLifecycle` plus a shared `*RdfjsStore`; import and SPARQL UPDATE both
+  buffer patches through `commit()` → `persistPatch`. Deno KV replace import
+  uses generation-swap inside `commitPatchToDenokv`.
 
 ### Migration
 
@@ -135,7 +140,7 @@ const libsqlRdfjsStore = new LibsqlRdfjsStore({
 });
 const libsqlQuadStore = new LibsqlQuadStore({
   libsqlRdfjsStore,
-  patchSync: infrastructure.patchSync,
+  importLifecycle: infrastructure.patchSync,
 });
 const adapter = createLibsqlClientFromStores({
   infrastructure,
@@ -150,10 +155,10 @@ If you wrapped `LibsqlStore` with `RdfjsQuadStore` for `client.import`:
 
 ```typescript
 // Before
-new RdfjsQuadStore({ rdfjsStore: libsqlStore, patchSync });
+new RdfjsQuadStore({ rdfjsStore: libsqlStore, importLifecycle });
 
 // After
-new LibsqlQuadStore({ libsqlRdfjsStore, patchSync });
+new LibsqlQuadStore({ libsqlRdfjsStore, importLifecycle });
 ```
 
 Deno KV custom assembly:

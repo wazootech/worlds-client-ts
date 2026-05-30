@@ -1,7 +1,7 @@
 import { assertEquals } from "@std/assert";
 import type * as rdfjs from "@rdfjs/types";
 import { DataFactory } from "n3";
-import { DenokvQuadStore } from "./denokv-quad-store.ts";
+import { createDenokvStores } from "./create-denokv-client.ts";
 import { DenokvSearchIndex } from "./denokv-search-index.ts";
 
 const { namedNode, literal, quad } = DataFactory;
@@ -17,8 +17,11 @@ async function seedQuads(
   quads: rdfjs.Quad[],
   options?: { keyPrefix?: Deno.KvKey },
 ): Promise<void> {
-  const quadStore = new DenokvQuadStore({ kv, keyPrefix: options?.keyPrefix });
-  await quadStore.import({
+  const { denokvQuadStore } = createDenokvStores({
+    kv,
+    keyPrefix: options?.keyPrefix,
+  });
+  await denokvQuadStore.import({
     mode: "merge",
     source: { kind: "quads", quads },
   });
@@ -217,8 +220,8 @@ Deno.test(
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
-      const quadStore = new DenokvQuadStore({ kv });
-      await quadStore.import({
+      const { denokvQuadStore } = createDenokvStores({ kv });
+      await denokvQuadStore.import({
         mode: "merge",
         source: {
           kind: "quads",
@@ -232,7 +235,7 @@ Deno.test(
         },
       });
 
-      await quadStore.import({
+      await denokvQuadStore.import({
         mode: "replace",
         source: {
           kind: "quads",

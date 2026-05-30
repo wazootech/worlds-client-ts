@@ -1,12 +1,10 @@
 import type { TextSplitterInterface } from "@/client/search-index/quad-chunker/mod.ts";
-import type { Patch } from "@/client/quad-store/mod.ts";
+import type { ImportLifecycle } from "@/client/quad-store/mod.ts";
+import type { Patch, PatchCommitContext } from "@/client/quad-store/mod.ts";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
 import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/libsql-query-builder.ts";
-import {
-  createLibsqlSearchIndexRebuilder,
-  type RebuildLibsqlSearchIndexFromQuadsResult,
-} from "@/client/adapters/libsql/search/rebuild-libsql-search-index-from-quads.ts";
+import { createLibsqlSearchIndexRebuilder } from "@/client/adapters/libsql/search/rebuild-libsql-search-index-from-quads.ts";
 
 /**
  * LibsqlPatchSyncAdapterOptions configures shared LibSQL quad/chunk synchronization.
@@ -22,17 +20,12 @@ export interface LibsqlPatchSyncAdapterOptions extends LibsqlClientBaseOptions {
 /**
  * LibsqlPatchSyncState coordinates commitPatchToLibsql with optional deferred search indexing.
  */
-export interface LibsqlPatchSyncState {
+export interface LibsqlPatchSyncState extends ImportLifecycle {
   /** persistPatch commits a patch to LibSQL using the current defer-search flag. */
-  persistPatch: (patch: Patch) => Promise<void>;
-
-  /** beforeImport applies deferred search indexing before the next commit. */
-  beforeImport: () => void;
-
-  /** afterImport rebuilds search chunks when searchIndexOnImport is "deferred". */
-  afterImport: () => Promise<
-    RebuildLibsqlSearchIndexFromQuadsResult | undefined
-  >;
+  persistPatch: (
+    patch: Patch,
+    context?: PatchCommitContext,
+  ) => Promise<void>;
 }
 
 /**
@@ -51,7 +44,7 @@ export function createLibsqlPatchSyncState(
   let skipSearchIndexForNextCommit = false;
 
   return {
-    persistPatch: async (patch: Patch) => {
+    persistPatch: async (patch, _context) => {
       await commitPatchToLibsql(patch, {
         ...dependencies,
         skipSearchIndexProjection: !projectSearchIndex ||
@@ -64,11 +57,11 @@ export function createLibsqlPatchSyncState(
       skipSearchIndexForNextCommit = deferSearchDuringImport;
     },
 
-    afterImport: async () => {
+    afterImport: async (): Promise<void> => {
       if (!deferSearchDuringImport) {
-        return undefined;
+        return;
       }
-      return await reindex();
+      await reindex();
     },
   };
 }

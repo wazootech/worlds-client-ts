@@ -267,3 +267,26 @@ Deno.test("RdfjsQuadStore.export - returns serialized dump", async () => {
   assertEquals(response.contentType, "text/turtle");
   assertEquals(response.data.includes("value1"), true);
 });
+
+Deno.test("RdfjsQuadStore.import invokes importLifecycle hooks", async () => {
+  const events: string[] = [];
+  const store = new Store();
+  const quadStore = new RdfjsQuadStore({
+    store,
+    importLifecycle: {
+      beforeImport() {
+        events.push("before");
+      },
+      afterImport() {
+        events.push("after");
+        return Promise.resolve();
+      },
+    },
+  });
+
+  await quadStore.import({
+    source: { kind: "quads", quads: [q1] },
+  });
+
+  assertEquals(events, ["before", "after"]);
+});
