@@ -1,7 +1,6 @@
-import type { SearchIndexOnImport } from "@/client/quad-store/mod.ts";
 import type {
-  CommitHandler,
-  ImportLifecycle,
+  PatchSyncState,
+  SearchIndexOnImport,
 } from "@/client/quad-store/mod.ts";
 import {
   commitPatchToDenokv,
@@ -27,19 +26,11 @@ export interface DenokvPatchSyncAdapterOptions
 }
 
 /**
- * DenokvPatchSyncState coordinates Deno KV commit persisting with import lifecycle hooks.
- */
-export interface DenokvPatchSyncState extends ImportLifecycle {
-  /** persistPatch atomically persists a buffered patch to Deno KV durable storage. */
-  persistPatch: CommitHandler;
-}
-
-/**
  * createDenokvPatchSyncState builds persistPatch and deferred-import helpers for Deno KV clients.
  */
 export function createDenokvPatchSyncState(
   dependencies: DenokvPatchSyncAdapterOptions,
-): DenokvPatchSyncState {
+): PatchSyncState {
   const searchIndexOnImport = dependencies.searchIndexOnImport ?? "incremental";
 
   return {

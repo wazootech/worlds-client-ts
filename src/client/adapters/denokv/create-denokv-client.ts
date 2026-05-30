@@ -1,6 +1,6 @@
 import type { ClientInterface } from "@/client/client.ts";
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
-import { wireDurableClient } from "@/client/adapters/shared/wire-durable-client.ts";
+import { wireDurableClient } from "@/client/wire-durable-client.ts";
 
 import { DenokvQuadStore } from "./denokv-quad-store.ts";
 import { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";

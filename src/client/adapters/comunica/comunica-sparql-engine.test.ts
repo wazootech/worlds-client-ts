@@ -21,7 +21,6 @@ import {
   ComunicaSparqlEngine,
   executeSparql,
 } from "./comunica-sparql-engine.ts";
-import { createComunicaEngineWithBufferedCommit } from "./create-sparql-engine-with-commit.ts";
 import { createDenokvStoresForTest } from "@/client/adapters/denokv/create-denokv-stores-for-test.ts";
 
 const queryEngine = new QueryEngine();
@@ -513,25 +512,22 @@ Deno.test(
 );
 
 Deno.test(
-  "createComunicaEngineWithBufferedCommit - does NOT commit on read-only SELECT",
+  "ComunicaSparqlEngine - does NOT commit on read-only SELECT",
   async () => {
     let commitCount = 0;
     const store = new Store();
 
-    // deno-lint-ignore no-explicit-any
-    const bufferedStore = store as any;
-    bufferedStore.commit = () => {
-      commitCount++;
-      return Promise.resolve();
-    };
-
     const queryEngineLocal = new QueryEngine();
-    const sparqlEngine = createComunicaEngineWithBufferedCommit({
+    const sparqlEngine = new ComunicaSparqlEngine({
       queryEngine: queryEngineLocal,
-      store: bufferedStore,
+      store,
+      onVoid: () => {
+        commitCount++;
+        return Promise.resolve();
+      },
     });
 
-    bufferedStore.addQuad(
+    store.addQuad(
       DataFactory.namedNode("https://example.com/s"),
       DataFactory.namedNode("https://example.com/p"),
       DataFactory.namedNode("https://example.com/o"),
@@ -547,22 +543,19 @@ Deno.test(
 );
 
 Deno.test(
-  "createComunicaEngineWithBufferedCommit - COMMITS on mutating SPARQL UPDATE",
+  "ComunicaSparqlEngine - COMMITS on mutating SPARQL UPDATE",
   async () => {
     let commitCount = 0;
     const store = new Store();
 
-    // deno-lint-ignore no-explicit-any
-    const bufferedStore = store as any;
-    bufferedStore.commit = () => {
-      commitCount++;
-      return Promise.resolve();
-    };
-
     const queryEngineLocal = new QueryEngine();
-    const sparqlEngine = createComunicaEngineWithBufferedCommit({
+    const sparqlEngine = new ComunicaSparqlEngine({
       queryEngine: queryEngineLocal,
-      store: bufferedStore,
+      store,
+      onVoid: () => {
+        commitCount++;
+        return Promise.resolve();
+      },
     });
 
     const response = await sparqlEngine.execute({

@@ -4,7 +4,7 @@ import type { ClientInterface } from "@/client/client.ts";
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
 import { LibsqlSearchIndex } from "@/client/adapters/libsql/search/mod.ts";
 import { createLibsqlPatchSyncState } from "@/client/adapters/libsql/sync/mod.ts";
-import { wireDurableClient } from "@/client/adapters/shared/wire-durable-client.ts";
+import { wireDurableClient } from "@/client/wire-durable-client.ts";
 
 import type { LibsqlClientBaseOptions } from "./libsql-client-base-options.ts";
 import { LibsqlQuadStore } from "./libsql-quad-store.ts";

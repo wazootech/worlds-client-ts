@@ -8,7 +8,7 @@ import type {
   Quad,
 } from "@/client/quad-store/mod.ts";
 import { toRdfjsQuad } from "@/client/quad-store/mod.ts";
-import { BufferedRdfjsPatchState } from "@/client/adapters/shared/buffered-rdfjs-store.ts";
+import { BufferedRdfjsPatchState } from "@/client/quad-store/buffered-rdfjs-store.ts";
 import {
   buildGenerationDataPrefix,
   buildPrimaryQuadKey,

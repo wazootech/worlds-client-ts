@@ -5,8 +5,8 @@ import { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";
 import {
   createDenokvPatchSyncState,
   type DenokvPatchSyncAdapterOptions,
-  type DenokvPatchSyncState,
 } from "./sync/denokv-patch-sync.ts";
+import type { PatchSyncState } from "@/client/quad-store/mod.ts";
 
 /**
  * DenokvStoresForTest bundles Deno KV quad and RDF/JS store facades for adapter tests.
@@ -19,7 +19,7 @@ export interface DenokvStoresForTest {
   denokvRdfjsStore: DenokvRdfjsStore;
 
   /** patchSync coordinates persistPatch and deferred import lifecycle hooks in tests. */
-  patchSync: DenokvPatchSyncState;
+  patchSync: PatchSyncState;
 }
 
 /**

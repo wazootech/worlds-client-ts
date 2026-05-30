@@ -1,3 +1,5 @@
+import type { CommitHandler } from "./commit-handler.ts";
+
 /**
  * ImportLifecycle runs adapter-specific work immediately before and after quad import persistence.
  */
@@ -39,3 +41,11 @@ export async function runImportWithLifecycle(
  * SearchIndexOnImport controls when search chunk projection runs during bulk import.
  */
 export type SearchIndexOnImport = "incremental" | "deferred" | "disabled";
+
+/**
+ * PatchSyncState coordinates commit persisting with import lifecycle hooks.
+ */
+export interface PatchSyncState extends ImportLifecycle {
+  /** persistPatch atomically persists a buffered patch to durable storage. */
+  persistPatch: CommitHandler;
+}

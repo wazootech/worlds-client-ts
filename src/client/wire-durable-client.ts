@@ -1,11 +1,8 @@
 import { Client } from "@/client/client.ts";
 import type { ClientCapabilities } from "@/client/client-capabilities.ts";
 import type { ClientInterface } from "@/client/client.ts";
-import type {
-  BufferedCommitStore,
-  ComunicaQueryEngine,
-} from "@/client/adapters/comunica/mod.ts";
-import { createComunicaEngineWithBufferedCommit } from "@/client/adapters/comunica/mod.ts";
+import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
+import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
 import type { QuadStoreInterface } from "@/client/quad-store/mod.ts";
 import type { SearchIndexInterface } from "@/client/search-index/mod.ts";
 import type * as rdfjs from "@rdfjs/types";
@@ -24,7 +21,7 @@ export interface WireDurableClientOptions {
   capabilities: ClientCapabilities;
 
   /** rdfjsStoreForSparql is the hexastore-backed RDF/JS store used when queryEngine is set. */
-  rdfjsStoreForSparql: rdfjs.Store & BufferedCommitStore;
+  rdfjsStoreForSparql: rdfjs.Store & { commit(): Promise<void> };
 
   /** queryEngine optionally enables built-in Comunica SPARQL with buffered commit. */
   queryEngine?: ComunicaQueryEngine;
@@ -37,9 +34,10 @@ export function wireDurableClient(
   options: WireDurableClientOptions,
 ): ClientInterface {
   const sparqlEngine = options.queryEngine
-    ? createComunicaEngineWithBufferedCommit({
+    ? new ComunicaSparqlEngine({
       queryEngine: options.queryEngine,
       store: options.rdfjsStoreForSparql,
+      onVoid: () => options.rdfjsStoreForSparql.commit(),
     })
     : undefined;
 
