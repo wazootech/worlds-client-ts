@@ -41,6 +41,6 @@ export async function runImportWithLifecycle(
  * PatchSyncState coordinates commit persisting with import lifecycle hooks.
  */
 export interface PatchSyncState extends ImportLifecycle {
-  /** persistPatch atomically persists a buffered patch to durable storage. */
-  persistPatch: CommitHandler;
+  /** commit atomically persists a buffered patch to durable storage. */
+  commit: CommitHandler;
 }

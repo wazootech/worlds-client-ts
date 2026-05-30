@@ -29,7 +29,7 @@ export function createDenokvClient(
     kv: options.kv,
     keyPrefix: options.keyPrefix,
     enabledHexastoreIndexes: options.enabledHexastoreIndexes,
-    commitHandler: patchSync.persistPatch,
+    commitHandler: patchSync.commit,
   });
   const denokvQuadStore = new DenokvQuadStore({
     denokvRdfjsStore,

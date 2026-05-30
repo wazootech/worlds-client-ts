@@ -25,7 +25,7 @@ async function createLibsqlQuadStoreForTest(): Promise<{
   const libsqlRdfjsStore = new LibsqlRdfjsStore({
     client,
     queryBuilder: testLibsqlQueryBuilder,
-    commitHandler: patchSync.persistPatch,
+    commitHandler: patchSync.commit,
   });
   return {
     client,

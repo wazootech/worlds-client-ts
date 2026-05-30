@@ -49,7 +49,7 @@ export async function createLibsqlClient(
   const libsqlRdfjsStore = new LibsqlRdfjsStore({
     client: options.client,
     queryBuilder,
-    commitHandler: patchSync.persistPatch,
+    commitHandler: patchSync.commit,
     matchPageSize: options.matchPageSize,
   });
   const libsqlQuadStore = new LibsqlQuadStore({

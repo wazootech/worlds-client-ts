@@ -32,7 +32,7 @@ export function createDenokvPatchSyncState(
   const searchIndexOnImport = dependencies.searchIndexOnImport ?? "incremental";
 
   return {
-    persistPatch: async (patch, context) => {
+    commit: async (patch, context) => {
       await commitPatchToDenokv(patch, dependencies, context);
     },
 

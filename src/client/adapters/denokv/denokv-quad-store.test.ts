@@ -178,7 +178,7 @@ Deno.test("DenokvQuadStore.import invokes importLifecycle hooks", async () => {
     const patchSync = createDenokvPatchSyncState({ kv });
     const denokvRdfjsStore = new DenokvRdfjsStore({
       kv,
-      commitHandler: patchSync.persistPatch,
+      commitHandler: patchSync.commit,
     });
     const quadStore = new DenokvQuadStore({
       denokvRdfjsStore,

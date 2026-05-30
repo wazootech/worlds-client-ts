@@ -26,7 +26,7 @@ export function createLibsqlPatchSyncState(
   const searchIndexOnImport = dependencies.searchIndexOnImport ?? "incremental";
 
   return {
-    persistPatch: async (patch, context) => {
+    commit: async (patch, context) => {
       const isImport = context?.importMode !== undefined;
       const skipSearchIndexProjection =
         dependencies.searchIndexOnImport === "disabled" ||
