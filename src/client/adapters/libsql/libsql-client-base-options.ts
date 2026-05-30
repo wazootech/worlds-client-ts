@@ -5,7 +5,7 @@ import type { EmbeddingService } from "@/client/search-index/embedding-service/m
 import type { TextSplitterInterface } from "@/client/search-index/quad-chunker/mod.ts";
 
 /**
- * LibsqlClientBaseOptions lists configuration shared by hydrated-N3 and hexastore LibSQL clients.
+ * LibsqlClientBaseOptions lists configuration shared by hexastore LibSQL client factories.
  */
 export interface LibsqlClientBaseOptions extends QuadFilter {
   /** client is the underlying LibSQL client pointing to the database. */

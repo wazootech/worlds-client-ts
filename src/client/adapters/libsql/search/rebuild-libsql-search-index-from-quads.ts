@@ -43,8 +43,8 @@ export async function rebuildLibsqlSearchIndexFromQuads(
   let afterQuadId: string | undefined;
 
   for (;;) {
-    const query = libsqlQueryBuilder.buildHydrateQuadsPageQuery(
-      { include, exclude },
+    const query = libsqlQueryBuilder.buildMatchQuadsQuery(
+      { subject: null, predicate: null, object: null, graph: null },
       { afterQuadId, limit: pageSize },
     );
     const resultSet = await client.execute(query);

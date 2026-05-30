@@ -39,17 +39,17 @@ async function createPreloadedClient(count: number): Promise<{
 
 console.log("Pre-populating Deno Kv benchmark datasets...");
 
-const hydrationCorpus100 = await createPreloadedClient(100);
-const hydrationCorpus1000 = await createPreloadedClient(1000);
-const hydrationCorpus5000 = await createPreloadedClient(5000);
+const exportCorpus100 = await createPreloadedClient(100);
+const exportCorpus1000 = await createPreloadedClient(1000);
+const exportCorpus5000 = await createPreloadedClient(5000);
 const searchCorpus = await createPreloadedClient(2000);
 
 console.log("Deno Kv benchmark datasets ready.");
 
 globalThis.addEventListener("unload", () => {
-  hydrationCorpus100.kv.close();
-  hydrationCorpus1000.kv.close();
-  hydrationCorpus5000.kv.close();
+  exportCorpus100.kv.close();
+  exportCorpus1000.kv.close();
+  exportCorpus5000.kv.close();
   searchCorpus.kv.close();
 });
 
@@ -113,36 +113,36 @@ Deno.bench({
 });
 
 // -----------------------------------------------------------------------------
-// BENCHMARK GROUP 2: Read Hydration Latency
-// Measures the stateless edge cost of lazy workspace hydration.
+// BENCHMARK GROUP 2: Full graph export (durable read)
+// Measures client.export() over the hexastore — not N3 hydration.
 // -----------------------------------------------------------------------------
 
 Deno.bench({
-  name: "Deno Kv Hydration: 100 Quads from DB",
-  group: "Hydration Scale",
+  name: "Deno Kv FullGraphExport: 100 Quads from DB",
+  group: "FullGraphExport",
   async fn(benchContext) {
     benchContext.start();
-    await hydrationCorpus100.client.export({ format: { kind: "quads" } });
+    await exportCorpus100.client.export({ format: { kind: "quads" } });
     benchContext.end();
   },
 });
 
 Deno.bench({
-  name: "Deno Kv Hydration: 1,000 Quads from DB",
-  group: "Hydration Scale",
+  name: "Deno Kv FullGraphExport: 1,000 Quads from DB",
+  group: "FullGraphExport",
   async fn(benchContext) {
     benchContext.start();
-    await hydrationCorpus1000.client.export({ format: { kind: "quads" } });
+    await exportCorpus1000.client.export({ format: { kind: "quads" } });
     benchContext.end();
   },
 });
 
 Deno.bench({
-  name: "Deno Kv Hydration: 5,000 Quads from DB",
-  group: "Hydration Scale",
+  name: "Deno Kv FullGraphExport: 5,000 Quads from DB",
+  group: "FullGraphExport",
   async fn(benchContext) {
     benchContext.start();
-    await hydrationCorpus5000.client.export({ format: { kind: "quads" } });
+    await exportCorpus5000.client.export({ format: { kind: "quads" } });
     benchContext.end();
   },
 });

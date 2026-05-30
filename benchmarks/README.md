@@ -199,7 +199,7 @@ Historical reference only.
 | Benchmark                                      | Avg                       |
 | :--------------------------------------------- | :------------------------ |
 | Import 10 / 100 / 1000 quads                   | 4.9 ms / 57.3 ms / 613 ms |
-| Hydration 100 / 1k / 5k                        | 3.1 ms / 12.6 ms / 152 ms |
+| Full graph export 100 / 1k / 5k¹               | 3.1 ms / 12.6 ms / 152 ms |
 | FTS search (2k corpus) specific / multi / miss | 2.1 ms / 10.0 ms / 1.9 ms |
 
 ### `denokv-pressure.bench.ts`
@@ -207,7 +207,7 @@ Historical reference only.
 | Benchmark                           | Avg                       |
 | :---------------------------------- | :------------------------ |
 | Import 10 / 100 / 1000              | 419 µs / 1.9 ms / 18.9 ms |
-| Hydration 100 / 1k / 5k             | 1.1 ms / 9.0 ms / 49.0 ms |
+| Full graph export 100 / 1k / 5k¹    | 1.1 ms / 9.0 ms / 49.0 ms |
 | Search hit / miss (full 2k KV scan) | 21.7 ms / 20.8 ms         |
 
 ### `search-comparison.bench.ts` (LibSQL FTS vs RDF/JS naive)
@@ -220,16 +220,17 @@ Historical reference only.
 
 ## Baseline table (post-preload, 2026-05-22)
 
-Captured on **Deno 2.8.0 (Windows x86_64)** with module-level preload and
-batched LibSQL hydration (`DEFAULT_HYDRATION_BATCH_SIZE = 1000`). Use this table
-for local regression checks.
+Captured on **Deno 2.8.0 (Windows x86_64)** with module-level preload. Use this
+table for local regression checks. ¹Legacy bench rows labeled “Hydration”
+measure `client.export()` full-graph reads, not N3 hydration; `denokv-pressure`
+now uses the `FullGraphExport` group name.
 
 ### `libsql-pressure.bench.ts`
 
 | Benchmark                                      | Avg                        |
 | :--------------------------------------------- | :------------------------- |
 | Import 10 / 100 / 1000 quads                   | 4.3 ms / 60.5 ms / 615 ms  |
-| Hydration 100 / 1k / 5k                        | 1.4 ms / 14.1 ms / 73.0 ms |
+| Full graph export 100 / 1k / 5k¹               | 1.4 ms / 14.1 ms / 73.0 ms |
 | FTS search (2k corpus) specific / multi / miss | 997 µs / 7.3 ms / 948 µs   |
 
 ### `denokv-pressure.bench.ts`
@@ -237,7 +238,7 @@ for local regression checks.
 | Benchmark                           | Avg                        |
 | :---------------------------------- | :------------------------- |
 | Import 10 / 100 / 1000              | 734 µs / 3.3 ms / 24.7 ms  |
-| Hydration 100 / 1k / 5k             | 1.4 ms / 11.9 ms / 58.1 ms |
+| Full graph export 100 / 1k / 5k¹    | 1.4 ms / 11.9 ms / 58.1 ms |
 | Search hit / miss (full 2k KV scan) | 24.0 ms / 25.8 ms          |
 
 ### `search-comparison.bench.ts` (LibSQL FTS vs RDF/JS naive)

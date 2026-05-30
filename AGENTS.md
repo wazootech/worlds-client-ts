@@ -15,13 +15,16 @@ Deno KV paths query **persistent hexastore** stores (`LibsqlRdfjsStore`,
 `DenokvRdfjsStore`) without hydrating a full N3 mirror per request. The RDF/JS
 adapter still uses `N3.Store` for local development and tests.
 
-### Hydration
+### Durable reads vs in-memory N3
 
-For **RDF/JS** and historical **libsql-n3** topologies, hydration bootstrapped
-an ephemeral `N3.Store` from durable quads. **Production LibSQL and Denokv**
-skip that path: SPARQL and search read through persistent stores directly. Deno
-KV lazy reads still fetch quads from KV on demand without a process-wide N3
-mirror.
+**Production LibSQL and Deno KV** factories wire hexastore `*RdfjsStore`
+implementations only — Comunica SPARQL and search read durable indexes directly,
+with no per-query N3 mirror. **In-memory RDF/JS** (`RdfjsQuadStore` over
+`N3.Store`) is the intentional local-dev and test topology. Historical
+**libsql-n3** (hydrate durable quads into N3, then query) was removed from the
+package; see [CHANGELOG.md](CHANGELOG.md) and
+[discussion #45](https://github.com/wazootech/worlds-client-ts/discussions/45)
+for crossover methodology only.
 
 ### Synchronization
 
@@ -367,10 +370,11 @@ query-shape examples are inlined in `examples/libsql-sparql-scale`; see README
 
 ### Decoupled store lifecycle via dependency injection
 
-To support high-throughput, serverless container warm-starts, the instantiation
-and hydration of the Graph Store are fully externalized from the generalized
-`Client` factory. The caller injects an initialized `Store` directly, allowing
-trivial container-level caching across sequential HTTP invocations.
+To support high-throughput, serverless container warm-starts, graph store
+construction is fully externalized from the generalized `Client` factory. The
+caller injects initialized `quadStore` / `searchIndex` (and optional
+`sparqlEngine`) directly, allowing trivial container-level caching across
+sequential HTTP invocations.
 
 ### Sterile orchestration via adapters
 

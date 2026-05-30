@@ -1,17 +1,13 @@
-import type {
-  ExportRequest,
-  ExportResponse,
-  ImportLifecycle,
-  ImportRequest,
-  PatchCommitContext,
-  QuadStoreInterface,
-} from "@/client/quad-store/mod.ts";
 import {
-  collectQuadsFromStream,
-  exportQuadsResponse,
+  exportFromRdfjsStore,
+  type ExportRequest,
+  type ExportResponse,
+  type ImportLifecycle,
+  type ImportMode,
+  type ImportRequest,
+  importViaBufferedRdfjsStore,
+  type QuadStoreInterface,
 } from "@/client/quad-store/mod.ts";
-import { materializeImportQuads } from "@/client/quad-store/rdf-formats.ts";
-import { runImportWithLifecycle } from "@/client/quad-store/mod.ts";
 
 import type { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";
 
@@ -35,25 +31,20 @@ export class DenokvQuadStore implements QuadStoreInterface {
   ) {}
 
   public async import(request: ImportRequest): Promise<void> {
-    await runImportWithLifecycle(
+    await importViaBufferedRdfjsStore(
+      request,
       this.options.importLifecycle,
-      async () => {
-        const mode = request.mode ?? "merge";
-        const quads = await materializeImportQuads(request.source);
-        const commitContext: PatchCommitContext = { importMode: mode };
-
-        for (const quad of quads) {
-          this.options.denokvRdfjsStore.addQuad(quad);
-        }
-
-        await this.options.denokvRdfjsStore.commit(commitContext);
+      {
+        rdfjsStore: this.options.denokvRdfjsStore,
+        buildCommitContext: (mode: ImportMode) => ({ importMode: mode }),
       },
     );
   }
 
   public async export(request: ExportRequest): Promise<ExportResponse> {
-    const stream = this.options.denokvRdfjsStore.match(null, null, null, null);
-    const quads = await collectQuadsFromStream(stream);
-    return await exportQuadsResponse(quads, request);
+    return await exportFromRdfjsStore(
+      this.options.denokvRdfjsStore,
+      request,
+    );
   }
 }

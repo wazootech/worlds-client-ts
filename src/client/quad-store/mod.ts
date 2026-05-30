@@ -9,3 +9,4 @@ export * from "./term.ts";
 export * from "./quad.ts";
 export * from "./rdf-formats.ts";
 export * from "./patch-sync-state.ts";
+export * from "./import-export-via-rdfjs-store.ts";

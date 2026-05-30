@@ -2,7 +2,6 @@ import { assertEquals, assertExists, assertRejects } from "@std/assert";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory } from "n3";
 import { createDenokvClient } from "./create-denokv-client.ts";
-import { seedDenokvQuadsForTest } from "./create-denokv-stores-for-test.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 const queryEngine = new QueryEngine();
@@ -59,7 +58,7 @@ Deno.test(
 );
 
 Deno.test(
-  "createDenokvClient - queryEngine SPARQL reads from Deno Kv without N3 hydration",
+  "createDenokvClient - queryEngine SPARQL reads hexastore from Deno KV",
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
@@ -93,79 +92,6 @@ Deno.test(
       assertEquals(
         response.data.results.bindings[0].text?.value,
         "Dana surveys alpine ridgelines.",
-      );
-    } finally {
-      kv.close();
-    }
-  },
-);
-
-Deno.test(
-  "createDenokvClient - hydration SPARQL reads latest Deno Kv state",
-  async () => {
-    const kv = await Deno.openKv(":memory:");
-    try {
-      const client = createDenokvClient({
-        kv,
-        queryEngine,
-      });
-
-      await seedDenokvQuadsForTest(kv, [
-        quad(
-          namedNode("urn:person:bob"),
-          namedNode("urn:bio"),
-          literal("Bob charts forest trails."),
-        ),
-      ]);
-
-      const response = await client.sparql({
-        query: "ASK WHERE { <urn:person:bob> ?p ?o }",
-      });
-
-      if (response.kind !== "ask") {
-        throw new Error("Expected ask response kind");
-      }
-      assertEquals(response.data.boolean, true);
-    } finally {
-      kv.close();
-    }
-  },
-);
-
-Deno.test(
-  "createDenokvClient - hydration SPARQL sees quads imported after client construction",
-  async () => {
-    const kv = await Deno.openKv(":memory:");
-    try {
-      const client = createDenokvClient({
-        kv,
-        queryEngine,
-      });
-
-      await client.import({
-        source: {
-          kind: "quads",
-          quads: [
-            quad(
-              namedNode("urn:person:carol"),
-              namedNode("urn:bio"),
-              literal("Carol maps desert canyons."),
-            ),
-          ],
-        },
-      });
-
-      const response = await client.sparql({
-        query: "SELECT ?text WHERE { <urn:person:carol> <urn:bio> ?text }",
-      });
-
-      if (response.kind !== "select") {
-        throw new Error("Expected select response kind");
-      }
-      assertEquals(response.data.results.bindings.length, 1);
-      assertEquals(
-        response.data.results.bindings[0].text?.value,
-        "Carol maps desert canyons.",
       );
     } finally {
       kv.close();

@@ -168,9 +168,9 @@ seeded LibSQL world.
 
 ## Advanced
 
-**Choosing a LibSQL topology**: hexastore vs N3 hydration, warm containers,
-SPARQL query shape at scale, and bulk import strategies.
-[-> AGENTS.md](AGENTS.md)
+**Choosing a LibSQL topology**: hexastore default (historical N3 hydrate path
+removed; in-memory N3 via RDF/JS adapter), warm containers, SPARQL query shape
+at scale, and bulk import strategies. [-> AGENTS.md](AGENTS.md)
 
 **Agent integration**: search-then-SPARQL two-hop pattern for LLM tool use with
 hybrid retrieval. [-> AGENTS.md](AGENTS.md)

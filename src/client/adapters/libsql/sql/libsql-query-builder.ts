@@ -352,12 +352,6 @@ export class LibsqlQueryBuilder {
     };
   }
 
-  public buildHydrateQuery(
-    filter?: QuadFilter,
-  ): { sql: string; args: string[] } {
-    return this.buildHydrateQuadsPageQuery(filter, {});
-  }
-
   /**
    * buildMatchQuadsQuery returns SQL to read quads for a pattern, optionally keyset-paged by id.
    */
@@ -402,41 +396,6 @@ export class LibsqlQueryBuilder {
 
     return {
       sql: `SELECT COUNT(*) AS count FROM quads ${whereClause}`,
-      args,
-    };
-  }
-
-  /**
-   * buildHydrateQuadsPageQuery returns a keyset page of quads for N3 hydration.
-   */
-  public buildHydrateQuadsPageQuery(
-    filter: QuadFilter | undefined,
-    pageOptions: { afterQuadId?: string; limit?: number },
-  ): { sql: string; args: string[] } {
-    const { whereClauses, filterArgs } = buildIncludeExcludeFilterClauses(
-      filter,
-      QUADS_TABLE_COLUMNS,
-    );
-    const args = [...filterArgs];
-
-    if (pageOptions.afterQuadId) {
-      whereClauses.push("id > ?");
-      args.push(pageOptions.afterQuadId);
-    }
-
-    const whereFilter = whereClauses.length > 0
-      ? `WHERE ${whereClauses.join(" AND ")}`
-      : "";
-
-    let limitClause = "";
-    if (pageOptions.limit != null) {
-      limitClause = " LIMIT ?";
-      args.push(String(Math.max(1, Math.floor(pageOptions.limit))));
-    }
-
-    return {
-      sql:
-        `SELECT id, s, s_type, p, o, o_type, o_datatype, o_lang, g, g_type FROM quads ${whereFilter} ORDER BY id ASC${limitClause}`,
       args,
     };
   }
@@ -670,13 +629,6 @@ interface ColumnMapping {
   predicates: string;
   graphs: string;
 }
-
-/** QUADS_TABLE_COLUMNS maps QuadFilter fields to quads table column names. */
-const QUADS_TABLE_COLUMNS: ColumnMapping = {
-  subjects: "s",
-  predicates: "p",
-  graphs: "g",
-};
 
 /** CHUNKS_TABLE_COLUMNS maps QuadFilter fields to chunks table column names. */
 const CHUNKS_TABLE_COLUMNS: ColumnMapping = {
