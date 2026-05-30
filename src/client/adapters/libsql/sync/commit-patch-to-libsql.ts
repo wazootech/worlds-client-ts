@@ -5,7 +5,7 @@ import type {
 } from "@/client/search-index/quad-chunker/mod.ts";
 import { chunkQuads } from "@/client/search-index/quad-chunker/mod.ts";
 import type * as rdfjs from "@rdfjs/types";
-import type { Patch } from "@/client/quad-store/mod.ts";
+import type { Patch, PatchCommitContext } from "@/client/quad-store/mod.ts";
 import {
   filterQuads,
   fromRdfjsTerm,
@@ -89,6 +89,18 @@ async function stageInStatements(
 }
 
 /**
+ * executeReplaceImportWipe clears all quads and search chunks before a replace-mode import commit.
+ */
+async function executeReplaceImportWipe(
+  client: Client,
+  libsqlQueryBuilder: LibsqlQueryBuilder,
+  writeBatchSize: number,
+): Promise<void> {
+  const wipeStatements = libsqlQueryBuilder.buildWipeAllGraphDataStatements();
+  await executeWriteBatches(client, wipeStatements, writeBatchSize);
+}
+
+/**
  * commitPatchToLibsql commits additions and removals across LibSQL quads and optional search chunks.
  *
  * Large patches are written in multiple `client.batch` slices (see `STAGING_FLUSH_THRESHOLD`) to avoid
@@ -99,6 +111,7 @@ async function stageInStatements(
 export async function commitPatchToLibsql(
   patch: Patch,
   options: CommitPatchToLibsqlOptions,
+  context?: PatchCommitContext,
 ): Promise<void> {
   const {
     client,
@@ -114,6 +127,14 @@ export async function commitPatchToLibsql(
     options.labelPredicates,
   );
   const statements: InStatement[] = [];
+
+  if (context?.importMode === "replace") {
+    await executeReplaceImportWipe(
+      client,
+      libsqlQueryBuilder,
+      writeBatchSize,
+    );
+  }
 
   const matcher = filterQuads({ include, exclude });
 

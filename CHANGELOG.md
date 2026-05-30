@@ -25,8 +25,15 @@
 - **`ImportLifecycle`** (`beforeImport` / `afterImport`) wraps every
   `QuadStoreInterface.import`. `LibsqlQuadStore` and `DenokvQuadStore` take
   `importLifecycle` plus a shared `*RdfjsStore`; import and SPARQL UPDATE both
-  buffer patches through `commit()` → `persistPatch`. Deno KV replace import
-  uses generation-swap inside `commitPatchToDenokv`.
+  buffer patches through `commit()` → `persistPatch`. All durable imports share
+  `importViaBufferedRdfjsStore` and pass `PatchCommitContext.importMode` on
+  commit; replace semantics are adapter-specific (`commitPatchToLibsql` SQL
+  wipe, `commitPatchToDenokv` generation-swap). `createImportPatchSyncState`
+  maps `searchIndexOnImport` with `SearchIndexTopology` for projection and
+  deferred reindex.
+- Durable factories set optional **`Client.capabilities.searchIndexTopology`**
+  (`"materialized"` for LibSQL, `"scan"` for Deno KV) so callers know when
+  `reindex()` rebuilds durable chunks vs scan-at-query-time no-ops.
 
 ### Migration
 

@@ -1,10 +1,15 @@
 import type { ImportLifecycle } from "./import-lifecycle.ts";
-import type { CommitHandler } from "./commit-handler.ts";
+import type { CommitHandler, PatchCommitContext } from "./commit-handler.ts";
+import type { Patch } from "./patch.ts";
+import {
+  type ImportCommitProjectionFlags,
+  type ImportIndexingPolicyOptions,
+  resolveImportCommitProjectionFlags,
+  type SearchIndexOnImport,
+  shouldRunDeferredImportReindex,
+} from "./import-indexing-policy.ts";
 
-/**
- * SearchIndexOnImport controls when search chunk projection runs during bulk import.
- */
-export type SearchIndexOnImport = "incremental" | "deferred" | "disabled";
+export type { SearchIndexOnImport };
 
 /**
  * PatchSyncState coordinates persistPatch with optional deferred import lifecycle hooks.
@@ -15,42 +20,70 @@ export interface PatchSyncState extends ImportLifecycle {
 }
 
 /**
- * CreateDeferredImportPatchSyncOptions configures shared deferred-import patch sync behavior.
+ * PersistPatchWithProjectionFlags atomically persists a patch with search projection flags.
  */
-export interface CreateDeferredImportPatchSyncOptions {
-  /** searchIndexOnImport controls whether afterImport runs a deferred reindex pass. */
-  searchIndexOnImport?: SearchIndexOnImport;
+export type PersistPatchWithProjectionFlags = (
+  patch: Patch,
+  context: PatchCommitContext | undefined,
+  projectionFlags: ImportCommitProjectionFlags,
+) => Promise<void>;
 
+/**
+ * CreateImportPatchSyncStateOptions configures shared import patch sync behavior.
+ */
+export interface CreateImportPatchSyncStateOptions
+  extends ImportIndexingPolicyOptions {
   /** persistPatch commits a patch to the durable backend. */
-  persistPatch: CommitHandler;
+  persistPatch: PersistPatchWithProjectionFlags;
 
   /** beforeImport runs immediately before import body execution. */
   beforeImport?: () => void;
 
-  /** afterDeferredImport runs after import when searchIndexOnImport is "deferred". */
+  /** afterDeferredImport runs after import when deferred reindex is eligible. */
   afterDeferredImport?: () => Promise<void>;
 }
 
 /**
- * createDeferredImportPatchSync builds persistPatch and optional deferred-import lifecycle hooks.
+ * createImportPatchSyncState builds persistPatch and import lifecycle hooks from indexing policy.
  */
-export function createDeferredImportPatchSync(
-  options: CreateDeferredImportPatchSyncOptions,
+export function createImportPatchSyncState(
+  options: CreateImportPatchSyncStateOptions,
 ): PatchSyncState {
-  const deferSearchDuringImport = options.searchIndexOnImport === "deferred";
+  const policy: ImportIndexingPolicyOptions = {
+    searchIndexOnImport: options.searchIndexOnImport,
+    searchIndexTopology: options.searchIndexTopology,
+  };
+
+  let importCommitInFlight = false;
 
   return {
-    persistPatch: options.persistPatch,
+    persistPatch: async (patch, context) => {
+      const projectionFlags = resolveImportCommitProjectionFlags(
+        policy,
+        importCommitInFlight ? "duringImportCommit" : "sparqlUpdateCommit",
+      );
+      try {
+        await options.persistPatch(patch, context, projectionFlags);
+      } finally {
+        importCommitInFlight = false;
+      }
+    },
 
     beforeImport: () => {
+      importCommitInFlight = true;
       options.beforeImport?.();
     },
 
     afterImport: async (): Promise<void> => {
-      if (!deferSearchDuringImport || !options.afterDeferredImport) {
+      if (
+        !shouldRunDeferredImportReindex(
+          policy,
+          options.afterDeferredImport !== undefined,
+        )
+      ) {
         return;
       }
-      await options.afterDeferredImport();
+      await options.afterDeferredImport!();
     },
   };
 }

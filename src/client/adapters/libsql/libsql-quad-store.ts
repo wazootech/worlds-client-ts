@@ -1,5 +1,4 @@
 import {
-  awaitDrainRemoveMatches,
   exportFromRdfjsStore,
   type ExportRequest,
   type ExportResponse,
@@ -35,7 +34,6 @@ export class LibsqlQuadStore implements QuadStoreInterface {
       this.options.importLifecycle,
       {
         rdfjsStore: this.options.libsqlRdfjsStore,
-        onReplace: () => awaitDrainRemoveMatches(this.options.libsqlRdfjsStore),
       },
     );
   }

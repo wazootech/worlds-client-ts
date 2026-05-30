@@ -123,7 +123,7 @@ export async function exportQuadsResponse(
 
 /**
  * awaitDrainRemoveMatches waits for removeMatches(null, null, null, null) to finish.
- * Durable Deno KV replace imports use PatchCommitContext.importMode instead.
+ * Used by in-memory replace import commits; durable backends honor PatchCommitContext.importMode in persistPatch.
  */
 export function awaitDrainRemoveMatches(
   store: rdfjs.Store,

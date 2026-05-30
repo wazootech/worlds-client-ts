@@ -342,6 +342,16 @@ export class LibsqlQueryBuilder {
     };
   }
 
+  /**
+   * buildWipeAllGraphDataStatements returns SQL that clears search chunks then quads for replace import.
+   */
+  public buildWipeAllGraphDataStatements(): Array<{ sql: string; args: [] }> {
+    return [
+      { sql: "DELETE FROM chunks", args: [] },
+      { sql: "DELETE FROM quads", args: [] },
+    ];
+  }
+
   public buildSelectExistingQuadIds(
     quadIds: string[],
   ): { sql: string; args: string[] } {

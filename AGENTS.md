@@ -229,7 +229,11 @@ green-passing integration pipeline runs:
   `working-tree-encoding=UTF-8` (see [`.gitattributes`](.gitattributes)). Never
   save TypeScript or markdown as UTF-16; on Windows that corrupts `deno fmt`
   (files collapse to a single line). After changing encoding attributes, run
-  `git add --renormalize .` so the index stores UTF-8.
+  `git add --renormalize .` so the index stores UTF-8. CI runs
+  `deno task encoding:check` before format; repair accidental UTF-16 saves with
+  `deno task encoding:fix` then `deno fmt`. On Windows, Cursor **Write** and
+  **StrReplace** can emit UTF-16 — run `encoding:check` after edits (see
+  [`.cursor/rules/source-encoding.mdc`](.cursor/rules/source-encoding.mdc)).
 
 - **Mandatory execution flags:**
   - **Unstable KV:** Any execution task, example, or test interacting with the
@@ -348,10 +352,17 @@ Custom assembly uses `new Client` with `ClientOptions`; wire
 when you need warm-start control beyond `createLibsqlClient`. Durable backends
 share buffer → `commit()` → `persistPatch` for import and SPARQL UPDATE; all
 quad stores run `ImportLifecycle` (`beforeImport` / `afterImport`) around
-`import`. LibSQL defers built-in chunk projection via
-`searchIndexOnImport: "deferred"`; Deno KV supports the same defer hooks for
-external search indexes via
+`import` via `importViaBufferedRdfjsStore`, which always commits with
+`PatchCommitContext.importMode`. Replace import: LibSQL wipes `quads`/`chunks`
+in `commitPatchToLibsql`; Deno KV generation-swap in `commitPatchToDenokv`. Do
+not reintroduce pre-commit `onReplace` drains on the shared import helper.
+`createImportPatchSyncState` applies `searchIndexOnImport` using
+`SearchIndexTopology` (`materialized` on LibSQL, `scan` on Deno KV). LibSQL
+defers built-in chunk projection via `searchIndexOnImport: "deferred"`; Deno KV
+supports the same defer hooks for external search indexes via
 `createDenokvPatchSyncState({ searchIndexOnImport: "deferred", reindex })`.
+`createLibsqlClient` / `createDenokvClient` set
+`Client.capabilities.searchIndexTopology`.
 
 - **Long-running (Fly.io, DigitalOcean, 24/7 Deno):** one `Client` at process
   boot. See [`examples/libsql-long-running`](examples/libsql-long-running).
@@ -569,7 +580,11 @@ const devScanQuery =
 | `searchIndexOnImport: "disabled"`    | Skips chunking entirely. Call `client.reindex()` before searching.               |
 
 Use `"deferred"` or `"disabled"` for SPARQL-only bulk loads or large initial
-imports where indexing can happen once at the end.
+imports where indexing can happen once at the end. On LibSQL,
+`capabilities.searchIndexTopology` is `"materialized"` and `reindex()` rebuilds
+FTS/vector chunks; on Deno KV and in-memory RDF/JS it is `"scan"` and
+`reindex()` is typically a no-op unless you supply an external `reindex` hook on
+patch sync.
 
 ### Benchmark references
 

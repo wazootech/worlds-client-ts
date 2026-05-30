@@ -8,5 +8,6 @@ export * from "./hash-quad.ts";
 export * from "./term.ts";
 export * from "./quad.ts";
 export * from "./rdf-formats.ts";
+export * from "./import-indexing-policy.ts";
 export * from "./patch-sync-state.ts";
 export * from "./import-export-via-rdfjs-store.ts";

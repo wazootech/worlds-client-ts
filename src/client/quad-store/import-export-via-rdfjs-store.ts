@@ -3,7 +3,6 @@ import type { PatchCommitContext } from "./commit-handler.ts";
 import type {
   ExportRequest,
   ExportResponse,
-  ImportMode,
   ImportRequest,
 } from "./quad-store-interface.ts";
 import type { ImportLifecycle } from "./import-lifecycle.ts";
@@ -39,12 +38,6 @@ export interface CommittingRdfjsStore {
 export interface ImportViaBufferedRdfjsStoreOptions {
   /** rdfjsStore receives buffered quads and persists on commit. */
   rdfjsStore: CommittingRdfjsStore;
-
-  /** onReplace runs before buffered inserts when import mode is replace (LibSQL wipe). */
-  onReplace?: () => Promise<void>;
-
-  /** buildCommitContext supplies backend-specific commit metadata (e.g. Deno KV import mode). */
-  buildCommitContext?: (mode: ImportMode) => PatchCommitContext | undefined;
 }
 
 /**
@@ -59,15 +52,11 @@ export async function importViaBufferedRdfjsStore(
     const mode = request.mode ?? "merge";
     const quads = await materializeImportQuads(request.source);
 
-    if (mode === "replace" && options.onReplace) {
-      await options.onReplace();
-    }
-
     for (const quad of quads) {
       options.rdfjsStore.addQuad(quad);
     }
 
-    await options.rdfjsStore.commit(options.buildCommitContext?.(mode));
+    await options.rdfjsStore.commit({ importMode: mode });
   });
 }
 

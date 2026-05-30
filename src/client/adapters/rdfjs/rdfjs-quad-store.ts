@@ -7,15 +7,11 @@ import type {
   QuadStoreInterface,
 } from "@/client/quad-store/mod.ts";
 import {
-  awaitDrainRemoveMatches,
-  collectQuadsFromStream,
-  exportQuadsResponse,
+  exportFromRdfjsStore,
+  importViaBufferedRdfjsStore,
 } from "@/client/quad-store/mod.ts";
-import { materializeImportQuads } from "@/client/quad-store/rdf-formats.ts";
-import {
-  noopImportLifecycle,
-  runImportWithLifecycle,
-} from "@/client/quad-store/import-lifecycle.ts";
+import { noopImportLifecycle } from "@/client/quad-store/import-lifecycle.ts";
+import { createRdfjsCommittingStore } from "./rdfjs-committing-store.ts";
 
 /**
  * RdfjsQuadStoreOptions configures RdfjsQuadStore dependencies.
@@ -53,26 +49,16 @@ export class RdfjsQuadStore implements QuadStoreInterface {
   }
 
   public async import(request: ImportRequest): Promise<void> {
-    await runImportWithLifecycle(this.importLifecycle, async () => {
-      const mode = request.mode ?? "merge";
-      const quads = await materializeImportQuads(request.source);
-      const store = this.store;
-
-      if (mode === "replace") {
-        await awaitDrainRemoveMatches(store);
-      }
-
-      for (const quad of quads) {
-        // deno-lint-ignore no-explicit-any
-        (store as any).addQuad(quad);
-      }
-    });
+    const committingStore = createRdfjsCommittingStore({ store: this.store });
+    await importViaBufferedRdfjsStore(
+      request,
+      this.importLifecycle,
+      { rdfjsStore: committingStore },
+    );
   }
 
   public async export(request: ExportRequest): Promise<ExportResponse> {
-    const stream = this.store.match(null, null, null, null);
-    const quads = await collectQuadsFromStream(stream);
-    return await exportQuadsResponse(quads, request);
+    return await exportFromRdfjsStore(this.store, request);
   }
 }
 

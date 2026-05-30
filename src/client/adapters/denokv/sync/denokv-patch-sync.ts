@@ -1,5 +1,5 @@
 import type { SearchIndexOnImport } from "@/client/quad-store/mod.ts";
-import { createDeferredImportPatchSync } from "@/client/quad-store/mod.ts";
+import { createImportPatchSyncState } from "@/client/quad-store/mod.ts";
 import type { PatchSyncState } from "@/client/quad-store/mod.ts";
 
 import {
@@ -31,8 +31,9 @@ export interface DenokvPatchSyncAdapterOptions
 export function createDenokvPatchSyncState(
   dependencies: DenokvPatchSyncAdapterOptions,
 ): PatchSyncState {
-  return createDeferredImportPatchSync({
+  return createImportPatchSyncState({
     searchIndexOnImport: dependencies.searchIndexOnImport,
+    searchIndexTopology: "scan",
     persistPatch: async (patch, context) => {
       await commitPatchToDenokv(patch, dependencies, context);
     },

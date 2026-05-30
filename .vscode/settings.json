@@ -1,5 +1,15 @@
 {
   "deno.enable": true,
   "files.encoding": "utf8",
-  "files.eol": "\n"
+  "files.autoGuessEncoding": false,
+  "files.eol": "\n",
+  "[typescript]": {
+    "files.encoding": "utf8"
+  },
+  "[json]": {
+    "files.encoding": "utf8"
+  },
+  "[markdown]": {
+    "files.encoding": "utf8"
+  }
 }

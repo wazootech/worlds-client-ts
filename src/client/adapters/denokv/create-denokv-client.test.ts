@@ -12,6 +12,7 @@ Deno.test(
     const kv = await Deno.openKv(":memory:");
     try {
       const client = createDenokvClient({ kv });
+      assertEquals(client.capabilities?.searchIndexTopology, "scan");
       const testQuad = quad(
         namedNode("urn:person:alice"),
         namedNode("urn:bio"),

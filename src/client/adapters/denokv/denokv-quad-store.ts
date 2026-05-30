@@ -3,7 +3,6 @@ import {
   type ExportRequest,
   type ExportResponse,
   type ImportLifecycle,
-  type ImportMode,
   type ImportRequest,
   importViaBufferedRdfjsStore,
   type QuadStoreInterface,
@@ -36,7 +35,6 @@ export class DenokvQuadStore implements QuadStoreInterface {
       this.options.importLifecycle,
       {
         rdfjsStore: this.options.denokvRdfjsStore,
-        buildCommitContext: (mode: ImportMode) => ({ importMode: mode }),
       },
     );
   }

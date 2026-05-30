@@ -276,3 +276,46 @@ Deno.test(
     assertEquals(chunkRowCount > 0, true);
   },
 );
+
+Deno.test(
+  "commitPatchToLibsql - importMode replace wipes prior quads before insert",
+  async () => {
+    const client = createClient({ url: ":memory:" });
+    await setupLibsqlSchemaForTest(client);
+
+    const options = {
+      client,
+      textSplitter: sharedTextSplitter,
+      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      skipSearchIndexProjection: true,
+    };
+
+    const priorQuad = quad(
+      namedNode("urn:replace:prior"),
+      namedNode("urn:predicate"),
+      literal("prior"),
+    );
+    const replacementQuad = quad(
+      namedNode("urn:replace:new"),
+      namedNode("urn:predicate"),
+      literal("new"),
+    );
+
+    await commitPatchToLibsql(
+      { insertions: [priorQuad], deletions: [] },
+      options,
+    );
+
+    await commitPatchToLibsql(
+      { insertions: [replacementQuad], deletions: [] },
+      options,
+      { importMode: "replace" },
+    );
+
+    const quadRows = await client.execute(
+      "SELECT s FROM quads ORDER BY s ASC",
+    );
+    assertEquals(quadRows.rows.length, 1);
+    assertEquals(String(quadRows.rows[0].s), "urn:replace:new");
+  },
+);

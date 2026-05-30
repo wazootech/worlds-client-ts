@@ -16,11 +16,18 @@ import type {
   SearchRequest,
   SearchResponse,
 } from "./search-index/mod.ts";
+import type { ClientCapabilities } from "./client-capabilities.ts";
+
+export type { ClientCapabilities };
 
 /**
  * ClientInterface is the public contract for the Worlds API.
  */
 export interface ClientInterface {
+  /**
+   * capabilities describes search topology when the factory sets it (materialized vs scan).
+   */
+  readonly capabilities?: ClientCapabilities;
   /**
    * import imports data into the Worlds API.
    * @param request The import request body.
@@ -50,7 +57,8 @@ export interface ClientInterface {
   search(request: SearchRequest): Promise<SearchResponse>;
 
   /**
-   * reindex rebuilds the derived search index from durable quads where supported.
+   * reindex rebuilds the derived search index from durable quads when capabilities.searchIndexTopology is "materialized".
+   * On scan topologies, reindex is a documented no-op unless an external index hook was wired at factory time.
    * @param request optional include/exclude scope and read page size.
    * @returns A promise that resolves to processed quad and chunk row counts.
    */
@@ -69,15 +77,22 @@ export interface ClientOptions {
 
   /** searchIndex enables high-performance keyword search across the graph literals. */
   searchIndex?: SearchIndexInterface;
+
+  /** capabilities documents search index topology for integrators when known at assembly time. */
+  capabilities?: ClientCapabilities;
 }
 
 /**
  * Client synthesizes a Worlds API facade from wired quad, SPARQL, and search subsystems.
  */
 export class Client implements ClientInterface {
+  public readonly capabilities: ClientCapabilities | undefined;
+
   public constructor(
     private readonly options: ClientOptions,
-  ) {}
+  ) {
+    this.capabilities = options.capabilities;
+  }
 
   public import(request: ImportRequest): Promise<void> {
     if (!this.options.quadStore) {
