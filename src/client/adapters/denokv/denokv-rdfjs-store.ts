@@ -10,19 +10,18 @@ import { BufferedRdfjsPatchState } from "@/client/adapters/shared/buffered-rdfjs
 import {
   buildGenerationDataPrefix,
   buildPrimaryQuadKey,
-} from "./denokv-hexastore-keys.ts";
+} from "./kv/denokv-hexastore-keys.ts";
 import {
   DEFAULT_DENOKV_HEXASTORE_INDEXES,
   type DenokvHexastoreIndex,
-} from "./denokv-hexastore-index-set.ts";
-import { readActiveGeneration } from "./denokv-dataset-generation.ts";
-import type { SerializedQuad } from "./denokv-serialization.ts";
-import { deserializeQuad } from "./denokv-serialization.ts";
-import { commitPatchToDenokv } from "./sync/commit-patch-to-denokv.ts";
+} from "./kv/denokv-hexastore-index-set.ts";
+import { readActiveGeneration } from "./kv/denokv-dataset-generation.ts";
+import type { SerializedQuad } from "./kv/denokv-serialization.ts";
+import { deserializeQuad } from "./kv/denokv-serialization.ts";
 import {
   buildBestMatchCursor,
   matchesPattern,
-} from "./denokv-match-selector.ts";
+} from "./kv/denokv-match-selector.ts";
 
 /** MAX_KV_GET_MANY_SIZE is Deno KV's per-call getMany key cap. */
 export const MAX_KV_GET_MANY_SIZE = 10;
@@ -326,18 +325,6 @@ export class DenokvRdfjsStore implements rdfjs.Store {
    * commit persists buffered insertions and deletions through the configured CommitHandler.
    */
   public async commit(context?: PatchCommitContext): Promise<void> {
-    const commitOptions = {
-      kv: this.options.kv,
-      keyPrefix: this.options.keyPrefix,
-      enabledHexastoreIndexes: this.options.enabledHexastoreIndexes,
-    };
-
-    await this.patchState.flushCommit(
-      this.options.commitHandler,
-      context,
-      async (patch, commitContext) => {
-        await commitPatchToDenokv(patch, commitOptions, commitContext);
-      },
-    );
+    await this.patchState.flushCommit(this.options.commitHandler, context);
   }
 }

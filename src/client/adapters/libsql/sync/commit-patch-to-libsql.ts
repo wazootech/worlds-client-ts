@@ -37,7 +37,7 @@ export interface CommitPatchToLibsqlOptions extends LibsqlClientBaseOptions {
 }
 
 /** DEFAULT_MAX_LOOKUP_CHUNK_SIZE is the default IN-clause and deletion chunk width. */
-const DEFAULT_MAX_LOOKUP_CHUNK_SIZE = 800;
+export const DEFAULT_MAX_LOOKUP_CHUNK_SIZE = 800;
 
 /** DEFAULT_MAX_WRITE_BATCH_SIZE limits statements per LibSQL write batch. */
 const DEFAULT_MAX_WRITE_BATCH_SIZE = 500;
