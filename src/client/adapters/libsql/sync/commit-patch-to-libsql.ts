@@ -9,11 +9,11 @@ import type { Patch } from "@/client/quad-store/mod.ts";
 import {
   filterQuads,
   hashQuads,
-  isTextualLiteral,
+  rdfTermToFlatDescriptor,
 } from "@/client/quad-store/mod.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
-import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/libsql-query-builder.ts";
-import { quadFromLibsqlRow } from "@/client/adapters/libsql/libsql-quad-row.ts";
+import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/sql/libsql-query-builder.ts";
+import { refreshSearchChunksForSubjects } from "@/client/adapters/libsql/search/refresh-search-chunks-for-subjects.ts";
 import {
   buildChunkFtsValue,
   resolveLabelPredicates,
@@ -34,16 +34,6 @@ export interface CommitPatchToLibsqlOptions extends LibsqlClientBaseOptions {
 
   /** skipSearchIndexProjection omits FTS/vector chunk writes for this patch (quads table only). Pair with `rebuildLibsqlSearchIndexFromQuads` after bulk import when searchIndexOnImport is "deferred". */
   skipSearchIndexProjection?: boolean;
-}
-
-/**
- * RefreshSearchChunksForSubjectsResult reports subject-scoped search index refresh counts.
- */
-export interface RefreshSearchChunksForSubjectsResult {
-  /** subjectCount is the number of distinct subject IRIs refreshed. */
-  subjectCount: number;
-  /** chunkRowCount is the number of chunk rows written. */
-  chunkRowCount: number;
 }
 
 /** DEFAULT_MAX_LOOKUP_CHUNK_SIZE is the default IN-clause and deletion chunk width. */
@@ -290,48 +280,6 @@ export async function refreshSearchChunksForQuads(
 }
 
 /**
- * refreshSearchChunksForSubjects rebuilds FTS/vector rows for all textual-literal quads of the given subjects.
- */
-export async function refreshSearchChunksForSubjects(
-  subjects: string[],
-  options: CommitPatchToLibsqlOptions,
-): Promise<RefreshSearchChunksForSubjectsResult> {
-  const uniqueSubjects = Array.from(new Set(subjects));
-  if (uniqueSubjects.length === 0) {
-    return { subjectCount: 0, chunkRowCount: 0 };
-  }
-
-  const lookupChunkSize = options.maxLookupChunkSize ??
-    DEFAULT_MAX_LOOKUP_CHUNK_SIZE;
-  const quads: rdfjs.Quad[] = [];
-
-  for (let index = 0; index < uniqueSubjects.length; index += lookupChunkSize) {
-    const subjectBatch = uniqueSubjects.slice(index, index + lookupChunkSize);
-    const query = options.libsqlQueryBuilder
-      .buildSelectTextualLiteralQuadsForSubjects(subjectBatch);
-    const resultSet = await options.client.execute(query);
-    for (const row of resultSet.rows) {
-      try {
-        const reconstructedQuad = quadFromLibsqlRow(row);
-        if (isTextualLiteral(reconstructedQuad.object)) {
-          quads.push(reconstructedQuad);
-        }
-      } catch (cause) {
-        throw new Error("failed to load textual quads for subject refresh", {
-          cause,
-        });
-      }
-    }
-  }
-
-  const chunkRowCount = await refreshSearchChunksForQuads(quads, options);
-  return {
-    subjectCount: uniqueSubjects.length,
-    chunkRowCount,
-  };
-}
-
-/**
  * collectLabelPredicateSubjects returns subject IRIs touched by label-predicate quad mutations.
  */
 function collectLabelPredicateSubjects(
@@ -448,20 +396,21 @@ function buildRelationalStatements(
   queryBuilder: LibsqlQueryBuilder,
 ): InStatement[] {
   const insertQuadRows = quads.map((quad, index) => {
-    const isLiteral = quad.object.termType === "Literal";
-    const literalNode = isLiteral ? (quad.object as rdfjs.Literal) : null;
+    const subject = rdfTermToFlatDescriptor(quad.subject);
+    const object = rdfTermToFlatDescriptor(quad.object);
+    const graph = rdfTermToFlatDescriptor(quad.graph);
 
     return {
       quad_id: quadIds[index],
-      s: quad.subject.value,
-      s_type: quad.subject.termType,
+      s: subject.value,
+      s_type: subject.termType,
       p: quad.predicate.value,
-      o: quad.object.value,
-      o_type: quad.object.termType,
-      o_datatype: literalNode?.datatype?.value,
-      o_lang: literalNode?.language,
-      g: quad.graph.value,
-      g_type: quad.graph.termType,
+      o: object.value,
+      o_type: object.termType,
+      o_datatype: object.datatype,
+      o_lang: object.language,
+      g: graph.value,
+      g_type: graph.termType,
     };
   });
 

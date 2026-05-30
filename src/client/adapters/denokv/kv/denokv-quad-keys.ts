@@ -1,6 +1,7 @@
 import type * as rdfjs from "@rdfjs/types";
 
 import type { SerializedQuad } from "./denokv-serialization.ts";
+import { serializeTerm } from "./denokv-serialization.ts";
 import {
   buildIndexKey,
   buildPrimaryQuadKey,
@@ -135,17 +136,4 @@ export function materializeQuadKeys(
   }
 
   return { primaryKey, indexKeys, serializedQuad };
-}
-
-function serializeTerm(term: rdfjs.Term): SerializedQuad["subject"] {
-  return {
-    termType: term.termType,
-    value: term.value,
-    language: term.termType === "Literal"
-      ? (term as rdfjs.Literal).language
-      : undefined,
-    datatype: term.termType === "Literal"
-      ? (term as rdfjs.Literal).datatype.value
-      : undefined,
-  };
 }
