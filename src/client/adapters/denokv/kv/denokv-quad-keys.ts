@@ -1,7 +1,6 @@
 import type * as rdfjs from "@rdfjs/types";
-
-import type { SerializedQuad } from "./denokv-serialization.ts";
-import { serializeTerm } from "./denokv-serialization.ts";
+import type { Quad } from "@/client/quad-store/mod.ts";
+import { fromRdfjsQuad } from "@/client/quad-store/mod.ts";
 import {
   buildIndexKey,
   buildPrimaryQuadKey,
@@ -26,7 +25,7 @@ export interface MaterializeQuadKeysOptions {
   quadId: string;
 
   /** serializedQuad optionally supplies a pre-serialized quad payload. */
-  serializedQuad?: SerializedQuad;
+  serializedQuad?: Quad;
 }
 
 /**
@@ -37,19 +36,15 @@ export function materializeQuadKeys(
 ): {
   primaryKey: Deno.KvKey;
   indexKeys: Deno.KvKey[];
-  serializedQuad: SerializedQuad;
+  serializedQuad: Quad;
 } {
   const primaryKey = buildPrimaryQuadKey(
     options.scopedDataPrefix,
     options.quadId,
   );
 
-  const serializedQuad: SerializedQuad = options.serializedQuad ?? {
-    subject: serializeTerm(options.storedQuad.subject),
-    predicate: serializeTerm(options.storedQuad.predicate),
-    object: serializeTerm(options.storedQuad.object),
-    graph: serializeTerm(options.storedQuad.graph),
-  };
+  const serializedQuad: Quad = options.serializedQuad ??
+    fromRdfjsQuad(options.storedQuad);
 
   const indexKeys: Deno.KvKey[] = [];
 

@@ -5,7 +5,9 @@ import type { EventEmitter } from "node:events";
 import type {
   CommitHandler,
   PatchCommitContext,
+  Quad,
 } from "@/client/quad-store/mod.ts";
+import { toRdfjsQuad } from "@/client/quad-store/mod.ts";
 import { BufferedRdfjsPatchState } from "@/client/adapters/shared/buffered-rdfjs-store.ts";
 import {
   buildGenerationDataPrefix,
@@ -16,8 +18,6 @@ import {
   type DenokvHexastoreIndex,
 } from "./kv/denokv-hexastore-index-set.ts";
 import { readActiveGeneration } from "./kv/denokv-dataset-generation.ts";
-import type { SerializedQuad } from "./kv/denokv-serialization.ts";
-import { deserializeQuad } from "./kv/denokv-serialization.ts";
 import {
   buildBestMatchCursor,
   matchesPattern,
@@ -78,7 +78,7 @@ export class DenokvRdfjsStore implements rdfjs.Store {
     let cursorKind: "index" | "primary" | undefined;
     let indexListIterator: AsyncIterator<Deno.KvEntry<string>> | undefined;
     let primaryListIterator:
-      | AsyncIterator<Deno.KvEntry<SerializedQuad>>
+      | AsyncIterator<Deno.KvEntry<Quad>>
       | undefined;
     let pendingIndexQuadIds: string[] = [];
     let streamFinished = false;
@@ -107,7 +107,7 @@ export class DenokvRdfjsStore implements rdfjs.Store {
           Symbol.asyncIterator
         ]();
       } else {
-        primaryListIterator = kv.list<SerializedQuad>(cursor.selector)[
+        primaryListIterator = kv.list<Quad>(cursor.selector)[
           Symbol.asyncIterator
         ]();
       }
@@ -131,13 +131,13 @@ export class DenokvRdfjsStore implements rdfjs.Store {
           buildPrimaryQuadKey(scopedDataPrefix!, quadId)
         );
         const entries = await kv.getMany(keys) as Array<
-          Deno.KvEntryMaybe<SerializedQuad>
+          Deno.KvEntryMaybe<Quad>
         >;
 
         for (let entryIndex = 0; entryIndex < entries.length; entryIndex++) {
           const entry = entries[entryIndex];
           if (!entry.value) continue;
-          const storedQuad = deserializeQuad(entry.value);
+          const storedQuad = toRdfjsQuad(entry.value);
           if (!matchesPattern(storedQuad, pattern)) continue;
           if (!rowStream.push(storedQuad)) {
             pendingIndexQuadIds = quadIdBatch.slice(entryIndex);
@@ -213,7 +213,7 @@ export class DenokvRdfjsStore implements rdfjs.Store {
           }
           if (!nextEntry.value.value) continue;
 
-          const storedQuad = deserializeQuad(nextEntry.value.value);
+          const storedQuad = toRdfjsQuad(nextEntry.value.value);
           if (!matchesPattern(storedQuad, pattern)) continue;
 
           pushedAny = true;

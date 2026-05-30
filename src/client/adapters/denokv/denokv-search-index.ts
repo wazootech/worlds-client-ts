@@ -9,8 +9,8 @@ import type {
 } from "@/client/search-index/mod.ts";
 import { buildSearchResultId } from "@/client/search-index/build-search-result-id.ts";
 import { filterQuads, isTextualLiteral } from "@/client/quad-store/mod.ts";
-import type { SerializedQuad } from "./kv/denokv-serialization.ts";
-import { deserializeQuad } from "./kv/denokv-serialization.ts";
+import type { Quad } from "@/client/quad-store/mod.ts";
+import { toRdfjsQuad } from "@/client/quad-store/mod.ts";
 import {
   buildGenerationDataPrefix,
   buildPrimaryQuadKey,
@@ -115,14 +115,14 @@ async function scanQuadBatch(
     buildPrimaryQuadKey(scopedDataPrefix, quadId)
   );
   const entries = await kv.getMany(keys) as Array<
-    Deno.KvEntryMaybe<SerializedQuad>
+    Deno.KvEntryMaybe<Quad>
   >;
 
   for (const entry of entries) {
     const serialized = entry.value;
     if (!serialized) continue;
 
-    const storedQuad = deserializeQuad(serialized);
+    const storedQuad = toRdfjsQuad(serialized);
 
     if (!matcher(storedQuad)) {
       continue;
