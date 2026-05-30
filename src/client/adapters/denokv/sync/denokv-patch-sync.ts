@@ -1,7 +1,8 @@
 import type { SearchIndexOnImport } from "@/client/quad-store/mod.ts";
-import { createImportPatchSyncState } from "@/client/quad-store/mod.ts";
-import type { PatchSyncState } from "@/client/quad-store/mod.ts";
-
+import type {
+  CommitHandler,
+  ImportLifecycle,
+} from "@/client/quad-store/mod.ts";
 import {
   commitPatchToDenokv,
   type CommitPatchToDenokvOptions,
@@ -17,7 +18,7 @@ export interface DenokvPatchSyncAdapterOptions
    *
    * - `"incremental"` (default when omitted): no import defer hooks.
    * - `"deferred"`: `beforeImport` / `afterImport` coordinate a caller-provided `reindex`.
-   * - `"disabled"`: same as incremental for Deno KV (no built-in derived index).
+   * - `"disabled"`: same as incremental for Deno KV (no derived derived index).
    */
   searchIndexOnImport?: SearchIndexOnImport;
 
@@ -26,17 +27,32 @@ export interface DenokvPatchSyncAdapterOptions
 }
 
 /**
+ * DenokvPatchSyncState coordinates Deno KV commit persisting with import lifecycle hooks.
+ */
+export interface DenokvPatchSyncState extends ImportLifecycle {
+  /** persistPatch atomically persists a buffered patch to Deno KV durable storage. */
+  persistPatch: CommitHandler;
+}
+
+/**
  * createDenokvPatchSyncState builds persistPatch and deferred-import helpers for Deno KV clients.
  */
 export function createDenokvPatchSyncState(
   dependencies: DenokvPatchSyncAdapterOptions,
-): PatchSyncState {
-  return createImportPatchSyncState({
-    searchIndexOnImport: dependencies.searchIndexOnImport,
-    searchIndexTopology: "scan",
+): DenokvPatchSyncState {
+  const searchIndexOnImport = dependencies.searchIndexOnImport ?? "incremental";
+
+  return {
     persistPatch: async (patch, context) => {
       await commitPatchToDenokv(patch, dependencies, context);
     },
-    afterDeferredImport: dependencies.reindex,
-  });
+
+    beforeImport: () => {},
+
+    afterImport: async (): Promise<void> => {
+      if (searchIndexOnImport === "deferred" && dependencies.reindex) {
+        await dependencies.reindex();
+      }
+    },
+  };
 }

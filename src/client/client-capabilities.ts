@@ -1,4 +1,7 @@
-import type { SearchIndexTopology } from "@/client/quad-store/mod.ts";
+/**
+ * SearchIndexTopology distinguishes materialized FTS/vector indexes from scan-at-query-time indexes.
+ */
+export type SearchIndexTopology = "materialized" | "scan";
 
 /**
  * ClientCapabilities exposes topology facts callers need beyond SearchIndexInterface method shapes.

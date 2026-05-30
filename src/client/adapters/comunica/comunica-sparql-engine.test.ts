@@ -21,6 +21,7 @@ import {
   ComunicaSparqlEngine,
   executeSparql,
 } from "./comunica-sparql-engine.ts";
+import { createComunicaEngineWithBufferedCommit } from "./create-sparql-engine-with-commit.ts";
 import { createDenokvStoresForTest } from "@/client/adapters/denokv/create-denokv-stores-for-test.ts";
 
 const queryEngine = new QueryEngine();
@@ -508,5 +509,73 @@ Deno.test(
       response.data.results.bindings[0]?.object?.value,
       "LibsqlRdfjsStore cardinality hint path",
     );
+  },
+);
+
+Deno.test(
+  "createComunicaEngineWithBufferedCommit - does NOT commit on read-only SELECT",
+  async () => {
+    let commitCount = 0;
+    const store = new Store();
+
+    // deno-lint-ignore no-explicit-any
+    const bufferedStore = store as any;
+    bufferedStore.commit = () => {
+      commitCount++;
+      return Promise.resolve();
+    };
+
+    const queryEngineLocal = new QueryEngine();
+    const sparqlEngine = createComunicaEngineWithBufferedCommit({
+      queryEngine: queryEngineLocal,
+      store: bufferedStore,
+    });
+
+    bufferedStore.addQuad(
+      DataFactory.namedNode("https://example.com/s"),
+      DataFactory.namedNode("https://example.com/p"),
+      DataFactory.namedNode("https://example.com/o"),
+    );
+
+    const response = await sparqlEngine.execute({
+      query: "SELECT ?s ?p ?o WHERE { ?s ?p ?o }",
+    });
+
+    assertEquals(response.kind, "select");
+    assertEquals(commitCount, 0, "Should not commit on read-only queries");
+  },
+);
+
+Deno.test(
+  "createComunicaEngineWithBufferedCommit - COMMITS on mutating SPARQL UPDATE",
+  async () => {
+    let commitCount = 0;
+    const store = new Store();
+
+    // deno-lint-ignore no-explicit-any
+    const bufferedStore = store as any;
+    bufferedStore.commit = () => {
+      commitCount++;
+      return Promise.resolve();
+    };
+
+    const queryEngineLocal = new QueryEngine();
+    const sparqlEngine = createComunicaEngineWithBufferedCommit({
+      queryEngine: queryEngineLocal,
+      store: bufferedStore,
+    });
+
+    const response = await sparqlEngine.execute({
+      query:
+        `INSERT DATA { <https://example.com/s> <https://example.com/p> <https://example.com/o> }`,
+    });
+
+    assertEquals(response.kind, "void");
+    assertEquals(
+      commitCount,
+      1,
+      "Should commit exactly once on mutating updates",
+    );
+    assertEquals(store.size, 1);
   },
 );

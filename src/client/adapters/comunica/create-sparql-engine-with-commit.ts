@@ -28,32 +28,14 @@ export interface CreateComunicaEngineWithBufferedCommitOptions {
 }
 
 /**
- * wrapSparqlEngineWithBufferedCommit flushes store.commit() after every SPARQL execute call.
- */
-export function wrapSparqlEngineWithBufferedCommit(
-  sparqlEngine: SparqlEngineInterface,
-  store: BufferedCommitStore,
-): SparqlEngineInterface {
-  return {
-    execute: async (request) => {
-      const response = await sparqlEngine.execute(request);
-      await store.commit();
-      return response;
-    },
-  };
-}
-
-/**
  * createComunicaEngineWithBufferedCommit builds Comunica SPARQL with post-query buffer commits.
  */
 export function createComunicaEngineWithBufferedCommit(
   options: CreateComunicaEngineWithBufferedCommitOptions,
 ): SparqlEngineInterface {
-  const comunicaEngine = new ComunicaSparqlEngine({
+  return new ComunicaSparqlEngine({
     queryEngine: options.queryEngine,
     store: options.store,
     onVoid: options.onVoid ?? (() => options.store.commit()),
   });
-
-  return wrapSparqlEngineWithBufferedCommit(comunicaEngine, options.store);
 }

@@ -34,3 +34,8 @@ export async function runImportWithLifecycle(
   await importBody();
   await importLifecycle.afterImport();
 }
+
+/**
+ * SearchIndexOnImport controls when search chunk projection runs during bulk import.
+ */
+export type SearchIndexOnImport = "incremental" | "deferred" | "disabled";

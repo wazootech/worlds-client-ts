@@ -9,8 +9,8 @@ import type {
 import {
   exportFromRdfjsStore,
   importViaBufferedRdfjsStore,
+  noopImportLifecycle,
 } from "@/client/quad-store/mod.ts";
-import { noopImportLifecycle } from "@/client/quad-store/import-lifecycle.ts";
 import { createRdfjsCommittingStore } from "./rdfjs-committing-store.ts";
 
 /**

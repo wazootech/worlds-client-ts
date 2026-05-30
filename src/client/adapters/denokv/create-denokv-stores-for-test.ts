@@ -1,4 +1,3 @@
-import type { PatchSyncState } from "@/client/quad-store/mod.ts";
 import type * as rdfjs from "@rdfjs/types";
 
 import { DenokvQuadStore } from "./denokv-quad-store.ts";
@@ -6,6 +5,7 @@ import { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";
 import {
   createDenokvPatchSyncState,
   type DenokvPatchSyncAdapterOptions,
+  type DenokvPatchSyncState,
 } from "./sync/denokv-patch-sync.ts";
 
 /**
@@ -19,7 +19,7 @@ export interface DenokvStoresForTest {
   denokvRdfjsStore: DenokvRdfjsStore;
 
   /** patchSync coordinates persistPatch and deferred import lifecycle hooks in tests. */
-  patchSync: PatchSyncState;
+  patchSync: DenokvPatchSyncState;
 }
 
 /**

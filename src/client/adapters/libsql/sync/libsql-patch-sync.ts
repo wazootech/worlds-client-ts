@@ -1,6 +1,8 @@
 import type { TextSplitterInterface } from "@/client/search-index/quad-chunker/mod.ts";
-import { createImportPatchSyncState } from "@/client/quad-store/mod.ts";
-import type { PatchSyncState } from "@/client/quad-store/mod.ts";
+import type {
+  CommitHandler,
+  ImportLifecycle,
+} from "@/client/quad-store/mod.ts";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
 import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/sql/libsql-query-builder.ts";
@@ -18,28 +20,45 @@ export interface LibsqlPatchSyncAdapterOptions extends LibsqlClientBaseOptions {
 }
 
 /**
+ * LibsqlPatchSyncState coordinates LibSQL commit persisting with import lifecycle hooks.
+ */
+export interface LibsqlPatchSyncState extends ImportLifecycle {
+  /** persistPatch atomically persists a buffered patch to LibSQL durable storage. */
+  persistPatch: CommitHandler;
+}
+
+/**
  * createLibsqlPatchSyncState builds persistPatch and deferred-import helpers for LibSQL clients.
  */
 export function createLibsqlPatchSyncState(
   dependencies: LibsqlPatchSyncAdapterOptions,
-): PatchSyncState {
+): LibsqlPatchSyncState {
   const reindex = createLibsqlSearchIndexRebuilder(dependencies);
+  const searchIndexOnImport = dependencies.searchIndexOnImport ?? "incremental";
 
-  return createImportPatchSyncState({
-    searchIndexOnImport: dependencies.searchIndexOnImport,
-    searchIndexTopology: "materialized",
-    afterDeferredImport: async () => {
-      await reindex();
-    },
-    persistPatch: async (patch, context, projectionFlags) => {
+  return {
+    persistPatch: async (patch, context) => {
+      const isImport = context?.importMode !== undefined;
+      const skipSearchIndexProjection =
+        dependencies.searchIndexOnImport === "disabled" ||
+        (isImport && searchIndexOnImport === "deferred");
+
       await commitPatchToLibsql(
         patch,
         {
           ...dependencies,
-          skipSearchIndexProjection: projectionFlags.skipSearchIndexProjection,
+          skipSearchIndexProjection,
         },
         context,
       );
     },
-  });
+
+    beforeImport: () => {},
+
+    afterImport: async (): Promise<void> => {
+      if (searchIndexOnImport === "deferred") {
+        await reindex();
+      }
+    },
+  };
 }

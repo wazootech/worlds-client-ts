@@ -1,5 +1,5 @@
 export * from "./quad-store-interface.ts";
-export * from "./import-lifecycle.ts";
+export * from "./import-synchronizer.ts";
 export * from "./patch.ts";
 export * from "./commit-handler.ts";
 export * from "./quad-filter.ts";
@@ -8,6 +8,4 @@ export * from "./hash-quad.ts";
 export * from "./term.ts";
 export * from "./quad.ts";
 export * from "./rdf-formats.ts";
-export * from "./import-indexing-policy.ts";
-export * from "./patch-sync-state.ts";
 export * from "./import-export-via-rdfjs-store.ts";

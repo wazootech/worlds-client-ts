@@ -2,7 +2,7 @@ import { assertEquals } from "@std/assert";
 import { DataFactory, Store } from "n3";
 import type { QuadStoreInterface } from "./quad-store-interface.ts";
 import { RdfjsQuadStore } from "@/client/adapters/rdfjs/rdfjs-quad-store.ts";
-import type { ImportLifecycle } from "./import-lifecycle.ts";
+import type { ImportLifecycle } from "./import-synchronizer.ts";
 
 const { namedNode, literal, quad } = DataFactory;
 
@@ -17,52 +17,86 @@ const q2 = quad(
   literal("value2"),
 );
 
-function registerQuadStoreImportContract(
-  label: string,
-  createStore: () => QuadStoreInterface,
-): void {
-  Deno.test(`${label} - merge mode retains prior quads`, async () => {
-    const store = createStore();
-    await store.import({
-      mode: "merge",
-      source: { kind: "quads", quads: [q1] },
-    });
-    await store.import({
-      mode: "merge",
-      source: { kind: "quads", quads: [q2] },
-    });
+/**
+ * ContractTestContext houses the QuadStore instance to run tests against
+ * and an optional cleanup hook for resources like network clients or file locks.
+ */
+export interface ContractTestContext {
+  /** The concrete QuadStore adapter instance. */
+  store: QuadStoreInterface;
 
-    const response = await store.export({ format: { kind: "quads" } });
-    if (response.kind !== "quads") {
-      throw new Error("Expected quads response");
+  /** Teardown hook executed after each contract test runs. */
+  cleanup?: () => Promise<void> | void;
+}
+
+/**
+ * ContractTestOptions configures a single adapter's integration into the harness.
+ */
+export interface ContractTestOptions {
+  /** The descriptive name of the adapter (e.g. 'LibsqlQuadStore'). */
+  label: string;
+
+  /** Setup factory creating a fresh store and hook for isolation. */
+  setup: () => Promise<ContractTestContext> | ContractTestContext;
+}
+
+export function registerQuadStoreContractTests(
+  options: ContractTestOptions,
+): void {
+  const { label, setup } = options;
+
+  Deno.test(`${label} - contract - merge mode retains prior quads`, async () => {
+    const { store, cleanup } = await setup();
+    try {
+      await store.import({
+        mode: "merge",
+        source: { kind: "quads", quads: [q1] },
+      });
+      await store.import({
+        mode: "merge",
+        source: { kind: "quads", quads: [q2] },
+      });
+
+      const response = await store.export({ format: { kind: "quads" } });
+      if (response.kind !== "quads") {
+        throw new Error("Expected quads response");
+      }
+      assertEquals(response.quads.length, 2);
+    } finally {
+      if (cleanup) await cleanup();
     }
-    assertEquals(response.quads.length, 2);
   });
 
-  Deno.test(`${label} - replace mode leaves only new quads`, async () => {
-    const store = createStore();
-    await store.import({
-      mode: "merge",
-      source: { kind: "quads", quads: [q1] },
-    });
-    await store.import({
-      mode: "replace",
-      source: { kind: "quads", quads: [q2] },
-    });
+  Deno.test(`${label} - contract - replace mode leaves only new quads`, async () => {
+    const { store, cleanup } = await setup();
+    try {
+      await store.import({
+        mode: "merge",
+        source: { kind: "quads", quads: [q1] },
+      });
+      await store.import({
+        mode: "replace",
+        source: { kind: "quads", quads: [q2] },
+      });
 
-    const response = await store.export({ format: { kind: "quads" } });
-    if (response.kind !== "quads") {
-      throw new Error("Expected quads response");
+      const response = await store.export({ format: { kind: "quads" } });
+      if (response.kind !== "quads") {
+        throw new Error("Expected quads response");
+      }
+      assertEquals(response.quads.length, 1);
+      assertEquals(response.quads[0].subject.value, q2.subject.value);
+    } finally {
+      if (cleanup) await cleanup();
     }
-    assertEquals(response.quads.length, 1);
-    assertEquals(response.quads[0].subject.value, q2.subject.value);
   });
 }
 
-registerQuadStoreImportContract(
-  "RdfjsQuadStore",
-  () => new RdfjsQuadStore(new Store()),
-);
+registerQuadStoreContractTests({
+  label: "RdfjsQuadStore",
+  setup: () => ({
+    store: new RdfjsQuadStore(new Store()),
+  }),
+});
 
 Deno.test("RdfjsQuadStore - importLifecycle hooks fire around import", async () => {
   const events: string[] = [];

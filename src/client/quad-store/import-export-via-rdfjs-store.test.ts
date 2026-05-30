@@ -4,7 +4,7 @@ import type * as rdfjs from "@rdfjs/types";
 import type { PatchCommitContext } from "./commit-handler.ts";
 import type { CommittingRdfjsStore } from "./import-export-via-rdfjs-store.ts";
 import { importViaBufferedRdfjsStore } from "./import-export-via-rdfjs-store.ts";
-import { noopImportLifecycle } from "./import-lifecycle.ts";
+import { noopImportLifecycle } from "./import-synchronizer.ts";
 
 const { namedNode, literal, quad } = DataFactory;
 

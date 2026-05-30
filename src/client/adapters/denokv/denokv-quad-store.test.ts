@@ -1,3 +1,4 @@
+import { registerQuadStoreContractTests } from "@/client/quad-store/quad-store-interface.contract.test.ts";
 import { assertEquals } from "@std/assert";
 import { DataFactory, Store } from "n3";
 import { createDenokvStoresForTest } from "./create-denokv-stores-for-test.ts";
@@ -18,34 +19,18 @@ const q2 = quad(
   literal("value2"),
 );
 
-Deno.test("DenokvQuadStore.import - [Tracer Bullet] merge mode stores and exports a quad", async () => {
-  const kv = await Deno.openKv(":memory:");
-  const { denokvQuadStore: store } = createDenokvStoresForTest({ kv });
-
-  try {
-    await store.import({
-      mode: "merge",
-      source: {
-        kind: "quads",
-        quads: [q1],
+registerQuadStoreContractTests({
+  label: "DenokvQuadStore",
+  setup: async () => {
+    const kv = await Deno.openKv(":memory:");
+    const { denokvQuadStore: store } = createDenokvStoresForTest({ kv });
+    return {
+      store,
+      cleanup: async () => {
+        await kv.close();
       },
-    });
-
-    const response = await store.export({
-      format: { kind: "quads" },
-    });
-
-    if (response.kind !== "quads") {
-      throw new Error("Expected quads format response");
-    }
-
-    assertEquals(response.quads.length, 1);
-    assertEquals(response.quads[0].subject.value, q1.subject.value);
-    assertEquals(response.quads[0].predicate.value, q1.predicate.value);
-    assertEquals(response.quads[0].object.value, q1.object.value);
-  } finally {
-    kv.close();
-  }
+    };
+  },
 });
 
 Deno.test("DenokvQuadStore.import - replace mode switches generation and hides prior quads", async () => {
