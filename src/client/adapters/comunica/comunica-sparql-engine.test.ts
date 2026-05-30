@@ -3,12 +3,12 @@ import { createClient } from "@libsql/client";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import type { Quad } from "n3";
 import { DataFactory, Parser, Store } from "n3";
+import { commitPatchToLibsql } from "@/client/adapters/libsql/sync/commit-patch-to-libsql.ts";
+import { LibsqlRdfjsStore } from "@/client/adapters/libsql/libsql-rdfjs-store.ts";
 import {
-  commitPatchToLibsql,
   initializeLibsqlSchema,
   LibsqlQueryBuilder,
-  LibsqlRdfjsStore,
-} from "@/client/adapters/libsql/mod.ts";
+} from "@/client/adapters/libsql/sql/mod.ts";
 import { canonize } from "rdf-canonize";
 import { encodeBase64Url } from "@std/encoding/base64url";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
@@ -21,7 +21,7 @@ import {
   ComunicaSparqlEngine,
   executeSparql,
 } from "./comunica-sparql-engine.ts";
-import { createDenokvStores } from "@/client/adapters/denokv/create-denokv-client.ts";
+import { createDenokvStoresForTest } from "@/client/adapters/denokv/create-denokv-stores-for-test.ts";
 
 const queryEngine = new QueryEngine();
 
@@ -80,11 +80,12 @@ Deno.test(
 
       const n3Store = new Store(quads);
 
-      const { denokvQuadStore, denokvRdfjsStore: kvStore } = createDenokvStores(
-        {
-          kv,
-        },
-      );
+      const { denokvQuadStore, denokvRdfjsStore: kvStore } =
+        createDenokvStoresForTest(
+          {
+            kv,
+          },
+        );
       await denokvQuadStore.import({
         mode: "merge",
         source: { kind: "quads", quads },

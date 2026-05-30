@@ -302,8 +302,9 @@ Public graph persistence facades must use explicit suffixes:
 
 LibSQL: `client.import` → `LibsqlQuadStore` → `LibsqlRdfjsStore.commit()`. Deno
 KV: `client.import` → `DenokvQuadStore` (native KV bulk path). Both use
-`*RdfjsStore` for Comunica SPARQL. Advanced assembly:
-`createLibsqlClientFromStores`, `createDenokvClientFromStores`.
+`*RdfjsStore` for Comunica SPARQL. Advanced assembly uses explicit
+`new Client({ quadStore, searchIndex, sparqlEngine? })` with the suffixed
+stores.
 
 ## Architectural system map
 
@@ -339,12 +340,14 @@ For standard Comunica SPARQL, pass a Comunica `queryEngine` into factory options
 (e.g. `createLibsqlClient({ queryEngine })`) or wire `ComunicaSparqlEngine` when
 assembling `new Client` manually.
 
-Custom assembly uses `new Client` with `ClientOptions`; advanced LibSQL
-warm-start uses `createLibsqlClientFromStores`. Durable backends share buffer →
-`commit()` → `persistPatch` for import and SPARQL UPDATE; all quad stores run
-`ImportLifecycle` (`beforeImport` / `afterImport`) around `import`. LibSQL
-defers built-in chunk projection via `searchIndexOnImport: "deferred"`; Deno KV
-supports the same defer hooks for external search indexes via
+Custom assembly uses `new Client` with `ClientOptions`; wire
+`LibsqlSearchIndex`, `createLibsqlPatchSyncState`, and suffixed stores directly
+when you need warm-start control beyond `createLibsqlClient`. Durable backends
+share buffer → `commit()` → `persistPatch` for import and SPARQL UPDATE; all
+quad stores run `ImportLifecycle` (`beforeImport` / `afterImport`) around
+`import`. LibSQL defers built-in chunk projection via
+`searchIndexOnImport: "deferred"`; Deno KV supports the same defer hooks for
+external search indexes via
 `createDenokvPatchSyncState({ searchIndexOnImport: "deferred", reindex })`.
 
 - **Long-running (Fly.io, DigitalOcean, 24/7 Deno):** one `Client` at process

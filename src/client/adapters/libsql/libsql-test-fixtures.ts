@@ -1,4 +1,4 @@
-import { createClient } from "@libsql/client";
+import type { Client } from "@libsql/client";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import {
   initializeLibsqlSchema,
@@ -17,7 +17,7 @@ export const sharedTextSplitter = new RecursiveCharacterTextSplitter({
  * setupLibsqlSchemaForTest initializes the LibSQL schema for adapter tests.
  */
 export async function setupLibsqlSchemaForTest(
-  client: ReturnType<typeof createClient>,
+  client: Client,
 ): Promise<void> {
   await initializeLibsqlSchema(client, testLibsqlQueryBuilder);
 }

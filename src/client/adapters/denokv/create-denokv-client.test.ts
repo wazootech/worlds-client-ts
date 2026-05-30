@@ -1,12 +1,8 @@
 import { assertEquals, assertExists, assertRejects } from "@std/assert";
-import type * as rdfjs from "@rdfjs/types";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory } from "n3";
 import { createDenokvClient } from "./create-denokv-client.ts";
-import {
-  createDenokvStoresForTest,
-  seedDenokvQuadsForTest,
-} from "./create-denokv-stores-for-test.ts";
+import { seedDenokvQuadsForTest } from "./create-denokv-stores-for-test.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 const queryEngine = new QueryEngine();

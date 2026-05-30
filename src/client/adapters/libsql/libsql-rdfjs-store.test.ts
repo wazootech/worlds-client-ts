@@ -4,7 +4,7 @@ import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
 import type * as rdfjs from "@rdfjs/types";
 import { Readable } from "node:stream";
-import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import { LibsqlQueryBuilder } from "./sql/libsql-query-builder.ts";
 import type { CommitHandler } from "@/client/quad-store/mod.ts";
 import { collectQuadsFromStream } from "@/client/quad-store/mod.ts";
 import { LibsqlRdfjsStore } from "./libsql-rdfjs-store.ts";

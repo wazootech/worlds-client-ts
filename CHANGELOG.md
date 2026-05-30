@@ -11,9 +11,14 @@
   `createLibsqlClient`, `createDenokvClient`. **Removed `createRdfjsClient`** —
   wire in-memory N3 with `RdfjsQuadStore` / `RdfjsSearchIndex` explicitly.
 - Renamed `createLibsqlAdapter` → `createLibsqlClient` (and matching
-  `createLibsqlClientFromStores`, `createLibsqlClientInfrastructure`,
-  `LibsqlClientOptions`, `LibsqlClientInfrastructure`). Same pattern for RDF/JS
-  and Deno KV.
+  `LibsqlClientOptions`). Same pattern for RDF/JS and Deno KV.
+- Removed `createLibsqlClientFromStores`, `createLibsqlClientInfrastructure`,
+  `createLibsqlStores`, `createDenokvClientFromStores`, and
+  `createDenokvStores`. Custom assembly uses explicit
+  `new Client({ quadStore, searchIndex, sparqlEngine? })`.
+- Narrowed `@worlds/client/adapters/libsql` and `@worlds/client/adapters/denokv`
+  exports to factory entry points, suffixed stores, and search helpers; SQL/KV
+  internals are in-repo only under `libsql/sql/` and `denokv/kv/`.
 - Renamed `rebuildSearchIndex` → **`reindex`**; `RebuildSearchIndexRequest` /
   `RebuildSearchIndexResponse` → `ReindexRequest` / `ReindexResponse`. RDF/JS
   and Deno KV `reindex()` succeed as documented no-ops.
@@ -121,33 +126,30 @@ import { createLibsqlClient } from "@worlds/client/adapters/libsql";
 const adapter = await createLibsqlClient({ client, queryEngine });
 ```
 
-Custom LibSQL assembly (`createLibsqlClientFromRdfjsStore` removed):
+Custom LibSQL assembly (removed `createLibsqlClientFromStores` and
+`createLibsqlClientInfrastructure`; prefer `createLibsqlClient` when possible):
 
 ```typescript
+import { Client } from "@worlds/client";
 import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
 import {
-  createLibsqlClientFromStores,
-  createLibsqlClientInfrastructure,
+  createLibsqlClient,
   LibsqlQuadStore,
   LibsqlRdfjsStore,
+  LibsqlSearchIndex,
 } from "@worlds/client/adapters/libsql";
 
-const infrastructure = await createLibsqlClientInfrastructure({ client });
-const libsqlRdfjsStore = new LibsqlRdfjsStore({
-  client,
-  queryBuilder: infrastructure.queryBuilder,
-  commitHandler: infrastructure.patchSync.persistPatch,
-});
-const libsqlQuadStore = new LibsqlQuadStore({
-  libsqlRdfjsStore,
-  importLifecycle: infrastructure.patchSync,
-});
-const adapter = createLibsqlClientFromStores({
-  infrastructure,
-  libsqlQuadStore,
-  libsqlRdfjsStore,
-  createSparqlEngine: ({ store }) =>
-    new ComunicaSparqlEngine({ queryEngine, store }),
+// Default path (recommended):
+const adapter = await createLibsqlClient({ client, queryEngine });
+
+// Advanced warm-start: mirror create-libsql-client.ts wiring, then:
+const customAdapter = new Client({
+  quadStore: libsqlQuadStore,
+  searchIndex: libsqlSearchIndex,
+  sparqlEngine: new ComunicaSparqlEngine({
+    queryEngine,
+    store: libsqlRdfjsStore,
+  }),
 });
 ```
 
@@ -161,15 +163,24 @@ new RdfjsQuadStore({ rdfjsStore: libsqlStore, importLifecycle });
 new LibsqlQuadStore({ libsqlRdfjsStore, importLifecycle });
 ```
 
-Deno KV custom assembly:
+Deno KV custom assembly (removed `createDenokvClientFromStores`; prefer
+`createDenokvClient` when possible):
 
 ```typescript
-import { createDenokvClientFromStores } from "@worlds/client/adapters/denokv";
+import { Client } from "@worlds/client";
+import {
+  createDenokvClient,
+  DenokvQuadStore,
+  DenokvRdfjsStore,
+  DenokvSearchIndex,
+} from "@worlds/client/adapters/denokv";
 
-const adapter = createDenokvClientFromStores({
-  denokvQuadStore,
-  denokvRdfjsStore,
-  searchIndex,
+const adapter = createDenokvClient({ kv, keyPrefix, queryEngine });
+
+// Advanced: mirror create-denokv-client.ts, then pass stores to Client.
+const customAdapter = new Client({
+  quadStore: denokvQuadStore,
+  searchIndex: new DenokvSearchIndex({ kv, keyPrefix }),
   sparqlEngine,
 });
 ```

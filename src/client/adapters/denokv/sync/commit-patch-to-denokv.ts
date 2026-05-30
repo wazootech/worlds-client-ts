@@ -6,14 +6,14 @@ import {
   bumpDatasetGeneration,
   garbageCollectOrphanedGenerations,
   readActiveGeneration,
-} from "../denokv-dataset-generation.ts";
-import { buildGenerationDataPrefix } from "../denokv-hexastore-keys.ts";
+} from "../kv/denokv-dataset-generation.ts";
+import { buildGenerationDataPrefix } from "../kv/denokv-hexastore-keys.ts";
 import {
   DEFAULT_DENOKV_HEXASTORE_INDEXES,
   type DenokvHexastoreIndex,
-} from "../denokv-hexastore-index-set.ts";
-import { commitBatchedKvMutations } from "../denokv-kv-limits.ts";
-import { materializeQuadKeys } from "../denokv-quad-keys.ts";
+} from "../kv/denokv-hexastore-index-set.ts";
+import { commitBatchedKvMutations } from "../kv/denokv-kv-limits.ts";
+import { materializeQuadKeys } from "../kv/denokv-quad-keys.ts";
 
 /**
  * CommitPatchToDenokvOptions configures Deno KV quad persistence for patch commits.

@@ -1,6 +1,6 @@
 import { assertEquals } from "@std/assert";
 import { DataFactory, Store } from "n3";
-import { createDenokvStores } from "./create-denokv-client.ts";
+import { createDenokvStoresForTest } from "./create-denokv-stores-for-test.ts";
 import { createDenokvPatchSyncState } from "./sync/denokv-patch-sync.ts";
 import { DenokvQuadStore } from "./denokv-quad-store.ts";
 import { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";
@@ -20,7 +20,7 @@ const q2 = quad(
 
 Deno.test("DenokvQuadStore.import - [Tracer Bullet] merge mode stores and exports a quad", async () => {
   const kv = await Deno.openKv(":memory:");
-  const { denokvQuadStore: store } = createDenokvStores({ kv });
+  const { denokvQuadStore: store } = createDenokvStoresForTest({ kv });
 
   try {
     await store.import({
@@ -51,7 +51,10 @@ Deno.test("DenokvQuadStore.import - [Tracer Bullet] merge mode stores and export
 Deno.test("DenokvQuadStore.import - replace mode switches generation and hides prior quads", async () => {
   const kv = await Deno.openKv(":memory:");
   const keyPrefix = ["quads"];
-  const { denokvQuadStore: store } = createDenokvStores({ kv, keyPrefix });
+  const { denokvQuadStore: store } = createDenokvStoresForTest({
+    kv,
+    keyPrefix,
+  });
 
   try {
     await store.import({
@@ -89,7 +92,7 @@ Deno.test("DenokvQuadStore.import - replace mode switches generation and hides p
 
 Deno.test("DenokvQuadStore.import - source: dataset handles DatasetCore objects", async () => {
   const kv = await Deno.openKv(":memory:");
-  const { denokvQuadStore: store } = createDenokvStores({ kv });
+  const { denokvQuadStore: store } = createDenokvStoresForTest({ kv });
 
   try {
     const dataset = new Store();
@@ -111,7 +114,7 @@ Deno.test("DenokvQuadStore.import - source: dataset handles DatasetCore objects"
 
 Deno.test("DenokvQuadStore.import - source: serialized parses Turtle successfully", async () => {
   const kv = await Deno.openKv(":memory:");
-  const { denokvQuadStore: store } = createDenokvStores({ kv });
+  const { denokvQuadStore: store } = createDenokvStoresForTest({ kv });
 
   try {
     const turtle = `<http://example.org/s3> <http://example.org/p3> "value" .`;
@@ -135,7 +138,7 @@ Deno.test("DenokvQuadStore.import - source: serialized parses Turtle successfull
 
 Deno.test("DenokvQuadStore.import - long literals use kv-toolbox batchedAtomic commits", async () => {
   const kv = await Deno.openKv(":memory:");
-  const { denokvQuadStore: store } = createDenokvStores({ kv });
+  const { denokvQuadStore: store } = createDenokvStoresForTest({ kv });
 
   try {
     const longLiteralQuads = Array.from({ length: 100 }, (_, index) =>
@@ -164,7 +167,7 @@ Deno.test("DenokvQuadStore.import - long literals use kv-toolbox batchedAtomic c
 
 Deno.test("DenokvQuadStore.export - returns serialized dump", async () => {
   const kv = await Deno.openKv(":memory:");
-  const { denokvQuadStore: store } = createDenokvStores({ kv });
+  const { denokvQuadStore: store } = createDenokvStoresForTest({ kv });
 
   try {
     await store.import({
@@ -219,7 +222,7 @@ Deno.test("createDenokvPatchSyncState - deferred import runs caller reindex", as
   const events: string[] = [];
   const kv = await Deno.openKv(":memory:");
   try {
-    const { denokvQuadStore } = createDenokvStores({
+    const { denokvQuadStore } = createDenokvStoresForTest({
       kv,
       searchIndexOnImport: "deferred",
       reindex: () => {
