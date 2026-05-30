@@ -26,16 +26,11 @@ export interface DenokvPatchSyncAdapterOptions
 }
 
 /**
- * DenokvPatchSyncState coordinates commitPatchToDenokv with optional deferred external search indexing.
- */
-export type DenokvPatchSyncState = PatchSyncState;
-
-/**
  * createDenokvPatchSyncState builds persistPatch and deferred-import helpers for Deno KV clients.
  */
 export function createDenokvPatchSyncState(
   dependencies: DenokvPatchSyncAdapterOptions,
-): DenokvPatchSyncState {
+): PatchSyncState {
   return createDeferredImportPatchSync({
     searchIndexOnImport: dependencies.searchIndexOnImport,
     persistPatch: async (patch, context) => {

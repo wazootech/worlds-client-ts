@@ -6,10 +6,10 @@ import { createDenokvClientFromStores } from "./create-denokv-client-from-stores
 import { DenokvQuadStore } from "./denokv-quad-store.ts";
 import { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";
 import { DenokvSearchIndex } from "./denokv-search-index.ts";
+import type { PatchSyncState } from "@/client/quad-store/mod.ts";
 import {
   createDenokvPatchSyncState,
   type DenokvPatchSyncAdapterOptions,
-  type DenokvPatchSyncState,
 } from "./sync/denokv-patch-sync.ts";
 
 /**
@@ -31,7 +31,7 @@ export interface DenokvStores {
   denokvRdfjsStore: DenokvRdfjsStore;
 
   /** patchSync coordinates persistPatch and deferred import lifecycle hooks. */
-  patchSync: DenokvPatchSyncState;
+  patchSync: PatchSyncState;
 }
 
 /**

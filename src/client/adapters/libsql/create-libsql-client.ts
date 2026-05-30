@@ -10,7 +10,7 @@ import {
 } from "./create-libsql-client-infrastructure.ts";
 import { LibsqlQuadStore } from "./libsql-quad-store.ts";
 import { LibsqlRdfjsStore } from "./libsql-rdfjs-store.ts";
-import type { LibsqlPatchSyncState } from "./sync/libsql-patch-sync.ts";
+import type { PatchSyncState } from "@/client/quad-store/mod.ts";
 
 /**
  * LibsqlClientOptions configures LibSQL execution through LibsqlRdfjsStore and hexastore indexes.
@@ -31,7 +31,7 @@ export interface LibsqlStores {
   libsqlRdfjsStore: LibsqlRdfjsStore;
 
   /** patchSync coordinates persistPatch and deferred import lifecycle hooks. */
-  patchSync: LibsqlPatchSyncState;
+  patchSync: PatchSyncState;
 }
 
 /**

@@ -19,16 +19,11 @@ export interface LibsqlPatchSyncAdapterOptions extends LibsqlClientBaseOptions {
 }
 
 /**
- * LibsqlPatchSyncState coordinates commitPatchToLibsql with optional deferred search indexing.
- */
-export type LibsqlPatchSyncState = PatchSyncState;
-
-/**
  * createLibsqlPatchSyncState builds persistPatch and deferred-import helpers for LibSQL clients.
  */
 export function createLibsqlPatchSyncState(
   dependencies: LibsqlPatchSyncAdapterOptions,
-): LibsqlPatchSyncState {
+): PatchSyncState {
   const searchIndexOnImport: SearchIndexOnImport | undefined =
     dependencies.searchIndexOnImport;
 

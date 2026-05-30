@@ -4,10 +4,8 @@ import type { LibsqlClientBaseOptions } from "./libsql-client-base-options.ts";
 import { LibsqlSearchIndex } from "@/client/adapters/libsql/search/mod.ts";
 import { initializeLibsqlSchema } from "./initialize-libsql-schema.ts";
 import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
-import {
-  createLibsqlPatchSyncState,
-  type LibsqlPatchSyncState,
-} from "@/client/adapters/libsql/sync/mod.ts";
+import type { PatchSyncState } from "@/client/quad-store/mod.ts";
+import { createLibsqlPatchSyncState } from "@/client/adapters/libsql/sync/mod.ts";
 
 /**
  * LibsqlClientInfrastructure holds shared LibSQL schema, search, and patch-sync state.
@@ -20,7 +18,7 @@ export interface LibsqlClientInfrastructure {
   searchIndex: LibsqlSearchIndex;
 
   /** patchSync coordinates persistPatch and deferred search indexing on import. */
-  patchSync: LibsqlPatchSyncState;
+  patchSync: PatchSyncState;
 }
 
 /**

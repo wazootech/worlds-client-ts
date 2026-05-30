@@ -6,5 +6,4 @@ export * from "./quad-filter.ts";
 export * from "./is-textual-literal.ts";
 export * from "./hash-quad.ts";
 export * from "./rdf-formats.ts";
-export * from "./quad-stream.ts";
 export * from "./patch-sync-state.ts";
