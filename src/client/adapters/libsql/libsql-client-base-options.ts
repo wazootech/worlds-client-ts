@@ -1,5 +1,6 @@
 import type { Client as LibsqlClient } from "@libsql/client";
 import type { QuadFilter } from "@/client/quad-store/mod.ts";
+import type { SearchIndexOnImport } from "@/client/quad-store/mod.ts";
 import type { EmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
 import type { TextSplitterInterface } from "@/client/search-index/quad-chunker/mod.ts";
 
@@ -41,5 +42,5 @@ export interface LibsqlClientBaseOptions extends QuadFilter {
    * - `"deferred"`: persists quads on each import, rebuilds FTS/vector chunks in one pass afterward.
    * - `"disabled"`: skips chunking entirely; caller calls `client.reindex()` before searching.
    */
-  searchIndexOnImport?: "incremental" | "deferred" | "disabled";
+  searchIndexOnImport?: SearchIndexOnImport;
 }

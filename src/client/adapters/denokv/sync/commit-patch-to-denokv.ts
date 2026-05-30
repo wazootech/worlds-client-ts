@@ -1,5 +1,6 @@
+import type * as rdfjs from "@rdfjs/types";
 import type { Patch, PatchCommitContext } from "@/client/quad-store/mod.ts";
-import { hashQuad } from "@/client/quad-store/mod.ts";
+import { hashQuads } from "@/client/quad-store/mod.ts";
 
 import {
   bumpDatasetGeneration,
@@ -13,7 +14,6 @@ import {
 } from "../denokv-hexastore-index-set.ts";
 import { commitBatchedKvMutations } from "../denokv-kv-limits.ts";
 import { materializeQuadKeys } from "../denokv-quad-keys.ts";
-import { serializeTerm } from "../denokv-serialization.ts";
 
 /**
  * CommitPatchToDenokvOptions configures Deno KV quad persistence for patch commits.
@@ -70,29 +70,11 @@ async function commitReplaceImportPatch(
 ): Promise<void> {
   const generationId = await bumpDatasetGeneration(kv, keyPrefix);
   const scopedDataPrefix = buildGenerationDataPrefix(keyPrefix, generationId);
-
-  const insertMutations: Array<{ key: Deno.KvKey; value: unknown }> = [];
-
-  for (const storedQuad of patch.insertions) {
-    const quadId = await hashQuad(storedQuad);
-    const { primaryKey, indexKeys, serializedQuad } = materializeQuadKeys({
-      scopedDataPrefix,
-      enabledIndexes,
-      storedQuad,
-      quadId,
-      serializedQuad: {
-        subject: serializeTerm(storedQuad.subject),
-        predicate: serializeTerm(storedQuad.predicate),
-        object: serializeTerm(storedQuad.object),
-        graph: serializeTerm(storedQuad.graph),
-      },
-    });
-
-    insertMutations.push({ key: primaryKey, value: serializedQuad });
-    for (const indexKey of indexKeys) {
-      insertMutations.push({ key: indexKey, value: quadId });
-    }
-  }
+  const insertMutations = await buildKvInsertMutations(
+    scopedDataPrefix,
+    enabledIndexes,
+    patch.insertions,
+  );
 
   if (insertMutations.length > 0) {
     await commitBatchedKvMutations(kv, (batch) => {
@@ -119,10 +101,10 @@ async function commitIncrementalPatch(
   const scopedDataPrefix = buildGenerationDataPrefix(keyPrefix, generationId);
 
   const deleteMutations: Deno.KvKey[] = [];
-  const insertMutations: Array<{ key: Deno.KvKey; value: unknown }> = [];
-
-  for (const storedQuad of patch.deletions) {
-    const quadId = await hashQuad(storedQuad);
+  const deletionQuadIds = await hashQuads(patch.deletions);
+  for (let index = 0; index < patch.deletions.length; index++) {
+    const storedQuad = patch.deletions[index]!;
+    const quadId = deletionQuadIds[index]!;
     const { primaryKey, indexKeys } = materializeQuadKeys({
       scopedDataPrefix,
       enabledIndexes,
@@ -133,8 +115,37 @@ async function commitIncrementalPatch(
     deleteMutations.push(primaryKey, ...indexKeys);
   }
 
-  for (const storedQuad of patch.insertions) {
-    const quadId = await hashQuad(storedQuad);
+  const insertMutations = await buildKvInsertMutations(
+    scopedDataPrefix,
+    enabledIndexes,
+    patch.insertions,
+  );
+
+  await commitBatchedKvMutations(kv, (batch) => {
+    for (const key of deleteMutations) {
+      batch.delete(key);
+    }
+    for (const { key, value } of insertMutations) {
+      batch.set(key, value);
+    }
+  });
+}
+
+async function buildKvInsertMutations(
+  scopedDataPrefix: Deno.KvKey,
+  enabledIndexes: readonly DenokvHexastoreIndex[],
+  quads: readonly rdfjs.Quad[],
+): Promise<Array<{ key: Deno.KvKey; value: unknown }>> {
+  if (quads.length === 0) {
+    return [];
+  }
+
+  const quadIds = await hashQuads([...quads]);
+  const insertMutations: Array<{ key: Deno.KvKey; value: unknown }> = [];
+
+  for (let index = 0; index < quads.length; index++) {
+    const storedQuad = quads[index]!;
+    const quadId = quadIds[index]!;
     const { primaryKey, indexKeys, serializedQuad } = materializeQuadKeys({
       scopedDataPrefix,
       enabledIndexes,
@@ -148,12 +159,5 @@ async function commitIncrementalPatch(
     }
   }
 
-  await commitBatchedKvMutations(kv, (batch) => {
-    for (const key of deleteMutations) {
-      batch.delete(key);
-    }
-    for (const { key, value } of insertMutations) {
-      batch.set(key, value);
-    }
-  });
+  return insertMutations;
 }

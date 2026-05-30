@@ -1,6 +1,7 @@
 import type { TextSplitterInterface } from "@/client/search-index/quad-chunker/mod.ts";
-import type { ImportLifecycle } from "@/client/quad-store/mod.ts";
-import type { Patch, PatchCommitContext } from "@/client/quad-store/mod.ts";
+import type { SearchIndexOnImport } from "@/client/quad-store/mod.ts";
+import { createDeferredImportPatchSync } from "@/client/quad-store/mod.ts";
+import type { PatchSyncState } from "@/client/quad-store/mod.ts";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
 import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/libsql-query-builder.ts";
@@ -20,13 +21,7 @@ export interface LibsqlPatchSyncAdapterOptions extends LibsqlClientBaseOptions {
 /**
  * LibsqlPatchSyncState coordinates commitPatchToLibsql with optional deferred search indexing.
  */
-export interface LibsqlPatchSyncState extends ImportLifecycle {
-  /** persistPatch commits a patch to LibSQL using the current defer-search flag. */
-  persistPatch: (
-    patch: Patch,
-    context?: PatchCommitContext,
-  ) => Promise<void>;
-}
+export type LibsqlPatchSyncState = PatchSyncState;
 
 /**
  * createLibsqlPatchSyncState builds persistPatch and deferred-import helpers for LibSQL clients.
@@ -34,7 +29,8 @@ export interface LibsqlPatchSyncState extends ImportLifecycle {
 export function createLibsqlPatchSyncState(
   dependencies: LibsqlPatchSyncAdapterOptions,
 ): LibsqlPatchSyncState {
-  const { searchIndexOnImport } = dependencies;
+  const searchIndexOnImport: SearchIndexOnImport | undefined =
+    dependencies.searchIndexOnImport;
 
   const projectSearchIndex = searchIndexOnImport !== "disabled";
   const deferSearchDuringImport = searchIndexOnImport === "deferred";
@@ -43,7 +39,14 @@ export function createLibsqlPatchSyncState(
 
   let skipSearchIndexForNextCommit = false;
 
-  return {
+  return createDeferredImportPatchSync({
+    searchIndexOnImport,
+    beforeImport: () => {
+      skipSearchIndexForNextCommit = deferSearchDuringImport;
+    },
+    afterDeferredImport: async () => {
+      await reindex();
+    },
     persistPatch: async (patch, _context) => {
       await commitPatchToLibsql(patch, {
         ...dependencies,
@@ -52,16 +55,5 @@ export function createLibsqlPatchSyncState(
       });
       skipSearchIndexForNextCommit = false;
     },
-
-    beforeImport: () => {
-      skipSearchIndexForNextCommit = deferSearchDuringImport;
-    },
-
-    afterImport: async (): Promise<void> => {
-      if (!deferSearchDuringImport) {
-        return;
-      }
-      await reindex();
-    },
-  };
+  });
 }

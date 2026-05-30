@@ -16,3 +16,16 @@ export async function hashQuad(quad: rdfjs.Quad): Promise<string> {
   const encoded = new TextEncoder().encode(canonical);
   return encodeBase64Url(encoded);
 }
+
+/**
+ * hashQuads computes deterministic canonical IDs for multiple quads in parallel.
+ */
+export async function hashQuads(quads: rdfjs.Quad[]): Promise<string[]> {
+  try {
+    return await Promise.all(quads.map((quad) => hashQuad(quad)));
+  } catch (cause) {
+    throw new Error("failed to compute content hashes for incoming quads", {
+      cause,
+    });
+  }
+}

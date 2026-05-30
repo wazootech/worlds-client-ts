@@ -31,21 +31,13 @@ export function createLibsqlClientFromStores(
   options: LibsqlClientFromStoresOptions,
 ): ClientInterface {
   const { searchIndex } = options.infrastructure;
-  const configuredSparqlEngine = options.createSparqlEngine?.({
+  const sparqlEngine = options.createSparqlEngine?.({
     store: options.libsqlRdfjsStore,
   });
 
   return new Client({
     quadStore: options.libsqlQuadStore,
-    sparqlEngine: configuredSparqlEngine
-      ? {
-        execute: async (request) => {
-          const response = await configuredSparqlEngine.execute(request);
-          await options.libsqlRdfjsStore.commit();
-          return response;
-        },
-      }
-      : undefined,
+    sparqlEngine,
     searchIndex,
   });
 }

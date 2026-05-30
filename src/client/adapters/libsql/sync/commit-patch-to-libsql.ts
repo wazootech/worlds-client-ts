@@ -8,7 +8,7 @@ import type * as rdfjs from "@rdfjs/types";
 import type { Patch } from "@/client/quad-store/mod.ts";
 import {
   filterQuads,
-  hashQuad,
+  hashQuads,
   isTextualLiteral,
 } from "@/client/quad-store/mod.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
@@ -133,7 +133,7 @@ export async function commitPatchToLibsql(
   // 1. Stage Sweeping Deletion Operations
   const deletionQuadIds = new Set<string>();
   if (targetedDeletions.length) {
-    const computedDeletionQuadIds = await computeQuadIds(targetedDeletions);
+    const computedDeletionQuadIds = await hashQuads(targetedDeletions);
     for (const quadId of computedDeletionQuadIds) {
       deletionQuadIds.add(quadId);
     }
@@ -153,7 +153,7 @@ export async function commitPatchToLibsql(
 
   // 2. Stage Content-Addressed Novel Insertion Operations
   if (targetedInsertions.length) {
-    const proposedQuadIds = await computeQuadIds(targetedInsertions);
+    const proposedQuadIds = await hashQuads(targetedInsertions);
     const existingIds = await queryCachePresence(
       client,
       proposedQuadIds,
@@ -258,7 +258,7 @@ export async function refreshSearchChunksForQuads(
     options.labelPredicates,
   );
 
-  const quadIds = await computeQuadIds(quads);
+  const quadIds = await hashQuads(quads);
   const chunkInsertStatements = await buildVectorChunkStatements(
     quads,
     quadIds,
@@ -347,19 +347,6 @@ function collectLabelPredicateSubjects(
     }
   }
   return Array.from(subjects);
-}
-
-/**
- * computeQuadIds computes deterministic base64 URL-safe content hashes for raw Graph quads.
- */
-async function computeQuadIds(quads: rdfjs.Quad[]): Promise<string[]> {
-  try {
-    return await Promise.all(quads.map((q) => hashQuad(q)));
-  } catch (cause) {
-    throw new Error("failed to compute content hashes for incoming quads", {
-      cause,
-    });
-  }
 }
 
 /**

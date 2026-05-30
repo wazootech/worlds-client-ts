@@ -1,6 +1,6 @@
 import type { ClientInterface } from "@/client/client.ts";
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
-import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
+import { createComunicaEngineWithBufferedCommit } from "@/client/adapters/comunica/mod.ts";
 
 import { createDenokvClientFromStores } from "./create-denokv-client-from-stores.ts";
 import { DenokvQuadStore } from "./denokv-quad-store.ts";
@@ -70,19 +70,12 @@ export function createDenokvClient(
       kv: options.kv,
       keyPrefix: options.keyPrefix,
     }),
-    sparqlEngine: options.queryEngine
-      ? {
-        execute: async (request) => {
-          const engine = new ComunicaSparqlEngine({
-            queryEngine: options.queryEngine!,
-            store: denokvRdfjsStore,
-            onVoid: () => denokvRdfjsStore.commit(),
-          });
-          const response = await engine.execute(request);
-          await denokvRdfjsStore.commit();
-          return response;
-        },
-      }
+    createSparqlEngine: options.queryEngine
+      ? ({ store }) =>
+        createComunicaEngineWithBufferedCommit({
+          queryEngine: options.queryEngine!,
+          store,
+        })
       : undefined,
   });
 }

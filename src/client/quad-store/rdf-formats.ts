@@ -2,6 +2,7 @@ import type * as rdfjs from "@rdfjs/types";
 import { Readable } from "node:stream";
 import { Parser } from "n3";
 import type { ImportRequest } from "./quad-store-interface.ts";
+import { collectQuadsFromStream } from "./quad-stream.ts";
 
 /**
  * RdfFormat specifies content type configuration mapping for parser/writer facilities.
@@ -64,13 +65,7 @@ export async function materializeImportQuads(
 
   if (source.kind === "serialized") {
     const parsedStream = parseQuads(source.data, source.contentType);
-    const quads: rdfjs.Quad[] = [];
-    await new Promise<void>((resolve, reject) => {
-      parsedStream.on("data", (quad: rdfjs.Quad) => quads.push(quad));
-      parsedStream.on("end", resolve);
-      parsedStream.on("error", reject);
-    });
-    return quads;
+    return await collectQuadsFromStream(parsedStream);
   }
 
   throw new Error("Unsupported import source kind");

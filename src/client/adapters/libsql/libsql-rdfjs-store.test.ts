@@ -5,7 +5,8 @@ import { DataFactory } from "n3";
 import type * as rdfjs from "@rdfjs/types";
 import { Readable } from "node:stream";
 import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
-import type { CommitHandler } from "./libsql-rdfjs-store.ts";
+import type { CommitHandler } from "@/client/quad-store/mod.ts";
+import { collectQuadsFromStream } from "@/client/quad-store/mod.ts";
 import { LibsqlRdfjsStore } from "./libsql-rdfjs-store.ts";
 
 const { namedNode, literal, blankNode, quad } = DataFactory;
@@ -69,17 +70,6 @@ async function seedQuad(
   });
 }
 
-function collectStream(
-  stream: rdfjs.Stream<rdfjs.Quad>,
-): Promise<rdfjs.Quad[]> {
-  return new Promise((resolve, reject) => {
-    const quads: rdfjs.Quad[] = [];
-    stream.on("data", (q: rdfjs.Quad) => quads.push(q));
-    stream.on("end", () => resolve(quads));
-    stream.on("error", reject);
-  });
-}
-
 // ──────────────────────────────────────────────────
 // Phase 1: match() read tests
 // ──────────────────────────────────────────────────
@@ -89,7 +79,9 @@ Deno.test("LibsqlRdfjsStore.match - empty store returns empty stream", async () 
   await setupSchema(db);
   const store = createTestLibsqlRdfjsStore(db, testBuilder);
 
-  const results = await collectStream(store.match(null, null, null, null));
+  const results = await collectQuadsFromStream(
+    store.match(null, null, null, null),
+  );
   assertEquals(results.length, 0);
 });
 
@@ -108,7 +100,7 @@ Deno.test("LibsqlRdfjsStore.match - all four terms bound returns exact quad", as
   });
   const store = createTestLibsqlRdfjsStore(db, testBuilder);
 
-  const results = await collectStream(store.match(
+  const results = await collectQuadsFromStream(store.match(
     namedNode("urn:alice"),
     namedNode("urn:knows"),
     namedNode("urn:bob"),
@@ -131,7 +123,7 @@ Deno.test("LibsqlRdfjsStore.match - by subject only returns matching quads", asy
   await seedQuad(db, { id: "h3", s: "urn:a", p: "urn:p3", o: "o3" });
   const store = createTestLibsqlRdfjsStore(db, testBuilder);
 
-  const results = await collectStream(
+  const results = await collectQuadsFromStream(
     store.match(namedNode("urn:a"), null, null, null),
   );
 
@@ -149,7 +141,7 @@ Deno.test("LibsqlRdfjsStore.match - by predicate only uses PSO index", async () 
   await seedQuad(db, { id: "h3", s: "urn:c", p: "urn:target", o: "o3" });
   const store = createTestLibsqlRdfjsStore(db, testBuilder);
 
-  const results = await collectStream(
+  const results = await collectQuadsFromStream(
     store.match(null, namedNode("urn:target"), null, null),
   );
 
@@ -180,7 +172,7 @@ Deno.test("LibsqlRdfjsStore.match - by graph only uses GPSO index", async () => 
   });
   const store = createTestLibsqlRdfjsStore(db, testBuilder);
 
-  const results = await collectStream(
+  const results = await collectQuadsFromStream(
     store.match(null, null, null, namedNode("urn:g1")),
   );
 
@@ -207,7 +199,7 @@ Deno.test("LibsqlRdfjsStore.match - by object only uses OPSG index", async () =>
   });
   const store = createTestLibsqlRdfjsStore(db, testBuilder);
 
-  const results = await collectStream(
+  const results = await collectQuadsFromStream(
     store.match(null, null, literal("target"), null),
   );
 
@@ -234,13 +226,13 @@ Deno.test("LibsqlRdfjsStore.match - disambiguates NamedNode vs BlankNode with sa
   });
   const store = createTestLibsqlRdfjsStore(db, testBuilder);
 
-  const namedResults = await collectStream(
+  const namedResults = await collectQuadsFromStream(
     store.match(namedNode("b1"), null, null, null),
   );
   assertEquals(namedResults.length, 1);
   assertEquals(namedResults[0].subject.termType, "NamedNode");
 
-  const blankResults = await collectStream(
+  const blankResults = await collectQuadsFromStream(
     store.match(blankNode("b1"), null, null, null),
   );
   assertEquals(blankResults.length, 1);
@@ -261,7 +253,7 @@ Deno.test("LibsqlRdfjsStore.match - literal with language tag", async () => {
   const store = createTestLibsqlRdfjsStore(db, testBuilder);
 
   // Match by subject+p, then check the literal
-  const results = await collectStream(
+  const results = await collectQuadsFromStream(
     store.match(namedNode("urn:s"), namedNode("urn:p"), null, null),
   );
 
@@ -285,7 +277,7 @@ Deno.test("LibsqlRdfjsStore.match - literal with datatype", async () => {
   });
   const store = createTestLibsqlRdfjsStore(db, testBuilder);
 
-  const results = await collectStream(
+  const results = await collectQuadsFromStream(
     store.match(namedNode("urn:s"), namedNode("urn:p"), null, null),
   );
 
@@ -308,7 +300,7 @@ Deno.test("LibsqlRdfjsStore.match - DefaultGraph round-trip", async () => {
   });
   const store = createTestLibsqlRdfjsStore(db, testBuilder);
 
-  const results = await collectStream(
+  const results = await collectQuadsFromStream(
     store.match(namedNode("urn:s"), null, null, null),
   );
 
@@ -339,7 +331,7 @@ Deno.test(
     });
     const store = createTestLibsqlRdfjsStore(db, testBuilder);
 
-    const results = await collectStream(
+    const results = await collectQuadsFromStream(
       store.match(
         namedNode("urn:s"),
         namedNode("urn:p"),
@@ -376,7 +368,7 @@ Deno.test(
     });
     const store = createTestLibsqlRdfjsStore(db, testBuilder);
 
-    const results = await collectStream(
+    const results = await collectQuadsFromStream(
       store.match(
         namedNode("urn:s"),
         namedNode("urn:p"),
@@ -407,7 +399,7 @@ Deno.test("LibsqlRdfjsStore.match - NamedNode object terms round-trip", async ()
   });
   const store = createTestLibsqlRdfjsStore(db, testBuilder);
 
-  const results = await collectStream(
+  const results = await collectQuadsFromStream(
     store.match(null, null, namedNode("http://example.com/resource"), null),
   );
 
@@ -428,7 +420,7 @@ Deno.test("LibsqlRdfjsStore.match - BlankNode graph terms round-trip", async () 
   });
   const store = createTestLibsqlRdfjsStore(db, testBuilder);
 
-  const results = await collectStream(
+  const results = await collectQuadsFromStream(
     store.match(null, null, null, blankNode("genid-graph")),
   );
 
@@ -445,7 +437,7 @@ Deno.test(
     const store = createTestLibsqlRdfjsStore(failingClient, testBuilder);
 
     await assertRejects(
-      () => collectStream(store.match(null, null, null, null)),
+      () => collectQuadsFromStream(store.match(null, null, null, null)),
       Error,
       "database unavailable",
     );
@@ -473,7 +465,7 @@ Deno.test("LibsqlRdfjsStore.match - multiple named graphs are isolated", async (
   });
   const store = createTestLibsqlRdfjsStore(db, testBuilder);
 
-  const g1Results = await collectStream(
+  const g1Results = await collectQuadsFromStream(
     store.match(null, null, null, namedNode("urn:g1")),
   );
   assertEquals(g1Results.length, 1);
@@ -541,7 +533,9 @@ Deno.test("LibsqlRdfjsStore.add - buffered quad not visible before commit", asyn
   store.add(quad(namedNode("urn:s"), namedNode("urn:p"), literal("v1")));
 
   // Not visible before commit
-  const results = await collectStream(store.match(null, null, null, null));
+  const results = await collectQuadsFromStream(
+    store.match(null, null, null, null),
+  );
   assertEquals(results.length, 0);
 });
 
@@ -558,7 +552,9 @@ Deno.test("LibsqlRdfjsStore.add - commit persists quad, match finds it", async (
   store.add(q);
   await store.commit();
 
-  const results = await collectStream(store.match(null, null, null, null));
+  const results = await collectQuadsFromStream(
+    store.match(null, null, null, null),
+  );
   assertEquals(results.length, 1);
   assertEquals(results[0].subject.value, "urn:s");
   assertEquals(results[0].object.value, "v1");
@@ -576,14 +572,14 @@ Deno.test("LibsqlRdfjsStore.add - commit once, then add+commit again accumulates
   store.add(quad(namedNode("urn:s"), namedNode("urn:p"), literal("v1")));
   await store.commit();
   assertEquals(
-    (await collectStream(store.match(null, null, null, null))).length,
+    (await collectQuadsFromStream(store.match(null, null, null, null))).length,
     1,
   );
 
   store.add(quad(namedNode("urn:s2"), namedNode("urn:p"), literal("v2")));
   await store.commit();
   assertEquals(
-    (await collectStream(store.match(null, null, null, null))).length,
+    (await collectQuadsFromStream(store.match(null, null, null, null))).length,
     2,
   );
 });
@@ -604,14 +600,14 @@ Deno.test("LibsqlRdfjsStore.delete - buffered quad still visible before commit",
   store.delete(q);
   // Still visible before commit
   assertEquals(
-    (await collectStream(store.match(null, null, null, null))).length,
+    (await collectQuadsFromStream(store.match(null, null, null, null))).length,
     1,
   );
 
   // Gone after commit
   await store.commit();
   assertEquals(
-    (await collectStream(store.match(null, null, null, null))).length,
+    (await collectQuadsFromStream(store.match(null, null, null, null))).length,
     0,
   );
 });
@@ -631,7 +627,7 @@ Deno.test("LibsqlRdfjsStore.delete - add then delete same quad before commit is 
   await store.commit();
 
   assertEquals(
-    (await collectStream(store.match(null, null, null, null))).length,
+    (await collectQuadsFromStream(store.match(null, null, null, null))).length,
     0,
   );
 });
@@ -650,7 +646,7 @@ Deno.test("LibsqlRdfjsStore.removeMatches - buffers matching quads for deletion"
   store.add(quad(namedNode("urn:other"), namedNode("urn:p"), literal("stay")));
   await store.commit();
   assertEquals(
-    (await collectStream(store.match(null, null, null, null))).length,
+    (await collectQuadsFromStream(store.match(null, null, null, null))).length,
     3,
   );
 
@@ -663,14 +659,16 @@ Deno.test("LibsqlRdfjsStore.removeMatches - buffers matching quads for deletion"
 
   // Still visible before commit
   assertEquals(
-    (await collectStream(store.match(null, null, null, null))).length,
+    (await collectQuadsFromStream(store.match(null, null, null, null))).length,
     3,
   );
 
   await store.commit();
 
   // Two removed, one stays
-  const remaining = await collectStream(store.match(null, null, null, null));
+  const remaining = await collectQuadsFromStream(
+    store.match(null, null, null, null),
+  );
   assertEquals(remaining.length, 1);
   assertEquals(remaining[0].subject.value, "urn:other");
 });
@@ -691,7 +689,7 @@ Deno.test("LibsqlRdfjsStore.clearBuffer - discards pending mutations on error", 
   await store.commit(); // should be no-op
 
   assertEquals(
-    (await collectStream(store.match(null, null, null, null))).length,
+    (await collectQuadsFromStream(store.match(null, null, null, null))).length,
     0,
   );
 });
@@ -757,7 +755,9 @@ Deno.test("LibsqlRdfjsStore.remove - stream buffers quads for deletion on commit
   });
   await store.commit();
 
-  const remaining = await collectStream(store.match(null, null, null, null));
+  const remaining = await collectQuadsFromStream(
+    store.match(null, null, null, null),
+  );
   assertEquals(remaining.length, 1);
   assertEquals(remaining[0].subject.value, "urn:keep");
 });
@@ -817,7 +817,9 @@ Deno.test("LibsqlRdfjsStore.deleteGraph - accepts graph IRI strings", async () =
   });
   await store.commit();
 
-  const remaining = await collectStream(store.match(null, null, null, null));
+  const remaining = await collectQuadsFromStream(
+    store.match(null, null, null, null),
+  );
   assertEquals(remaining.length, 1);
   assertEquals(remaining[0].graph.value, "urn:other-graph");
 });
@@ -857,7 +859,7 @@ Deno.test("LibsqlRdfjsStore.import - stream buffers all quads, commit persists t
 
   await store.commit();
   assertEquals(
-    (await collectStream(store.match(null, null, null, null))).length,
+    (await collectQuadsFromStream(store.match(null, null, null, null))).length,
     2,
   );
 });
@@ -875,7 +877,9 @@ Deno.test("LibsqlRdfjsStore.match - keyset pages return the full result set", as
   }
 
   const store = createTestLibsqlRdfjsStore(db, testBuilder, undefined, 2);
-  const results = await collectStream(store.match(null, null, null, null));
+  const results = await collectQuadsFromStream(
+    store.match(null, null, null, null),
+  );
   assertEquals(results.length, 5);
 });
 
@@ -920,7 +924,7 @@ Deno.test("LibsqlRdfjsStore.countQuads - returns exact counts for bound patterns
     1,
   );
 
-  const streamCount = (await collectStream(
+  const streamCount = (await collectQuadsFromStream(
     store.match(namedNode("urn:alice"), null, null, null),
   )).length;
   assertEquals(

@@ -1,5 +1,6 @@
-import type { ImportLifecycle } from "@/client/quad-store/mod.ts";
-import type { Patch, PatchCommitContext } from "@/client/quad-store/mod.ts";
+import type { SearchIndexOnImport } from "@/client/quad-store/mod.ts";
+import { createDeferredImportPatchSync } from "@/client/quad-store/mod.ts";
+import type { PatchSyncState } from "@/client/quad-store/mod.ts";
 
 import {
   commitPatchToDenokv,
@@ -18,7 +19,7 @@ export interface DenokvPatchSyncAdapterOptions
    * - `"deferred"`: `beforeImport` / `afterImport` coordinate a caller-provided `reindex`.
    * - `"disabled"`: same as incremental for Deno KV (no built-in derived index).
    */
-  searchIndexOnImport?: "incremental" | "deferred" | "disabled";
+  searchIndexOnImport?: SearchIndexOnImport;
 
   /** reindex rebuilds an external search index after deferred import completes. */
   reindex?: () => Promise<void>;
@@ -27,13 +28,7 @@ export interface DenokvPatchSyncAdapterOptions
 /**
  * DenokvPatchSyncState coordinates commitPatchToDenokv with optional deferred external search indexing.
  */
-export interface DenokvPatchSyncState extends ImportLifecycle {
-  /** persistPatch commits a patch to Deno KV using the current import context. */
-  persistPatch: (
-    patch: Patch,
-    context?: PatchCommitContext,
-  ) => Promise<void>;
-}
+export type DenokvPatchSyncState = PatchSyncState;
 
 /**
  * createDenokvPatchSyncState builds persistPatch and deferred-import helpers for Deno KV clients.
@@ -41,21 +36,11 @@ export interface DenokvPatchSyncState extends ImportLifecycle {
 export function createDenokvPatchSyncState(
   dependencies: DenokvPatchSyncAdapterOptions,
 ): DenokvPatchSyncState {
-  const deferSearchDuringImport =
-    dependencies.searchIndexOnImport === "deferred";
-
-  return {
+  return createDeferredImportPatchSync({
+    searchIndexOnImport: dependencies.searchIndexOnImport,
     persistPatch: async (patch, context) => {
       await commitPatchToDenokv(patch, dependencies, context);
     },
-
-    beforeImport: () => {},
-
-    afterImport: async (): Promise<void> => {
-      if (!deferSearchDuringImport || !dependencies.reindex) {
-        return;
-      }
-      await dependencies.reindex();
-    },
-  };
+    afterDeferredImport: dependencies.reindex,
+  });
 }

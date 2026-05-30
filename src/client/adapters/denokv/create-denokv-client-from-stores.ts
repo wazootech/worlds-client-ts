@@ -18,8 +18,10 @@ export interface DenokvClientFromStoresOptions {
   /** searchIndex projects keyword discovery over Deno KV chunk keys. */
   searchIndex: SearchIndexInterface;
 
-  /** sparqlEngine optionally evaluates SPARQL over denokvRdfjsStore. */
-  sparqlEngine?: SparqlEngineInterface;
+  /** createSparqlEngine optionally attaches a caller-provided SPARQL engine over denokvRdfjsStore. */
+  createSparqlEngine?: (
+    options: { store: DenokvRdfjsStore },
+  ) => SparqlEngineInterface;
 }
 
 /**
@@ -28,9 +30,13 @@ export interface DenokvClientFromStoresOptions {
 export function createDenokvClientFromStores(
   options: DenokvClientFromStoresOptions,
 ): ClientInterface {
+  const sparqlEngine = options.createSparqlEngine?.({
+    store: options.denokvRdfjsStore,
+  });
+
   return new Client({
     quadStore: options.denokvQuadStore,
     searchIndex: options.searchIndex,
-    sparqlEngine: options.sparqlEngine,
+    sparqlEngine,
   });
 }
