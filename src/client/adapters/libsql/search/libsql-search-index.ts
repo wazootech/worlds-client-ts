@@ -1,4 +1,3 @@
-import { DataFactory } from "n3";
 import type {
   ReindexRequest,
   ReindexResponse,
@@ -7,12 +6,10 @@ import type {
   SearchResponse,
   SearchResult,
 } from "@/client/search-index/mod.ts";
-import { hashQuad } from "@/client/quad-store/mod.ts";
+import { buildSearchResultId } from "@/client/search-index/build-search-result-id.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
-import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/libsql-query-builder.ts";
+import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/sql/libsql-query-builder.ts";
 import { rebuildLibsqlSearchIndexFromQuads } from "./rebuild-libsql-search-index-from-quads.ts";
-
-const { literal, namedNode, quad: createQuad, defaultGraph } = DataFactory;
 
 /**
  * LibsqlSearchIndexOptions defines the structured configuration and dependency parameters needed to construct the LibSQL search engine.
@@ -85,17 +82,8 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
         graph: String(row["graph"]),
         text: String(row["value"]),
       };
-      const searchQuad = createQuad(
-        namedNode(searchResultBase.subject),
-        namedNode(searchResultBase.predicate),
-        literal(searchResultBase.text),
-        searchResultBase.graph
-          ? namedNode(searchResultBase.graph)
-          : defaultGraph(),
-      );
-
       results.push({
-        id: await hashQuad(searchQuad),
+        id: await buildSearchResultId(searchResultBase),
         ...searchResultBase,
         score: Number(row["combined_rank"]),
       });

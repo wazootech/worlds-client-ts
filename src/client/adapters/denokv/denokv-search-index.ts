@@ -1,5 +1,4 @@
 import type * as rdfjs from "@rdfjs/types";
-import { DataFactory } from "n3";
 import type {
   ReindexRequest,
   ReindexResponse,
@@ -8,20 +7,15 @@ import type {
   SearchResponse,
   SearchResult,
 } from "@/client/search-index/mod.ts";
-import {
-  filterQuads,
-  hashQuad,
-  isTextualLiteral,
-} from "@/client/quad-store/mod.ts";
-import type { SerializedQuad } from "./denokv-serialization.ts";
-import { deserializeTerm } from "./denokv-serialization.ts";
+import { buildSearchResultId } from "@/client/search-index/build-search-result-id.ts";
+import { filterQuads, isTextualLiteral } from "@/client/quad-store/mod.ts";
+import type { SerializedQuad } from "./kv/denokv-serialization.ts";
+import { deserializeQuad } from "./kv/denokv-serialization.ts";
 import {
   buildGenerationDataPrefix,
   buildPrimaryQuadKey,
-} from "./denokv-hexastore-keys.ts";
-import { readActiveGeneration } from "./denokv-dataset-generation.ts";
-
-const { quad } = DataFactory;
+} from "./kv/denokv-hexastore-keys.ts";
+import { readActiveGeneration } from "./kv/denokv-dataset-generation.ts";
 
 const MAX_KV_BATCH_SIZE = 50;
 
@@ -128,12 +122,7 @@ async function scanQuadBatch(
     const serialized = entry.value;
     if (!serialized) continue;
 
-    const storedQuad = quad(
-      deserializeTerm(serialized.subject) as rdfjs.Quad_Subject,
-      deserializeTerm(serialized.predicate) as rdfjs.Quad_Predicate,
-      deserializeTerm(serialized.object) as rdfjs.Quad_Object,
-      deserializeTerm(serialized.graph) as rdfjs.Quad_Graph,
-    );
+    const storedQuad = deserializeQuad(serialized);
 
     if (!matcher(storedQuad)) {
       continue;
@@ -142,12 +131,15 @@ async function scanQuadBatch(
     if (isTextualLiteral(storedQuad.object)) {
       const value = storedQuad.object.value;
       if (value.toLowerCase().includes(query)) {
-        results.push({
-          id: await hashQuad(storedQuad),
+        const searchResultBase = {
           subject: storedQuad.subject.value,
           predicate: storedQuad.predicate.value,
           graph: storedQuad.graph.value,
           text: value,
+        };
+        results.push({
+          id: await buildSearchResultId(searchResultBase),
+          ...searchResultBase,
           score: 1.0,
         });
       }

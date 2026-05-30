@@ -1,5 +1,4 @@
 import type * as rdfjs from "@rdfjs/types";
-import { DataFactory } from "n3";
 import type { Store } from "n3";
 import type {
   ReindexRequest,
@@ -9,13 +8,8 @@ import type {
   SearchResponse,
   SearchResult,
 } from "@/client/search-index/mod.ts";
-import {
-  filterQuads,
-  hashQuad,
-  isTextualLiteral,
-} from "@/client/quad-store/mod.ts";
-
-const { literal, namedNode, quad: createQuad, defaultGraph } = DataFactory;
+import { buildSearchResultId } from "@/client/search-index/build-search-result-id.ts";
+import { filterQuads, isTextualLiteral } from "@/client/quad-store/mod.ts";
 
 /**
  * RdfjsSearchIndex is the implementation of SearchIndexInterface that uses an RDF/JS store.
@@ -52,16 +46,8 @@ export class RdfjsSearchIndex implements SearchIndexInterface {
                 graph: quad.graph.value,
                 text: value,
               };
-              const searchQuad = createQuad(
-                namedNode(searchResultBase.subject),
-                namedNode(searchResultBase.predicate),
-                literal(searchResultBase.text),
-                searchResultBase.graph
-                  ? namedNode(searchResultBase.graph)
-                  : defaultGraph(),
-              );
               results.push({
-                id: await hashQuad(searchQuad),
+                id: await buildSearchResultId(searchResultBase),
                 ...searchResultBase,
                 score: 1.0,
               });
