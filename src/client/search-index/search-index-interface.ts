@@ -79,3 +79,8 @@ export interface SearchIndexInterface {
    */
   reindex(request?: ReindexRequest): Promise<ReindexResponse>;
 }
+
+/**
+ * SearchIndexOnImport controls when search chunk projection runs during bulk import.
+ */
+export type SearchIndexOnImport = "incremental" | "deferred" | "disabled";

@@ -38,11 +38,6 @@ export async function runImportWithLifecycle(
 }
 
 /**
- * SearchIndexOnImport controls when search chunk projection runs during bulk import.
- */
-export type SearchIndexOnImport = "incremental" | "deferred" | "disabled";
-
-/**
  * PatchSyncState coordinates commit persisting with import lifecycle hooks.
  */
 export interface PatchSyncState extends ImportLifecycle {

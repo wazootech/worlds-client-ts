@@ -1,6 +1,6 @@
 import type { Client as LibsqlClient } from "@libsql/client";
 import type { QuadFilter } from "@/client/quad-store/mod.ts";
-import type { SearchIndexOnImport } from "@/client/quad-store/mod.ts";
+import type { SearchIndexOnImport } from "@/client/search-index/mod.ts";
 import type { EmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
 import type { TextSplitterInterface } from "@/client/search-index/quad-chunker/mod.ts";
 

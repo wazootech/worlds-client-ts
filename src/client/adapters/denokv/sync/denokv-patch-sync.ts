@@ -1,7 +1,5 @@
-import type {
-  PatchSyncState,
-  SearchIndexOnImport,
-} from "@/client/quad-store/mod.ts";
+import type { PatchSyncState } from "@/client/quad-store/mod.ts";
+import type { SearchIndexOnImport } from "@/client/search-index/mod.ts";
 import {
   commitPatchToDenokv,
   type CommitPatchToDenokvOptions,
