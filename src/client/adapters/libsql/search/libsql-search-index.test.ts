@@ -4,23 +4,15 @@ import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { FakeEmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
 import type { EmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
 import {
-  initializeLibsqlSchema,
-  LibsqlQueryBuilder,
-} from "@/client/adapters/libsql/mod.ts";
-
-// --- Helpers ---
-
-const testLibsqlQueryBuilder = new LibsqlQueryBuilder(32);
-
-async function setupSchema(client: ReturnType<typeof createClient>) {
-  await initializeLibsqlSchema(client, testLibsqlQueryBuilder);
-}
+  setupLibsqlSchemaForTest,
+  testLibsqlQueryBuilder,
+} from "@/client/adapters/libsql/libsql-test-fixtures.ts";
 
 // --- Tests ---
 
 Deno.test("LibsqlSearchIndex - Tracer Bullet: performs basic hybrid search and maps results", async () => {
   const client = createClient({ url: ":memory:" });
-  await setupSchema(client);
+  await setupLibsqlSchemaForTest(client);
 
   const paddedVec = new Array(32).fill(0);
   paddedVec[0] = 1.0;
@@ -77,7 +69,7 @@ Deno.test("LibsqlSearchIndex - Tracer Bullet: performs basic hybrid search and m
 
 Deno.test("LibsqlSearchIndex - Scope Inclusion: limits matches only to included subjects", async () => {
   const client = createClient({ url: ":memory:" });
-  await setupSchema(client);
+  await setupLibsqlSchemaForTest(client);
 
   const data = new Array(32).fill(0);
   data[0] = 1.0;
@@ -140,7 +132,7 @@ Deno.test("LibsqlSearchIndex - Scope Inclusion: limits matches only to included 
 
 Deno.test("LibsqlSearchIndex - Scope Exclusion: suppresses explicitly excluded predicates", async () => {
   const client = createClient({ url: ":memory:" });
-  await setupSchema(client);
+  await setupLibsqlSchemaForTest(client);
 
   const data = new Array(32).fill(0);
   data[0] = 1.0;
@@ -196,7 +188,7 @@ Deno.test("LibsqlSearchIndex - Scope Exclusion: suppresses explicitly excluded p
 
 Deno.test("LibsqlSearchIndex - Vectorless Mode: gracefully degrades to keyword-only search when embeddingService is omitted", async () => {
   const client = createClient({ url: ":memory:" });
-  await setupSchema(client);
+  await setupLibsqlSchemaForTest(client);
 
   // Insert chunk rows with NULL vectors (Vectorless mode)
   await client.execute({
@@ -247,7 +239,7 @@ Deno.test("LibsqlSearchIndex - Vectorless Mode: gracefully degrades to keyword-o
 
 Deno.test("LibsqlSearchIndex - Stability: executes search safely when query contains special FTS5 syntax characters without throwing crashes", async () => {
   const client = createClient({ url: ":memory:" });
-  await setupSchema(client);
+  await setupLibsqlSchemaForTest(client);
 
   // Insert a document we can try to find
   await client.execute({
@@ -304,7 +296,7 @@ Deno.test(
   "LibsqlSearchIndex - degrades to keyword-only search when embeddingService throws",
   async () => {
     const client = createClient({ url: ":memory:" });
-    await setupSchema(client);
+    await setupLibsqlSchemaForTest(client);
 
     await client.execute({
       sql:
@@ -336,7 +328,7 @@ Deno.test(
   "LibsqlSearchIndex - degrades when embedding dimensions do not match schema",
   async () => {
     const client = createClient({ url: ":memory:" });
-    await setupSchema(client);
+    await setupLibsqlSchemaForTest(client);
 
     await client.execute({
       sql:
@@ -368,7 +360,7 @@ Deno.test(
 
 Deno.test("LibsqlSearchIndex - respects custom result limit option", async () => {
   const client = createClient({ url: ":memory:" });
-  await setupSchema(client);
+  await setupLibsqlSchemaForTest(client);
 
   const vecStr = JSON.stringify(new Array(32).fill(0));
 

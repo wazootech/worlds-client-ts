@@ -1,31 +1,23 @@
 import { assertEquals } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
-import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import { rebuildLibsqlSearchIndexFromQuads } from "@/client/adapters/libsql/search/rebuild-libsql-search-index-from-quads.ts";
 import { FakeEmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
 import {
-  initializeLibsqlSchema,
-  LibsqlQueryBuilder,
-} from "@/client/adapters/libsql/mod.ts";
+  setupLibsqlSchemaForTest,
+  sharedTextSplitter,
+  testLibsqlQueryBuilder,
+} from "@/client/adapters/libsql/libsql-test-fixtures.ts";
 import { buildChunkFtsValue } from "@/client/adapters/libsql/search/search-chunk-fts.ts";
 
 const { quad, namedNode, literal } = DataFactory;
-
-const testLibsqlQueryBuilder = new LibsqlQueryBuilder(32);
-
-async function setupSchema(client: ReturnType<typeof createClient>) {
-  await initializeLibsqlSchema(client, testLibsqlQueryBuilder);
-}
-
-const sharedSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000 });
 
 Deno.test(
   "commitPatchToLibsql - bulk quad INSERT persists expected quads row count",
   async () => {
     const client = createClient({ url: ":memory:" });
-    await setupSchema(client);
+    await setupLibsqlSchemaForTest(client);
 
     const bulkQuadCount = 120;
     const bulkQuads = Array.from({ length: bulkQuadCount }, (_, index) =>
@@ -39,7 +31,7 @@ Deno.test(
       { insertions: bulkQuads, deletions: [] },
       {
         client,
-        textSplitter: sharedSplitter,
+        textSplitter: sharedTextSplitter,
         libsqlQueryBuilder: testLibsqlQueryBuilder,
         skipSearchIndexProjection: true,
       },
@@ -54,12 +46,12 @@ Deno.test(
 
 Deno.test("commitPatchToLibsql - isolated writes and removals commit correctly to BOTH chunks and quads", async () => {
   const client = createClient({ url: ":memory:" });
-  await setupSchema(client);
+  await setupLibsqlSchemaForTest(client);
 
   const options = {
     client,
     embeddingService: new FakeEmbeddingService(),
-    textSplitter: sharedSplitter,
+    textSplitter: sharedTextSplitter,
     libsqlQueryBuilder: testLibsqlQueryBuilder,
   };
 
@@ -106,12 +98,12 @@ Deno.test("commitPatchToLibsql - isolated writes and removals commit correctly t
 
 Deno.test("commitPatchToLibsql - supports synchronization when embeddingService is omitted (vector column left null)", async () => {
   const client = createClient({ url: ":memory:" });
-  await setupSchema(client);
+  await setupLibsqlSchemaForTest(client);
 
   const options = {
     client,
     // embeddingService is omitted intentionally
-    textSplitter: sharedSplitter,
+    textSplitter: sharedTextSplitter,
     libsqlQueryBuilder: testLibsqlQueryBuilder,
   };
 
@@ -148,12 +140,12 @@ Deno.test("commitPatchToLibsql - supports synchronization when embeddingService 
 
 Deno.test("commitPatchToLibsql - stores literal value and discovery fts_value", async () => {
   const client = createClient({ url: ":memory:" });
-  await setupSchema(client);
+  await setupLibsqlSchemaForTest(client);
 
   const options = {
     client,
     embeddingService: new FakeEmbeddingService(),
-    textSplitter: sharedSplitter,
+    textSplitter: sharedTextSplitter,
     libsqlQueryBuilder: testLibsqlQueryBuilder,
   };
 
@@ -189,7 +181,7 @@ Deno.test(
   "commitPatchToLibsql - bulk insertions beyond SQLITE_MAX_VARIABLE_NUMBER do not fail",
   async () => {
     const client = createClient({ url: ":memory:" });
-    await setupSchema(client);
+    await setupLibsqlSchemaForTest(client);
 
     const bulkQuadCount = 2_500;
     const bulkQuads = Array.from({ length: bulkQuadCount }, (_, index) =>
@@ -201,7 +193,7 @@ Deno.test(
 
     const options = {
       client,
-      textSplitter: sharedSplitter,
+      textSplitter: sharedTextSplitter,
       libsqlQueryBuilder: testLibsqlQueryBuilder,
     };
 
@@ -221,7 +213,7 @@ Deno.test(
   "commitPatchToLibsql - large bulk insertions flush staged statements without stack overflow",
   async () => {
     const client = createClient({ url: ":memory:" });
-    await setupSchema(client);
+    await setupLibsqlSchemaForTest(client);
 
     const largeBulkQuadCount = 50_000;
     const largeBulkQuads = Array.from(
@@ -236,7 +228,7 @@ Deno.test(
 
     const options = {
       client,
-      textSplitter: sharedSplitter,
+      textSplitter: sharedTextSplitter,
       libsqlQueryBuilder: testLibsqlQueryBuilder,
     };
 
@@ -256,11 +248,11 @@ Deno.test(
   "commitPatchToLibsql - skipSearchIndexProjection defers chunk rows until rebuild",
   async () => {
     const client = createClient({ url: ":memory:" });
-    await setupSchema(client);
+    await setupLibsqlSchemaForTest(client);
 
     const options = {
       client,
-      textSplitter: sharedSplitter,
+      textSplitter: sharedTextSplitter,
       libsqlQueryBuilder: testLibsqlQueryBuilder,
     };
 

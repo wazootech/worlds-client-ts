@@ -1,12 +1,12 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
-import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { commitPatchToLibsql } from "@/client/adapters/libsql/sync/commit-patch-to-libsql.ts";
 import {
-  initializeLibsqlSchema,
-  LibsqlQueryBuilder,
-} from "@/client/adapters/libsql/mod.ts";
+  setupLibsqlSchemaForTest,
+  sharedTextSplitter,
+  testLibsqlQueryBuilder,
+} from "@/client/adapters/libsql/libsql-test-fixtures.ts";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { rebuildLibsqlSearchIndexFromQuads } from "./rebuild-libsql-search-index-from-quads.ts";
 import { resolveLabelPredicates } from "./search-chunk-fts.ts";
@@ -18,18 +18,11 @@ const HAS_CAPITAL = "http://example.org/hasCapital";
 const RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
 const CUSTOM_LABEL = "http://example.org/customLabel";
 
-const testLibsqlQueryBuilder = new LibsqlQueryBuilder(32);
-const sharedSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000 });
-
-async function setupSchema(client: ReturnType<typeof createClient>) {
-  await initializeLibsqlSchema(client, testLibsqlQueryBuilder);
-}
-
 Deno.test(
   "rebuildLibsqlSearchIndexFromQuads - discovers subject via fts_value while value stays literal",
   async () => {
     const client = createClient({ url: ":memory:" });
-    await setupSchema(client);
+    await setupLibsqlSchemaForTest(client);
 
     const capitalQuad = quad(
       namedNode(AURELIA),
@@ -42,7 +35,7 @@ Deno.test(
       deletions: [],
     }, {
       client,
-      textSplitter: sharedSplitter,
+      textSplitter: sharedTextSplitter,
       libsqlQueryBuilder: testLibsqlQueryBuilder,
     });
 
@@ -71,7 +64,7 @@ Deno.test(
   "rebuildLibsqlSearchIndexFromQuads - label literals enable discovery by alias",
   async () => {
     const client = createClient({ url: ":memory:" });
-    await setupSchema(client);
+    await setupLibsqlSchemaForTest(client);
 
     const capitalQuad = quad(
       namedNode(AURELIA),
@@ -89,7 +82,7 @@ Deno.test(
       deletions: [],
     }, {
       client,
-      textSplitter: sharedSplitter,
+      textSplitter: sharedTextSplitter,
       libsqlQueryBuilder: testLibsqlQueryBuilder,
     });
 
@@ -114,7 +107,7 @@ Deno.test(
   "rebuildLibsqlSearchIndexFromQuads - rebuild refreshes fts_value after schema-style reindex",
   async () => {
     const client = createClient({ url: ":memory:" });
-    await setupSchema(client);
+    await setupLibsqlSchemaForTest(client);
 
     const capitalQuad = quad(
       namedNode(AURELIA),
@@ -127,7 +120,7 @@ Deno.test(
       deletions: [],
     }, {
       client,
-      textSplitter: sharedSplitter,
+      textSplitter: sharedTextSplitter,
       libsqlQueryBuilder: testLibsqlQueryBuilder,
     });
 
@@ -141,7 +134,7 @@ Deno.test(
 
     const rebuildResult = await rebuildLibsqlSearchIndexFromQuads({
       client,
-      textSplitter: sharedSplitter,
+      textSplitter: sharedTextSplitter,
       libsqlQueryBuilder: testLibsqlQueryBuilder,
     });
 
@@ -171,7 +164,7 @@ Deno.test(
   "rebuildLibsqlSearchIndexFromQuads - extended labelPredicates union is indexed",
   async () => {
     const client = createClient({ url: ":memory:" });
-    await setupSchema(client);
+    await setupLibsqlSchemaForTest(client);
 
     const entity = "http://example.org/Entity";
     const factQuad = quad(
@@ -190,7 +183,7 @@ Deno.test(
       deletions: [],
     }, {
       client,
-      textSplitter: sharedSplitter,
+      textSplitter: sharedTextSplitter,
       libsqlQueryBuilder: testLibsqlQueryBuilder,
       labelPredicates: [CUSTOM_LABEL],
     });
@@ -222,7 +215,7 @@ Deno.test(
   "rebuildLibsqlSearchIndexFromQuads - label update fan-out refreshes sibling fact chunks",
   async () => {
     const client = createClient({ url: ":memory:" });
-    await setupSchema(client);
+    await setupLibsqlSchemaForTest(client);
 
     const capitalQuad = quad(
       namedNode(AURELIA),
@@ -235,7 +228,7 @@ Deno.test(
       deletions: [],
     }, {
       client,
-      textSplitter: sharedSplitter,
+      textSplitter: sharedTextSplitter,
       libsqlQueryBuilder: testLibsqlQueryBuilder,
     });
 
@@ -250,7 +243,7 @@ Deno.test(
       deletions: [],
     }, {
       client,
-      textSplitter: sharedSplitter,
+      textSplitter: sharedTextSplitter,
       libsqlQueryBuilder: testLibsqlQueryBuilder,
     });
 

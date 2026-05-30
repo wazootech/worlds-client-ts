@@ -2,27 +2,14 @@ import { assertEquals, assertExists, assertRejects } from "@std/assert";
 import type * as rdfjs from "@rdfjs/types";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { DataFactory } from "n3";
+import { createDenokvClient } from "./create-denokv-client.ts";
 import {
-  createDenokvClient,
-  createDenokvStores,
-} from "./create-denokv-client.ts";
+  createDenokvStoresForTest,
+  seedDenokvQuadsForTest,
+} from "./create-denokv-stores-for-test.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 const queryEngine = new QueryEngine();
-
-/**
- * seedQuads persists quads into an in-memory Deno Kv instance for client tests.
- */
-async function seedQuads(
-  kv: Deno.Kv,
-  quads: rdfjs.Quad[],
-): Promise<void> {
-  const { denokvQuadStore } = createDenokvStores({ kv });
-  await denokvQuadStore.import({
-    mode: "merge",
-    source: { kind: "quads", quads },
-  });
-}
 
 Deno.test(
   "createDenokvClient - import delivers search hits from Deno Kv",
@@ -127,7 +114,7 @@ Deno.test(
         queryEngine,
       });
 
-      await seedQuads(kv, [
+      await seedDenokvQuadsForTest(kv, [
         quad(
           namedNode("urn:person:bob"),
           namedNode("urn:bio"),

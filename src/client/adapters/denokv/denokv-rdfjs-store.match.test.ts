@@ -2,27 +2,16 @@ import { assertEquals } from "@std/assert";
 import type * as rdfjs from "@rdfjs/types";
 import { DataFactory } from "n3";
 import { generateSyntheticQuads } from "../../../../benchmarks/shared/synthetic-data.ts";
-import { createDenokvStores } from "./create-denokv-client.ts";
-import { DEFAULT_DENOKV_HEXASTORE_INDEXES } from "./denokv-hexastore-index-set.ts";
+import { collectQuadsFromStream } from "@/client/quad-store/mod.ts";
+import {
+  createDenokvStoresForTest,
+  seedDenokvQuadsForTest,
+} from "./create-denokv-stores-for-test.ts";
+import { DEFAULT_DENOKV_HEXASTORE_INDEXES } from "./kv/denokv-hexastore-index-set.ts";
 import { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";
-import { buildBestMatchSelector } from "./denokv-match-selector.ts";
+import { buildBestMatchSelector } from "./kv/denokv-match-selector.ts";
 
 const { namedNode, literal, blankNode, quad } = DataFactory;
-
-async function seedQuads(
-  kv: Deno.Kv,
-  quads: rdfjs.Quad[],
-  options?: { keyPrefix?: Deno.KvKey },
-): Promise<void> {
-  const { denokvQuadStore } = createDenokvStores({
-    kv,
-    keyPrefix: options?.keyPrefix,
-  });
-  await denokvQuadStore.import({
-    mode: "merge",
-    source: { kind: "quads", quads },
-  });
-}
 
 function collectMatch(
   store: DenokvRdfjsStore,
@@ -31,13 +20,7 @@ function collectMatch(
   object?: rdfjs.Term | null,
   graph?: rdfjs.Term | null,
 ): Promise<rdfjs.Quad[]> {
-  return new Promise((resolve, reject) => {
-    const quads: rdfjs.Quad[] = [];
-    const stream = store.match(subject, predicate, object, graph);
-    stream.on("data", (q: rdfjs.Quad) => quads.push(q));
-    stream.on("end", () => resolve(quads));
-    stream.on("error", reject);
-  });
+  return collectQuadsFromStream(store.match(subject, predicate, object, graph));
 }
 
 Deno.test("DEFAULT_DENOKV_HEXASTORE_INDEXES - enables all seven quad-native families", () => {
@@ -62,7 +45,7 @@ Deno.test("DenokvRdfjsStore.match - empty store returns empty stream", async () 
 Deno.test("DenokvRdfjsStore.match - all four terms bound returns exact quad", async () => {
   const kv = await Deno.openKv(":memory:");
   try {
-    await seedQuads(kv, [
+    await seedDenokvQuadsForTest(kv, [
       quad(
         namedNode("urn:alice"),
         namedNode("urn:knows"),
@@ -94,7 +77,7 @@ Deno.test("DenokvRdfjsStore.match - all four terms bound returns exact quad", as
 Deno.test("DenokvRdfjsStore.match - by subject only returns matching quads", async () => {
   const kv = await Deno.openKv(":memory:");
   try {
-    await seedQuads(kv, [
+    await seedDenokvQuadsForTest(kv, [
       quad(namedNode("urn:a"), namedNode("urn:p1"), literal("o1")),
       quad(namedNode("urn:b"), namedNode("urn:p2"), literal("o2")),
       quad(namedNode("urn:a"), namedNode("urn:p3"), literal("o3")),
@@ -121,7 +104,7 @@ Deno.test("DenokvRdfjsStore.match - by subject only returns matching quads", asy
 Deno.test("DenokvRdfjsStore.match - by predicate only uses PSO index", async () => {
   const kv = await Deno.openKv(":memory:");
   try {
-    await seedQuads(kv, [
+    await seedDenokvQuadsForTest(kv, [
       quad(namedNode("urn:a"), namedNode("urn:target"), literal("o1")),
       quad(namedNode("urn:b"), namedNode("urn:other"), literal("o2")),
       quad(namedNode("urn:c"), namedNode("urn:target"), literal("o3")),
@@ -148,7 +131,7 @@ Deno.test("DenokvRdfjsStore.match - by predicate only uses PSO index", async () 
 Deno.test("DenokvRdfjsStore.match - by graph only uses GPSO index", async () => {
   const kv = await Deno.openKv(":memory:");
   try {
-    await seedQuads(kv, [
+    await seedDenokvQuadsForTest(kv, [
       quad(
         namedNode("urn:a"),
         namedNode("urn:p"),
@@ -182,7 +165,7 @@ Deno.test("DenokvRdfjsStore.match - by graph only uses GPSO index", async () => 
 Deno.test("DenokvRdfjsStore.match - by object only uses OPSG index", async () => {
   const kv = await Deno.openKv(":memory:");
   try {
-    await seedQuads(kv, [
+    await seedDenokvQuadsForTest(kv, [
       quad(namedNode("urn:a"), namedNode("urn:p"), literal("target")),
       quad(namedNode("urn:b"), namedNode("urn:p"), literal("other")),
     ]);
@@ -206,7 +189,7 @@ Deno.test("DenokvRdfjsStore.match - by object only uses OPSG index", async () =>
 Deno.test("DenokvRdfjsStore.match - disambiguates NamedNode vs BlankNode with same value", async () => {
   const kv = await Deno.openKv(":memory:");
   try {
-    await seedQuads(kv, [
+    await seedDenokvQuadsForTest(kv, [
       quad(namedNode("b1"), namedNode("urn:p"), literal("o1")),
       quad(blankNode("b1"), namedNode("urn:p"), literal("o2")),
     ]);
@@ -240,7 +223,7 @@ Deno.test("DenokvRdfjsStore.match - disambiguates NamedNode vs BlankNode with sa
 Deno.test("DenokvRdfjsStore.match - literal with language tag", async () => {
   const kv = await Deno.openKv(":memory:");
   try {
-    await seedQuads(kv, [
+    await seedDenokvQuadsForTest(kv, [
       quad(
         namedNode("urn:s"),
         namedNode("urn:p"),
@@ -272,7 +255,7 @@ Deno.test(
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
-      await seedQuads(kv, [
+      await seedDenokvQuadsForTest(kv, [
         quad(namedNode("urn:a"), namedNode("urn:p1"), literal("target")),
         quad(namedNode("urn:a"), namedNode("urn:p2"), literal("other")),
         quad(namedNode("urn:b"), namedNode("urn:p1"), literal("target")),
@@ -300,7 +283,7 @@ Deno.test(
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
-      await seedQuads(kv, [
+      await seedDenokvQuadsForTest(kv, [
         quad(namedNode("urn:a"), namedNode("urn:p1"), literal("target")),
         quad(namedNode("urn:a"), namedNode("urn:p2"), literal("other")),
         quad(namedNode("urn:b"), namedNode("urn:p1"), literal("target")),
@@ -334,7 +317,7 @@ Deno.test(
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
-      await seedQuads(kv, [
+      await seedDenokvQuadsForTest(kv, [
         quad(namedNode("urn:a"), namedNode("urn:p1"), literal("o1")),
         quad(namedNode("urn:a"), namedNode("urn:p2"), literal("o2")),
         quad(namedNode("urn:b"), namedNode("urn:p1"), literal("o3")),
@@ -367,7 +350,7 @@ Deno.test(
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
-      await seedQuads(kv, [
+      await seedDenokvQuadsForTest(kv, [
         quad(
           namedNode("urn:alice"),
           namedNode("urn:knows"),
@@ -429,7 +412,7 @@ Deno.test(
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
-      await seedQuads(kv, generateSyntheticQuads(800));
+      await seedDenokvQuadsForTest(kv, generateSyntheticQuads(800));
 
       const store = new DenokvRdfjsStore({ kv });
       const startedAt = performance.now();
@@ -465,7 +448,7 @@ Deno.test(
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
-      await seedQuads(kv, [
+      await seedDenokvQuadsForTest(kv, [
         quad(namedNode("urn:a"), namedNode("urn:target"), literal("o1")),
         quad(namedNode("urn:b"), namedNode("urn:other"), literal("o2")),
       ]);

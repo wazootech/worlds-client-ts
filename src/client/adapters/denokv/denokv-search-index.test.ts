@@ -1,7 +1,10 @@
 import { assertEquals } from "@std/assert";
 import type * as rdfjs from "@rdfjs/types";
 import { DataFactory } from "n3";
-import { createDenokvStores } from "./create-denokv-client.ts";
+import {
+  createDenokvStoresForTest,
+  seedDenokvQuadsForTest,
+} from "./create-denokv-stores-for-test.ts";
 import { DenokvSearchIndex } from "./denokv-search-index.ts";
 
 const { namedNode, literal, quad } = DataFactory;
@@ -9,30 +12,12 @@ const { namedNode, literal, quad } = DataFactory;
 /** customKeyPrefix is a non-default Deno Kv namespace used by prefix isolation tests. */
 const customKeyPrefix = ["tenant", "quads"];
 
-/**
- * seedQuads persists quads into an in-memory Deno Kv instance for search tests.
- */
-async function seedQuads(
-  kv: Deno.Kv,
-  quads: rdfjs.Quad[],
-  options?: { keyPrefix?: Deno.KvKey },
-): Promise<void> {
-  const { denokvQuadStore } = createDenokvStores({
-    kv,
-    keyPrefix: options?.keyPrefix,
-  });
-  await denokvQuadStore.import({
-    mode: "merge",
-    source: { kind: "quads", quads },
-  });
-}
-
 Deno.test(
   "DenokvSearchIndex.search - returns literal matching text locally",
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
-      await seedQuads(kv, [
+      await seedDenokvQuadsForTest(kv, [
         quad(
           namedNode("http://example.com/entity1"),
           namedNode("http://example.com/hasDesc"),
@@ -65,7 +50,7 @@ Deno.test(
     const kv = await Deno.openKv(":memory:");
     const targetSubject = "http://example.com/target";
     try {
-      await seedQuads(kv, [
+      await seedDenokvQuadsForTest(kv, [
         quad(
           namedNode(targetSubject),
           namedNode("http://example.com/desc"),
@@ -98,7 +83,7 @@ Deno.test(
     const kv = await Deno.openKv(":memory:");
     const excludePred = "http://example.com/hidden";
     try {
-      await seedQuads(kv, [
+      await seedDenokvQuadsForTest(kv, [
         quad(
           namedNode("http://example.com/subject"),
           namedNode(excludePred),
@@ -128,7 +113,7 @@ Deno.test(
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
-      await seedQuads(kv, [
+      await seedDenokvQuadsForTest(kv, [
         quad(
           namedNode("http://example.com/s1"),
           namedNode("http://example.com/p1"),
@@ -167,7 +152,7 @@ Deno.test(
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
-      await seedQuads(kv, [
+      await seedDenokvQuadsForTest(kv, [
         quad(
           namedNode("http://example.com/s"),
           namedNode("http://example.com/p"),
@@ -194,7 +179,7 @@ Deno.test(
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
-      await seedQuads(kv, [
+      await seedDenokvQuadsForTest(kv, [
         quad(
           namedNode("http://example.com/s"),
           namedNode("http://example.com/p"),
@@ -220,7 +205,7 @@ Deno.test(
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
-      const { denokvQuadStore } = createDenokvStores({ kv });
+      const { denokvQuadStore } = createDenokvStoresForTest({ kv });
       await denokvQuadStore.import({
         mode: "merge",
         source: {
@@ -267,7 +252,7 @@ Deno.test(
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
-      await seedQuads(
+      await seedDenokvQuadsForTest(
         kv,
         [
           quad(
