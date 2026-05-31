@@ -11,6 +11,7 @@
 *.yaml text eol=lf working-tree-encoding=UTF-8
 *.sql text eol=lf working-tree-encoding=UTF-8
 *.toml text eol=lf working-tree-encoding=UTF-8
+.editorconfig text eol=lf working-tree-encoding=UTF-8
 
 *.png binary
 *.jpg binary
