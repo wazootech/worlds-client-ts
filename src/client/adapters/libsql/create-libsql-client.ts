@@ -1,10 +1,11 @@
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+import { Client } from "@/client/client.ts";
 
 import type { ClientInterface } from "@/client/client.ts";
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
 import { LibsqlSearchIndex } from "@/client/adapters/libsql/search/mod.ts";
 import { createLibsqlCommitSync } from "@/client/adapters/libsql/sync/mod.ts";
-import { wireDurableClient } from "@/client/wire-durable-client.ts";
+import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
 
 import type { LibsqlClientBaseOptions } from "./libsql-client-base-options.ts";
 import { LibsqlQuadStore } from "./libsql-quad-store.ts";
@@ -57,10 +58,17 @@ export async function createLibsqlClient(
     importLifecycle: patchSync,
   });
 
-  return wireDurableClient({
+  const sparqlEngine = options.queryEngine
+    ? new ComunicaSparqlEngine({
+      queryEngine: options.queryEngine,
+      store: libsqlRdfjsStore,
+      onVoid: () => libsqlRdfjsStore.commit(),
+    })
+    : undefined;
+
+  return new Client({
     quadStore: libsqlQuadStore,
     searchIndex,
-    rdfjsStoreForSparql: libsqlRdfjsStore,
-    queryEngine: options.queryEngine,
+    sparqlEngine,
   });
 }

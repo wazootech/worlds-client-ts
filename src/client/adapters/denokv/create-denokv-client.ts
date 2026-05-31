@@ -1,6 +1,7 @@
+import { Client } from "@/client/client.ts";
 import type { ClientInterface } from "@/client/client.ts";
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
-import { wireDurableClient } from "@/client/wire-durable-client.ts";
+import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
 
 import { DenokvQuadStore } from "./denokv-quad-store.ts";
 import { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";
@@ -36,13 +37,20 @@ export function createDenokvClient(
     importLifecycle: patchSync,
   });
 
-  return wireDurableClient({
+  const sparqlEngine = options.queryEngine
+    ? new ComunicaSparqlEngine({
+      queryEngine: options.queryEngine,
+      store: denokvRdfjsStore,
+      onVoid: () => denokvRdfjsStore.commit(),
+    })
+    : undefined;
+
+  return new Client({
     quadStore: denokvQuadStore,
     searchIndex: new DenokvSearchIndex({
       kv: options.kv,
       keyPrefix: options.keyPrefix,
     }),
-    rdfjsStoreForSparql: denokvRdfjsStore,
-    queryEngine: options.queryEngine,
+    sparqlEngine,
   });
 }
