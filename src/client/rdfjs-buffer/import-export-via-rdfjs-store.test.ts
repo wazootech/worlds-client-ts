@@ -2,9 +2,9 @@ import { assertEquals } from "@std/assert";
 import { DataFactory } from "n3";
 import type * as rdfjs from "@rdfjs/types";
 import type { PatchCommitContext } from "@/client/quad-store/commit-handler.ts";
-import type { CommittingRdfjsStore } from "./import-export-via-rdfjs-store.ts";
+import type { ImportCommitTarget } from "./import-export-via-rdfjs-store.ts";
 import { importViaBufferedRdfjsStore } from "./import-export-via-rdfjs-store.ts";
-import { noopImportLifecycle } from "@/client/commit-sync/mod.ts";
+import { noopImportLifecycle } from "@/client/import-lifecycle/mod.ts";
 
 const { namedNode, literal, quad } = DataFactory;
 
@@ -19,15 +19,15 @@ const q2 = quad(
   literal("two"),
 );
 
-function createRecordingCommittingStore(): {
-  store: CommittingRdfjsStore;
+function createRecordingImportCommitTarget(): {
+  store: ImportCommitTarget;
   bufferedQuads: () => rdfjs.Quad[];
   lastCommitContext: () => PatchCommitContext | undefined;
 } {
   const buffered: rdfjs.Quad[] = [];
   let lastContext: PatchCommitContext | undefined;
 
-  const store: CommittingRdfjsStore = {
+  const store: ImportCommitTarget = {
     addQuad(quadToAdd) {
       buffered.push(quadToAdd);
     },
@@ -48,7 +48,7 @@ function createRecordingCommittingStore(): {
 }
 
 Deno.test("importViaBufferedRdfjsStore - buffers quads and commits with merge mode", async () => {
-  const recording = createRecordingCommittingStore();
+  const recording = createRecordingImportCommitTarget();
 
   await importViaBufferedRdfjsStore(
     { mode: "merge", source: { kind: "quads", quads: [q1, q2] } },
@@ -61,7 +61,7 @@ Deno.test("importViaBufferedRdfjsStore - buffers quads and commits with merge mo
 });
 
 Deno.test("importViaBufferedRdfjsStore - defaults mode to merge", async () => {
-  const recording = createRecordingCommittingStore();
+  const recording = createRecordingImportCommitTarget();
 
   await importViaBufferedRdfjsStore(
     { source: { kind: "quads", quads: [q1] } },
@@ -73,7 +73,7 @@ Deno.test("importViaBufferedRdfjsStore - defaults mode to merge", async () => {
 });
 
 Deno.test("importViaBufferedRdfjsStore - passes replace mode to commit context", async () => {
-  const recording = createRecordingCommittingStore();
+  const recording = createRecordingImportCommitTarget();
 
   await importViaBufferedRdfjsStore(
     { mode: "replace", source: { kind: "quads", quads: [q2] } },

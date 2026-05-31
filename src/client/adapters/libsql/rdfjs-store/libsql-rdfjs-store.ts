@@ -8,7 +8,7 @@ import type {
   CommitHandler,
   PatchCommitContext,
 } from "@/client/quad-store/mod.ts";
-import { BufferedRdfjsPatchState } from "@/client/rdfjs-buffer/mod.ts";
+import { RdfjsPatchBuffer } from "@/client/rdfjs-buffer/mod.ts";
 import { quadFromLibsqlRow } from "./sql/libsql-quad-row.ts";
 
 /**
@@ -33,7 +33,7 @@ export interface LibsqlRdfjsStoreOptions {
  * All triple/quad patterns resolve via a single SQL index seek with no in-memory hydration needed.
  */
 export class LibsqlRdfjsStore implements rdfjs.Store {
-  private readonly patchState = new BufferedRdfjsPatchState();
+  private readonly patchBuffer = new RdfjsPatchBuffer();
 
   private readonly matchPageSize: number;
 
@@ -136,7 +136,7 @@ export class LibsqlRdfjsStore implements rdfjs.Store {
    * add buffers a single quad for insertion on the next commit.
    */
   public add(quad: rdfjs.Quad): this {
-    this.patchState.add(quad);
+    this.patchBuffer.add(quad);
     return this;
   }
 
@@ -144,7 +144,7 @@ export class LibsqlRdfjsStore implements rdfjs.Store {
    * addQuad buffers a single quad for insertion on the next commit (RDF/JS Store alias for add).
    */
   public addQuad(quad: rdfjs.Quad): this {
-    this.patchState.addQuad(quad);
+    this.patchBuffer.addQuad(quad);
     return this;
   }
 
@@ -152,7 +152,7 @@ export class LibsqlRdfjsStore implements rdfjs.Store {
    * delete buffers a single quad for deletion on the next commit.
    */
   public delete(quad: rdfjs.Quad): this {
-    this.patchState.delete(quad);
+    this.patchBuffer.delete(quad);
     return this;
   }
 
@@ -160,14 +160,14 @@ export class LibsqlRdfjsStore implements rdfjs.Store {
    * import consumes an RDF/JS Stream, buffering all quads for later commit.
    */
   public import(stream: rdfjs.Stream<rdfjs.Quad>): EventEmitter {
-    return this.patchState.import(stream);
+    return this.patchBuffer.import(stream);
   }
 
   /**
    * remove consumes a stream and buffers all quads from it for deletion on commit.
    */
   public remove(stream: rdfjs.Stream<rdfjs.Quad>): EventEmitter {
-    return this.patchState.remove(stream);
+    return this.patchBuffer.remove(stream);
   }
 
   /**
@@ -179,7 +179,7 @@ export class LibsqlRdfjsStore implements rdfjs.Store {
     object?: rdfjs.Term | null,
     graph?: rdfjs.Term | null,
   ): EventEmitter {
-    return this.patchState.removeMatches(
+    return this.patchBuffer.removeMatches(
       this.match.bind(this),
       subject,
       predicate,
@@ -192,7 +192,7 @@ export class LibsqlRdfjsStore implements rdfjs.Store {
    * deleteGraph buffers all quads in the named graph for deletion on commit.
    */
   public deleteGraph(graph: rdfjs.Term | string): EventEmitter {
-    return this.patchState.deleteGraph(this.match.bind(this), graph);
+    return this.patchBuffer.deleteGraph(this.match.bind(this), graph);
   }
 
   /**
@@ -201,7 +201,7 @@ export class LibsqlRdfjsStore implements rdfjs.Store {
    * buffers before invoking the handler.
    */
   public async commit(context?: PatchCommitContext): Promise<void> {
-    await this.patchState.flushCommit(this.options.commitHandler, context);
+    await this.patchBuffer.flushBuffer(this.options.commitHandler, context);
   }
 
   /**
@@ -209,6 +209,6 @@ export class LibsqlRdfjsStore implements rdfjs.Store {
    * Used for error recovery after a failed SPARQL UPDATE.
    */
   public clearBuffer(): void {
-    this.patchState.clearBuffer();
+    this.patchBuffer.clearBuffer();
   }
 }

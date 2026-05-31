@@ -6,7 +6,7 @@ import {
   importViaBufferedRdfjsStore,
   type QuadStoreInterface,
 } from "@/client/quad-store/mod.ts";
-import type { ImportLifecycle } from "@/client/commit-sync/mod.ts";
+import { resolveImportLifecycle } from "@/client/import-lifecycle/mod.ts";
 import type { LibsqlRdfjsStore } from "../rdfjs-store/mod.ts";
 
 /**
@@ -16,8 +16,11 @@ export interface LibsqlQuadStoreOptions {
   /** libsqlRdfjsStore is the hexastore-backed RDF/JS store receiving buffered mutations. */
   libsqlRdfjsStore: LibsqlRdfjsStore;
 
-  /** importLifecycle coordinates deferred search indexing around import commits. */
-  importLifecycle: ImportLifecycle;
+  /** beforeImport runs before import writes quads (optional). */
+  beforeImport?: () => void;
+
+  /** afterImport runs after import persistence completes (optional). */
+  afterImport?: () => Promise<void>;
 }
 
 /**
@@ -31,7 +34,10 @@ export class LibsqlQuadStore implements QuadStoreInterface {
   public async import(request: ImportRequest): Promise<void> {
     await importViaBufferedRdfjsStore(
       request,
-      this.options.importLifecycle,
+      resolveImportLifecycle({
+        beforeImport: this.options.beforeImport,
+        afterImport: this.options.afterImport,
+      }),
       {
         rdfjsStore: this.options.libsqlRdfjsStore,
       },

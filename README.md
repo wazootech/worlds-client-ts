@@ -98,7 +98,7 @@ for structured traversal and reasoning.
 | :----------------------- | :-------------------------------------- | :---------------------------------------------------------- |
 | `quad-store`             | `@worlds/client/quad-store`             | Import/export API, patch types, RDF formats                 |
 | `rdfjs-buffer`           | `@worlds/client/rdfjs-buffer`           | Shared patch buffering and import flush (topology-agnostic) |
-| `commit-sync`            | `@worlds/client` (root barrel)          | Import lifecycle hooks around durable commits               |
+| `import-lifecycle`       | `@worlds/client` (root barrel)          | Import lifecycle hooks around durable commits               |
 | `adapters/*/rdfjs-store` | `@worlds/client/adapters/libsql` (etc.) | Durable `*RdfjsStore` hexastore + backend sync              |
 
 Do not confuse `@worlds/client/rdfjs-buffer` with adapter `rdfjs-store/` folders

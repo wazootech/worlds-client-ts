@@ -1,14 +1,28 @@
+import type { CommitHandler } from "@/client/quad-store/mod.ts";
 import type { TextSplitterInterface } from "@/client/search-index/quad-chunker/mod.ts";
-import type { CommitSyncState } from "@/client/commit-sync/mod.ts";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
 import type { LibsqlQueryBuilder } from "../sql/libsql-query-builder.ts";
 import { createLibsqlSearchIndexRebuilder } from "../../search-index/rebuild-libsql-search-index-from-quads.ts";
 
 /**
- * LibsqlCommitSyncOptions configures shared LibSQL quad/chunk synchronization.
+ * LibsqlPersistHooks bundles commitHandler and import lifecycle callbacks for LibSQL clients.
  */
-export interface LibsqlCommitSyncOptions extends LibsqlClientBaseOptions {
+export interface LibsqlPersistHooks {
+  /** commitHandler persists buffered patches to LibSQL. */
+  commitHandler: CommitHandler;
+
+  /** beforeImport runs before import writes quads. */
+  beforeImport: () => void;
+
+  /** afterImport runs after import persistence completes. */
+  afterImport: () => Promise<void>;
+}
+
+/**
+ * LibsqlPersistHooksOptions configures shared LibSQL quad/chunk synchronization.
+ */
+export interface LibsqlPersistHooksOptions extends LibsqlClientBaseOptions {
   /** libsqlQueryBuilder supplies dimension-aware SQL for commits and rebuilds. */
   libsqlQueryBuilder: LibsqlQueryBuilder;
 
@@ -17,16 +31,16 @@ export interface LibsqlCommitSyncOptions extends LibsqlClientBaseOptions {
 }
 
 /**
- * createLibsqlCommitSync builds commit and deferred-import helpers for LibSQL clients.
+ * createLibsqlPersistHooks builds commitHandler and deferred-import helpers for LibSQL clients.
  */
-export function createLibsqlCommitSync(
-  dependencies: LibsqlCommitSyncOptions,
-): CommitSyncState {
+export function createLibsqlPersistHooks(
+  dependencies: LibsqlPersistHooksOptions,
+): LibsqlPersistHooks {
   const reindex = createLibsqlSearchIndexRebuilder(dependencies);
   const searchIndexOnImport = dependencies.searchIndexOnImport ?? "incremental";
 
   return {
-    commit: async (patch, context) => {
+    commitHandler: async (patch, context) => {
       const isImport = context?.importMode !== undefined;
       const skipSearchIndexProjection =
         dependencies.searchIndexOnImport === "disabled" ||

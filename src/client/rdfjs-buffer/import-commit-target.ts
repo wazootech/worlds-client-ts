@@ -1,22 +1,22 @@
 import type * as rdfjs from "@rdfjs/types";
-import type { CommittingRdfjsStore } from "./import-export-via-rdfjs-store.ts";
+import type { ImportCommitTarget } from "./import-export-via-rdfjs-store.ts";
 import type { PatchCommitContext } from "@/client/quad-store/mod.ts";
 import { awaitDrainRemoveMatches } from "@/client/quad-store/mod.ts";
 
 /**
- * RdfjsCommittingStoreOptions configures an in-memory CommittingRdfjsStore adapter.
+ * ImportCommitTargetOptions configures an in-memory ImportCommitTarget adapter.
  */
-export interface RdfjsCommittingStoreOptions {
+export interface ImportCommitTargetOptions {
   /** store is the underlying RDF/JS graph mutated on commit. */
   store: rdfjs.Store;
 }
 
 /**
- * createRdfjsCommittingStore buffers import quads until commit, matching durable import ordering.
+ * createImportCommitTarget buffers import quads until commit, matching durable import ordering.
  */
-export function createRdfjsCommittingStore(
-  options: RdfjsCommittingStoreOptions,
-): CommittingRdfjsStore {
+export function createImportCommitTarget(
+  options: ImportCommitTargetOptions,
+): ImportCommitTarget {
   const insertBuffer: rdfjs.Quad[] = [];
 
   return {

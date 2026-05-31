@@ -7,14 +7,14 @@ import { DenokvQuadStore } from "./quad-store/mod.ts";
 import { DenokvRdfjsStore } from "./rdfjs-store/mod.ts";
 import { DenokvSearchIndex } from "./search-index/mod.ts";
 import {
-  createDenokvCommitSync,
-  type DenokvCommitSyncOptions,
-} from "./rdfjs-store/sync/denokv-commit-sync.ts";
+  createDenokvPersistHooks,
+  type DenokvPersistHooksOptions,
+} from "./rdfjs-store/sync/create-denokv-persist-hooks.ts";
 
 /**
  * DenokvClientOptions specifies configuration parameters for Deno KV client contexts.
  */
-export interface DenokvClientOptions extends DenokvCommitSyncOptions {
+export interface DenokvClientOptions extends DenokvPersistHooksOptions {
   /** queryEngine optionally enables built-in Comunica SPARQL over DenokvRdfjsStore. */
   queryEngine?: ComunicaQueryEngine;
 }
@@ -25,16 +25,17 @@ export interface DenokvClientOptions extends DenokvCommitSyncOptions {
 export function createDenokvClient(
   options: DenokvClientOptions,
 ): ClientInterface {
-  const patchSync = createDenokvCommitSync(options);
+  const persistHooks = createDenokvPersistHooks(options);
   const denokvRdfjsStore = new DenokvRdfjsStore({
     kv: options.kv,
     keyPrefix: options.keyPrefix,
     enabledHexastoreIndexes: options.enabledHexastoreIndexes,
-    commitHandler: patchSync.commit,
+    commitHandler: persistHooks.commitHandler,
   });
   const denokvQuadStore = new DenokvQuadStore({
     denokvRdfjsStore,
-    importLifecycle: patchSync,
+    beforeImport: persistHooks.beforeImport,
+    afterImport: persistHooks.afterImport,
   });
 
   const sparqlEngine = options.queryEngine

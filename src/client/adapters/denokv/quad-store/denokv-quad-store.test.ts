@@ -2,7 +2,7 @@ import { registerQuadStoreContractTests } from "@/client/quad-store/quad-store-i
 import { assertEquals } from "@std/assert";
 import { DataFactory, Store } from "n3";
 import { createDenokvStoresForTest } from "../create-denokv-stores-for-test.ts";
-import { createDenokvCommitSync } from "../rdfjs-store/sync/denokv-commit-sync.ts";
+import { createDenokvPersistHooks } from "../rdfjs-store/sync/create-denokv-persist-hooks.ts";
 import { DenokvQuadStore } from "./mod.ts";
 import { DenokvRdfjsStore } from "../rdfjs-store/mod.ts";
 
@@ -171,25 +171,23 @@ Deno.test("DenokvQuadStore.export - returns serialized dump", async () => {
   }
 });
 
-Deno.test("DenokvQuadStore.import invokes importLifecycle hooks", async () => {
+Deno.test("DenokvQuadStore.import invokes import hooks", async () => {
   const events: string[] = [];
   const kv = await Deno.openKv(":memory:");
   try {
-    const patchSync = createDenokvCommitSync({ kv });
+    const persistHooks = createDenokvPersistHooks({ kv });
     const denokvRdfjsStore = new DenokvRdfjsStore({
       kv,
-      commitHandler: patchSync.commit,
+      commitHandler: persistHooks.commitHandler,
     });
     const quadStore = new DenokvQuadStore({
       denokvRdfjsStore,
-      importLifecycle: {
-        beforeImport() {
-          events.push("before");
-        },
-        afterImport() {
-          events.push("after");
-          return Promise.resolve();
-        },
+      beforeImport() {
+        events.push("before");
+      },
+      afterImport() {
+        events.push("after");
+        return Promise.resolve();
       },
     });
 
@@ -203,7 +201,7 @@ Deno.test("DenokvQuadStore.import invokes importLifecycle hooks", async () => {
   }
 });
 
-Deno.test("createDenokvCommitSync - deferred import runs caller reindex", async () => {
+Deno.test("createDenokvPersistHooks - deferred import runs caller reindex", async () => {
   const events: string[] = [];
   const kv = await Deno.openKv(":memory:");
   try {

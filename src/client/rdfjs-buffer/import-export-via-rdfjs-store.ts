@@ -8,7 +8,7 @@ import type {
 import {
   type ImportLifecycle,
   runImportWithLifecycle,
-} from "@/client/commit-sync/mod.ts";
+} from "@/client/import-lifecycle/mod.ts";
 import {
   collectQuadsFromStream,
   exportQuadsResponse,
@@ -16,9 +16,9 @@ import {
 } from "@/client/quad-store/rdf-formats.ts";
 
 /**
- * CommittingRdfjsStore is the minimal surface needed for durable buffered import and export.
+ * ImportCommitTarget is the minimal surface needed for durable buffered import and export.
  */
-export interface CommittingRdfjsStore {
+export interface ImportCommitTarget {
   /** addQuad buffers a quad until commit. */
   addQuad(quad: rdfjs.Quad): void;
 
@@ -39,7 +39,7 @@ export interface CommittingRdfjsStore {
  */
 export interface ImportViaBufferedRdfjsStoreOptions {
   /** rdfjsStore receives buffered quads and persists on commit. */
-  rdfjsStore: CommittingRdfjsStore;
+  rdfjsStore: ImportCommitTarget;
 }
 
 /**

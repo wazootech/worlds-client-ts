@@ -1,5 +1,3 @@
-import type { CommitHandler } from "@/client/quad-store/mod.ts";
-
 /**
  * ImportLifecycle runs adapter-specific work immediately before and after quad import persistence.
  */
@@ -26,6 +24,19 @@ export const noopImportLifecycle: ImportLifecycle = {
 };
 
 /**
+ * resolveImportLifecycle builds an ImportLifecycle from optional import hooks.
+ */
+export function resolveImportLifecycle(options: {
+  beforeImport?: () => void;
+  afterImport?: () => Promise<void>;
+}): ImportLifecycle {
+  return {
+    beforeImport: options.beforeImport ?? noopImportLifecycle.beforeImport,
+    afterImport: options.afterImport ?? noopImportLifecycle.afterImport,
+  };
+}
+
+/**
  * runImportWithLifecycle invokes importLifecycle around an import body.
  */
 export async function runImportWithLifecycle(
@@ -35,12 +46,4 @@ export async function runImportWithLifecycle(
   importLifecycle.beforeImport();
   await importBody();
   await importLifecycle.afterImport();
-}
-
-/**
- * CommitSyncState coordinates commit persisting with import lifecycle hooks.
- */
-export interface CommitSyncState extends ImportLifecycle {
-  /** commit atomically persists a buffered patch to durable storage. */
-  commit: CommitHandler;
 }

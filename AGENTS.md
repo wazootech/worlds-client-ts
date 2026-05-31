@@ -343,7 +343,7 @@ For standard Comunica SPARQL, pass a Comunica `queryEngine` into factory options
 assembling `new Client` manually.
 
 Custom assembly uses `new Client` with `ClientOptions`; wire
-`LibsqlSearchIndex`, `createLibsqlPatchSyncState`, and suffixed stores directly
+`LibsqlSearchIndex`, `createLibsqlPersistHooks`, and suffixed stores directly
 when you need warm-start control beyond `createLibsqlClient`. Durable backends
 share buffer → `commit()` → `persistPatch` for import and SPARQL UPDATE; all
 quad stores run `ImportLifecycle` (`beforeImport` / `afterImport`) around
@@ -351,10 +351,12 @@ quad stores run `ImportLifecycle` (`beforeImport` / `afterImport`) around
 `PatchCommitContext.importMode`. Replace import: LibSQL wipes `quads`/`chunks`
 in `commitPatchToLibsql`; Deno KV generation-swap in `commitPatchToDenokv`. Do
 not reintroduce pre-commit `onReplace` drains on the shared import helper.
-`createImportPatchSyncState` applies `searchIndexOnImport`. LibSQL defers
-built-in chunk projection via `searchIndexOnImport: "deferred"`; Deno KV
-supports the same defer hooks for external search indexes via
-`createDenokvPatchSyncState({ searchIndexOnImport: "deferred", reindex })`.
+`createLibsqlPersistHooks` and `createDenokvPersistHooks` apply
+`searchIndexOnImport` via flat `commitHandler`, `beforeImport`, and
+`afterImport`. LibSQL defers built-in chunk projection via
+`searchIndexOnImport: "deferred"`; Deno KV supports the same defer hooks for
+external search indexes via
+`createDenokvPersistHooks({ searchIndexOnImport: "deferred", reindex })`.
 
 - **Long-running (Fly.io, DigitalOcean, 24/7 Deno):** one `Client` at process
   boot. See [`examples/libsql-hello-world`](examples/libsql-hello-world).

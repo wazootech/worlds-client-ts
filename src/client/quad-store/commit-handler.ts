@@ -20,9 +20,9 @@ export type CommitHandler = (
 ) => Promise<void>;
 
 /**
- * deduplicatePatchBuffers removes quads that appear in both insert and delete buffers.
+ * deduplicateBuffers removes quads that appear in both insert and delete buffers.
  */
-export function deduplicatePatchBuffers(
+export function deduplicateBuffers(
   insertBuffer: rdfjs.Quad[],
   deleteBuffer: rdfjs.Quad[],
 ): void {

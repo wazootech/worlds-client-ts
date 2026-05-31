@@ -8,7 +8,7 @@ import type {
   Quad,
 } from "@/client/quad-store/mod.ts";
 import { toRdfjsQuad } from "@/client/quad-store/mod.ts";
-import { BufferedRdfjsPatchState } from "@/client/rdfjs-buffer/mod.ts";
+import { RdfjsPatchBuffer } from "@/client/rdfjs-buffer/mod.ts";
 import {
   buildGenerationDataPrefix,
   buildPrimaryQuadKey,
@@ -50,7 +50,7 @@ export interface DenokvRdfjsStoreOptions {
  * It supports Comunica SPARQL by implementing match() and buffering mutations until commit().
  */
 export class DenokvRdfjsStore implements rdfjs.Store {
-  private readonly patchState = new BufferedRdfjsPatchState();
+  private readonly patchBuffer = new RdfjsPatchBuffer();
 
   public constructor(
     private readonly options: DenokvRdfjsStoreOptions,
@@ -263,22 +263,22 @@ export class DenokvRdfjsStore implements rdfjs.Store {
   }
 
   public add(quad: rdfjs.Quad): this {
-    this.patchState.add(quad);
+    this.patchBuffer.add(quad);
     return this;
   }
 
   public addQuad(quad: rdfjs.Quad): this {
-    this.patchState.addQuad(quad);
+    this.patchBuffer.addQuad(quad);
     return this;
   }
 
   public addQuads(quads: rdfjs.Quad[]): this {
-    this.patchState.addQuads(quads);
+    this.patchBuffer.addQuads(quads);
     return this;
   }
 
   public delete(quad: rdfjs.Quad): this {
-    this.patchState.delete(quad);
+    this.patchBuffer.delete(quad);
     return this;
   }
 
@@ -287,16 +287,16 @@ export class DenokvRdfjsStore implements rdfjs.Store {
   }
 
   public removeQuads(quads: rdfjs.Quad[]): this {
-    this.patchState.removeQuads(quads);
+    this.patchBuffer.removeQuads(quads);
     return this;
   }
 
   public import(stream: rdfjs.Stream<rdfjs.Quad>): EventEmitter {
-    return this.patchState.import(stream);
+    return this.patchBuffer.import(stream);
   }
 
   public remove(stream: rdfjs.Stream<rdfjs.Quad>): EventEmitter {
-    return this.patchState.remove(stream);
+    return this.patchBuffer.remove(stream);
   }
 
   public removeMatches(
@@ -305,7 +305,7 @@ export class DenokvRdfjsStore implements rdfjs.Store {
     object?: rdfjs.Term | null,
     graph?: rdfjs.Term | null,
   ): EventEmitter {
-    return this.patchState.removeMatches(
+    return this.patchBuffer.removeMatches(
       this.match.bind(this),
       subject,
       predicate,
@@ -318,13 +318,13 @@ export class DenokvRdfjsStore implements rdfjs.Store {
    * deleteGraph buffers all quads in the named graph for deletion on commit.
    */
   public deleteGraph(graph: rdfjs.Term | string): EventEmitter {
-    return this.patchState.deleteGraph(this.match.bind(this), graph);
+    return this.patchBuffer.deleteGraph(this.match.bind(this), graph);
   }
 
   /**
    * commit persists buffered insertions and deletions through the configured CommitHandler.
    */
   public async commit(context?: PatchCommitContext): Promise<void> {
-    await this.patchState.flushCommit(this.options.commitHandler, context);
+    await this.patchBuffer.flushBuffer(this.options.commitHandler, context);
   }
 }

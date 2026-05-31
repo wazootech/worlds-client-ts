@@ -24,14 +24,26 @@
   `RebuildSearchIndexResponse` → `ReindexRequest` / `ReindexResponse`. RDF/JS
   and Deno KV `reindex()` succeed as documented no-ops.
 - **`ImportLifecycle`** (`beforeImport` / `afterImport`) wraps every
-  `QuadStoreInterface.import`. `LibsqlQuadStore` and `DenokvQuadStore` take
-  `importLifecycle` plus a shared `*RdfjsStore`; import and SPARQL UPDATE both
-  buffer patches through `commit()` → `persistPatch`. All durable imports share
-  `importViaBufferedRdfjsStore` and pass `PatchCommitContext.importMode` on
-  commit; replace semantics are adapter-specific (`commitPatchToLibsql` SQL
-  wipe, `commitPatchToDenokv` generation-swap). `createImportPatchSyncState`
-  maps `searchIndexOnImport` with `SearchIndexTopology` for projection and
-  deferred reindex.
+  `QuadStoreInterface.import` via `importViaBufferedRdfjsStore`. Durable
+  `*QuadStore` options take optional flat `beforeImport` / `afterImport`
+  callbacks (not a bundled sync object). Import and SPARQL UPDATE both buffer
+  patches through `commit()` → `commitPatchTo*`. Replace import: LibSQL wipes
+  `quads`/`chunks` in `commitPatchToLibsql`; Deno KV generation-swap in
+  `commitPatchToDenokv`. `createLibsqlPersistHooks` and
+  `createDenokvPersistHooks` return
+  `{ commitHandler, beforeImport, afterImport
+  }` and map `searchIndexOnImport`
+  for projection and deferred reindex.
+- Renamed **`commit-sync`** → **`import-lifecycle`** (root barrel export).
+  Removed **`CommitSyncState`**; use flat `commitHandler` on `*RdfjsStore` and
+  `beforeImport` / `afterImport` on `*QuadStore`.
+- Renamed **`createLibsqlCommitSync`** → **`createLibsqlPersistHooks`**;
+  **`createDenokvCommitSync`** → **`createDenokvPersistHooks`**.
+- Renamed **`BufferedRdfjsPatchState`** → **`RdfjsPatchBuffer`**;
+  **`flushCommit`** → **`flushBuffer`**; **`deduplicatePatchBuffers`** →
+  **`deduplicateBuffers`**; **`CommittingRdfjsStore`** →
+  **`ImportCommitTarget`**; **`createRdfjsCommittingStore`** →
+  **`createImportCommitTarget`**.
 - Renamed `@worlds/client/rdfjs-store` → **`@worlds/client/rdfjs-buffer`**
   (shared patch buffering and import orchestration). Adapter `*RdfjsStore`
   implementations remain under `@worlds/client/adapters/*/rdfjs-store/`.

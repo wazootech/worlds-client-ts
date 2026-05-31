@@ -2,7 +2,7 @@ import { assertEquals } from "@std/assert";
 import { DataFactory, Store } from "n3";
 import type { QuadStoreInterface } from "./quad-store-interface.ts";
 import { RdfjsQuadStore } from "@/client/adapters/rdfjs/rdfjs-quad-store.ts";
-import type { ImportLifecycle } from "@/client/commit-sync/mod.ts";
+import type { ImportLifecycle } from "@/client/import-lifecycle/mod.ts";
 
 const { namedNode, literal, quad } = DataFactory;
 
