@@ -2,15 +2,17 @@ import type * as rdfjs from "@rdfjs/types";
 import type {
   ExportRequest,
   ExportResponse,
-  ImportLifecycle,
   ImportRequest,
   QuadStoreInterface,
 } from "@/client/quad-store/mod.ts";
 import {
   exportFromRdfjsStore,
   importViaBufferedRdfjsStore,
-  noopImportLifecycle,
 } from "@/client/quad-store/mod.ts";
+import {
+  type ImportLifecycle,
+  noopImportLifecycle,
+} from "@/client/commit-sync/mod.ts";
 import { createRdfjsCommittingStore } from "./rdfjs-committing-store.ts";
 
 /**

@@ -9,7 +9,12 @@ const USE_LITE_VECTOR_DIMENSIONS = 512;
 
 const { quad, namedNode, literal } = DataFactory;
 
-/** hasLocalUseModels is true when adapter-local USE artifacts are present on disk. */
+/** exampleSubjectIri is the grounded subject used for production-style SPARQL in this demo. */
+const exampleSubjectIri = "urn:demo:entity:0";
+
+/**
+ * hasLocalUseModels returns true when adapter-local USE artifacts are present on disk.
+ */
 function hasLocalUseModels(): boolean {
   const modelsDirectory = new URL(
     "../../src/client/adapters/tfjs-universal-sentence-encoder/models/",
@@ -25,16 +30,14 @@ function hasLocalUseModels(): boolean {
 }
 
 /**
- * Long-running service (Fly.io, DigitalOcean, 24/7 Deno): one process-scoped Client
- * over hexastore LibSQL. Demonstrates hybrid search:
- * LibSQL FTS5 keyword retrieval fused with vector similarity via USE lite embeddings.
+ * Main entry point for the consolidated LibSQL hello-world example.
  *
- * Prerequisites: run `deno task download:tfjs-use` once to cache model artifacts.
- *
- * It transparently handles:
- * 1. Automatic durable schema initialization (512-d vectors).
- * 2. Embedding-backed chunk indexing on import.
- * 3. Hybrid search and optional SPARQL over the same store.
+ * Demonstrates a production-style, long-running service configuration with a single process-scoped Client:
+ * 1. Durable schema initialization on LibSQL (hexastore index + FTS5 + USE vector embeddings).
+ * 2. Ingestion of semantically distinct and metadata quads.
+ * 3. Fused hybrid search (vector similarity + keyword FTS5) via TF.js Universal Sentence Encoder models.
+ * 4. Grounded, subject-bound selective SPARQL query optimized for scale.
+ * 5. Capped full-scan SPARQL query illustrating unbound scans (for debugging/development only).
  */
 if (import.meta.main) {
   if (!hasLocalUseModels()) {
@@ -75,6 +78,18 @@ if (import.meta.main) {
             "Quantum mechanics describes subatomic particle behavior in physics.",
           ),
         ),
+        quad(
+          namedNode(exampleSubjectIri),
+          namedNode("urn:demo:predicate"),
+          literal("Production paths bind at least one term in hot-path BGPs."),
+        ),
+        quad(
+          namedNode("urn:demo:entity:1"),
+          namedNode("urn:demo:predicate"),
+          literal(
+            "Other entities stay reachable via bound lookups, not full scans.",
+          ),
+        ),
       ],
     },
     mode: "merge",
@@ -96,10 +111,24 @@ if (import.meta.main) {
   }
   console.log("\nTop match is the garden/cat quad (hybrid vector search OK).");
 
-  console.log("\nExecuting subject-bound SPARQL query...");
-  const sparqlResponse = await client.sparql({
-    query:
-      `SELECT ?property ?object WHERE { <urn:animal:cat> ?property ?object }`,
+  console.log("\n--- SPARQL AT SCALE DEMONSTRATION ---");
+
+  const selectiveSparqlQuery =
+    `SELECT ?property ?object WHERE { <${exampleSubjectIri}> ?property ?object }`;
+  console.log(
+    "Selective (production-style / scale-safe):",
+    selectiveSparqlQuery,
+  );
+  const selectiveResponse = await client.sparql({
+    query: selectiveSparqlQuery,
   });
-  console.log(JSON.stringify(sparqlResponse, null, 2));
+  console.log(JSON.stringify(selectiveResponse, null, 2));
+
+  const devOnlyScanQuery =
+    "SELECT ?subject ?property ?object WHERE { ?subject ?property ?object } LIMIT 100";
+  console.log("\nCapped full scan (dev/small graphs only):", devOnlyScanQuery);
+  const scanResponse = await client.sparql({ query: devOnlyScanQuery });
+  console.log(JSON.stringify(scanResponse, null, 2));
+
+  console.log("\nLibSQL Hello World demonstration completed successfully.");
 }

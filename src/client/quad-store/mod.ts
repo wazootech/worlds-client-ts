@@ -1,5 +1,4 @@
 export * from "./quad-store-interface.ts";
-export * from "./import-synchronizer.ts";
 export * from "./patch.ts";
 export * from "./commit-handler.ts";
 export * from "./quad-filter.ts";

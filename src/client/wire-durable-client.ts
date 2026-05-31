@@ -1,5 +1,4 @@
 import { Client } from "@/client/client.ts";
-import type { ClientCapabilities } from "@/client/client-capabilities.ts";
 import type { ClientInterface } from "@/client/client.ts";
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
 import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
@@ -16,9 +15,6 @@ export interface WireDurableClientOptions {
 
   /** searchIndex is the hybrid or scan search facade wired for this backend. */
   searchIndex: SearchIndexInterface;
-
-  /** capabilities documents search index topology for integrators and agents. */
-  capabilities: ClientCapabilities;
 
   /** rdfjsStoreForSparql is the hexastore-backed RDF/JS store used when queryEngine is set. */
   rdfjsStoreForSparql: rdfjs.Store & { commit(): Promise<void> };
@@ -45,6 +41,5 @@ export function wireDurableClient(
     quadStore: options.quadStore,
     searchIndex: options.searchIndex,
     sparqlEngine,
-    capabilities: options.capabilities,
   });
 }

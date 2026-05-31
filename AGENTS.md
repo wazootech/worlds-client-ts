@@ -356,16 +356,13 @@ quad stores run `ImportLifecycle` (`beforeImport` / `afterImport`) around
 `PatchCommitContext.importMode`. Replace import: LibSQL wipes `quads`/`chunks`
 in `commitPatchToLibsql`; Deno KV generation-swap in `commitPatchToDenokv`. Do
 not reintroduce pre-commit `onReplace` drains on the shared import helper.
-`createImportPatchSyncState` applies `searchIndexOnImport` using
-`SearchIndexTopology` (`materialized` on LibSQL, `scan` on Deno KV). LibSQL
-defers built-in chunk projection via `searchIndexOnImport: "deferred"`; Deno KV
+`createImportPatchSyncState` applies `searchIndexOnImport`. LibSQL defers
+built-in chunk projection via `searchIndexOnImport: "deferred"`; Deno KV
 supports the same defer hooks for external search indexes via
 `createDenokvPatchSyncState({ searchIndexOnImport: "deferred", reindex })`.
-`createLibsqlClient` / `createDenokvClient` set
-`Client.capabilities.searchIndexTopology`.
 
 - **Long-running (Fly.io, DigitalOcean, 24/7 Deno):** one `Client` at process
-  boot. See [`examples/libsql-long-running`](examples/libsql-long-running).
+  boot. See [`examples/libsql-hello-world`](examples/libsql-hello-world).
 
 Use `benchmarks/sparql-hexastore-perf-libsql.bench.ts` and
 `benchmarks/sparql-hexastore-perf-denokv.bench.ts` (requires `--unstable-kv`) to
@@ -376,7 +373,7 @@ document post-preload methodology. Historical hydrate+N3 vs libsql crossover:
 [discussion #45](https://github.com/wazootech/worlds-client-ts/discussions/45).
 Scale guidance for very large graphs:
 [#68](https://github.com/wazootech/worlds-client-ts/issues/68). SPARQL
-query-shape examples are inlined in `examples/libsql-sparql-scale`; see README
+query-shape examples are inlined in `examples/libsql-hello-world`; see README
 **Scale and SPARQL query shape**.
 
 ### Decoupled store lifecycle via dependency injection
@@ -580,11 +577,10 @@ const devScanQuery =
 | `searchIndexOnImport: "disabled"`    | Skips chunking entirely. Call `client.reindex()` before searching.               |
 
 Use `"deferred"` or `"disabled"` for SPARQL-only bulk loads or large initial
-imports where indexing can happen once at the end. On LibSQL,
-`capabilities.searchIndexTopology` is `"materialized"` and `reindex()` rebuilds
-FTS/vector chunks; on Deno KV and in-memory RDF/JS it is `"scan"` and
-`reindex()` is typically a no-op unless you supply an external `reindex` hook on
-patch sync.
+imports where indexing can happen once at the end. On LibSQL, `reindex()`
+rebuilds FTS/vector chunks; on Deno KV and in-memory RDF/JS `reindex()` is
+typically a safe no-op unless you supply an external `reindex` hook on patch
+sync.
 
 ### Benchmark references
 

@@ -1,14 +1,14 @@
 import type { TextSplitterInterface } from "@/client/search-index/quad-chunker/mod.ts";
-import type { PatchSyncState } from "@/client/quad-store/mod.ts";
+import type { CommitSyncState } from "@/client/commit-sync/mod.ts";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
 import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/sql/libsql-query-builder.ts";
 import { createLibsqlSearchIndexRebuilder } from "@/client/adapters/libsql/search/rebuild-libsql-search-index-from-quads.ts";
 
 /**
- * LibsqlPatchSyncAdapterOptions configures shared LibSQL quad/chunk synchronization.
+ * LibsqlCommitSyncOptions configures shared LibSQL quad/chunk synchronization.
  */
-export interface LibsqlPatchSyncAdapterOptions extends LibsqlClientBaseOptions {
+export interface LibsqlCommitSyncOptions extends LibsqlClientBaseOptions {
   /** libsqlQueryBuilder supplies dimension-aware SQL for commits and rebuilds. */
   libsqlQueryBuilder: LibsqlQueryBuilder;
 
@@ -17,11 +17,11 @@ export interface LibsqlPatchSyncAdapterOptions extends LibsqlClientBaseOptions {
 }
 
 /**
- * createLibsqlPatchSyncState builds persistPatch and deferred-import helpers for LibSQL clients.
+ * createLibsqlCommitSync builds commit and deferred-import helpers for LibSQL clients.
  */
-export function createLibsqlPatchSyncState(
-  dependencies: LibsqlPatchSyncAdapterOptions,
-): PatchSyncState {
+export function createLibsqlCommitSync(
+  dependencies: LibsqlCommitSyncOptions,
+): CommitSyncState {
   const reindex = createLibsqlSearchIndexRebuilder(dependencies);
   const searchIndexOnImport = dependencies.searchIndexOnImport ?? "incremental";
 

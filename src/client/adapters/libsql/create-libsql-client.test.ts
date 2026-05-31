@@ -35,7 +35,6 @@ Deno.test(
     });
 
     assertEquals(sparqlResponse.kind, "select");
-    assertEquals(client.capabilities?.searchIndexTopology, "materialized");
 
     databaseClient.close();
   },

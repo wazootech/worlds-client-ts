@@ -3,7 +3,7 @@ import { type Client, createClient } from "@libsql/client";
 
 import { LibsqlQuadStore } from "./libsql-quad-store.ts";
 import { LibsqlRdfjsStore } from "./libsql-rdfjs-store.ts";
-import { createLibsqlPatchSyncState } from "./sync/libsql-patch-sync.ts";
+import { createLibsqlCommitSync } from "./sync/libsql-commit-sync.ts";
 import {
   setupLibsqlSchemaForTest,
   sharedTextSplitter,
@@ -16,7 +16,7 @@ async function createLibsqlQuadStoreForTest(): Promise<{
 }> {
   const client = createClient({ url: ":memory:" });
   await setupLibsqlSchemaForTest(client);
-  const patchSync = createLibsqlPatchSyncState({
+  const patchSync = createLibsqlCommitSync({
     client,
     libsqlQueryBuilder: testLibsqlQueryBuilder,
     textSplitter: sharedTextSplitter,

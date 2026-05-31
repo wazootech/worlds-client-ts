@@ -3,7 +3,7 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import type { ClientInterface } from "@/client/client.ts";
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
 import { LibsqlSearchIndex } from "@/client/adapters/libsql/search/mod.ts";
-import { createLibsqlPatchSyncState } from "@/client/adapters/libsql/sync/mod.ts";
+import { createLibsqlCommitSync } from "@/client/adapters/libsql/sync/mod.ts";
 import { wireDurableClient } from "@/client/wire-durable-client.ts";
 
 import type { LibsqlClientBaseOptions } from "./libsql-client-base-options.ts";
@@ -40,7 +40,7 @@ export async function createLibsqlClient(
     textSplitter,
   });
 
-  const patchSync = createLibsqlPatchSyncState({
+  const patchSync = createLibsqlCommitSync({
     ...options,
     libsqlQueryBuilder: queryBuilder,
     textSplitter,
@@ -62,6 +62,5 @@ export async function createLibsqlClient(
     searchIndex,
     rdfjsStoreForSparql: libsqlRdfjsStore,
     queryEngine: options.queryEngine,
-    capabilities: { searchIndexTopology: "materialized" },
   });
 }

@@ -2,11 +2,11 @@ import {
   exportFromRdfjsStore,
   type ExportRequest,
   type ExportResponse,
-  type ImportLifecycle,
   type ImportRequest,
   importViaBufferedRdfjsStore,
   type QuadStoreInterface,
 } from "@/client/quad-store/mod.ts";
+import type { ImportLifecycle } from "@/client/commit-sync/mod.ts";
 
 import type { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";
 

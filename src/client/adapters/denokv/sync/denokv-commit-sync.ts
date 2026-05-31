@@ -1,4 +1,4 @@
-import type { PatchSyncState } from "@/client/quad-store/mod.ts";
+import type { CommitSyncState } from "@/client/commit-sync/mod.ts";
 import type { SearchIndexOnImport } from "@/client/search-index/mod.ts";
 import {
   commitPatchToDenokv,
@@ -6,10 +6,9 @@ import {
 } from "./commit-patch-to-denokv.ts";
 
 /**
- * DenokvPatchSyncAdapterOptions configures shared Deno KV patch synchronization.
+ * DenokvCommitSyncOptions configures shared Deno KV patch synchronization.
  */
-export interface DenokvPatchSyncAdapterOptions
-  extends CommitPatchToDenokvOptions {
+export interface DenokvCommitSyncOptions extends CommitPatchToDenokvOptions {
   /**
    * searchIndexOnImport controls deferred external search indexing during bulk import.
    *
@@ -24,11 +23,11 @@ export interface DenokvPatchSyncAdapterOptions
 }
 
 /**
- * createDenokvPatchSyncState builds persistPatch and deferred-import helpers for Deno KV clients.
+ * createDenokvCommitSync builds commit and deferred-import helpers for Deno KV clients.
  */
-export function createDenokvPatchSyncState(
-  dependencies: DenokvPatchSyncAdapterOptions,
-): PatchSyncState {
+export function createDenokvCommitSync(
+  dependencies: DenokvCommitSyncOptions,
+): CommitSyncState {
   const searchIndexOnImport = dependencies.searchIndexOnImport ?? "incremental";
 
   return {

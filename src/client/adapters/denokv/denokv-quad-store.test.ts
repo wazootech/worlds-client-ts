@@ -2,7 +2,7 @@ import { registerQuadStoreContractTests } from "@/client/quad-store/quad-store-i
 import { assertEquals } from "@std/assert";
 import { DataFactory, Store } from "n3";
 import { createDenokvStoresForTest } from "./create-denokv-stores-for-test.ts";
-import { createDenokvPatchSyncState } from "./sync/denokv-patch-sync.ts";
+import { createDenokvCommitSync } from "./sync/denokv-commit-sync.ts";
 import { DenokvQuadStore } from "./denokv-quad-store.ts";
 import { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";
 
@@ -175,7 +175,7 @@ Deno.test("DenokvQuadStore.import invokes importLifecycle hooks", async () => {
   const events: string[] = [];
   const kv = await Deno.openKv(":memory:");
   try {
-    const patchSync = createDenokvPatchSyncState({ kv });
+    const patchSync = createDenokvCommitSync({ kv });
     const denokvRdfjsStore = new DenokvRdfjsStore({
       kv,
       commitHandler: patchSync.commit,
@@ -203,7 +203,7 @@ Deno.test("DenokvQuadStore.import invokes importLifecycle hooks", async () => {
   }
 });
 
-Deno.test("createDenokvPatchSyncState - deferred import runs caller reindex", async () => {
+Deno.test("createDenokvCommitSync - deferred import runs caller reindex", async () => {
   const events: string[] = [];
   const kv = await Deno.openKv(":memory:");
   try {

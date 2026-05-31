@@ -1,4 +1,4 @@
-import type { CommitHandler } from "./commit-handler.ts";
+import type { CommitHandler } from "@/client/quad-store/mod.ts";
 
 /**
  * ImportLifecycle runs adapter-specific work immediately before and after quad import persistence.
@@ -38,9 +38,9 @@ export async function runImportWithLifecycle(
 }
 
 /**
- * PatchSyncState coordinates commit persisting with import lifecycle hooks.
+ * CommitSyncState coordinates commit persisting with import lifecycle hooks.
  */
-export interface PatchSyncState extends ImportLifecycle {
+export interface CommitSyncState extends ImportLifecycle {
   /** commit atomically persists a buffered patch to durable storage. */
   commit: CommitHandler;
 }

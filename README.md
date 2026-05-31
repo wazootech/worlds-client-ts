@@ -154,13 +154,12 @@ const client = createDenokvClient({
 
 ## Examples
 
-| Example                                             | Description                                    | Command                                           |
-| :-------------------------------------------------- | :--------------------------------------------- | :------------------------------------------------ |
-| [Hello world](examples/hello-world)                 | In-memory graph with search                    | `deno task example:hello-world`                   |
-| [LibSQL hexastore](examples/libsql-long-running)    | Production hexastore for long-running services | `deno task example:libsql-long-running:hexastore` |
-| [LibSQL SPARQL scale](examples/libsql-sparql-scale) | Subject-bound vs capped-scan query shapes      | `deno task example:libsql-sparql-scale`           |
-| [Deno KV](examples/denokv-hello-world)              | KV-backed SPARQL + search                      | `deno task example:denokv-hello-world`            |
-| [AI SDK](examples/ai-sdk-hello-world)               | Vercel AI SDK tools with Gemini                | `deno task example:ai-sdk-hello-world`            |
+| Example                                | Description                            | Command                                |
+| :------------------------------------- | :------------------------------------- | :------------------------------------- |
+| [Hello world](examples/hello-world)    | In-memory graph with search            | `deno task example:hello-world`        |
+| [LibSQL](examples/libsql-hello-world)  | LibSQL hybrid search + SPARQL at scale | `deno task example:libsql-hello-world` |
+| [Deno KV](examples/denokv-hello-world) | KV-backed SPARQL + search              | `deno task example:denokv-hello-world` |
+| [AI SDK](examples/ai-sdk-hello-world)  | Vercel AI SDK tools with Gemini        | `deno task example:ai-sdk-hello-world` |
 
 The [agent eval harness](https://github.com/wazootech/worlds-client-evals) lives
 in a separate repository and runs deterministic assertion checks against a

@@ -3,10 +3,10 @@ import type * as rdfjs from "@rdfjs/types";
 import { DenokvQuadStore } from "./denokv-quad-store.ts";
 import { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";
 import {
-  createDenokvPatchSyncState,
-  type DenokvPatchSyncAdapterOptions,
-} from "./sync/denokv-patch-sync.ts";
-import type { PatchSyncState } from "@/client/quad-store/mod.ts";
+  createDenokvCommitSync,
+  type DenokvCommitSyncOptions,
+} from "./sync/denokv-commit-sync.ts";
+import type { CommitSyncState } from "@/client/commit-sync/mod.ts";
 
 /**
  * DenokvStoresForTest bundles Deno KV quad and RDF/JS store facades for adapter tests.
@@ -18,29 +18,29 @@ export interface DenokvStoresForTest {
   /** denokvRdfjsStore serves Comunica SPARQL match and buffered updates in tests. */
   denokvRdfjsStore: DenokvRdfjsStore;
 
-  /** patchSync coordinates persistPatch and deferred import lifecycle hooks in tests. */
-  patchSync: PatchSyncState;
+  /** commitSync coordinates commit and deferred import lifecycle hooks in tests. */
+  commitSync: CommitSyncState;
 }
 
 /**
  * createDenokvStoresForTest wires shared DenokvRdfjsStore and DenokvQuadStore instances for tests.
  */
 export function createDenokvStoresForTest(
-  options: DenokvPatchSyncAdapterOptions,
+  options: DenokvCommitSyncOptions,
 ): DenokvStoresForTest {
-  const patchSync = createDenokvPatchSyncState(options);
+  const commitSync = createDenokvCommitSync(options);
   const denokvRdfjsStore = new DenokvRdfjsStore({
     kv: options.kv,
     keyPrefix: options.keyPrefix,
     enabledHexastoreIndexes: options.enabledHexastoreIndexes,
-    commitHandler: patchSync.commit,
+    commitHandler: commitSync.commit,
   });
   const denokvQuadStore = new DenokvQuadStore({
     denokvRdfjsStore,
-    importLifecycle: patchSync,
+    importLifecycle: commitSync,
   });
 
-  return { denokvQuadStore, denokvRdfjsStore, patchSync };
+  return { denokvQuadStore, denokvRdfjsStore, commitSync };
 }
 
 /**
@@ -50,7 +50,7 @@ export async function seedDenokvQuadsForTest(
   kv: Deno.Kv,
   quads: rdfjs.Quad[],
   options?: Pick<
-    DenokvPatchSyncAdapterOptions,
+    DenokvCommitSyncOptions,
     "keyPrefix" | "enabledHexastoreIndexes"
   >,
 ): Promise<void> {

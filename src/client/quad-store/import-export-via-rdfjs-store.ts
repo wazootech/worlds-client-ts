@@ -5,8 +5,10 @@ import type {
   ExportResponse,
   ImportRequest,
 } from "./quad-store-interface.ts";
-import type { ImportLifecycle } from "./import-synchronizer.ts";
-import { runImportWithLifecycle } from "./import-synchronizer.ts";
+import {
+  type ImportLifecycle,
+  runImportWithLifecycle,
+} from "@/client/commit-sync/mod.ts";
 import {
   collectQuadsFromStream,
   exportQuadsResponse,
