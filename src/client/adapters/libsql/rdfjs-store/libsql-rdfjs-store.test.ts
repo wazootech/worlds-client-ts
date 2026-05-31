@@ -7,7 +7,7 @@ import { Readable } from "node:stream";
 import { LibsqlQueryBuilder } from "./sql/libsql-query-builder.ts";
 import type { CommitHandler } from "@/client/quad-store/mod.ts";
 import { collectQuadsFromStream } from "@/client/quad-store/mod.ts";
-import { LibsqlRdfjsStore } from "./libsql-rdfjs-store.ts";
+import { LibsqlRdfjsStore } from "./mod.ts";
 
 const { namedNode, literal, blankNode, quad } = DataFactory;
 

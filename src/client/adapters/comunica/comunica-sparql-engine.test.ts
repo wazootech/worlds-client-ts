@@ -3,12 +3,12 @@ import { createClient } from "@libsql/client";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import type { Quad } from "n3";
 import { DataFactory, Parser, Store } from "n3";
-import { commitPatchToLibsql } from "@/client/adapters/libsql/sync/commit-patch-to-libsql.ts";
-import { LibsqlRdfjsStore } from "@/client/adapters/libsql/libsql-rdfjs-store.ts";
+import { commitPatchToLibsql } from "@/client/adapters/libsql/rdfjs-store/sync/commit-patch-to-libsql.ts";
+import { LibsqlRdfjsStore } from "@/client/adapters/libsql/rdfjs-store/mod.ts";
 import {
   initializeLibsqlSchema,
   LibsqlQueryBuilder,
-} from "@/client/adapters/libsql/sql/mod.ts";
+} from "@/client/adapters/libsql/rdfjs-store/sql/mod.ts";
 import { canonize } from "rdf-canonize";
 import { encodeBase64Url } from "@std/encoding/base64url";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";

@@ -1,14 +1,14 @@
 import { registerQuadStoreContractTests } from "@/client/quad-store/quad-store-interface.contract.test.ts";
 import { type Client, createClient } from "@libsql/client";
 
-import { LibsqlQuadStore } from "./libsql-quad-store.ts";
-import { LibsqlRdfjsStore } from "./libsql-rdfjs-store.ts";
-import { createLibsqlCommitSync } from "./sync/libsql-commit-sync.ts";
+import { LibsqlQuadStore } from "./mod.ts";
+import { LibsqlRdfjsStore } from "../rdfjs-store/mod.ts";
+import { createLibsqlCommitSync } from "../rdfjs-store/sync/libsql-commit-sync.ts";
 import {
   setupLibsqlSchemaForTest,
   sharedTextSplitter,
   testLibsqlQueryBuilder,
-} from "./libsql-test-fixtures.ts";
+} from "../libsql-test-fixtures.ts";
 
 async function createLibsqlQuadStoreForTest(): Promise<{
   store: LibsqlQuadStore;

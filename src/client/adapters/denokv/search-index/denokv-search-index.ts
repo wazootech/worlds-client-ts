@@ -14,8 +14,8 @@ import { toRdfjsQuad } from "@/client/quad-store/mod.ts";
 import {
   buildGenerationDataPrefix,
   buildPrimaryQuadKey,
-} from "./kv/denokv-hexastore-keys.ts";
-import { readActiveGeneration } from "./kv/denokv-dataset-generation.ts";
+} from "../rdfjs-store/kv/denokv-hexastore-keys.ts";
+import { readActiveGeneration } from "../rdfjs-store/kv/denokv-dataset-generation.ts";
 
 const MAX_KV_BATCH_SIZE = 50;
 

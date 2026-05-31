@@ -1,11 +1,11 @@
 import { assertEquals } from "@std/assert";
 import type * as rdfjs from "@rdfjs/types";
 import { DataFactory } from "n3";
-import { generateSyntheticQuads } from "../../../../benchmarks/shared/synthetic-data.ts";
+import { generateSyntheticQuads } from "../../../../../benchmarks/shared/synthetic-data.ts";
 import { collectQuadsFromStream } from "@/client/quad-store/mod.ts";
-import { seedDenokvQuadsForTest } from "./create-denokv-stores-for-test.ts";
+import { seedDenokvQuadsForTest } from "../create-denokv-stores-for-test.ts";
 import { DEFAULT_DENOKV_HEXASTORE_INDEXES } from "./kv/denokv-hexastore-index-set.ts";
-import { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";
+import { DenokvRdfjsStore } from "./mod.ts";
 import { buildBestMatchSelector } from "./kv/denokv-match-selector.ts";
 
 const { namedNode, literal, blankNode, quad } = DataFactory;

@@ -1,10 +1,10 @@
 import { registerQuadStoreContractTests } from "@/client/quad-store/quad-store-interface.contract.test.ts";
 import { assertEquals } from "@std/assert";
 import { DataFactory, Store } from "n3";
-import { createDenokvStoresForTest } from "./create-denokv-stores-for-test.ts";
-import { createDenokvCommitSync } from "./sync/denokv-commit-sync.ts";
-import { DenokvQuadStore } from "./denokv-quad-store.ts";
-import { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";
+import { createDenokvStoresForTest } from "../create-denokv-stores-for-test.ts";
+import { createDenokvCommitSync } from "../rdfjs-store/sync/denokv-commit-sync.ts";
+import { DenokvQuadStore } from "./mod.ts";
+import { DenokvRdfjsStore } from "../rdfjs-store/mod.ts";
 
 const { namedNode, literal, quad } = DataFactory;
 

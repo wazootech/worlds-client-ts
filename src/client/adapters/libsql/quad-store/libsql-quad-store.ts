@@ -7,7 +7,7 @@ import {
   type QuadStoreInterface,
 } from "@/client/quad-store/mod.ts";
 import type { ImportLifecycle } from "@/client/commit-sync/mod.ts";
-import type { LibsqlRdfjsStore } from "./libsql-rdfjs-store.ts";
+import type { LibsqlRdfjsStore } from "../rdfjs-store/mod.ts";
 
 /**
  * LibsqlQuadStoreOptions configures LibsqlQuadStore dependencies.

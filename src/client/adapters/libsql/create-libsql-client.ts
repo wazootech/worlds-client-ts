@@ -3,15 +3,15 @@ import { Client } from "@/client/client.ts";
 
 import type { ClientInterface } from "@/client/client.ts";
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
-import { LibsqlSearchIndex } from "@/client/adapters/libsql/search/mod.ts";
-import { createLibsqlCommitSync } from "@/client/adapters/libsql/sync/mod.ts";
+import { LibsqlSearchIndex } from "@/client/adapters/libsql/search-index/mod.ts";
+import { createLibsqlCommitSync } from "@/client/adapters/libsql/rdfjs-store/sync/mod.ts";
 import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
 
 import type { LibsqlClientBaseOptions } from "./libsql-client-base-options.ts";
-import { LibsqlQuadStore } from "./libsql-quad-store.ts";
-import { LibsqlRdfjsStore } from "./libsql-rdfjs-store.ts";
-import { initializeLibsqlSchema } from "./sql/initialize-libsql-schema.ts";
-import { LibsqlQueryBuilder } from "./sql/libsql-query-builder.ts";
+import { LibsqlQuadStore } from "./quad-store/mod.ts";
+import { LibsqlRdfjsStore } from "./rdfjs-store/mod.ts";
+import { initializeLibsqlSchema } from "./rdfjs-store/sql/initialize-libsql-schema.ts";
+import { LibsqlQueryBuilder } from "./rdfjs-store/sql/libsql-query-builder.ts";
 
 /**
  * LibsqlClientOptions configures LibSQL execution through LibsqlRdfjsStore and hexastore indexes.

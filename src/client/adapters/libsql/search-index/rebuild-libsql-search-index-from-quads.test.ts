@@ -1,7 +1,7 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
-import { commitPatchToLibsql } from "@/client/adapters/libsql/sync/commit-patch-to-libsql.ts";
+import { commitPatchToLibsql } from "@/client/adapters/libsql/rdfjs-store/sync/commit-patch-to-libsql.ts";
 import {
   setupLibsqlSchemaForTest,
   sharedTextSplitter,

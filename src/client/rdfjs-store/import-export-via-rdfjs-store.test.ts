@@ -1,7 +1,7 @@
 import { assertEquals } from "@std/assert";
 import { DataFactory } from "n3";
 import type * as rdfjs from "@rdfjs/types";
-import type { PatchCommitContext } from "./commit-handler.ts";
+import type { PatchCommitContext } from "@/client/quad-store/commit-handler.ts";
 import type { CommittingRdfjsStore } from "./import-export-via-rdfjs-store.ts";
 import { importViaBufferedRdfjsStore } from "./import-export-via-rdfjs-store.ts";
 import { noopImportLifecycle } from "@/client/commit-sync/mod.ts";

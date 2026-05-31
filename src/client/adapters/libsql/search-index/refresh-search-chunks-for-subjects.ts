@@ -1,12 +1,12 @@
 import type * as rdfjs from "@rdfjs/types";
 
 import { isTextualLiteral } from "@/client/quad-store/mod.ts";
-import type { CommitPatchToLibsqlOptions } from "@/client/adapters/libsql/sync/commit-patch-to-libsql.ts";
+import type { CommitPatchToLibsqlOptions } from "@/client/adapters/libsql/rdfjs-store/sync/commit-patch-to-libsql.ts";
 import {
   DEFAULT_MAX_LOOKUP_CHUNK_SIZE,
   refreshSearchChunksForQuads,
-} from "@/client/adapters/libsql/sync/commit-patch-to-libsql.ts";
-import { quadFromLibsqlRow } from "@/client/adapters/libsql/sql/libsql-quad-row.ts";
+} from "@/client/adapters/libsql/rdfjs-store/sync/commit-patch-to-libsql.ts";
+import { quadFromLibsqlRow } from "@/client/adapters/libsql/rdfjs-store/sql/libsql-quad-row.ts";
 
 /**
  * RefreshSearchChunksForSubjectsResult reports subject-scoped search index refresh counts.

@@ -8,7 +8,7 @@ import {
 } from "@/client/quad-store/mod.ts";
 import type { ImportLifecycle } from "@/client/commit-sync/mod.ts";
 
-import type { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";
+import type { DenokvRdfjsStore } from "../rdfjs-store/mod.ts";
 
 /**
  * DenokvQuadStoreOptions configures DenokvQuadStore dependencies.

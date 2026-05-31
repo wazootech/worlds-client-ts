@@ -1,11 +1,11 @@
 import type * as rdfjs from "@rdfjs/types";
 
-import { DenokvQuadStore } from "./denokv-quad-store.ts";
-import { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";
+import { DenokvQuadStore } from "./quad-store/mod.ts";
+import { DenokvRdfjsStore } from "./rdfjs-store/mod.ts";
 import {
   createDenokvCommitSync,
   type DenokvCommitSyncOptions,
-} from "./sync/denokv-commit-sync.ts";
+} from "./rdfjs-store/sync/denokv-commit-sync.ts";
 import type { CommitSyncState } from "@/client/commit-sync/mod.ts";
 
 /**

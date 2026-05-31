@@ -3,13 +3,13 @@ import type { ClientInterface } from "@/client/client.ts";
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
 import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
 
-import { DenokvQuadStore } from "./denokv-quad-store.ts";
-import { DenokvRdfjsStore } from "./denokv-rdfjs-store.ts";
-import { DenokvSearchIndex } from "./denokv-search-index.ts";
+import { DenokvQuadStore } from "./quad-store/mod.ts";
+import { DenokvRdfjsStore } from "./rdfjs-store/mod.ts";
+import { DenokvSearchIndex } from "./search-index/mod.ts";
 import {
   createDenokvCommitSync,
   type DenokvCommitSyncOptions,
-} from "./sync/denokv-commit-sync.ts";
+} from "./rdfjs-store/sync/denokv-commit-sync.ts";
 
 /**
  * DenokvClientOptions specifies configuration parameters for Deno KV client contexts.

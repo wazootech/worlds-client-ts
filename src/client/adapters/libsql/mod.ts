@@ -1,10 +1,10 @@
 export type { LibsqlClientOptions } from "./create-libsql-client.ts";
 export { createLibsqlClient } from "./create-libsql-client.ts";
-export { LibsqlRdfjsStore } from "./libsql-rdfjs-store.ts";
-export { LibsqlQuadStore } from "./libsql-quad-store.ts";
+export { LibsqlRdfjsStore } from "./rdfjs-store/mod.ts";
+export { LibsqlQuadStore } from "./quad-store/mod.ts";
 export {
   LibsqlSearchIndex,
   rebuildLibsqlSearchIndexFromQuads,
   refreshSearchChunksForSubjects,
-} from "./search/mod.ts";
-export type { RefreshSearchChunksForSubjectsResult } from "./search/mod.ts";
+} from "./search-index/mod.ts";
+export type { RefreshSearchChunksForSubjectsResult } from "./search-index/mod.ts";

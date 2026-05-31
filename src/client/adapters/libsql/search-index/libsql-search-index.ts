@@ -8,7 +8,7 @@ import type {
 } from "@/client/search-index/mod.ts";
 import { buildSearchResultId } from "@/client/search-index/build-search-result-id.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
-import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/sql/libsql-query-builder.ts";
+import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/rdfjs-store/sql/libsql-query-builder.ts";
 import { rebuildLibsqlSearchIndexFromQuads } from "./rebuild-libsql-search-index-from-quads.ts";
 
 /**

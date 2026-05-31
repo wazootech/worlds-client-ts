@@ -1,5 +1,5 @@
 import type * as rdfjs from "@rdfjs/types";
-import type { CommittingRdfjsStore } from "@/client/quad-store/import-export-via-rdfjs-store.ts";
+import type { CommittingRdfjsStore } from "./import-export-via-rdfjs-store.ts";
 import type { PatchCommitContext } from "@/client/quad-store/mod.ts";
 import { awaitDrainRemoveMatches } from "@/client/quad-store/mod.ts";
 

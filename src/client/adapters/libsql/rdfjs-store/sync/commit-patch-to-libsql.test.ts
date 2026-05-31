@@ -2,14 +2,14 @@ import { assertEquals } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
-import { rebuildLibsqlSearchIndexFromQuads } from "@/client/adapters/libsql/search/rebuild-libsql-search-index-from-quads.ts";
+import { rebuildLibsqlSearchIndexFromQuads } from "../../search-index/rebuild-libsql-search-index-from-quads.ts";
 import { FakeEmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
 import {
   setupLibsqlSchemaForTest,
   sharedTextSplitter,
   testLibsqlQueryBuilder,
 } from "@/client/adapters/libsql/libsql-test-fixtures.ts";
-import { buildChunkFtsValue } from "@/client/adapters/libsql/search/search-chunk-fts.ts";
+import { buildChunkFtsValue } from "@/client/adapters/libsql/search-index/search-chunk-fts.ts";
 
 const { quad, namedNode, literal } = DataFactory;
 

@@ -2,8 +2,8 @@ import type { TextSplitterInterface } from "@/client/search-index/quad-chunker/m
 import type { CommitSyncState } from "@/client/commit-sync/mod.ts";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
-import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/sql/libsql-query-builder.ts";
-import { createLibsqlSearchIndexRebuilder } from "@/client/adapters/libsql/search/rebuild-libsql-search-index-from-quads.ts";
+import type { LibsqlQueryBuilder } from "../sql/libsql-query-builder.ts";
+import { createLibsqlSearchIndexRebuilder } from "../../search-index/rebuild-libsql-search-index-from-quads.ts";
 
 /**
  * LibsqlCommitSyncOptions configures shared LibSQL quad/chunk synchronization.

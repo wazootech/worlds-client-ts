@@ -1,10 +1,10 @@
 import type * as rdfjs from "@rdfjs/types";
-import type { PatchCommitContext } from "./commit-handler.ts";
+import type { PatchCommitContext } from "@/client/quad-store/commit-handler.ts";
 import type {
   ExportRequest,
   ExportResponse,
   ImportRequest,
-} from "./quad-store-interface.ts";
+} from "@/client/quad-store/quad-store-interface.ts";
 import {
   type ImportLifecycle,
   runImportWithLifecycle,
@@ -13,7 +13,7 @@ import {
   collectQuadsFromStream,
   exportQuadsResponse,
   materializeImportQuads,
-} from "./rdf-formats.ts";
+} from "@/client/quad-store/rdf-formats.ts";
 
 /**
  * CommittingRdfjsStore is the minimal surface needed for durable buffered import and export.

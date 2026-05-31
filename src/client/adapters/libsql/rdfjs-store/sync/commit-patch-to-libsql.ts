@@ -12,12 +12,12 @@ import {
   hashQuads,
 } from "@/client/quad-store/mod.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
-import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/sql/libsql-query-builder.ts";
-import { refreshSearchChunksForSubjects } from "@/client/adapters/libsql/search/refresh-search-chunks-for-subjects.ts";
+import type { LibsqlQueryBuilder } from "../sql/libsql-query-builder.ts";
+import { refreshSearchChunksForSubjects } from "../../search-index/refresh-search-chunks-for-subjects.ts";
 import {
   buildChunkFtsValue,
   resolveLabelPredicates,
-} from "@/client/adapters/libsql/search/search-chunk-fts.ts";
+} from "../../search-index/search-chunk-fts.ts";
 
 /**
  * CommitPatchToLibsqlOptions provides configurations for executing updates against LibSQL durable stores.
