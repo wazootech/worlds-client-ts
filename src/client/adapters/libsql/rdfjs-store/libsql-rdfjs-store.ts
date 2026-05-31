@@ -8,7 +8,7 @@ import type {
   CommitHandler,
   PatchCommitContext,
 } from "@/client/quad-store/mod.ts";
-import { BufferedRdfjsPatchState } from "@/client/rdfjs-store/mod.ts";
+import { BufferedRdfjsPatchState } from "@/client/rdfjs-buffer/mod.ts";
 import { quadFromLibsqlRow } from "./sql/libsql-quad-row.ts";
 
 /**

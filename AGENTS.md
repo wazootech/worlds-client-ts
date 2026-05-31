@@ -125,7 +125,8 @@ mathematical brevity.
 2. **Same domain folder.** `./file.ts` or `./subfolder/mod.ts` for siblings and
    children.
 3. **Nested folder, parent barrel.** `@/client/adapters/libsql/mod.ts` from
-   `libsql/search/` or `libsql/sync/` — not `../` and not `@worlds/client/...`.
+   `libsql/search-index/` or `libsql/rdfjs-store/sync/` — not `../` and not
+   `@worlds/client/...`.
 
 Never use parent-relative `../` to reach another domain. Never import
 `@worlds/client/...` anywhere under `src/`.
@@ -159,10 +160,13 @@ would cycle — e.g. `chunk-quads.ts` uses `@/client/quad-store/mod.ts`, not
 
 When adding a new importable subpath, add it to `exports` in `deno.json` for
 `@worlds/client/...` consumers. Mirror the file path under `@/client/...` for
-in-repo imports (no duplicate `@worlds/client/*` entries in `imports`). Under
-`adapters/libsql/`, keep `search/` and `sync/` subfolders (each with a `mod.ts`
-barrel); RDF/JS and quad facades live at the `libsql/` root
-(`libsql-rdfjs-store.ts`, `libsql-quad-store.ts`, factories).
+in-repo imports (no duplicate `@worlds/client/*` entries in `imports`). Shared
+topology-agnostic patch buffering lives in `rdfjs-buffer/` (export
+`@worlds/client/rdfjs-buffer`); durable adapter `*RdfjsStore` implementations
+live under `adapters/*/rdfjs-store/`. Under durable adapters, keep seam
+subfolders for `quad-store/`, `search-index/`, and `rdfjs-store/` (each with a
+`mod.ts` barrel). Internal SQL, KV, and sync helpers live under the seam that
+owns them; factories remain at the adapter root.
 
 ### No inline imports
 
@@ -300,10 +304,10 @@ green-passing integration pipeline runs:
 Public graph persistence facades must use explicit suffixes:
 
 - **`*RdfjsStore`** — implements `rdfjs.Store` (e.g. `LibsqlRdfjsStore`,
-  `DenokvRdfjsStore`). File name: `libsql-rdfjs-store.ts`.
+  `DenokvRdfjsStore`). File name: `rdfjs-store/libsql-rdfjs-store.ts`.
 - **`*QuadStore`** — implements `QuadStoreInterface` (e.g. `LibsqlQuadStore`,
   `DenokvQuadStore`, in-memory `RdfjsQuadStore`). File name:
-  `libsql-quad-store.ts`.
+  `quad-store/libsql-quad-store.ts`.
 - **No bare `*Store`** names on public graph classes (`LibsqlStore`,
   `DenokvStore`).
 

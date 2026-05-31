@@ -18,7 +18,8 @@
   `new Client({ quadStore, searchIndex, sparqlEngine? })`.
 - Narrowed `@worlds/client/adapters/libsql` and `@worlds/client/adapters/denokv`
   exports to factory entry points, suffixed stores, and search helpers; SQL/KV
-  internals are in-repo only under `libsql/sql/` and `denokv/kv/`.
+  internals are in-repo only under durable adapter seam folders such as
+  `libsql/rdfjs-store/sql/` and `denokv/rdfjs-store/kv/`.
 - Renamed `rebuildSearchIndex` → **`reindex`**; `RebuildSearchIndexRequest` /
   `RebuildSearchIndexResponse` → `ReindexRequest` / `ReindexResponse`. RDF/JS
   and Deno KV `reindex()` succeed as documented no-ops.
@@ -31,9 +32,10 @@
   wipe, `commitPatchToDenokv` generation-swap). `createImportPatchSyncState`
   maps `searchIndexOnImport` with `SearchIndexTopology` for projection and
   deferred reindex.
-- Durable factories set optional **`Client.capabilities.searchIndexTopology`**
-  (`"materialized"` for LibSQL, `"scan"` for Deno KV) so callers know when
-  `reindex()` rebuilds durable chunks vs scan-at-query-time no-ops.
+- Renamed `@worlds/client/rdfjs-store` → **`@worlds/client/rdfjs-buffer`**
+  (shared patch buffering and import orchestration). Adapter `*RdfjsStore`
+  implementations remain under `@worlds/client/adapters/*/rdfjs-store/`.
+- Removed dead `wire-durable-client.ts` stub (logic lives in durable factories).
 
 ### Migration
 
@@ -50,6 +52,9 @@ await client.rebuildSearchIndex();
 import { createLibsqlClient } from "@worlds/client/adapters/libsql";
 const client = await createLibsqlClient({ client: db, queryEngine });
 await client.reindex();
+
+// Shared buffering (was @worlds/client/rdfjs-store)
+import { importViaBufferedRdfjsStore } from "@worlds/client/rdfjs-buffer";
 
 // In-memory (replaces createRdfjsClient)
 import { Client } from "@worlds/client";
@@ -107,8 +112,8 @@ const memoryClient = new Client({
 - Removed `createLibsqlClientFromRdfjsStore`; use
   `createLibsqlClientFromStores`.
 - Added `createDenokvClientFromStores` for Deno KV adapter assembly.
-- Flattened `src/client/adapters/libsql/store/` modules to `libsql/` root
-  (`libsql-rdfjs-store.ts`, `libsql-query-builder.ts`, etc.).
+- Organized durable adapter internals into seam folders such as `rdfjs-store/`,
+  `quad-store/`, and `search-index/`.
 
 ### Migration
 

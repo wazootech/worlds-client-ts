@@ -5,7 +5,7 @@
   "exports": {
     ".": "./src/mod.ts",
     "./quad-store": "./src/client/quad-store/mod.ts",
-    "./rdfjs-store": "./src/client/rdfjs-store/mod.ts",
+    "./rdfjs-buffer": "./src/client/rdfjs-buffer/mod.ts",
     "./search-index": "./src/client/search-index/mod.ts",
     "./search-index/embedding-service": "./src/client/search-index/embedding-service/mod.ts",
     "./search-index/quad-chunker": "./src/client/search-index/quad-chunker/mod.ts",
@@ -68,6 +68,7 @@
     "bench:hexastore-perf-large-denokv:full-scan": "deno bench --allow-all --unstable-kv --env --v8-flags=--max-old-space-size=8192 benchmarks/sparql-hexastore-perf-large-denokv.bench.ts",
     "bench:hexastore-perf-large-denokv:reuse": "deno bench --allow-all --unstable-kv --env --v8-flags=--max-old-space-size=8192 benchmarks/sparql-hexastore-perf-large-denokv.bench.ts",
     "publish:dry": "deno publish --dry-run --allow-dirty",
+    "doc:json": "deno run -A ./scripts/generate-doc-json.ts",
     "ci": {
       "description": "Formats, lints, checks, and tests the code",
       "dependencies": [

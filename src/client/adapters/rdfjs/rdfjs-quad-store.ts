@@ -8,12 +8,12 @@ import type {
 import {
   exportFromRdfjsStore,
   importViaBufferedRdfjsStore,
-} from "@/client/rdfjs-store/mod.ts";
+} from "@/client/rdfjs-buffer/mod.ts";
 import {
   type ImportLifecycle,
   noopImportLifecycle,
 } from "@/client/commit-sync/mod.ts";
-import { createRdfjsCommittingStore } from "@/client/rdfjs-store/mod.ts";
+import { createRdfjsCommittingStore } from "@/client/rdfjs-buffer/mod.ts";
 
 /**
  * RdfjsQuadStoreOptions configures RdfjsQuadStore dependencies.
