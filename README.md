@@ -88,6 +88,28 @@ with vector similarity via an embedding service and quad chunker.
 **SPARQL engine**: Evaluates declarative queries and updates against the graph
 for structured traversal and reasoning.
 
+## Module layout
+
+`Client` is the portable facade; durable backends assemble it via
+`createLibsqlClient` or `createDenokvClient`. Shared modules sit under
+`src/client/`:
+
+| Module                   | Export                                  | Role                                                        |
+| :----------------------- | :-------------------------------------- | :---------------------------------------------------------- |
+| `quad-store`             | `@worlds/client/quad-store`             | Import/export API, patch types, RDF formats                 |
+| `rdfjs-buffer`           | `@worlds/client/rdfjs-buffer`           | Shared patch buffering and import flush (topology-agnostic) |
+| `commit-sync`            | `@worlds/client` (root barrel)          | Import lifecycle hooks around durable commits               |
+| `adapters/*/rdfjs-store` | `@worlds/client/adapters/libsql` (etc.) | Durable `*RdfjsStore` hexastore + backend sync              |
+
+Do not confuse `@worlds/client/rdfjs-buffer` with adapter `rdfjs-store/` folders
+— they are different layers. Durable import flow: `Client.import` → `*QuadStore`
+→ `importViaBufferedRdfjsStore` → `*RdfjsStore.commit` → adapter
+`commitPatchTo*`.
+
+Regenerate merged API doc JSON with `deno task doc:json` (writes gitignored
+`docs/api.json`). Agent prompts, scale guidance, and coding rules:
+[AGENTS.md](AGENTS.md).
+
 ## Adapters
 
 | Adapter               | Best for                                  | Persistence          | SPARQL                             |

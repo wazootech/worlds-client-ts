@@ -229,15 +229,6 @@ green-passing integration pipeline runs:
   (`CRLF` / `\r\n`) is strictly prohibited. You MUST run `deno fmt` before
   staging any changes to auto-format text line endings and keep the CI formatter
   checks green.
-- **UTF-8 source encoding:** Text sources use `.gitattributes`
-  `working-tree-encoding=UTF-8` (see [`.gitattributes`](.gitattributes)). Never
-  save TypeScript or markdown as UTF-16; on Windows that corrupts `deno fmt`
-  (files collapse to a single line). After changing encoding attributes, run
-  `git add --renormalize .` so the index stores UTF-8. CI runs
-  `deno task encoding:check` before format; repair accidental UTF-16 saves with
-  `deno task encoding:fix` then `deno fmt`. On Windows, Cursor **Write** and
-  **StrReplace** can emit UTF-16 — run `encoding:check` after edits (see
-  [`.cursor/rules/source-encoding.mdc`](.cursor/rules/source-encoding.mdc)).
 
 - **Mandatory execution flags:**
   - **Unstable KV:** Any execution task, example, or test interacting with the

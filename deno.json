@@ -51,8 +51,6 @@
     "example:ai-sdk-hello-world": "deno -A --env ./examples/ai-sdk-hello-world/main.ts",
     "fmt": "deno fmt",
     "fmt:check": "deno fmt --check",
-    "encoding:check": "deno run -A ./scripts/check-source-encoding.ts",
-    "encoding:fix": "deno run -A ./scripts/check-source-encoding.ts --fix",
     "lint": "deno lint",
     "check": "deno check",
     "test": "deno test --allow-all --unstable-kv",
@@ -72,7 +70,6 @@
     "ci": {
       "description": "Formats, lints, checks, and tests the code",
       "dependencies": [
-        "encoding:check",
         "fmt:check",
         "lint",
         "check",
