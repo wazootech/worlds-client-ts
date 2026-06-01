@@ -1,4 +1,3 @@
-import type * as rdfjs from "@rdfjs/types";
 import type {
   ReindexRequest,
   ReindexResponse,
@@ -11,13 +10,8 @@ import { buildSearchResultId } from "@/client/search-index/build-search-result-i
 import { filterQuads, isTextualLiteral } from "@/client/quad-store/mod.ts";
 import type { Quad } from "@/client/quad-store/mod.ts";
 import { toRdfjsQuad } from "@/client/quad-store/mod.ts";
-import {
-  buildGenerationDataPrefix,
-  buildPrimaryQuadKey,
-} from "../kv/denokv-hexastore-keys.ts";
-import { readActiveGeneration } from "../kv/denokv-dataset-generation.ts";
-
-const MAX_KV_BATCH_SIZE = 10;
+import { buildGenerationDataPrefix } from "@/client/adapters/denokv/kv/denokv-hexastore-keys.ts";
+import { readActiveGeneration } from "@/client/adapters/denokv/kv/denokv-dataset-generation.ts";
 
 /**
  * DenokvSearchIndexOptions provides configurations for operating direct Kv search scans.
@@ -57,36 +51,36 @@ export class DenokvSearchIndex implements SearchIndexInterface {
       generationId,
     );
 
-    const pendingIds: string[] = [];
-
-    const indexIter = this.options.kv.list<string>({
-      prefix: [...scopedDataPrefix, "idx_spog"],
+    const quadIter = this.options.kv.list<Quad>({
+      prefix: [...scopedDataPrefix, "quads"],
     });
 
-    for await (const entry of indexIter) {
-      pendingIds.push(entry.value);
-      if (pendingIds.length >= MAX_KV_BATCH_SIZE) {
-        await scanQuadBatch(
-          this.options.kv,
-          scopedDataPrefix,
-          pendingIds,
-          query,
-          matcher,
-          results,
-        );
-        pendingIds.length = 0;
-      }
-    }
+    for await (const entry of quadIter) {
+      const serialized = entry.value;
+      if (!serialized) continue;
 
-    if (pendingIds.length > 0) {
-      await scanQuadBatch(
-        this.options.kv,
-        scopedDataPrefix,
-        pendingIds,
-        query,
-        matcher,
-        results,
-      );
+      const storedQuad = toRdfjsQuad(serialized);
+
+      if (!matcher(storedQuad)) {
+        continue;
+      }
+
+      if (isTextualLiteral(storedQuad.object)) {
+        const value = storedQuad.object.value;
+        if (value.toLowerCase().includes(query)) {
+          const searchResultBase = {
+            subject: storedQuad.subject.value,
+            predicate: storedQuad.predicate.value,
+            graph: storedQuad.graph.value,
+            text: value,
+          };
+          results.push({
+            id: await buildSearchResultId(searchResultBase),
+            ...searchResultBase,
+            score: 1.0,
+          });
+        }
+      }
     }
 
     return { results };
@@ -100,49 +94,5 @@ export class DenokvSearchIndex implements SearchIndexInterface {
       processedQuadCount: 0,
       chunkRowCount: 0,
     });
-  }
-}
-
-async function scanQuadBatch(
-  kv: Deno.Kv,
-  scopedDataPrefix: Deno.KvKey,
-  quadIds: readonly string[],
-  query: string,
-  matcher: (quad: rdfjs.Quad) => boolean,
-  results: SearchResult[],
-): Promise<void> {
-  const keys = quadIds.map((quadId) =>
-    buildPrimaryQuadKey(scopedDataPrefix, quadId)
-  );
-  const entries = await kv.getMany(keys) as Array<
-    Deno.KvEntryMaybe<Quad>
-  >;
-
-  for (const entry of entries) {
-    const serialized = entry.value;
-    if (!serialized) continue;
-
-    const storedQuad = toRdfjsQuad(serialized);
-
-    if (!matcher(storedQuad)) {
-      continue;
-    }
-
-    if (isTextualLiteral(storedQuad.object)) {
-      const value = storedQuad.object.value;
-      if (value.toLowerCase().includes(query)) {
-        const searchResultBase = {
-          subject: storedQuad.subject.value,
-          predicate: storedQuad.predicate.value,
-          graph: storedQuad.graph.value,
-          text: value,
-        };
-        results.push({
-          id: await buildSearchResultId(searchResultBase),
-          ...searchResultBase,
-          score: 1.0,
-        });
-      }
-    }
   }
 }

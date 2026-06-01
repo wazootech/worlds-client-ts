@@ -3,8 +3,8 @@ import { DataFactory } from "n3";
 import {
   createDenokvStoresForTest,
   seedDenokvQuadsForTest,
-} from "../create-denokv-stores-for-test.ts";
-import { commitPatchToDenokv } from "../commit-patch-to-denokv.ts";
+} from "@/client/adapters/denokv/create-denokv-stores-for-test.ts";
+import { commitPatchToDenokv } from "@/client/adapters/denokv/commit-patch-to-denokv.ts";
 import { DenokvSearchIndex } from "./denokv-search-index.ts";
 
 const { namedNode, literal, quad } = DataFactory;
