@@ -68,7 +68,7 @@ export interface ComunicaBinding {
 }
 
 import { createTransactionalRdfjsStore } from "@/client/rdfjs-buffer/mod.ts";
-import type { QuadTransaction } from "@/client/rdfjs-buffer/mod.ts";
+import type { Transaction } from "@/client/rdfjs-buffer/mod.ts";
 
 /**
  * ComunicaSparqlEngineOptions are the options for ComunicaSparqlEngine.
@@ -84,9 +84,9 @@ export interface ComunicaSparqlEngineOptions {
   queryEngine: ComunicaQueryEngine;
 
   /**
-   * createTransaction is an optional factory to create a QuadTransaction for SPARQL UPDATEs.
+   * createTransaction is an optional factory to create a Transaction for SPARQL UPDATEs.
    */
-  createTransaction?: () => QuadTransaction;
+  createTransaction?: () => Transaction;
 }
 
 /**
@@ -99,7 +99,7 @@ export class ComunicaSparqlEngine implements SparqlEngineInterface {
   ) {}
 
   public async execute(request: SparqlRequest): Promise<SparqlResponse> {
-    let tx: QuadTransaction | undefined;
+    let tx: Transaction | undefined;
     let storeForQuery: rdfjs.Store = this.options.store;
 
     if (this.options.createTransaction) {

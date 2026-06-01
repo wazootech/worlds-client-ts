@@ -2,7 +2,7 @@ import type * as rdfjs from "@rdfjs/types";
 
 import {
   BufferedRdfjsQuadStore,
-  createTransaction,
+  Transaction,
 } from "@/client/rdfjs-buffer/mod.ts";
 import { DenokvRdfjsStore } from "./rdfjs-store/mod.ts";
 import {
@@ -35,7 +35,7 @@ export function createDenokvStoresForTest(
   const denokvQuadStore = new BufferedRdfjsQuadStore({
     store: denokvRdfjsStore as unknown as rdfjs.Store,
     createTransaction: () =>
-      createTransaction({
+      new Transaction({
         commit: persistHooks.commit,
       }),
   });

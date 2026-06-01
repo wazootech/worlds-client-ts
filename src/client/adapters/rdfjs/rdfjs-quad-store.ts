@@ -7,9 +7,9 @@ import type {
 } from "@/client/quad-store/mod.ts";
 import {
   createRdfjsStoreCommitHandler,
-  createTransaction,
   exportFromRdfjsStore,
   importViaBufferedRdfjsStore,
+  Transaction,
 } from "@/client/rdfjs-buffer/mod.ts";
 import * as N3 from "n3";
 
@@ -36,7 +36,7 @@ export class RdfjsQuadStore implements QuadStoreInterface {
     const commitHandler = createRdfjsStoreCommitHandler(this.store);
     await importViaBufferedRdfjsStore(request, {
       createTransaction: () =>
-        createTransaction({
+        new Transaction({
           commit: commitHandler,
         }),
     });

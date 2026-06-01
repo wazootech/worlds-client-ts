@@ -2,7 +2,7 @@ import { assertEquals } from "@std/assert";
 import { DataFactory } from "n3";
 import type * as rdfjs from "@rdfjs/types";
 import type { PatchCommitContext } from "@/client/quad-store/commit-handler.ts";
-import type { QuadTransaction } from "./transaction.ts";
+import { Transaction } from "./transaction.ts";
 import { importViaBufferedRdfjsStore } from "./import-export-via-rdfjs-store.ts";
 
 const { namedNode, literal, quad } = DataFactory;
@@ -19,28 +19,26 @@ const q2 = quad(
 );
 
 function createRecordingTransaction(): {
-  createTransaction: () => QuadTransaction;
+  createTransaction: () => Transaction;
   bufferedQuads: () => rdfjs.Quad[];
   lastCommitContext: () => PatchCommitContext | undefined;
 } {
   const buffered: rdfjs.Quad[] = [];
   let lastContext: PatchCommitContext | undefined;
 
-  const createTransaction = (): QuadTransaction => ({
-    addQuad(quadToAdd: rdfjs.Quad) {
-      buffered.push(quadToAdd);
-    },
-    removeQuad(_quadToRemove: rdfjs.Quad) {
-      // not used in these tests
-    },
-    commit(context?: PatchCommitContext) {
-      lastContext = context;
-      return Promise.resolve();
-    },
-    rollback() {
-      buffered.length = 0;
-    },
-  });
+  const createTransaction = (): Transaction => {
+    const tx = new Transaction({
+      commit: (patch, context) => {
+        lastContext = context;
+        // push insertions
+        for (const q of patch.insertions) {
+          buffered.push(q);
+        }
+        return Promise.resolve();
+      },
+    });
+    return tx;
+  };
 
   return {
     createTransaction,

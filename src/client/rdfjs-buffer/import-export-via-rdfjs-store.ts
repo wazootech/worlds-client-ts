@@ -11,14 +11,14 @@ import {
   materializeImportQuads,
 } from "@/client/quad-store/rdf-formats.ts";
 
-import type { QuadTransaction } from "./transaction.ts";
+import type { Transaction } from "./transaction.ts";
 
 /**
- * ImportViaBufferedRdfjsStoreOptions configures durable import over a QuadTransaction.
+ * ImportViaBufferedRdfjsStoreOptions configures durable import over a Transaction.
  */
 export interface ImportViaBufferedRdfjsStoreOptions {
-  /** createTransaction creates a new QuadTransaction for the import. */
-  createTransaction: () => QuadTransaction;
+  /** createTransaction creates a new Transaction for the import. */
+  createTransaction: () => Transaction;
 }
 
 /**

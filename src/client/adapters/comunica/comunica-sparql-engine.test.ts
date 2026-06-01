@@ -4,7 +4,7 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import type { Quad } from "n3";
 import { DataFactory, Parser, Store } from "n3";
 import { commitPatchToLibsql } from "@/client/adapters/libsql/rdfjs-store/sync/commit-patch-to-libsql.ts";
-import type { QuadTransaction } from "@/client/rdfjs-buffer/mod.ts";
+import { Transaction } from "@/client/rdfjs-buffer/mod.ts";
 import type * as rdfjs from "@rdfjs/types";
 import { LibsqlRdfjsStore } from "@/client/adapters/libsql/rdfjs-store/mod.ts";
 import {
@@ -289,15 +289,12 @@ Deno.test(
       queryEngine,
       store: store,
       createTransaction: () => {
-        return {
-          addQuad: () => {},
-          removeQuad: () => {},
+        return new Transaction({
           commit: () => {
             voidInvoked = true;
             return Promise.resolve();
           },
-          rollback: () => {},
-        } as unknown as QuadTransaction;
+        });
       },
     });
 
@@ -534,15 +531,12 @@ Deno.test(
       queryEngine: queryEngineLocal,
       store: store,
       createTransaction: () => {
-        return {
-          addQuad: () => {},
-          removeQuad: () => {},
+        return new Transaction({
           commit: () => {
             commitCount++;
             return Promise.resolve();
           },
-          rollback: () => {},
-        } as unknown as QuadTransaction;
+        });
       },
     });
 
@@ -572,15 +566,14 @@ Deno.test(
       queryEngine: queryEngineLocal,
       store: store,
       createTransaction: () => {
-        return {
-          addQuad: (q: rdfjs.Quad) => store.addQuad(q),
-          removeQuad: (q: rdfjs.Quad) => store.removeQuad(q),
-          commit: () => {
+        return new Transaction({
+          commit: (patch) => {
             commitCount++;
+            for (const q of patch.insertions) store.addQuad(q);
+            for (const q of patch.deletions) store.removeQuad(q);
             return Promise.resolve();
           },
-          rollback: () => {},
-        } as unknown as QuadTransaction;
+        });
       },
     });
 

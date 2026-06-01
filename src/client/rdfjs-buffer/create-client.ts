@@ -6,7 +6,7 @@ import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
 import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
 import type * as rdfjs from "@rdfjs/types";
 import { BufferedRdfjsQuadStore } from "./buffered-rdfjs-quad-store.ts";
-import { createTransaction } from "./transaction.ts";
+import { Transaction } from "./transaction.ts";
 
 /**
  * AdapterClientOptions provides all the concrete subsystems needed to automatically
@@ -27,7 +27,7 @@ export interface AdapterClientOptions {
 }
 
 /**
- * createAdapterClient is a shared factory function that wires an adapter's explicit
+ * createClient is a shared factory function that wires an adapter's explicit
  * read models (RdfjsStore, SearchIndex) and mutative logic (CommitHandler) into
  * the unified Client facade.
  *
@@ -41,7 +41,7 @@ export function createClient(
   const quadStore = new BufferedRdfjsQuadStore({
     store: options.store,
     createTransaction: () =>
-      createTransaction({
+      new Transaction({
         commit: options.commit,
       }),
   });
@@ -51,7 +51,7 @@ export function createClient(
       queryEngine: options.queryEngine,
       store: options.store,
       createTransaction: () =>
-        createTransaction({
+        new Transaction({
           commit: options.commit,
         }),
     })
@@ -63,5 +63,3 @@ export function createClient(
     sparqlEngine,
   });
 }
-
-// TODO: Please consider alternate names for readSource, transactionFactory, createAdapterClient, createBufferedQuadTransaction, commitHandler

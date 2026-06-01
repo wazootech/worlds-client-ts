@@ -9,14 +9,14 @@ import {
   importViaBufferedRdfjsStore,
   type RdfjsExportSource,
 } from "./import-export-via-rdfjs-store.ts";
-import type { QuadTransaction } from "./transaction.ts";
+import type { Transaction } from "./transaction.ts";
 
 /**
  * BufferedRdfjsQuadStoreOptions configures BufferedRdfjsQuadStore dependencies.
  */
 export interface BufferedRdfjsQuadStoreOptions {
-  /** createTransaction creates a QuadTransaction for atomic imports. */
-  createTransaction: () => QuadTransaction;
+  /** createTransaction creates a Transaction for atomic imports. */
+  createTransaction: () => Transaction;
 
   /** store provides a stream of quads for exports. */
   store: RdfjsExportSource;
@@ -26,7 +26,7 @@ export interface BufferedRdfjsQuadStoreOptions {
  * BufferedRdfjsQuadStore implements QuadStoreInterface over a transaction factory and read source.
  */
 export class BufferedRdfjsQuadStore implements QuadStoreInterface {
-  private readonly createTransaction: () => QuadTransaction;
+  private readonly createTransaction: () => Transaction;
   private readonly store: RdfjsExportSource;
 
   public constructor(options: BufferedRdfjsQuadStoreOptions) {
