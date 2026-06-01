@@ -3,7 +3,8 @@ import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
 if (import.meta.main) {
   const kv = await Deno.openKv(":memory:");
-  const client = createDenokvClient({ kv, queryEngine: new QueryEngine() });
+  const queryEngine = new QueryEngine();
+  const client = createDenokvClient({ kv, queryEngine });
 
   await client.import({
     source: {

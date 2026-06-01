@@ -1,9 +1,7 @@
-import { Client } from "@/client/client.ts";
+import { createAdapterClient } from "@/client/rdfjs-buffer/mod.ts";
 import type { ClientInterface } from "@/client/client.ts";
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
-import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
 
-import { DenokvQuadStore } from "./quad-store/mod.ts";
 import { DenokvRdfjsStore } from "./rdfjs-store/mod.ts";
 import { DenokvSearchIndex } from "./search-index/mod.ts";
 import {
@@ -11,7 +9,6 @@ import {
   type DenokvPersistHooksOptions,
 } from "./rdfjs-store/sync/create-denokv-persist-hooks.ts";
 import { resolveImportLifecycle } from "@/client/import-lifecycle/mod.ts";
-import { createBufferedQuadTransaction } from "@/client/rdfjs-buffer/mod.ts";
 import type * as rdfjs from "@rdfjs/types";
 
 /**
@@ -23,7 +20,7 @@ export interface DenokvClientOptions extends DenokvPersistHooksOptions {
 }
 
 /**
- * createDenokvClient synthesizes a Client over DenokvQuadStore and DenokvRdfjsStore.
+ * createDenokvClient synthesizes a Client over DenokvRdfjsStore.
  */
 export function createDenokvClient(
   options: DenokvClientOptions,
@@ -40,33 +37,16 @@ export function createDenokvClient(
     enabledHexastoreIndexes: options.enabledHexastoreIndexes,
   });
 
-  const transactionFactory = () => {
-    return createBufferedQuadTransaction({
-      commitHandler: persistHooks.commitHandler,
-      importLifecycle,
-    });
-  };
-
-  const denokvQuadStore = new DenokvQuadStore({
-    denokvRdfjsStore,
-    commitHandler: persistHooks.commitHandler,
-    importLifecycle,
+  const searchIndex = new DenokvSearchIndex({
+    kv: options.kv,
+    keyPrefix: options.keyPrefix,
   });
 
-  const sparqlEngine = options.queryEngine
-    ? new ComunicaSparqlEngine({
-      queryEngine: options.queryEngine,
-      readSource: denokvRdfjsStore as unknown as rdfjs.Store,
-      transactionFactory,
-    })
-    : undefined;
-
-  return new Client({
-    quadStore: denokvQuadStore,
-    searchIndex: new DenokvSearchIndex({
-      kv: options.kv,
-      keyPrefix: options.keyPrefix,
-    }),
-    sparqlEngine,
+  return createAdapterClient({
+    searchIndex,
+    readSource: denokvRdfjsStore as unknown as rdfjs.Store,
+    commitHandler: persistHooks.commitHandler,
+    importLifecycle,
+    queryEngine: options.queryEngine,
   });
 }

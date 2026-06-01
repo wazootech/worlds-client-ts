@@ -1,6 +1,9 @@
 import type * as rdfjs from "@rdfjs/types";
 
-import { DenokvQuadStore } from "./quad-store/mod.ts";
+import {
+  BufferedRdfjsQuadStore,
+  createBufferedQuadTransaction,
+} from "@/client/rdfjs-buffer/mod.ts";
 import { DenokvRdfjsStore } from "./rdfjs-store/mod.ts";
 import {
   createDenokvPersistHooks,
@@ -13,14 +16,14 @@ import { resolveImportLifecycle } from "@/client/import-lifecycle/mod.ts";
  */
 export interface DenokvStoresForTest {
   /** denokvQuadStore serves Client import and export in tests. */
-  denokvQuadStore: DenokvQuadStore;
+  denokvQuadStore: BufferedRdfjsQuadStore;
 
   /** denokvRdfjsStore serves Comunica SPARQL match and buffered updates in tests. */
   denokvRdfjsStore: DenokvRdfjsStore;
 }
 
 /**
- * createDenokvStoresForTest wires shared DenokvRdfjsStore and DenokvQuadStore instances for tests.
+ * createDenokvStoresForTest wires shared DenokvRdfjsStore and BufferedRdfjsQuadStore instances for tests.
  */
 export function createDenokvStoresForTest(
   options: DenokvPersistHooksOptions,
@@ -35,10 +38,13 @@ export function createDenokvStoresForTest(
     keyPrefix: options.keyPrefix,
     enabledHexastoreIndexes: options.enabledHexastoreIndexes,
   });
-  const denokvQuadStore = new DenokvQuadStore({
-    denokvRdfjsStore,
-    commitHandler: persistHooks.commitHandler,
-    importLifecycle,
+  const denokvQuadStore = new BufferedRdfjsQuadStore({
+    readSource: denokvRdfjsStore as unknown as rdfjs.Store,
+    transactionFactory: () =>
+      createBufferedQuadTransaction({
+        commitHandler: persistHooks.commitHandler,
+        importLifecycle,
+      }),
   });
 
   return { denokvQuadStore, denokvRdfjsStore };
