@@ -44,8 +44,8 @@
   **`deduplicateBuffers`**; **`CommittingRdfjsStore`** →
   **`ImportCommitTarget`**; **`createRdfjsCommittingStore`** →
   **`createImportCommitTarget`**.
-- Renamed `@worlds/client/rdfjs-store` → **`@worlds/client/rdfjs-buffer`**
-  (shared patch buffering and import orchestration). Adapter `*RdfjsStore`
+- Renamed `@worlds/client/rdfjs-store` → **`@worlds/client/quad-store`** (shared
+  patch buffering and import orchestration). Adapter `*RdfjsStore`
   implementations remain under `@worlds/client/adapters/*/rdfjs-store/`.
 - Removed dead `wire-durable-client.ts` stub (logic lives in durable factories).
 
@@ -66,7 +66,7 @@ const client = await createLibsqlClient({ client: db, queryEngine });
 await client.reindex();
 
 // Shared buffering (was @worlds/client/rdfjs-store)
-import { importViaBufferedRdfjsStore } from "@worlds/client/rdfjs-buffer";
+import { importViaBufferedRdfjsStore } from "@worlds/client/quad-store";
 
 // In-memory (replaces createRdfjsClient)
 import { Client } from "@worlds/client";
@@ -94,8 +94,8 @@ const memoryClient = new Client({
   keyset-pages via `buildMatchQuadsQuery` with `filterQuads` in TypeScript for
   include/exclude.
 - Durable `LibsqlQuadStore` and `DenokvQuadStore` extend shared
-  `BufferedRdfjsQuadStore` (`@worlds/client/rdfjs-buffer`), delegating import
-  and export to `importViaBufferedRdfjsStore` / `exportFromRdfjsStore`.
+  `BufferedRdfjsQuadStore` (`@worlds/client/quad-store`), delegating import and
+  export to `importViaBufferedRdfjsStore` / `exportFromRdfjsStore`.
 - LibSQL SPARQL is configured by passing a Comunica `queryEngine` directly into
   adapter options (no `createSparqlEngine` callback or factory helper).
 - Deno KV SPARQL reads through a KV-backed RDF/JS store (no per-query N3

@@ -162,11 +162,11 @@ When adding a new importable subpath, add it to `exports` in `deno.json` for
 `@worlds/client/...` consumers. Mirror the file path under `@/client/...` for
 in-repo imports (no duplicate `@worlds/client/*` entries in `imports`). Shared
 topology-agnostic patch buffering lives in `rdfjs-buffer/` (export
-`@worlds/client/rdfjs-buffer`); durable adapter `*RdfjsStore` implementations
-live under `adapters/*/rdfjs-store/`. Under durable adapters, keep seam
-subfolders for `quad-store/`, `search-index/`, and `rdfjs-store/` (each with a
-`mod.ts` barrel). Internal SQL, KV, and sync helpers live under the seam that
-owns them; factories remain at the adapter root.
+`@worlds/client/quad-store`); durable adapter `*RdfjsStore` implementations live
+under `adapters/*/rdfjs-store/`. Under durable adapters, keep seam subfolders
+for `quad-store/`, `search-index/`, and `rdfjs-store/` (each with a `mod.ts`
+barrel). Internal SQL, KV, and sync helpers live under the seam that owns them;
+factories remain at the adapter root.
 
 ### No inline imports
 

@@ -1,20 +1,18 @@
 import type * as rdfjs from "@rdfjs/types";
 
-import {
-  BufferedRdfjsQuadStore,
-  Transaction,
-} from "@/client/rdfjs-buffer/mod.ts";
+import { RdfjsQuadStore } from "@/client/adapters/rdfjs/rdfjs-quad-store.ts";
+
 import { DenokvRdfjsStore } from "./rdfjs-store/mod.ts";
 import {
   createDenokvPersistHooks,
   type DenokvPersistHooksOptions,
-} from "./rdfjs-store/sync/create-denokv-persist-hooks.ts";
+} from "./create-denokv-persist-hooks.ts";
 /**
  * DenokvStoresForTest bundles Deno KV quad and RDF/JS store facades for adapter tests.
  */
 export interface DenokvStoresForTest {
   /** denokvQuadStore serves Client import and export in tests. */
-  denokvQuadStore: BufferedRdfjsQuadStore;
+  denokvQuadStore: RdfjsQuadStore;
 
   /** denokvRdfjsStore serves Comunica SPARQL match and buffered updates in tests. */
   denokvRdfjsStore: DenokvRdfjsStore;
@@ -32,12 +30,11 @@ export function createDenokvStoresForTest(
     keyPrefix: options.keyPrefix,
     enabledHexastoreIndexes: options.enabledHexastoreIndexes,
   });
-  const denokvQuadStore = new BufferedRdfjsQuadStore({
+  const denokvQuadStore = new RdfjsQuadStore({
     store: denokvRdfjsStore as unknown as rdfjs.Store,
-    createTransaction: () =>
-      new Transaction({
-        commit: persistHooks.commit,
-      }),
+    commit: async (patch, context) => {
+      await persistHooks.commit(patch, context);
+    },
   });
 
   return { denokvQuadStore, denokvRdfjsStore };

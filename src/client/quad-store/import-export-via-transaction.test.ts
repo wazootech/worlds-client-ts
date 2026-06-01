@@ -3,7 +3,7 @@ import { DataFactory } from "n3";
 import type * as rdfjs from "@rdfjs/types";
 import type { PatchCommitContext } from "@/client/quad-store/commit-handler.ts";
 import { Transaction } from "./transaction.ts";
-import { importViaBufferedRdfjsStore } from "./import-export-via-rdfjs-store.ts";
+import { importViaTransaction } from "./import-export-via-transaction.ts";
 
 const { namedNode, literal, quad } = DataFactory;
 
@@ -47,10 +47,10 @@ function createRecordingTransaction(): {
   };
 }
 
-Deno.test("importViaBufferedRdfjsStore - buffers quads and commits with merge mode", async () => {
+Deno.test("importViaTransaction - buffers quads and commits with merge mode", async () => {
   const recording = createRecordingTransaction();
 
-  await importViaBufferedRdfjsStore(
+  await importViaTransaction(
     { mode: "merge", source: { kind: "quads", quads: [q1, q2] } },
     { createTransaction: recording.createTransaction },
   );
@@ -59,10 +59,10 @@ Deno.test("importViaBufferedRdfjsStore - buffers quads and commits with merge mo
   assertEquals(recording.lastCommitContext()?.importMode, "merge");
 });
 
-Deno.test("importViaBufferedRdfjsStore - defaults mode to merge", async () => {
+Deno.test("importViaTransaction - defaults mode to merge", async () => {
   const recording = createRecordingTransaction();
 
-  await importViaBufferedRdfjsStore(
+  await importViaTransaction(
     { source: { kind: "quads", quads: [q1] } },
     { createTransaction: recording.createTransaction },
   );
@@ -70,10 +70,10 @@ Deno.test("importViaBufferedRdfjsStore - defaults mode to merge", async () => {
   assertEquals(recording.lastCommitContext()?.importMode, "merge");
 });
 
-Deno.test("importViaBufferedRdfjsStore - passes replace mode to commit context", async () => {
+Deno.test("importViaTransaction - passes replace mode to commit context", async () => {
   const recording = createRecordingTransaction();
 
-  await importViaBufferedRdfjsStore(
+  await importViaTransaction(
     { mode: "replace", source: { kind: "quads", quads: [q2] } },
     { createTransaction: recording.createTransaction },
   );

@@ -7,4 +7,5 @@ export * from "./hash-quad.ts";
 export * from "./term.ts";
 export * from "./quad.ts";
 export * from "./rdf-formats.ts";
-export * from "@/client/rdfjs-buffer/import-export-via-rdfjs-store.ts";
+export * from "./import-export-via-transaction.ts";
+export * from "./transaction.ts";

@@ -1,8 +1,8 @@
 import { assertEquals } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
-import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
-import { rebuildLibsqlSearchIndexFromQuads } from "../../search-index/rebuild-libsql-search-index-from-quads.ts";
+import { createLibsqlPersistHooks } from "./create-libsql-persist-hooks.ts";
+
 import { FakeEmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
 import {
   setupLibsqlSchemaForTest,
@@ -14,7 +14,7 @@ import { buildChunkFtsValue } from "@/client/adapters/libsql/search-index/search
 const { quad, namedNode, literal } = DataFactory;
 
 Deno.test(
-  "commitPatchToLibsql - bulk quad INSERT persists expected quads row count",
+  "createLibsqlPersistHooks - bulk quad INSERT persists expected quads row count",
   async () => {
     const client = createClient({ url: ":memory:" });
     await setupLibsqlSchemaForTest(client);
@@ -27,15 +27,14 @@ Deno.test(
         literal(`bulk insert ${index}`),
       ));
 
-    await commitPatchToLibsql(
-      { insertions: bulkQuads, deletions: [] },
-      {
-        client,
-        textSplitter: sharedTextSplitter,
-        libsqlQueryBuilder: testLibsqlQueryBuilder,
-        skipSearchIndexProjection: true,
-      },
-    );
+    const persistHooks = createLibsqlPersistHooks({
+      client,
+      textSplitter: sharedTextSplitter,
+      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchIndexOnImport: "disabled",
+    });
+
+    await persistHooks.commit({ insertions: bulkQuads, deletions: [] });
 
     const quadRows = await client.execute(
       "SELECT COUNT(*) as total FROM quads",
@@ -44,16 +43,16 @@ Deno.test(
   },
 );
 
-Deno.test("commitPatchToLibsql - isolated writes and removals commit correctly to BOTH chunks and quads", async () => {
+Deno.test("createLibsqlPersistHooks - isolated writes and removals commit correctly to BOTH chunks and quads", async () => {
   const client = createClient({ url: ":memory:" });
   await setupLibsqlSchemaForTest(client);
 
-  const options = {
+  const persistHooks = createLibsqlPersistHooks({
     client,
     embeddingService: new FakeEmbeddingService(),
     textSplitter: sharedTextSplitter,
     libsqlQueryBuilder: testLibsqlQueryBuilder,
-  };
+  });
 
   const testQuad = quad(
     namedNode("urn:subject"),
@@ -62,10 +61,10 @@ Deno.test("commitPatchToLibsql - isolated writes and removals commit correctly t
   );
 
   // 1. Commit insertion
-  await commitPatchToLibsql({
+  await persistHooks.commit({
     insertions: [testQuad],
     deletions: [],
-  }, options);
+  });
 
   // 2. Verify both Tables updated
   let chunkRows = await client.execute("SELECT COUNT(*) as total FROM chunks");
@@ -83,10 +82,10 @@ Deno.test("commitPatchToLibsql - isolated writes and removals commit correctly t
   );
 
   // 3. Execute deletion
-  await commitPatchToLibsql({
+  await persistHooks.commit({
     insertions: [],
     deletions: [testQuad],
-  }, options);
+  });
 
   // 4. Verify holistic cleared state
   chunkRows = await client.execute("SELECT COUNT(*) as total FROM chunks");
@@ -96,16 +95,16 @@ Deno.test("commitPatchToLibsql - isolated writes and removals commit correctly t
   assertEquals(quadRows.rows[0].total, 0, "Master quad cleanup failed");
 });
 
-Deno.test("commitPatchToLibsql - supports synchronization when embeddingService is omitted (vector column left null)", async () => {
+Deno.test("createLibsqlPersistHooks - supports synchronization when embeddingService is omitted (vector column left null)", async () => {
   const client = createClient({ url: ":memory:" });
   await setupLibsqlSchemaForTest(client);
 
-  const options = {
+  const persistHooks = createLibsqlPersistHooks({
     client,
     // embeddingService is omitted intentionally
     textSplitter: sharedTextSplitter,
     libsqlQueryBuilder: testLibsqlQueryBuilder,
-  };
+  });
 
   const testQuad = quad(
     namedNode("urn:subject"),
@@ -114,10 +113,10 @@ Deno.test("commitPatchToLibsql - supports synchronization when embeddingService 
   );
 
   // Commit insertion
-  await commitPatchToLibsql({
+  await persistHooks.commit({
     insertions: [testQuad],
     deletions: [],
-  }, options);
+  });
 
   // Verify that the chunk table has the row but with vector null
   const chunkRows = await client.execute("SELECT value, vector FROM chunks");
@@ -138,16 +137,16 @@ Deno.test("commitPatchToLibsql - supports synchronization when embeddingService 
   assertEquals(quadRows.rows[0].total, 1);
 });
 
-Deno.test("commitPatchToLibsql - stores literal value and discovery fts_value", async () => {
+Deno.test("createLibsqlPersistHooks - stores literal value and discovery fts_value", async () => {
   const client = createClient({ url: ":memory:" });
   await setupLibsqlSchemaForTest(client);
 
-  const options = {
+  const persistHooks = createLibsqlPersistHooks({
     client,
     embeddingService: new FakeEmbeddingService(),
     textSplitter: sharedTextSplitter,
     libsqlQueryBuilder: testLibsqlQueryBuilder,
-  };
+  });
 
   const testQuad = quad(
     namedNode("http://example.org/Aurelia"),
@@ -155,10 +154,10 @@ Deno.test("commitPatchToLibsql - stores literal value and discovery fts_value", 
     literal("Lume"),
   );
 
-  await commitPatchToLibsql({
+  await persistHooks.commit({
     insertions: [testQuad],
     deletions: [],
-  }, options);
+  });
 
   const chunkRows = await client.execute(
     "SELECT value, fts_value FROM chunks",
@@ -178,7 +177,7 @@ Deno.test("commitPatchToLibsql - stores literal value and discovery fts_value", 
 });
 
 Deno.test(
-  "commitPatchToLibsql - bulk insertions beyond SQLITE_MAX_VARIABLE_NUMBER do not fail",
+  "createLibsqlPersistHooks - bulk insertions beyond SQLITE_MAX_VARIABLE_NUMBER do not fail",
   async () => {
     const client = createClient({ url: ":memory:" });
     await setupLibsqlSchemaForTest(client);
@@ -191,16 +190,17 @@ Deno.test(
         literal(`bulk literal ${index}`),
       ));
 
-    const options = {
+    const persistHooks = createLibsqlPersistHooks({
       client,
       textSplitter: sharedTextSplitter,
       libsqlQueryBuilder: testLibsqlQueryBuilder,
-    };
+      searchIndexOnImport: "disabled", // Skip search chunk building so tests are fast
+    });
 
-    await commitPatchToLibsql({
+    await persistHooks.commit({
       insertions: bulkQuads,
       deletions: [],
-    }, options);
+    });
 
     const quadRows = await client.execute(
       "SELECT COUNT(*) as total FROM quads",
@@ -210,7 +210,7 @@ Deno.test(
 );
 
 Deno.test(
-  "commitPatchToLibsql - large bulk insertions flush staged statements without stack overflow",
+  "createLibsqlPersistHooks - large bulk insertions flush staged statements without stack overflow",
   async () => {
     const client = createClient({ url: ":memory:" });
     await setupLibsqlSchemaForTest(client);
@@ -226,16 +226,17 @@ Deno.test(
         ),
     );
 
-    const options = {
+    const persistHooks = createLibsqlPersistHooks({
       client,
       textSplitter: sharedTextSplitter,
       libsqlQueryBuilder: testLibsqlQueryBuilder,
-    };
+      searchIndexOnImport: "disabled", // Skip search chunk building for pure bulk quad sync test
+    });
 
-    await commitPatchToLibsql({
+    await persistHooks.commit({
       insertions: largeBulkQuads,
       deletions: [],
-    }, options);
+    });
 
     const quadRows = await client.execute(
       "SELECT COUNT(*) as total FROM quads",
@@ -245,7 +246,7 @@ Deno.test(
 );
 
 Deno.test(
-  "commitPatchToLibsql - skipSearchIndexProjection defers chunk rows until rebuild",
+  "createLibsqlPersistHooks - deferred mode auto-rebuilds at the end of import",
   async () => {
     const client = createClient({ url: ":memory:" });
     await setupLibsqlSchemaForTest(client);
@@ -254,9 +255,12 @@ Deno.test(
       client,
       textSplitter: sharedTextSplitter,
       libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchIndexOnImport: "deferred" as const,
     };
 
-    await commitPatchToLibsql({
+    const persistHooks = createLibsqlPersistHooks(options);
+
+    await persistHooks.commit({
       insertions: [
         quad(
           namedNode("urn:defer:entity:0"),
@@ -265,30 +269,27 @@ Deno.test(
         ),
       ],
       deletions: [],
-    }, { ...options, skipSearchIndexProjection: true });
+    }, { importMode: "merge" }); // searchIndexOnImport: deferred automatically rebuilds at the end of import
 
     const chunkRows = await client.execute(
       "SELECT COUNT(*) as total FROM chunks",
     );
-    assertEquals(Number(chunkRows.rows[0].total), 0);
-
-    const { chunkRowCount } = await rebuildLibsqlSearchIndexFromQuads(options);
-    assertEquals(chunkRowCount > 0, true);
+    assertEquals(Number(chunkRows.rows[0].total), 1);
   },
 );
 
 Deno.test(
-  "commitPatchToLibsql - importMode replace wipes prior quads before insert",
+  "createLibsqlPersistHooks - importMode replace wipes prior quads before insert",
   async () => {
     const client = createClient({ url: ":memory:" });
     await setupLibsqlSchemaForTest(client);
 
-    const options = {
+    const persistHooks = createLibsqlPersistHooks({
       client,
       textSplitter: sharedTextSplitter,
       libsqlQueryBuilder: testLibsqlQueryBuilder,
-      skipSearchIndexProjection: true,
-    };
+      searchIndexOnImport: "disabled",
+    });
 
     const priorQuad = quad(
       namedNode("urn:replace:prior"),
@@ -301,14 +302,12 @@ Deno.test(
       literal("new"),
     );
 
-    await commitPatchToLibsql(
+    await persistHooks.commit(
       { insertions: [priorQuad], deletions: [] },
-      options,
     );
 
-    await commitPatchToLibsql(
+    await persistHooks.commit(
       { insertions: [replacementQuad], deletions: [] },
-      options,
       { importMode: "replace" },
     );
 

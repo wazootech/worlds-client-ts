@@ -1,9 +1,11 @@
 import type { CommitHandler } from "@/client/quad-store/mod.ts";
 import type { TextSplitterInterface } from "@/client/search-index/quad-chunker/mod.ts";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
+import { projectSearchChunks } from "./search-index/project-search-chunks.ts";
+import { refreshSearchChunksForSubjects } from "./search-index/refresh-search-chunks-for-subjects.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
-import type { LibsqlQueryBuilder } from "../sql/libsql-query-builder.ts";
-import { createLibsqlSearchIndexRebuilder } from "../../search-index/rebuild-libsql-search-index-from-quads.ts";
+import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import { rebuildLibsqlSearchIndexFromQuads } from "./search-index/rebuild-libsql-search-index-from-quads.ts";
 
 /**
  * LibsqlPersistHooks bundles commitHandler and import lifecycle callbacks for LibSQL clients.
@@ -30,7 +32,7 @@ export interface LibsqlPersistHooksOptions extends LibsqlClientBaseOptions {
 export function createLibsqlPersistHooks(
   dependencies: LibsqlPersistHooksOptions,
 ): LibsqlPersistHooks {
-  const reindex = createLibsqlSearchIndexRebuilder(dependencies);
+  const reindex = () => rebuildLibsqlSearchIndexFromQuads(dependencies);
   const searchIndexOnImport = dependencies.searchIndexOnImport ?? "incremental";
 
   return {
@@ -40,14 +42,31 @@ export function createLibsqlPersistHooks(
         dependencies.searchIndexOnImport === "disabled" ||
         (isImport && searchIndexOnImport === "deferred");
 
-      await commitPatchToLibsql(
-        patch,
-        {
-          ...dependencies,
-          skipSearchIndexProjection,
-        },
-        context,
-      );
+      const { novelInsertions, novelQuadIds, labelTouchedSubjects } =
+        await commitPatchToLibsql(
+          patch,
+          {
+            ...dependencies,
+          },
+          context,
+        );
+
+      if (!skipSearchIndexProjection) {
+        if (novelQuadIds.length > 0) {
+          await projectSearchChunks(
+            novelInsertions,
+            novelQuadIds,
+            dependencies,
+          );
+        }
+
+        if (labelTouchedSubjects.length > 0) {
+          await refreshSearchChunksForSubjects(
+            labelTouchedSubjects,
+            dependencies,
+          );
+        }
+      }
 
       if (isImport && searchIndexOnImport === "deferred") {
         await reindex();

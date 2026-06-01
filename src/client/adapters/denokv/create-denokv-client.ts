@@ -1,14 +1,17 @@
-import { createClient } from "@/client/rdfjs-buffer/mod.ts";
+import { Client } from "@/client/client.ts";
+import type * as rdfjs from "@rdfjs/types";
 import type { ClientInterface } from "@/client/client.ts";
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
+import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
 
 import { DenokvRdfjsStore } from "./rdfjs-store/mod.ts";
 import { DenokvSearchIndex } from "./search-index/mod.ts";
 import {
   createDenokvPersistHooks,
   type DenokvPersistHooksOptions,
-} from "./rdfjs-store/sync/create-denokv-persist-hooks.ts";
-import type * as rdfjs from "@rdfjs/types";
+} from "./create-denokv-persist-hooks.ts";
+import { RdfjsQuadStore } from "@/client/adapters/rdfjs/rdfjs-quad-store.ts";
+import { Transaction } from "@/client/quad-store/mod.ts";
 
 /**
  * DenokvClientOptions specifies configuration parameters for Deno KV client contexts.
@@ -37,10 +40,22 @@ export function createDenokvClient(
     keyPrefix: options.keyPrefix,
   });
 
-  return createClient({
-    searchIndex,
+  const quadStore = new RdfjsQuadStore({
     store: denokvRdfjsStore as unknown as rdfjs.Store,
     commit: persistHooks.commit,
-    queryEngine: options.queryEngine,
+  });
+
+  const sparqlEngine = options.queryEngine
+    ? new ComunicaSparqlEngine({
+      queryEngine: options.queryEngine,
+      store: denokvRdfjsStore as unknown as rdfjs.Store,
+      createTransaction: () => new Transaction({ commit: persistHooks.commit }),
+    })
+    : undefined;
+
+  return new Client({
+    quadStore,
+    searchIndex,
+    sparqlEngine,
   });
 }

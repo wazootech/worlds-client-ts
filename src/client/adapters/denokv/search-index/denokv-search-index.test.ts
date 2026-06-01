@@ -4,7 +4,8 @@ import {
   createDenokvStoresForTest,
   seedDenokvQuadsForTest,
 } from "../create-denokv-stores-for-test.ts";
-import { DenokvSearchIndex } from "./mod.ts";
+import { commitPatchToDenokv } from "../commit-patch-to-denokv.ts";
+import { DenokvSearchIndex } from "./denokv-search-index.ts";
 
 const { namedNode, literal, quad } = DataFactory;
 
@@ -251,16 +252,18 @@ Deno.test(
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {
-      await seedDenokvQuadsForTest(
-        kv,
-        [
-          quad(
-            namedNode("http://example.com/tenant"),
-            namedNode("http://example.com/p"),
-            literal("Tenant scoped document"),
-          ),
-        ],
-        { keyPrefix: customKeyPrefix },
+      await commitPatchToDenokv(
+        {
+          insertions: [
+            quad(
+              namedNode("http://example.com/tenant"),
+              namedNode("http://example.com/p"),
+              literal("Tenant scoped document"),
+            ),
+          ],
+          deletions: [],
+        },
+        { kv, keyPrefix: customKeyPrefix },
       );
 
       const defaultPrefixIndex = new DenokvSearchIndex({ kv });

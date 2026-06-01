@@ -7,14 +7,17 @@ import {
   bumpDatasetGeneration,
   garbageCollectOrphanedGenerations,
   readActiveGeneration,
-} from "../kv/denokv-dataset-generation.ts";
-import { buildGenerationDataPrefix } from "../kv/denokv-hexastore-keys.ts";
+} from "./kv/denokv-dataset-generation.ts";
+import { buildGenerationDataPrefix } from "./kv/denokv-hexastore-keys.ts";
 import {
   DEFAULT_DENOKV_HEXASTORE_INDEXES,
   type DenokvHexastoreIndex,
-} from "../kv/denokv-hexastore-index-set.ts";
-import { commitBatchedKvMutations } from "../kv/denokv-kv-limits.ts";
-import { materializeQuadKeys } from "../kv/denokv-quad-keys.ts";
+} from "./kv/denokv-hexastore-index-set.ts";
+import {
+  type BatchedAtomicOperation,
+  commitBatchedKvMutations,
+} from "./kv/denokv-kv-limits.ts";
+import { materializeQuadKeys } from "./kv/denokv-quad-keys.ts";
 
 /**
  * CommitPatchToDenokvOptions configures Deno KV quad persistence for patch commits.
@@ -78,7 +81,7 @@ async function commitReplaceImportPatch(
   );
 
   if (insertMutations.length > 0) {
-    await commitBatchedKvMutations(kv, (batch) => {
+    await commitBatchedKvMutations(kv, (batch: BatchedAtomicOperation) => {
       for (const { key, value } of insertMutations) {
         batch.set(key, value);
       }
@@ -122,7 +125,7 @@ async function commitIncrementalPatch(
     patch.insertions,
   );
 
-  await commitBatchedKvMutations(kv, (batch) => {
+  await commitBatchedKvMutations(kv, (batch: BatchedAtomicOperation) => {
     for (const key of deleteMutations) {
       batch.delete(key);
     }

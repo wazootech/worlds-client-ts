@@ -159,3 +159,95 @@ function bridgeStreamToBuffer(
 
   return emitter;
 }
+
+/**
+ * createTransactionalRdfjsStore wraps an existing rdfjs.Store with a Transaction.
+ * It intercepts all mutative operations and routes them to the Transaction buffer,
+ * while passing read queries (match) through to the underlying store.
+ */
+export function createTransactionalRdfjsStore(
+  store: rdfjs.Store,
+  transaction: Transaction,
+): rdfjs.Store {
+  return new Proxy(store, {
+    get(target, prop, receiver) {
+      if (
+        prop === "add" ||
+        prop === "addQuad" ||
+        prop === "addQuads" ||
+        prop === "removeQuads" ||
+        prop === "delete" ||
+        prop === "removeQuad" ||
+        prop === "import" ||
+        prop === "remove" ||
+        prop === "removeMatches" ||
+        prop === "deleteGraph"
+      ) {
+        // Route mutative methods to the transaction
+        const value = Reflect.get(transaction, prop);
+        if (typeof value === "function") {
+          if (prop === "removeMatches" || prop === "deleteGraph") {
+            // These require the match function from the underlying store
+            return (...args: unknown[]) =>
+              Reflect.apply(value, transaction, [
+                target.match.bind(target),
+                ...args,
+              ]);
+          }
+          return value.bind(transaction);
+        }
+      }
+      // Pass-through read methods (match, countQuads, etc.) to the underlying store
+      return Reflect.get(target, prop, receiver);
+    },
+  });
+}
+
+/**
+ * createRdfjsStoreCommitHandler returns a CommitHandler that applies Patches
+ * directly to an underlying rdfjs.Store by using its native add/delete/remove methods.
+ * For robust usage, the underlying store should support synchronous add/delete.
+ */
+export function createRdfjsStoreCommitHandler(
+  store: rdfjs.Store,
+): CommitHandler {
+  return async (patch, context) => {
+    if (context?.importMode === "replace") {
+      const stream = store.match(null, null, null, null);
+      await new Promise<void>((resolve, reject) => {
+        stream.on("data", (quad: rdfjs.Quad) => {
+          if (
+            "removeQuad" in store && typeof store.removeQuad === "function"
+          ) {
+            store.removeQuad(quad);
+          } else if (
+            "delete" in store && typeof store.delete === "function"
+          ) {
+            store.delete(quad);
+          }
+        });
+        stream.on("end", resolve);
+        stream.on("error", reject);
+      });
+    }
+
+    // Some stores like N3.Store support addQuad/removeQuad synchronously,
+    // while the standard generic rdfjs.Store specifies add(quad) / delete(quad)
+    for (const quad of patch.deletions) {
+      if ("removeQuad" in store && typeof store.removeQuad === "function") {
+        store.removeQuad(quad);
+      } else if ("delete" in store && typeof store.delete === "function") {
+        store.delete(quad);
+      }
+    }
+
+    for (const quad of patch.insertions) {
+      if ("addQuad" in store && typeof store.addQuad === "function") {
+        store.addQuad(quad);
+      } else if ("add" in store && typeof store.add === "function") {
+        store.add(quad);
+      }
+    }
+    return Promise.resolve();
+  };
+}

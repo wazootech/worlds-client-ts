@@ -3,14 +3,14 @@ import { createClient } from "@libsql/client";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import type { Quad } from "n3";
 import { DataFactory, Parser, Store } from "n3";
-import { commitPatchToLibsql } from "@/client/adapters/libsql/rdfjs-store/sync/commit-patch-to-libsql.ts";
-import { Transaction } from "@/client/rdfjs-buffer/mod.ts";
+import { commitPatchToLibsql } from "@/client/adapters/libsql/commit-patch-to-libsql.ts";
+import { Transaction } from "@/client/quad-store/mod.ts";
 import type * as rdfjs from "@rdfjs/types";
 import { LibsqlRdfjsStore } from "@/client/adapters/libsql/rdfjs-store/mod.ts";
 import {
   initializeLibsqlSchema,
   LibsqlQueryBuilder,
-} from "@/client/adapters/libsql/rdfjs-store/sql/mod.ts";
+} from "@/client/adapters/libsql/mod.ts";
 import { canonize } from "rdf-canonize";
 import { encodeBase64Url } from "@std/encoding/base64url";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
@@ -487,7 +487,6 @@ Deno.test(
       client: databaseClient,
       textSplitter,
       libsqlQueryBuilder,
-      skipSearchIndexProjection: true,
     });
 
     assertEquals(

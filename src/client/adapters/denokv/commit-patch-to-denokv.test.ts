@@ -1,7 +1,7 @@
 import { assertEquals } from "@std/assert";
 import { DataFactory } from "n3";
 import { commitPatchToDenokv } from "./commit-patch-to-denokv.ts";
-import { readActiveGeneration } from "../kv/denokv-dataset-generation.ts";
+import { readActiveGeneration } from "./kv/denokv-dataset-generation.ts";
 
 const { namedNode, literal, quad } = DataFactory;
 

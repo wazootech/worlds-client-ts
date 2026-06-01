@@ -23,7 +23,8 @@ import { batchedAtomic } from "@kitsonk/kv-toolbox/batched_atomic";
  */
 
 /** BatchedKvAtomic is the kv-toolbox atomic queue used for hexastore bulk writes. */
-export type BatchedKvAtomic = ReturnType<typeof batchedAtomic>;
+export type BatchedAtomicOperation = ReturnType<typeof batchedAtomic>;
+export type BatchedKvAtomic = BatchedAtomicOperation;
 
 /**
  * commitBatchedKvMutations applies queued KV writes via kv-toolbox `batchedAtomic()`.

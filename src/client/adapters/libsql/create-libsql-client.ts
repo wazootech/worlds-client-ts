@@ -1,16 +1,18 @@
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { createClient } from "@/client/rdfjs-buffer/mod.ts";
-
+import type * as rdfjs from "@rdfjs/types";
+import { Client } from "@/client/client.ts";
 import type { ClientInterface } from "@/client/client.ts";
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
+import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
 import { LibsqlSearchIndex } from "@/client/adapters/libsql/search-index/mod.ts";
-import { createLibsqlPersistHooks } from "@/client/adapters/libsql/rdfjs-store/sync/mod.ts";
+import { createLibsqlPersistHooks } from "@/client/adapters/libsql/create-libsql-persist-hooks.ts";
 
 import type { LibsqlClientBaseOptions } from "./libsql-client-base-options.ts";
 import { LibsqlRdfjsStore } from "./rdfjs-store/mod.ts";
-import { initializeLibsqlSchema } from "./rdfjs-store/sql/initialize-libsql-schema.ts";
-import { LibsqlQueryBuilder } from "./rdfjs-store/sql/libsql-query-builder.ts";
-import type * as rdfjs from "@rdfjs/types";
+import { initializeLibsqlSchema } from "./initialize-libsql-schema.ts";
+import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import { RdfjsQuadStore } from "@/client/adapters/rdfjs/rdfjs-quad-store.ts";
+import { Transaction } from "@/client/quad-store/mod.ts";
 
 /**
  * LibsqlClientOptions configures LibSQL execution through LibsqlRdfjsStore and hexastore indexes.
@@ -52,10 +54,22 @@ export async function createLibsqlClient(
     matchPageSize: options.matchPageSize,
   });
 
-  return createClient({
-    searchIndex,
+  const quadStore = new RdfjsQuadStore({
     store: libsqlRdfjsStore as unknown as rdfjs.Store,
     commit: persistHooks.commit,
-    queryEngine: options.queryEngine,
+  });
+
+  const sparqlEngine = options.queryEngine
+    ? new ComunicaSparqlEngine({
+      queryEngine: options.queryEngine,
+      store: libsqlRdfjsStore as unknown as rdfjs.Store,
+      createTransaction: () => new Transaction({ commit: persistHooks.commit }),
+    })
+    : undefined;
+
+  return new Client({
+    quadStore,
+    searchIndex,
+    sparqlEngine,
   });
 }

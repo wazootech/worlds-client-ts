@@ -16,17 +16,17 @@ import type { Transaction } from "./transaction.ts";
 /**
  * ImportViaBufferedRdfjsStoreOptions configures durable import over a Transaction.
  */
-export interface ImportViaBufferedRdfjsStoreOptions {
-  /** createTransaction creates a new Transaction for the import. */
+export interface ImportViaTransactionOptions {
+  /** createTransaction yields a scoped mutation interceptor (Transaction). */
   createTransaction: () => Transaction;
 }
 
 /**
- * importViaBufferedRdfjsStore materializes import quads, buffers them on a transaction, and commits once.
+ * importViaTransaction drains an ImportRequest directly into a transactional patch.
  */
-export async function importViaBufferedRdfjsStore(
+export async function importViaTransaction(
   request: ImportRequest,
-  options: ImportViaBufferedRdfjsStoreOptions,
+  options: ImportViaTransactionOptions,
 ): Promise<void> {
   const mode = request.mode ?? "merge";
   const quads = await materializeImportQuads(request.source);

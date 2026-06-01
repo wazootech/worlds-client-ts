@@ -1,12 +1,10 @@
 import type * as rdfjs from "@rdfjs/types";
 
 import { isTextualLiteral } from "@/client/quad-store/mod.ts";
-import type { CommitPatchToLibsqlOptions } from "@/client/adapters/libsql/rdfjs-store/sync/commit-patch-to-libsql.ts";
-import {
-  DEFAULT_MAX_LOOKUP_CHUNK_SIZE,
-  refreshSearchChunksForQuads,
-} from "@/client/adapters/libsql/rdfjs-store/sync/commit-patch-to-libsql.ts";
-import { quadFromLibsqlRow } from "@/client/adapters/libsql/rdfjs-store/sql/libsql-quad-row.ts";
+import type { ProjectSearchChunksOptions } from "@/client/adapters/libsql/search-index/project-search-chunks.ts";
+import { refreshSearchChunksForQuads } from "@/client/adapters/libsql/search-index/project-search-chunks.ts";
+import { DEFAULT_MAX_LOOKUP_CHUNK_SIZE } from "@/client/adapters/libsql/libsql-batch-executor.ts";
+import { quadFromLibsqlRow } from "@/client/adapters/libsql/libsql-quad-row.ts";
 
 /**
  * RefreshSearchChunksForSubjectsResult reports subject-scoped search index refresh counts.
@@ -23,7 +21,7 @@ export interface RefreshSearchChunksForSubjectsResult {
  */
 export async function refreshSearchChunksForSubjects(
   subjects: string[],
-  options: CommitPatchToLibsqlOptions,
+  options: ProjectSearchChunksOptions,
 ): Promise<RefreshSearchChunksForSubjectsResult> {
   const uniqueSubjects = Array.from(new Set(subjects));
   if (uniqueSubjects.length === 0) {

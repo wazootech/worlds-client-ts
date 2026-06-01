@@ -8,9 +8,9 @@ import type {
 import {
   createRdfjsStoreCommitHandler,
   exportFromRdfjsStore,
-  importViaBufferedRdfjsStore,
+  importViaTransaction,
   Transaction,
-} from "@/client/rdfjs-buffer/mod.ts";
+} from "@/client/quad-store/mod.ts";
 import * as N3 from "n3";
 
 /**
@@ -19,6 +19,12 @@ import * as N3 from "n3";
 export interface RdfjsQuadStoreOptions {
   /** store is the active in-memory quad backend. */
   store?: rdfjs.Store;
+
+  /** commit optionally overrides how transactions are persisted. */
+  commit?: (
+    patch: import("@/client/quad-store/mod.ts").Patch,
+    context?: import("@/client/quad-store/mod.ts").PatchCommitContext,
+  ) => Promise<void>;
 }
 
 /**
@@ -28,13 +34,14 @@ export interface RdfjsQuadStoreOptions {
 export class RdfjsQuadStore implements QuadStoreInterface {
   private readonly store: rdfjs.Store;
 
-  public constructor(options?: RdfjsQuadStoreOptions) {
+  public constructor(private readonly options?: RdfjsQuadStoreOptions) {
     this.store = options?.store ?? new N3.Store();
   }
 
   public async import(request: ImportRequest): Promise<void> {
-    const commitHandler = createRdfjsStoreCommitHandler(this.store);
-    await importViaBufferedRdfjsStore(request, {
+    const commitHandler = this.options?.commit ??
+      createRdfjsStoreCommitHandler(this.store);
+    await importViaTransaction(request, {
       createTransaction: () =>
         new Transaction({
           commit: commitHandler,

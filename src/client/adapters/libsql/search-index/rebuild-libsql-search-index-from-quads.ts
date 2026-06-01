@@ -1,11 +1,11 @@
 import type * as rdfjs from "@rdfjs/types";
 import { filterQuads } from "@/client/quad-store/mod.ts";
 import {
-  type CommitPatchToLibsqlOptions,
+  type ProjectSearchChunksOptions,
   refreshSearchChunksForQuads,
-} from "@/client/adapters/libsql/rdfjs-store/sync/commit-patch-to-libsql.ts";
-import { quadFromLibsqlRow } from "@/client/adapters/libsql/rdfjs-store/sql/libsql-quad-row.ts";
-import { DEFAULT_LIBSQL_MATCH_PAGE_SIZE } from "@/client/adapters/libsql/rdfjs-store/sql/libsql-query-builder.ts";
+} from "@/client/adapters/libsql/search-index/project-search-chunks.ts";
+import { quadFromLibsqlRow } from "@/client/adapters/libsql/libsql-quad-row.ts";
+import { DEFAULT_LIBSQL_MATCH_PAGE_SIZE } from "@/client/adapters/libsql/libsql-query-builder.ts";
 
 /**
  * RebuildLibsqlSearchIndexFromQuadsResult reports how many quads and chunk rows were processed.
@@ -17,13 +17,18 @@ export interface RebuildLibsqlSearchIndexFromQuadsResult {
   chunkRowCount: number;
 }
 
+export interface ReadProjectSearchChunksOptions
+  extends ProjectSearchChunksOptions {
+  readPageSize?: number;
+}
+
 /**
  * rebuildLibsqlSearchIndexFromQuads rebuilds FTS and vector chunk rows from the `quads` table without re-importing graph data.
  *
  * Use after schema upgrades, label predicate changes, or discovery-index tuning so existing corpora pick up refreshed `fts_value` and vectors.
  */
 export async function rebuildLibsqlSearchIndexFromQuads(
-  options: CommitPatchToLibsqlOptions & { readPageSize?: number },
+  options: ReadProjectSearchChunksOptions,
 ): Promise<RebuildLibsqlSearchIndexFromQuadsResult> {
   const {
     client,
@@ -86,7 +91,7 @@ export async function rebuildLibsqlSearchIndexFromQuads(
  * createLibsqlSearchIndexRebuilder returns a closure that rebuilds search chunks using stable LibSQL dependencies.
  */
 export function createLibsqlSearchIndexRebuilder(
-  dependencies: CommitPatchToLibsqlOptions & { readPageSize?: number },
+  dependencies: ProjectSearchChunksOptions & { readPageSize?: number },
 ): () => Promise<RebuildLibsqlSearchIndexFromQuadsResult> {
   return () => rebuildLibsqlSearchIndexFromQuads(dependencies);
 }

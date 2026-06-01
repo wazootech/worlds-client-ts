@@ -3,7 +3,7 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import {
   initializeLibsqlSchema,
   LibsqlQueryBuilder,
-} from "@/client/adapters/libsql/rdfjs-store/sql/mod.ts";
+} from "@/client/adapters/libsql/mod.ts";
 
 /** testLibsqlQueryBuilder is the shared query builder used by LibSQL adapter tests. */
 export const testLibsqlQueryBuilder = new LibsqlQueryBuilder(32);

@@ -1,9 +1,10 @@
 import type { Client } from "@libsql/client";
 import type * as rdfjs from "@rdfjs/types";
 import { Readable } from "node:stream";
-import type { LibsqlQueryBuilder } from "./sql/libsql-query-builder.ts";
-import { DEFAULT_LIBSQL_MATCH_PAGE_SIZE } from "./sql/libsql-query-builder.ts";
-import { quadFromLibsqlRow } from "./sql/libsql-quad-row.ts";
+import type { LibsqlQueryBuilder } from "../libsql-query-builder.ts";
+import { DEFAULT_LIBSQL_MATCH_PAGE_SIZE } from "../libsql-query-builder.ts";
+
+import { quadFromLibsqlRow } from "../libsql-quad-row.ts";
 
 /**
  * LibsqlRdfjsStoreOptions configures LibsqlRdfjsStore dependencies and read behavior.

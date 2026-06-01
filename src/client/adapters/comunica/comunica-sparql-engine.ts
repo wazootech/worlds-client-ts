@@ -67,8 +67,8 @@ export interface ComunicaBinding {
   get?: (variable: string) => rdfjs.Term | undefined;
 }
 
-import { createTransactionalRdfjsStore } from "@/client/rdfjs-buffer/mod.ts";
-import type { Transaction } from "@/client/rdfjs-buffer/mod.ts";
+import { createTransactionalRdfjsStore } from "@/client/quad-store/mod.ts";
+import type { Transaction } from "@/client/quad-store/mod.ts";
 
 /**
  * ComunicaSparqlEngineOptions are the options for ComunicaSparqlEngine.

@@ -1,7 +1,7 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
-import { commitPatchToLibsql } from "@/client/adapters/libsql/rdfjs-store/sync/commit-patch-to-libsql.ts";
+import { createLibsqlPersistHooks } from "@/client/adapters/libsql/create-libsql-persist-hooks.ts";
 import {
   setupLibsqlSchemaForTest,
   sharedTextSplitter,
@@ -24,19 +24,21 @@ Deno.test(
     const client = createClient({ url: ":memory:" });
     await setupLibsqlSchemaForTest(client);
 
+    const persistHooks = createLibsqlPersistHooks({
+      client,
+      textSplitter: sharedTextSplitter,
+      libsqlQueryBuilder: testLibsqlQueryBuilder,
+    });
+
     const capitalQuad = quad(
       namedNode(AURELIA),
       namedNode(HAS_CAPITAL),
       literal("Lume"),
     );
 
-    await commitPatchToLibsql({
+    await persistHooks.commit({
       insertions: [capitalQuad],
       deletions: [],
-    }, {
-      client,
-      textSplitter: sharedTextSplitter,
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
     });
 
     const chunkRows = await client.execute(
@@ -66,6 +68,12 @@ Deno.test(
     const client = createClient({ url: ":memory:" });
     await setupLibsqlSchemaForTest(client);
 
+    const persistHooks = createLibsqlPersistHooks({
+      client,
+      textSplitter: sharedTextSplitter,
+      libsqlQueryBuilder: testLibsqlQueryBuilder,
+    });
+
     const capitalQuad = quad(
       namedNode(AURELIA),
       namedNode(HAS_CAPITAL),
@@ -77,13 +85,9 @@ Deno.test(
       literal("Kingdom of Aurelia"),
     );
 
-    await commitPatchToLibsql({
+    await persistHooks.commit({
       insertions: [capitalQuad, labelQuad],
       deletions: [],
-    }, {
-      client,
-      textSplitter: sharedTextSplitter,
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
     });
 
     const searchIndex = new LibsqlSearchIndex({
@@ -109,19 +113,21 @@ Deno.test(
     const client = createClient({ url: ":memory:" });
     await setupLibsqlSchemaForTest(client);
 
+    const persistHooks = createLibsqlPersistHooks({
+      client,
+      textSplitter: sharedTextSplitter,
+      libsqlQueryBuilder: testLibsqlQueryBuilder,
+    });
+
     const capitalQuad = quad(
       namedNode(AURELIA),
       namedNode(HAS_CAPITAL),
       literal("Lume"),
     );
 
-    await commitPatchToLibsql({
+    await persistHooks.commit({
       insertions: [capitalQuad],
       deletions: [],
-    }, {
-      client,
-      textSplitter: sharedTextSplitter,
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
     });
 
     await client.execute({
@@ -166,6 +172,13 @@ Deno.test(
     const client = createClient({ url: ":memory:" });
     await setupLibsqlSchemaForTest(client);
 
+    const persistHooks = createLibsqlPersistHooks({
+      client,
+      textSplitter: sharedTextSplitter,
+      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      labelPredicates: [CUSTOM_LABEL],
+    });
+
     const entity = "http://example.org/Entity";
     const factQuad = quad(
       namedNode(entity),
@@ -178,14 +191,9 @@ Deno.test(
       literal("Outpost Alpha"),
     );
 
-    await commitPatchToLibsql({
+    await persistHooks.commit({
       insertions: [factQuad, customLabelQuad],
       deletions: [],
-    }, {
-      client,
-      textSplitter: sharedTextSplitter,
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
-      labelPredicates: [CUSTOM_LABEL],
     });
 
     const predicates = resolveLabelPredicates([CUSTOM_LABEL]);
@@ -217,22 +225,24 @@ Deno.test(
     const client = createClient({ url: ":memory:" });
     await setupLibsqlSchemaForTest(client);
 
+    const persistHooks = createLibsqlPersistHooks({
+      client,
+      textSplitter: sharedTextSplitter,
+      libsqlQueryBuilder: testLibsqlQueryBuilder,
+    });
+
     const capitalQuad = quad(
       namedNode(AURELIA),
       namedNode(HAS_CAPITAL),
       literal("Lume"),
     );
 
-    await commitPatchToLibsql({
+    await persistHooks.commit({
       insertions: [capitalQuad],
       deletions: [],
-    }, {
-      client,
-      textSplitter: sharedTextSplitter,
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
     });
 
-    await commitPatchToLibsql({
+    await persistHooks.commit({
       insertions: [
         quad(
           namedNode(AURELIA),
@@ -241,10 +251,6 @@ Deno.test(
         ),
       ],
       deletions: [],
-    }, {
-      client,
-      textSplitter: sharedTextSplitter,
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
     });
 
     const capitalChunk = await client.execute({
