@@ -1,5 +1,5 @@
 import type { Client as LibsqlClient } from "@libsql/client";
-import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import type { LibsqlSchemaBuilder } from "./schema/libsql-schema-builder.ts";
 
 /**
  * initializeLibsqlSchema synchronously checks and creates the full set of persistent tables needed.
@@ -8,17 +8,17 @@ import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
  */
 export async function initializeLibsqlSchema(
   databaseClient: LibsqlClient,
-  queryBuilder: LibsqlQueryBuilder,
+  schemaBuilder: LibsqlSchemaBuilder,
 ): Promise<void> {
-  await databaseClient.execute(queryBuilder.buildLibsqlQuadsTable());
-  for (const ddl of queryBuilder.buildHexastoreIndexes()) {
+  await databaseClient.execute(schemaBuilder.buildLibsqlQuadsTable());
+  for (const ddl of schemaBuilder.buildHexastoreIndexes()) {
     await databaseClient.execute(ddl);
   }
-  await databaseClient.execute(queryBuilder.buildLibsqlChunksTable());
-  await migrateLibsqlChunksFtsValue(databaseClient, queryBuilder);
-  await databaseClient.execute(queryBuilder.buildLibsqlChunksQuadIdIndex());
-  await recreateLibsqlChunksFts(databaseClient, queryBuilder);
-  await databaseClient.execute(queryBuilder.buildLibsqlChunksIndex());
+  await databaseClient.execute(schemaBuilder.buildLibsqlChunksTable());
+  await migrateLibsqlChunksFtsValue(databaseClient, schemaBuilder);
+  await databaseClient.execute(schemaBuilder.buildLibsqlChunksQuadIdIndex());
+  await recreateLibsqlChunksFts(databaseClient, schemaBuilder);
+  await databaseClient.execute(schemaBuilder.buildLibsqlChunksIndex());
 }
 
 /**
@@ -26,7 +26,7 @@ export async function initializeLibsqlSchema(
  */
 async function migrateLibsqlChunksFtsValue(
   databaseClient: LibsqlClient,
-  queryBuilder: LibsqlQueryBuilder,
+  schemaBuilder: LibsqlSchemaBuilder,
 ): Promise<void> {
   const tableInfo = await databaseClient.execute("PRAGMA table_info(chunks)");
   const hasFtsValueColumn = tableInfo.rows.some((row) =>
@@ -36,7 +36,7 @@ async function migrateLibsqlChunksFtsValue(
   if (!hasFtsValueColumn) {
     try {
       await databaseClient.execute(
-        queryBuilder.buildMigrateChunksFtsValueColumn(),
+        schemaBuilder.buildMigrateChunksFtsValueColumn(),
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -45,7 +45,7 @@ async function migrateLibsqlChunksFtsValue(
       }
     }
     await databaseClient.execute(
-      queryBuilder.buildBackfillChunksFtsValueFromValue(),
+      schemaBuilder.buildBackfillChunksFtsValueFromValue(),
     );
   }
 }
@@ -55,9 +55,9 @@ async function migrateLibsqlChunksFtsValue(
  */
 async function recreateLibsqlChunksFts(
   databaseClient: LibsqlClient,
-  queryBuilder: LibsqlQueryBuilder,
+  schemaBuilder: LibsqlSchemaBuilder,
 ): Promise<void> {
-  for (const dropTriggerSql of queryBuilder.buildDropChunksFtsTriggers()) {
+  for (const dropTriggerSql of schemaBuilder.buildDropChunksFtsTriggers()) {
     await databaseClient.execute(dropTriggerSql);
   }
 
@@ -72,12 +72,12 @@ async function recreateLibsqlChunksFts(
       String(row.name) === "fts_value"
     );
     if (!indexesFtsValue) {
-      await databaseClient.execute(queryBuilder.buildDropChunksFtsTable());
+      await databaseClient.execute(schemaBuilder.buildDropChunksFtsTable());
     }
   }
 
-  await databaseClient.execute(queryBuilder.buildLibsqlChunksFtsTable());
-  for (const triggerSql of queryBuilder.buildLibsqlChunksTriggers()) {
+  await databaseClient.execute(schemaBuilder.buildLibsqlChunksFtsTable());
+  for (const triggerSql of schemaBuilder.buildLibsqlChunksTriggers()) {
     await databaseClient.execute(triggerSql);
   }
 
@@ -87,7 +87,7 @@ async function recreateLibsqlChunksFts(
   const totalChunks = Number(chunkCount.rows[0]?.total ?? 0);
   if (totalChunks > 0) {
     try {
-      await databaseClient.execute(queryBuilder.buildRebuildChunksFtsIndex());
+      await databaseClient.execute(schemaBuilder.buildRebuildChunksFtsIndex());
     } catch {
       // FTS rebuild is best-effort during migration; callers can run rebuildLibsqlSearchIndexFromQuads.
     }

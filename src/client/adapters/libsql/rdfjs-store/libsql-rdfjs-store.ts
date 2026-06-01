@@ -1,8 +1,11 @@
 import type { Client } from "@libsql/client";
 import type * as rdfjs from "@rdfjs/types";
 import { Readable } from "node:stream";
-import type { LibsqlQueryBuilder } from "../libsql-query-builder.ts";
-import { DEFAULT_LIBSQL_MATCH_PAGE_SIZE } from "../libsql-query-builder.ts";
+import {
+  buildCountQuadsQuery,
+  buildMatchQuadsQuery,
+} from "../quad-store/libsql-quad-query-builder.ts";
+import { DEFAULT_LIBSQL_MATCH_PAGE_SIZE } from "../quad-store/libsql-quad-query-builder.ts";
 
 import { quadFromLibsqlRow } from "../libsql-quad-row.ts";
 
@@ -14,7 +17,6 @@ export interface LibsqlRdfjsStoreOptions {
   client: Client;
 
   /** queryBuilder is the LibsqlQueryBuilder. */
-  queryBuilder: LibsqlQueryBuilder;
 
   /** matchPageSize limits rows per hexastore match SQL round-trip (default 1000). */
   matchPageSize?: number;
@@ -65,7 +67,7 @@ export class LibsqlRdfjsStore {
         }
 
         try {
-          const { sql, args } = this.options.queryBuilder.buildMatchQuadsQuery(
+          const { sql, args } = buildMatchQuadsQuery(
             pattern,
             {
               afterQuadId,
@@ -108,7 +110,7 @@ export class LibsqlRdfjsStore {
     object?: rdfjs.Term | null,
     graph?: rdfjs.Term | null,
   ): Promise<number> {
-    const { sql, args } = this.options.queryBuilder.buildCountQuadsQuery({
+    const { sql, args } = buildCountQuadsQuery({
       subject: subject ?? null,
       predicate: predicate ?? null,
       object: object ?? null,

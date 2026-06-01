@@ -8,15 +8,15 @@ import type {
 } from "@/client/search-index/mod.ts";
 import { buildSearchResultId } from "@/client/search-index/build-search-result-id.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
-import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/libsql-query-builder.ts";
+import type { LibsqlSearchQueryBuilder } from "./libsql-search-query-builder.ts";
 import { rebuildLibsqlSearchIndexFromQuads } from "./rebuild-libsql-search-index-from-quads.ts";
 
 /**
  * LibsqlSearchIndexOptions defines the structured configuration and dependency parameters needed to construct the LibSQL search engine.
  */
 export interface LibsqlSearchIndexOptions extends LibsqlClientBaseOptions {
-  /** libsqlQueryBuilder must match the schema and commit path used when materializing chunk vectors. */
-  libsqlQueryBuilder: LibsqlQueryBuilder;
+  /** searchQueryBuilder must match the schema and commit path used when materializing chunk vectors. */
+  searchQueryBuilder: LibsqlSearchQueryBuilder;
 
   /** limit establishes optional page sizing constraints for search result sets, defaulting to 100. */
   limit?: number;
@@ -46,10 +46,10 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
         ]);
         const embeddingLength = vector.length;
         if (
-          embeddingLength !== this.options.libsqlQueryBuilder.vectorDimensions
+          embeddingLength !== this.options.searchQueryBuilder.vectorDimensions
         ) {
           throw new Error(
-            `query embedding length ${embeddingLength} does not match vectorDimensions ${this.options.libsqlQueryBuilder.vectorDimensions}`,
+            `query embedding length ${embeddingLength} does not match vectorDimensions ${this.options.searchQueryBuilder.vectorDimensions}`,
           );
         }
         vectorJson = JSON.stringify(Array.from(vector));
@@ -63,7 +63,7 @@ export class LibsqlSearchIndex implements SearchIndexInterface {
       }
     }
 
-    const { sql, args } = this.options.libsqlQueryBuilder.buildSearchQuery(
+    const { sql, args } = this.options.searchQueryBuilder.buildSearchQuery(
       request,
       {
         vectorJson,

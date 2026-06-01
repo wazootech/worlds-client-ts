@@ -7,7 +7,9 @@ import { chunkQuads } from "@/client/search-index/quad-chunker/mod.ts";
 import type * as rdfjs from "@rdfjs/types";
 import { hashQuads } from "@/client/quad-store/mod.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
-import type { LibsqlQueryBuilder } from "@/client/adapters/libsql/libsql-query-builder.ts";
+import type { LibsqlSearchQueryBuilder } from "./libsql-search-query-builder.ts";
+import { buildSelectLabelLiteralsForSubjects } from "../quad-store/libsql-quad-query-builder.ts";
+
 import {
   buildChunkFtsValue,
   resolveLabelPredicates,
@@ -22,7 +24,7 @@ import {
 export interface ProjectSearchChunksOptions extends LibsqlClientBaseOptions {
   textSplitter: TextSplitterInterface;
   maxWriteBatchSize?: number;
-  libsqlQueryBuilder: LibsqlQueryBuilder;
+  searchQueryBuilder: LibsqlSearchQueryBuilder;
 }
 
 /**
@@ -92,7 +94,7 @@ export async function refreshSearchChunksForQuads(
     statements,
     buildChunkDeletionStatementsChunked(
       quadIds,
-      options.libsqlQueryBuilder,
+      options.searchQueryBuilder,
       lookupChunkSize,
     ),
   );
@@ -113,13 +115,15 @@ export async function refreshSearchChunksForQuads(
 
 function buildChunkDeletionStatementsChunked(
   quadIds: string[],
-  queryBuilder: LibsqlQueryBuilder,
+  queryBuilder: LibsqlSearchQueryBuilder,
   chunkSize: number,
 ): InStatement[] {
   const statements: InStatement[] = [];
   for (let index = 0; index < quadIds.length; index += chunkSize) {
     const quadIdBatch = quadIds.slice(index, index + chunkSize);
-    statements.push(queryBuilder.buildDeleteByQuadIds(quadIdBatch));
+    statements.push(
+      queryBuilder.buildDeleteByQuadIds(quadIdBatch),
+    );
   }
   return statements;
 }
@@ -129,7 +133,6 @@ async function loadLabelLiteralsBySubject(
   subjects: string[],
   labelPredicates: string[],
   lookupChunkSize: number,
-  queryBuilder: LibsqlQueryBuilder,
 ): Promise<Map<string, string[]>> {
   const labelLiteralsBySubject = new Map<string, string[]>();
   if (subjects.length === 0 || labelPredicates.length === 0) {
@@ -139,7 +142,7 @@ async function loadLabelLiteralsBySubject(
   const uniqueSubjects = Array.from(new Set(subjects));
   for (let index = 0; index < uniqueSubjects.length; index += lookupChunkSize) {
     const subjectBatch = uniqueSubjects.slice(index, index + lookupChunkSize);
-    const query = queryBuilder.buildSelectLabelLiteralsForSubjects(
+    const query = buildSelectLabelLiteralsForSubjects(
       subjectBatch,
       labelPredicates,
     );
@@ -186,7 +189,6 @@ async function buildVectorChunkStatements(
     uniqueSubjects,
     resolvedLabelPredicates,
     lookupChunkSize,
-    options.libsqlQueryBuilder,
   );
 
   const chunksWithFtsValue = chunks.map((chunk) => ({
@@ -217,9 +219,9 @@ async function buildVectorChunkStatements(
       ) {
         const projectedVector = uniqueVectors[vectorIndex]!;
         const embeddingLength = projectedVector.length;
-        if (embeddingLength !== options.libsqlQueryBuilder.vectorDimensions) {
+        if (embeddingLength !== options.searchQueryBuilder.vectorDimensions) {
           throw new Error(
-            `embedding length ${embeddingLength} does not match configured vectorDimensions ${options.libsqlQueryBuilder.vectorDimensions}`,
+            `embedding length ${embeddingLength} does not match configured vectorDimensions ${options.searchQueryBuilder.vectorDimensions}`,
           );
         }
       }
@@ -238,7 +240,7 @@ async function buildVectorChunkStatements(
     const vectorJson = vector ? JSON.stringify(Array.from(vector)) : undefined;
 
     statements.push(
-      options.libsqlQueryBuilder.buildInsertChunk({
+      options.searchQueryBuilder.buildInsertChunk({
         quad_id: chunk.quad_id,
         subject: chunk.subject,
         predicate: chunk.predicate,

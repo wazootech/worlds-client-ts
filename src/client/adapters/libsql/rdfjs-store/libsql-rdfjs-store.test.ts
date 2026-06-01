@@ -3,29 +3,25 @@ import type { Client } from "@libsql/client";
 import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
 import type * as rdfjs from "@rdfjs/types";
-import { LibsqlQueryBuilder } from "../libsql-query-builder.ts";
 import { collectQuadsFromStream } from "@/client/quad-store/mod.ts";
 import { LibsqlRdfjsStore } from "./mod.ts";
+import { testLibsqlSchemaBuilder } from "../libsql-test-fixtures.ts";
 
 const { namedNode, literal, blankNode } = DataFactory;
 
-const testBuilder = new LibsqlQueryBuilder(32);
-
 function createTestLibsqlRdfjsStore(
   client: ReturnType<typeof createClient>,
-  queryBuilder: LibsqlQueryBuilder,
   matchPageSize?: number,
 ): LibsqlRdfjsStore {
   return new LibsqlRdfjsStore({
     client,
-    queryBuilder,
     matchPageSize,
   });
 }
 
 async function setupSchema(db: ReturnType<typeof createClient>): Promise<void> {
-  await db.execute(testBuilder.buildLibsqlQuadsTable());
-  for (const ddl of testBuilder.buildHexastoreIndexes()) {
+  await db.execute(testLibsqlSchemaBuilder.buildLibsqlQuadsTable());
+  for (const ddl of testLibsqlSchemaBuilder.buildHexastoreIndexes()) {
     await db.execute(ddl);
   }
 }
@@ -73,7 +69,7 @@ async function seedQuad(
 Deno.test("LibsqlRdfjsStore.match - empty store returns empty stream", async () => {
   const db = createClient({ url: ":memory:" });
   await setupSchema(db);
-  const store = createTestLibsqlRdfjsStore(db, testBuilder);
+  const store = createTestLibsqlRdfjsStore(db);
 
   const results = await collectQuadsFromStream(
     store.match(null, null, null, null),
@@ -94,7 +90,7 @@ Deno.test("LibsqlRdfjsStore.match - all four terms bound returns exact quad", as
     g: "urn:graph1",
     g_type: "NamedNode",
   });
-  const store = createTestLibsqlRdfjsStore(db, testBuilder);
+  const store = createTestLibsqlRdfjsStore(db);
 
   const results = await collectQuadsFromStream(store.match(
     namedNode("urn:alice"),
@@ -117,7 +113,7 @@ Deno.test("LibsqlRdfjsStore.match - by subject only returns matching quads", asy
   await seedQuad(db, { id: "h1", s: "urn:a", p: "urn:p1", o: "o1" });
   await seedQuad(db, { id: "h2", s: "urn:b", p: "urn:p2", o: "o2" });
   await seedQuad(db, { id: "h3", s: "urn:a", p: "urn:p3", o: "o3" });
-  const store = createTestLibsqlRdfjsStore(db, testBuilder);
+  const store = createTestLibsqlRdfjsStore(db);
 
   const results = await collectQuadsFromStream(
     store.match(namedNode("urn:a"), null, null, null),
@@ -135,7 +131,7 @@ Deno.test("LibsqlRdfjsStore.match - by predicate only uses PSO index", async () 
   await seedQuad(db, { id: "h1", s: "urn:a", p: "urn:target", o: "o1" });
   await seedQuad(db, { id: "h2", s: "urn:b", p: "urn:other", o: "o2" });
   await seedQuad(db, { id: "h3", s: "urn:c", p: "urn:target", o: "o3" });
-  const store = createTestLibsqlRdfjsStore(db, testBuilder);
+  const store = createTestLibsqlRdfjsStore(db);
 
   const results = await collectQuadsFromStream(
     store.match(null, namedNode("urn:target"), null, null),
@@ -166,7 +162,7 @@ Deno.test("LibsqlRdfjsStore.match - by graph only uses GPSO index", async () => 
     g: "urn:g2",
     g_type: "NamedNode",
   });
-  const store = createTestLibsqlRdfjsStore(db, testBuilder);
+  const store = createTestLibsqlRdfjsStore(db);
 
   const results = await collectQuadsFromStream(
     store.match(null, null, null, namedNode("urn:g1")),
@@ -193,7 +189,7 @@ Deno.test("LibsqlRdfjsStore.match - by object only uses OPSG index", async () =>
     o: "other",
     o_type: "Literal",
   });
-  const store = createTestLibsqlRdfjsStore(db, testBuilder);
+  const store = createTestLibsqlRdfjsStore(db);
 
   const results = await collectQuadsFromStream(
     store.match(null, null, literal("target"), null),
@@ -220,7 +216,7 @@ Deno.test("LibsqlRdfjsStore.match - disambiguates NamedNode vs BlankNode with sa
     p: "urn:p",
     o: "o2",
   });
-  const store = createTestLibsqlRdfjsStore(db, testBuilder);
+  const store = createTestLibsqlRdfjsStore(db);
 
   const namedResults = await collectQuadsFromStream(
     store.match(namedNode("b1"), null, null, null),
@@ -246,7 +242,7 @@ Deno.test("LibsqlRdfjsStore.match - literal with language tag", async () => {
     o_type: "Literal",
     o_lang: "es",
   });
-  const store = createTestLibsqlRdfjsStore(db, testBuilder);
+  const store = createTestLibsqlRdfjsStore(db);
 
   // Match by subject+p, then check the literal
   const results = await collectQuadsFromStream(
@@ -271,7 +267,7 @@ Deno.test("LibsqlRdfjsStore.match - literal with datatype", async () => {
     o_type: "Literal",
     o_datatype: "http://www.w3.org/2001/XMLSchema#integer",
   });
-  const store = createTestLibsqlRdfjsStore(db, testBuilder);
+  const store = createTestLibsqlRdfjsStore(db);
 
   const results = await collectQuadsFromStream(
     store.match(namedNode("urn:s"), namedNode("urn:p"), null, null),
@@ -294,7 +290,7 @@ Deno.test("LibsqlRdfjsStore.match - DefaultGraph round-trip", async () => {
     g: "",
     g_type: "DefaultGraph",
   });
-  const store = createTestLibsqlRdfjsStore(db, testBuilder);
+  const store = createTestLibsqlRdfjsStore(db);
 
   const results = await collectQuadsFromStream(
     store.match(namedNode("urn:s"), null, null, null),
@@ -325,7 +321,7 @@ Deno.test(
       o_type: "Literal",
       o_lang: "en",
     });
-    const store = createTestLibsqlRdfjsStore(db, testBuilder);
+    const store = createTestLibsqlRdfjsStore(db);
 
     const results = await collectQuadsFromStream(
       store.match(
@@ -362,7 +358,7 @@ Deno.test(
       o_type: "Literal",
       o_datatype: "http://www.w3.org/2001/XMLSchema#integer",
     });
-    const store = createTestLibsqlRdfjsStore(db, testBuilder);
+    const store = createTestLibsqlRdfjsStore(db);
 
     const results = await collectQuadsFromStream(
       store.match(
@@ -393,7 +389,7 @@ Deno.test("LibsqlRdfjsStore.match - NamedNode object terms round-trip", async ()
     o_datatype: null,
     o_lang: null,
   });
-  const store = createTestLibsqlRdfjsStore(db, testBuilder);
+  const store = createTestLibsqlRdfjsStore(db);
 
   const results = await collectQuadsFromStream(
     store.match(null, null, namedNode("http://example.com/resource"), null),
@@ -414,7 +410,7 @@ Deno.test("LibsqlRdfjsStore.match - BlankNode graph terms round-trip", async () 
     g: "genid-graph",
     g_type: "BlankNode",
   });
-  const store = createTestLibsqlRdfjsStore(db, testBuilder);
+  const store = createTestLibsqlRdfjsStore(db);
 
   const results = await collectQuadsFromStream(
     store.match(null, null, null, blankNode("genid-graph")),
@@ -430,7 +426,7 @@ Deno.test(
     const failingClient = {
       execute: () => Promise.reject(new Error("database unavailable")),
     } as unknown as Client;
-    const store = createTestLibsqlRdfjsStore(failingClient, testBuilder);
+    const store = createTestLibsqlRdfjsStore(failingClient);
 
     await assertRejects(
       () => collectQuadsFromStream(store.match(null, null, null, null)),
@@ -459,7 +455,7 @@ Deno.test("LibsqlRdfjsStore.match - multiple named graphs are isolated", async (
     g: "urn:g2",
     g_type: "NamedNode",
   });
-  const store = createTestLibsqlRdfjsStore(db, testBuilder);
+  const store = createTestLibsqlRdfjsStore(db);
 
   const g1Results = await collectQuadsFromStream(
     store.match(null, null, null, namedNode("urn:g1")),

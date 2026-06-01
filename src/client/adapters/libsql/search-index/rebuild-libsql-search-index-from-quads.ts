@@ -5,7 +5,10 @@ import {
   refreshSearchChunksForQuads,
 } from "@/client/adapters/libsql/search-index/project-search-chunks.ts";
 import { quadFromLibsqlRow } from "@/client/adapters/libsql/libsql-quad-row.ts";
-import { DEFAULT_LIBSQL_MATCH_PAGE_SIZE } from "@/client/adapters/libsql/libsql-query-builder.ts";
+import {
+  buildMatchQuadsQuery,
+  DEFAULT_LIBSQL_MATCH_PAGE_SIZE,
+} from "../quad-store/libsql-quad-query-builder.ts";
 
 /**
  * RebuildLibsqlSearchIndexFromQuadsResult reports how many quads and chunk rows were processed.
@@ -34,7 +37,6 @@ export async function rebuildLibsqlSearchIndexFromQuads(
     client,
     include,
     exclude,
-    libsqlQueryBuilder,
     readPageSize,
   } = options;
   const pageSize = Math.max(
@@ -48,7 +50,7 @@ export async function rebuildLibsqlSearchIndexFromQuads(
   let afterQuadId: string | undefined;
 
   for (;;) {
-    const query = libsqlQueryBuilder.buildMatchQuadsQuery(
+    const query = buildMatchQuadsQuery(
       { subject: null, predicate: null, object: null, graph: null },
       { afterQuadId, limit: pageSize },
     );

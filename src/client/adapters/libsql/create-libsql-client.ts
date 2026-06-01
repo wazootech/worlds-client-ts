@@ -13,7 +13,8 @@ import { createLibsqlPersistHooks } from "@/client/adapters/libsql/create-libsql
 import type { LibsqlClientBaseOptions } from "./libsql-client-base-options.ts";
 import { LibsqlRdfjsStore } from "./rdfjs-store/mod.ts";
 import { initializeLibsqlSchema } from "./initialize-libsql-schema.ts";
-import { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import { LibsqlSchemaBuilder } from "./schema/libsql-schema-builder.ts";
+import { LibsqlSearchQueryBuilder } from "./search-index/libsql-search-query-builder.ts";
 import { RdfjsQuadStore } from "@/client/adapters/rdfjs/rdfjs-quad-store.ts";
 import { Transaction } from "@/client/quad-store/mod.ts";
 
@@ -32,34 +33,34 @@ export async function createLibsqlClient(
   options: LibsqlClientOptions,
 ): Promise<ClientInterface> {
   const vectorDimensions = options.vectorDimensions ?? 32;
-  const queryBuilder = new LibsqlQueryBuilder(vectorDimensions);
+  const schemaBuilder = new LibsqlSchemaBuilder(vectorDimensions);
+  const searchQueryBuilder = new LibsqlSearchQueryBuilder(vectorDimensions);
 
-  await initializeLibsqlSchema(options.client, queryBuilder);
+  await initializeLibsqlSchema(options.client, schemaBuilder);
 
   const textSplitter = options.textSplitter ??
     new RecursiveCharacterTextSplitter({ chunkSize: 1000 });
 
   const searchIndex = new LibsqlSearchIndex({
     ...options,
-    libsqlQueryBuilder: queryBuilder,
+    searchQueryBuilder,
     textSplitter,
   });
 
   const searchIndexProjector = new LibsqlSearchIndexProjector({
     ...options,
-    libsqlQueryBuilder: queryBuilder,
+    searchQueryBuilder,
     textSplitter,
   });
 
   const persistHooks = createLibsqlPersistHooks({
     ...options,
-    libsqlQueryBuilder: queryBuilder,
+    searchQueryBuilder,
     searchIndexProjector,
   });
 
   const libsqlRdfjsStore = new LibsqlRdfjsStore({
     client: options.client,
-    queryBuilder,
     matchPageSize: options.matchPageSize,
   });
 

@@ -8,7 +8,7 @@ import { FakeEmbeddingService } from "@/client/search-index/embedding-service/mo
 import {
   setupLibsqlSchemaForTest,
   sharedTextSplitter,
-  testLibsqlQueryBuilder,
+  testLibsqlSearchQueryBuilder,
 } from "@/client/adapters/libsql/libsql-test-fixtures.ts";
 import { buildChunkFtsValue } from "@/client/adapters/libsql/search-index/search-chunk-fts.ts";
 
@@ -33,11 +33,11 @@ Deno.test(
       searchIndexProjector: new LibsqlSearchIndexProjector({
         client,
         textSplitter: sharedTextSplitter,
-        libsqlQueryBuilder: testLibsqlQueryBuilder,
+        searchQueryBuilder: testLibsqlSearchQueryBuilder,
         labelPredicates: [],
         embeddingService: new FakeEmbeddingService(),
       }),
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
       searchIndexOnImport: "disabled",
     });
 
@@ -60,11 +60,11 @@ Deno.test("createLibsqlPersistHooks - isolated writes and removals commit correc
     searchIndexProjector: new LibsqlSearchIndexProjector({
       client,
       textSplitter: sharedTextSplitter,
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
       labelPredicates: [],
       embeddingService: new FakeEmbeddingService(),
     }),
-    libsqlQueryBuilder: testLibsqlQueryBuilder,
+    searchQueryBuilder: testLibsqlSearchQueryBuilder,
   });
 
   const testQuad = quad(
@@ -118,10 +118,10 @@ Deno.test("createLibsqlPersistHooks - supports synchronization when embeddingSer
     searchIndexProjector: new LibsqlSearchIndexProjector({
       client,
       textSplitter: sharedTextSplitter,
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
       labelPredicates: [],
     }),
-    libsqlQueryBuilder: testLibsqlQueryBuilder,
+    searchQueryBuilder: testLibsqlSearchQueryBuilder,
   });
 
   const testQuad = quad(
@@ -165,11 +165,11 @@ Deno.test("createLibsqlPersistHooks - stores literal value and discovery fts_val
     searchIndexProjector: new LibsqlSearchIndexProjector({
       client,
       textSplitter: sharedTextSplitter,
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
       labelPredicates: [],
       embeddingService: new FakeEmbeddingService(),
     }),
-    libsqlQueryBuilder: testLibsqlQueryBuilder,
+    searchQueryBuilder: testLibsqlSearchQueryBuilder,
   });
 
   const testQuad = quad(
@@ -219,11 +219,11 @@ Deno.test(
       searchIndexProjector: new LibsqlSearchIndexProjector({
         client,
         textSplitter: sharedTextSplitter,
-        libsqlQueryBuilder: testLibsqlQueryBuilder,
+        searchQueryBuilder: testLibsqlSearchQueryBuilder,
         labelPredicates: [],
         embeddingService: new FakeEmbeddingService(),
       }),
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
       searchIndexOnImport: "disabled", // Skip search chunk building so tests are fast
     });
 
@@ -261,11 +261,11 @@ Deno.test(
       searchIndexProjector: new LibsqlSearchIndexProjector({
         client,
         textSplitter: sharedTextSplitter,
-        libsqlQueryBuilder: testLibsqlQueryBuilder,
+        searchQueryBuilder: testLibsqlSearchQueryBuilder,
         labelPredicates: [],
         embeddingService: new FakeEmbeddingService(),
       }),
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
       searchIndexOnImport: "disabled", // Skip search chunk building for pure bulk quad sync test
     });
 
@@ -292,11 +292,11 @@ Deno.test(
       searchIndexProjector: new LibsqlSearchIndexProjector({
         client,
         textSplitter: sharedTextSplitter,
-        libsqlQueryBuilder: testLibsqlQueryBuilder,
+        searchQueryBuilder: testLibsqlSearchQueryBuilder,
         labelPredicates: [],
         embeddingService: new FakeEmbeddingService(),
       }),
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
       searchIndexOnImport: "deferred" as const,
     };
 
@@ -331,11 +331,11 @@ Deno.test(
       searchIndexProjector: new LibsqlSearchIndexProjector({
         client,
         textSplitter: sharedTextSplitter,
-        libsqlQueryBuilder: testLibsqlQueryBuilder,
+        searchQueryBuilder: testLibsqlSearchQueryBuilder,
         labelPredicates: [],
         embeddingService: new FakeEmbeddingService(),
       }),
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
       searchIndexOnImport: "disabled",
     });
 

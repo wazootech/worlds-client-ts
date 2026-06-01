@@ -1,12 +1,11 @@
 import type { Client } from "@libsql/client";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import {
-  initializeLibsqlSchema,
-  LibsqlQueryBuilder,
-} from "@/client/adapters/libsql/mod.ts";
+import { initializeLibsqlSchema } from "./initialize-libsql-schema.ts";
+import { LibsqlSchemaBuilder } from "./schema/libsql-schema-builder.ts";
+import { LibsqlSearchQueryBuilder } from "./search-index/libsql-search-query-builder.ts";
 
-/** testLibsqlQueryBuilder is the shared query builder used by LibSQL adapter tests. */
-export const testLibsqlQueryBuilder = new LibsqlQueryBuilder(32);
+export const testLibsqlSchemaBuilder = new LibsqlSchemaBuilder(32);
+export const testLibsqlSearchQueryBuilder = new LibsqlSearchQueryBuilder(32);
 
 /** sharedTextSplitter is the default text splitter for LibSQL search commit tests. */
 export const sharedTextSplitter = new RecursiveCharacterTextSplitter({
@@ -19,5 +18,5 @@ export const sharedTextSplitter = new RecursiveCharacterTextSplitter({
 export async function setupLibsqlSchemaForTest(
   client: Client,
 ): Promise<void> {
-  await initializeLibsqlSchema(client, testLibsqlQueryBuilder);
+  await initializeLibsqlSchema(client, testLibsqlSchemaBuilder);
 }

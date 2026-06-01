@@ -5,7 +5,7 @@ import { FakeEmbeddingService } from "@/client/search-index/embedding-service/mo
 import type { EmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
 import {
   setupLibsqlSchemaForTest,
-  testLibsqlQueryBuilder,
+  testLibsqlSearchQueryBuilder,
 } from "@/client/adapters/libsql/libsql-test-fixtures.ts";
 
 // --- Tests ---
@@ -53,7 +53,7 @@ Deno.test("LibsqlSearchIndex - Tracer Bullet: performs basic hybrid search and m
   const searchIndex = new LibsqlSearchIndex({
     client,
     embeddingService: new FakeEmbeddingService(),
-    libsqlQueryBuilder: testLibsqlQueryBuilder,
+    searchQueryBuilder: testLibsqlSearchQueryBuilder,
   });
 
   const response = await searchIndex.search({ query: "Alice" });
@@ -105,7 +105,7 @@ Deno.test("LibsqlSearchIndex - Scope Inclusion: limits matches only to included 
   const searchIndex = new LibsqlSearchIndex({
     client,
     embeddingService: new FakeEmbeddingService(),
-    libsqlQueryBuilder: testLibsqlQueryBuilder,
+    searchQueryBuilder: testLibsqlSearchQueryBuilder,
   });
 
   const base = await searchIndex.search({ query: "coding" });
@@ -168,7 +168,7 @@ Deno.test("LibsqlSearchIndex - Scope Exclusion: suppresses explicitly excluded p
   const searchIndex = new LibsqlSearchIndex({
     client,
     embeddingService: new FakeEmbeddingService(),
-    libsqlQueryBuilder: testLibsqlQueryBuilder,
+    searchQueryBuilder: testLibsqlSearchQueryBuilder,
   });
 
   const response = await searchIndex.search({
@@ -219,7 +219,7 @@ Deno.test("LibsqlSearchIndex - Vectorless Mode: gracefully degrades to keyword-o
   const searchIndex = new LibsqlSearchIndex({
     client,
     // embeddingService is omitted intentionally to trigger Keyword-only FTS
-    libsqlQueryBuilder: testLibsqlQueryBuilder,
+    searchQueryBuilder: testLibsqlSearchQueryBuilder,
   });
 
   const response = await searchIndex.search({ query: "search term" });
@@ -257,7 +257,7 @@ Deno.test("LibsqlSearchIndex - Stability: executes search safely when query cont
 
   const searchIndex = new LibsqlSearchIndex({
     client,
-    libsqlQueryBuilder: testLibsqlQueryBuilder,
+    searchQueryBuilder: testLibsqlSearchQueryBuilder,
   });
 
   // RED EXPECTATION: Running a query containing unclosed special characters (", {, etc.)
@@ -314,7 +314,7 @@ Deno.test(
     const searchIndex = new LibsqlSearchIndex({
       client,
       embeddingService: new FailingEmbeddingService(),
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
     });
 
     const response = await searchIndex.search({ query: "fallback keyword" });
@@ -346,7 +346,7 @@ Deno.test(
     const searchIndex = new LibsqlSearchIndex({
       client,
       embeddingService: new WrongDimensionEmbeddingService(),
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
     });
 
     const response = await searchIndex.search({
@@ -383,7 +383,7 @@ Deno.test("LibsqlSearchIndex - respects custom result limit option", async () =>
   const searchIndex = new LibsqlSearchIndex({
     client,
     embeddingService: new FakeEmbeddingService(),
-    libsqlQueryBuilder: testLibsqlQueryBuilder,
+    searchQueryBuilder: testLibsqlSearchQueryBuilder,
     limit: 2,
   });
 

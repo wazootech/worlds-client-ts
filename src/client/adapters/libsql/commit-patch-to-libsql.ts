@@ -8,7 +8,12 @@ import {
   hashQuads,
 } from "@/client/quad-store/mod.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
-import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import {
+  buildBulkInsertQuads,
+  buildDeleteQuadsByQuadIds,
+  buildSelectExistingQuadIds,
+  buildWipeAllGraphDataStatements,
+} from "./quad-store/libsql-quad-query-builder.ts";
 import {
   DEFAULT_MAX_LOOKUP_CHUNK_SIZE,
   DEFAULT_MAX_WRITE_BATCH_SIZE,
@@ -17,13 +22,14 @@ import {
   stageInStatements,
 } from "./libsql-batch-executor.ts";
 import { resolveLabelPredicates } from "./search-index/search-chunk-fts.ts";
+import type { LibsqlSearchQueryBuilder } from "./search-index/libsql-search-query-builder.ts";
 
 export interface CommitPatchToLibsqlOptions extends LibsqlClientBaseOptions {
   /** maxWriteBatchSize caps how many statements are sent per LibSQL write batch. Defaults to 500. */
   maxWriteBatchSize?: number;
 
-  /** libsqlQueryBuilder supplies dimension-aware SQL used for deletions, inserts, and chunk replication. */
-  libsqlQueryBuilder: LibsqlQueryBuilder;
+  /** searchQueryBuilder supplies dimension-aware SQL used for deletions, inserts, and chunk replication. */
+  searchQueryBuilder: LibsqlSearchQueryBuilder;
 }
 
 export interface CommitPatchToLibsqlResult {
@@ -37,10 +43,9 @@ export interface CommitPatchToLibsqlResult {
  */
 async function executeReplaceImportWipe(
   client: Client,
-  libsqlQueryBuilder: LibsqlQueryBuilder,
   writeBatchSize: number,
 ): Promise<void> {
-  const wipeStatements = libsqlQueryBuilder.buildWipeAllGraphDataStatements();
+  const wipeStatements = buildWipeAllGraphDataStatements();
   await executeWriteBatches(client, wipeStatements, writeBatchSize);
 }
 
@@ -59,7 +64,7 @@ export async function commitPatchToLibsql(
     maxWriteBatchSize,
     include,
     exclude,
-    libsqlQueryBuilder,
+    searchQueryBuilder,
   } = options;
   const lookupChunkSize = maxLookupChunkSize ?? DEFAULT_MAX_LOOKUP_CHUNK_SIZE;
   const writeBatchSize = maxWriteBatchSize ?? DEFAULT_MAX_WRITE_BATCH_SIZE;
@@ -68,7 +73,6 @@ export async function commitPatchToLibsql(
   if (isReplaceImportCommit(context)) {
     await executeReplaceImportWipe(
       client,
-      libsqlQueryBuilder,
       writeBatchSize,
     );
   }
@@ -91,7 +95,7 @@ export async function commitPatchToLibsql(
         statements,
         buildDeletionStatementsChunked(
           computedDeletionQuadIds,
-          libsqlQueryBuilder,
+          searchQueryBuilder,
           lookupChunkSize,
         ),
         writeBatchSize,
@@ -109,7 +113,6 @@ export async function commitPatchToLibsql(
       client,
       proposedQuadIds,
       lookupChunkSize,
-      libsqlQueryBuilder,
     );
 
     // Deduplication Filter: Process ONLY truly novel facts that are not yet persistent
@@ -128,7 +131,7 @@ export async function commitPatchToLibsql(
         statements,
         buildDeletionStatementsChunked(
           novelQuadIds,
-          libsqlQueryBuilder,
+          searchQueryBuilder,
           lookupChunkSize,
         ),
         writeBatchSize,
@@ -141,7 +144,6 @@ export async function commitPatchToLibsql(
         buildRelationalStatements(
           novelInsertions,
           novelQuadIds,
-          libsqlQueryBuilder,
         ),
         writeBatchSize,
       );
@@ -180,11 +182,11 @@ export async function commitPatchToLibsql(
  */
 function buildDeletionStatements(
   quadIds: string[],
-  queryBuilder: LibsqlQueryBuilder,
+  queryBuilder: LibsqlSearchQueryBuilder,
 ): InStatement[] {
   return [
     queryBuilder.buildDeleteByQuadIds(quadIds),
-    queryBuilder.buildDeleteQuadsByQuadIds(quadIds),
+    buildDeleteQuadsByQuadIds(quadIds),
   ];
 }
 
@@ -193,7 +195,7 @@ function buildDeletionStatements(
  */
 function buildDeletionStatementsChunked(
   quadIds: string[],
-  queryBuilder: LibsqlQueryBuilder,
+  queryBuilder: LibsqlSearchQueryBuilder,
   chunkSize: number,
 ): InStatement[] {
   const statements: InStatement[] = [];
@@ -214,13 +216,12 @@ async function queryCachePresence(
   client: Client,
   quadIds: string[],
   lookupChunkSize: number,
-  queryBuilder: LibsqlQueryBuilder,
 ): Promise<Set<string>> {
   const cachedIds = new Set<string>();
   try {
     for (let i = 0; i < quadIds.length; i += lookupChunkSize) {
       const batchIds = quadIds.slice(i, i + lookupChunkSize);
-      const query = queryBuilder.buildSelectExistingQuadIds(batchIds);
+      const query = buildSelectExistingQuadIds(batchIds);
       const resultSet = await client.execute(query);
       for (const row of resultSet.rows) {
         if (row.id) {
@@ -241,7 +242,6 @@ async function queryCachePresence(
 function buildRelationalStatements(
   quads: rdfjs.Quad[],
   quadIds: string[],
-  queryBuilder: LibsqlQueryBuilder,
 ): InStatement[] {
   const insertQuadRows = quads.map((quad, index) => {
     const subject = fromRdfjsTerm(quad.subject);
@@ -262,5 +262,5 @@ function buildRelationalStatements(
     };
   });
 
-  return queryBuilder.buildBulkInsertQuads(insertQuadRows);
+  return buildBulkInsertQuads(insertQuadRows);
 }

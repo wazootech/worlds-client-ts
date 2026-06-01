@@ -9,7 +9,8 @@ import type * as rdfjs from "@rdfjs/types";
 import { LibsqlRdfjsStore } from "@/client/adapters/libsql/rdfjs-store/mod.ts";
 import {
   initializeLibsqlSchema,
-  LibsqlQueryBuilder,
+  LibsqlSchemaBuilder,
+  LibsqlSearchQueryBuilder,
 } from "@/client/adapters/libsql/mod.ts";
 import { canonize } from "rdf-canonize";
 import { encodeBase64Url } from "@std/encoding/base64url";
@@ -462,15 +463,14 @@ Deno.test(
   "ComunicaSparqlEngine - LibsqlRdfjsStore countQuads supports selective SPARQL",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
-    const libsqlQueryBuilder = new LibsqlQueryBuilder(32);
-    await initializeLibsqlSchema(databaseClient, libsqlQueryBuilder);
+    const libsqlQueryBuilder = new LibsqlSearchQueryBuilder(32);
+    await initializeLibsqlSchema(databaseClient, new LibsqlSchemaBuilder(32));
 
     const textSplitter = new RecursiveCharacterTextSplitter({
       chunkSize: 1000,
     });
     const libsqlRdfjsStore = new LibsqlRdfjsStore({
       client: databaseClient,
-      queryBuilder: libsqlQueryBuilder,
     });
 
     const subjectIri = "urn:libsql:entity:0";
@@ -486,7 +486,7 @@ Deno.test(
     }, {
       client: databaseClient,
       textSplitter,
-      libsqlQueryBuilder,
+      searchQueryBuilder: libsqlQueryBuilder,
     });
 
     assertEquals(

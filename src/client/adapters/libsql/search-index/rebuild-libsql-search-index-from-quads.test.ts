@@ -7,7 +7,8 @@ import { createLibsqlPersistHooks } from "@/client/adapters/libsql/create-libsql
 import {
   setupLibsqlSchemaForTest,
   sharedTextSplitter,
-  testLibsqlQueryBuilder,
+  testLibsqlSchemaBuilder,
+  testLibsqlSearchQueryBuilder,
 } from "@/client/adapters/libsql/libsql-test-fixtures.ts";
 import { LibsqlSearchIndex } from "./libsql-search-index.ts";
 import { rebuildLibsqlSearchIndexFromQuads } from "./rebuild-libsql-search-index-from-quads.ts";
@@ -31,10 +32,10 @@ Deno.test(
       searchIndexProjector: new LibsqlSearchIndexProjector({
         client,
         textSplitter: sharedTextSplitter,
-        libsqlQueryBuilder: testLibsqlQueryBuilder,
+        searchQueryBuilder: testLibsqlSearchQueryBuilder,
         embeddingService: new FakeEmbeddingService(),
       }),
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
     });
 
     const capitalQuad = quad(
@@ -59,7 +60,7 @@ Deno.test(
 
     const searchIndex = new LibsqlSearchIndex({
       client,
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
     });
 
     const discovery = await searchIndex.search({ query: "Aurelia" });
@@ -80,10 +81,10 @@ Deno.test(
       searchIndexProjector: new LibsqlSearchIndexProjector({
         client,
         textSplitter: sharedTextSplitter,
-        libsqlQueryBuilder: testLibsqlQueryBuilder,
+        searchQueryBuilder: testLibsqlSearchQueryBuilder,
         embeddingService: new FakeEmbeddingService(),
       }),
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
     });
 
     const capitalQuad = quad(
@@ -104,7 +105,7 @@ Deno.test(
 
     const searchIndex = new LibsqlSearchIndex({
       client,
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
     });
 
     const discovery = await searchIndex.search({ query: "Kingdom" });
@@ -130,10 +131,10 @@ Deno.test(
       searchIndexProjector: new LibsqlSearchIndexProjector({
         client,
         textSplitter: sharedTextSplitter,
-        libsqlQueryBuilder: testLibsqlQueryBuilder,
+        searchQueryBuilder: testLibsqlSearchQueryBuilder,
         embeddingService: new FakeEmbeddingService(),
       }),
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
     });
 
     const capitalQuad = quad(
@@ -152,13 +153,13 @@ Deno.test(
       args: ["Lume", HAS_CAPITAL],
     });
     await client.execute(
-      testLibsqlQueryBuilder.buildRebuildChunksFtsIndex(),
+      testLibsqlSchemaBuilder.buildRebuildChunksFtsIndex(),
     );
 
     const rebuildResult = await rebuildLibsqlSearchIndexFromQuads({
       client,
       textSplitter: sharedTextSplitter,
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
     });
 
     assertEquals(rebuildResult.processedQuadCount, 1);
@@ -175,7 +176,7 @@ Deno.test(
 
     const searchIndex = new LibsqlSearchIndex({
       client,
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
     });
     const discovery = await searchIndex.search({ query: "Aurelia" });
     assertExists(discovery.results?.[0]);
@@ -194,11 +195,11 @@ Deno.test(
       searchIndexProjector: new LibsqlSearchIndexProjector({
         client,
         textSplitter: sharedTextSplitter,
-        libsqlQueryBuilder: testLibsqlQueryBuilder,
+        searchQueryBuilder: testLibsqlSearchQueryBuilder,
         embeddingService: new FakeEmbeddingService(),
         labelPredicates: [CUSTOM_LABEL],
       }),
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
       labelPredicates: [CUSTOM_LABEL],
     });
 
@@ -225,7 +226,7 @@ Deno.test(
 
     const searchIndex = new LibsqlSearchIndex({
       client,
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
     });
 
     const discovery = await searchIndex.search({ query: "Outpost" });
@@ -253,10 +254,10 @@ Deno.test(
       searchIndexProjector: new LibsqlSearchIndexProjector({
         client,
         textSplitter: sharedTextSplitter,
-        libsqlQueryBuilder: testLibsqlQueryBuilder,
+        searchQueryBuilder: testLibsqlSearchQueryBuilder,
         embeddingService: new FakeEmbeddingService(),
       }),
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
     });
 
     const capitalQuad = quad(
@@ -292,7 +293,7 @@ Deno.test(
 
     const searchIndex = new LibsqlSearchIndex({
       client,
-      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      searchQueryBuilder: testLibsqlSearchQueryBuilder,
     });
     const discovery = await searchIndex.search({ query: "New Kingdom" });
     const capitalHit = discovery.results?.find((result) =>

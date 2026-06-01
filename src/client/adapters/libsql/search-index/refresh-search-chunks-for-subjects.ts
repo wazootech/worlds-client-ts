@@ -1,6 +1,7 @@
 import type * as rdfjs from "@rdfjs/types";
 
 import { isTextualLiteral } from "@/client/quad-store/mod.ts";
+import { buildSelectTextualLiteralQuadsForSubjects } from "../quad-store/libsql-quad-query-builder.ts";
 import type { ProjectSearchChunksOptions } from "@/client/adapters/libsql/search-index/project-search-chunks.ts";
 import { refreshSearchChunksForQuads } from "@/client/adapters/libsql/search-index/project-search-chunks.ts";
 import { DEFAULT_MAX_LOOKUP_CHUNK_SIZE } from "@/client/adapters/libsql/libsql-batch-executor.ts";
@@ -34,8 +35,7 @@ export async function refreshSearchChunksForSubjects(
 
   for (let index = 0; index < uniqueSubjects.length; index += lookupChunkSize) {
     const subjectBatch = uniqueSubjects.slice(index, index + lookupChunkSize);
-    const query = options.libsqlQueryBuilder
-      .buildSelectTextualLiteralQuadsForSubjects(subjectBatch);
+    const query = buildSelectTextualLiteralQuadsForSubjects(subjectBatch);
     const resultSet = await options.client.execute(query);
     for (const row of resultSet.rows) {
       try {

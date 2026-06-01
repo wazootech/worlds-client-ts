@@ -2,7 +2,7 @@ import type { CommitHandler } from "@/client/quad-store/mod.ts";
 import type { LibsqlSearchIndexProjector } from "./search-index/mod.ts";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import type { LibsqlClientBaseOptions } from "./libsql-client-base-options.ts";
-import type { LibsqlQueryBuilder } from "./libsql-query-builder.ts";
+import type { LibsqlSearchQueryBuilder } from "./search-index/libsql-search-query-builder.ts";
 
 /**
  * LibsqlPersistHooks bundles commitHandler and import lifecycle callbacks for LibSQL clients.
@@ -16,8 +16,8 @@ export interface LibsqlPersistHooks {
  * LibsqlPersistHooksOptions configures shared LibSQL quad/chunk synchronization.
  */
 export interface LibsqlPersistHooksOptions extends LibsqlClientBaseOptions {
-  /** libsqlQueryBuilder supplies dimension-aware SQL for commits and rebuilds. */
-  libsqlQueryBuilder: LibsqlQueryBuilder;
+  /** searchQueryBuilder supplies dimension-aware SQL for commits and rebuilds. */
+  searchQueryBuilder: LibsqlSearchQueryBuilder;
 
   /** searchIndexProjector manages vector embedding and text chunk synchronisation. */
   searchIndexProjector?: LibsqlSearchIndexProjector;
