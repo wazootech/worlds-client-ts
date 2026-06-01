@@ -5,7 +5,6 @@ import type { ClientInterface } from "@/client/client.ts";
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
 import { LibsqlSearchIndex } from "@/client/adapters/libsql/search-index/mod.ts";
 import { createLibsqlPersistHooks } from "@/client/adapters/libsql/rdfjs-store/sync/mod.ts";
-import { resolveImportLifecycle } from "@/client/import-lifecycle/mod.ts";
 
 import type { LibsqlClientBaseOptions } from "./libsql-client-base-options.ts";
 import { LibsqlRdfjsStore } from "./rdfjs-store/mod.ts";
@@ -47,11 +46,6 @@ export async function createLibsqlClient(
     textSplitter,
   });
 
-  const importLifecycle = resolveImportLifecycle({
-    beforeImport: persistHooks.beforeImport,
-    afterImport: persistHooks.afterImport,
-  });
-
   const libsqlRdfjsStore = new LibsqlRdfjsStore({
     client: options.client,
     queryBuilder,
@@ -62,7 +56,8 @@ export async function createLibsqlClient(
     searchIndex,
     readSource: libsqlRdfjsStore as unknown as rdfjs.Store,
     commitHandler: persistHooks.commitHandler,
-    importLifecycle,
+    beforeImport: persistHooks.beforeImport,
+    afterImport: persistHooks.afterImport,
     queryEngine: options.queryEngine,
   });
 }

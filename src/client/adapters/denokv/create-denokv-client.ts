@@ -8,7 +8,6 @@ import {
   createDenokvPersistHooks,
   type DenokvPersistHooksOptions,
 } from "./rdfjs-store/sync/create-denokv-persist-hooks.ts";
-import { resolveImportLifecycle } from "@/client/import-lifecycle/mod.ts";
 import type * as rdfjs from "@rdfjs/types";
 
 /**
@@ -26,10 +25,6 @@ export function createDenokvClient(
   options: DenokvClientOptions,
 ): ClientInterface {
   const persistHooks = createDenokvPersistHooks(options);
-  const importLifecycle = resolveImportLifecycle({
-    beforeImport: persistHooks.beforeImport,
-    afterImport: persistHooks.afterImport,
-  });
 
   const denokvRdfjsStore = new DenokvRdfjsStore({
     kv: options.kv,
@@ -46,7 +41,8 @@ export function createDenokvClient(
     searchIndex,
     readSource: denokvRdfjsStore as unknown as rdfjs.Store,
     commitHandler: persistHooks.commitHandler,
-    importLifecycle,
+    beforeImport: persistHooks.beforeImport,
+    afterImport: persistHooks.afterImport,
     queryEngine: options.queryEngine,
   });
 }

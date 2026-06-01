@@ -2,7 +2,7 @@ import { Client } from "@/client/client.ts";
 import type { ClientInterface } from "@/client/client.ts";
 import type { SearchIndexInterface } from "@/client/search-index/mod.ts";
 import type { CommitHandler } from "@/client/quad-store/mod.ts";
-import type { ImportLifecycle } from "@/client/import-lifecycle/mod.ts";
+import { resolveImportLifecycle } from "@/client/import-lifecycle/mod.ts";
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
 import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
 import type * as rdfjs from "@rdfjs/types";
@@ -23,8 +23,11 @@ export interface AdapterClientOptions {
   /** The handler that accepts flushed patches to write them safely to the backend. */
   commitHandler: CommitHandler;
 
-  /** Optional hooks run before and after an import patch commits. */
-  importLifecycle?: ImportLifecycle;
+  /** Hook run before an import patch is committed. */
+  beforeImport?: () => void;
+
+  /** Hook run after an import patch completes. */
+  afterImport?: () => Promise<void>;
 
   /** An optional Comunica query engine enabling SPARQL queries across the readSource. */
   queryEngine?: ComunicaQueryEngine;
@@ -42,10 +45,15 @@ export interface AdapterClientOptions {
 export function createAdapterClient(
   options: AdapterClientOptions,
 ): ClientInterface {
+  const importLifecycle = resolveImportLifecycle({
+    beforeImport: options.beforeImport,
+    afterImport: options.afterImport,
+  });
+
   const transactionFactory = () => {
     return createBufferedQuadTransaction({
       commitHandler: options.commitHandler,
-      importLifecycle: options.importLifecycle,
+      importLifecycle,
     });
   };
 
