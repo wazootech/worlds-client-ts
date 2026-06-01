@@ -1,6 +1,7 @@
 import { assertEquals } from "@std/assert";
 import { createClient } from "@libsql/client";
 import { DataFactory } from "n3";
+import { LibsqlSearchIndexProjector } from "@/client/adapters/libsql/search-index/libsql-search-index-projector.ts";
 import { createLibsqlPersistHooks } from "./create-libsql-persist-hooks.ts";
 
 import { FakeEmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
@@ -29,7 +30,13 @@ Deno.test(
 
     const persistHooks = createLibsqlPersistHooks({
       client,
-      textSplitter: sharedTextSplitter,
+      searchIndexProjector: new LibsqlSearchIndexProjector({
+        client,
+        textSplitter: sharedTextSplitter,
+        libsqlQueryBuilder: testLibsqlQueryBuilder,
+        labelPredicates: [],
+        embeddingService: new FakeEmbeddingService(),
+      }),
       libsqlQueryBuilder: testLibsqlQueryBuilder,
       searchIndexOnImport: "disabled",
     });
@@ -50,7 +57,13 @@ Deno.test("createLibsqlPersistHooks - isolated writes and removals commit correc
   const persistHooks = createLibsqlPersistHooks({
     client,
     embeddingService: new FakeEmbeddingService(),
-    textSplitter: sharedTextSplitter,
+    searchIndexProjector: new LibsqlSearchIndexProjector({
+      client,
+      textSplitter: sharedTextSplitter,
+      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      labelPredicates: [],
+      embeddingService: new FakeEmbeddingService(),
+    }),
     libsqlQueryBuilder: testLibsqlQueryBuilder,
   });
 
@@ -102,7 +115,12 @@ Deno.test("createLibsqlPersistHooks - supports synchronization when embeddingSer
   const persistHooks = createLibsqlPersistHooks({
     client,
     // embeddingService is omitted intentionally
-    textSplitter: sharedTextSplitter,
+    searchIndexProjector: new LibsqlSearchIndexProjector({
+      client,
+      textSplitter: sharedTextSplitter,
+      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      labelPredicates: [],
+    }),
     libsqlQueryBuilder: testLibsqlQueryBuilder,
   });
 
@@ -144,7 +162,13 @@ Deno.test("createLibsqlPersistHooks - stores literal value and discovery fts_val
   const persistHooks = createLibsqlPersistHooks({
     client,
     embeddingService: new FakeEmbeddingService(),
-    textSplitter: sharedTextSplitter,
+    searchIndexProjector: new LibsqlSearchIndexProjector({
+      client,
+      textSplitter: sharedTextSplitter,
+      libsqlQueryBuilder: testLibsqlQueryBuilder,
+      labelPredicates: [],
+      embeddingService: new FakeEmbeddingService(),
+    }),
     libsqlQueryBuilder: testLibsqlQueryBuilder,
   });
 
@@ -192,7 +216,13 @@ Deno.test(
 
     const persistHooks = createLibsqlPersistHooks({
       client,
-      textSplitter: sharedTextSplitter,
+      searchIndexProjector: new LibsqlSearchIndexProjector({
+        client,
+        textSplitter: sharedTextSplitter,
+        libsqlQueryBuilder: testLibsqlQueryBuilder,
+        labelPredicates: [],
+        embeddingService: new FakeEmbeddingService(),
+      }),
       libsqlQueryBuilder: testLibsqlQueryBuilder,
       searchIndexOnImport: "disabled", // Skip search chunk building so tests are fast
     });
@@ -228,7 +258,13 @@ Deno.test(
 
     const persistHooks = createLibsqlPersistHooks({
       client,
-      textSplitter: sharedTextSplitter,
+      searchIndexProjector: new LibsqlSearchIndexProjector({
+        client,
+        textSplitter: sharedTextSplitter,
+        libsqlQueryBuilder: testLibsqlQueryBuilder,
+        labelPredicates: [],
+        embeddingService: new FakeEmbeddingService(),
+      }),
       libsqlQueryBuilder: testLibsqlQueryBuilder,
       searchIndexOnImport: "disabled", // Skip search chunk building for pure bulk quad sync test
     });
@@ -253,7 +289,13 @@ Deno.test(
 
     const options = {
       client,
-      textSplitter: sharedTextSplitter,
+      searchIndexProjector: new LibsqlSearchIndexProjector({
+        client,
+        textSplitter: sharedTextSplitter,
+        libsqlQueryBuilder: testLibsqlQueryBuilder,
+        labelPredicates: [],
+        embeddingService: new FakeEmbeddingService(),
+      }),
       libsqlQueryBuilder: testLibsqlQueryBuilder,
       searchIndexOnImport: "deferred" as const,
     };
@@ -286,7 +328,13 @@ Deno.test(
 
     const persistHooks = createLibsqlPersistHooks({
       client,
-      textSplitter: sharedTextSplitter,
+      searchIndexProjector: new LibsqlSearchIndexProjector({
+        client,
+        textSplitter: sharedTextSplitter,
+        libsqlQueryBuilder: testLibsqlQueryBuilder,
+        labelPredicates: [],
+        embeddingService: new FakeEmbeddingService(),
+      }),
       libsqlQueryBuilder: testLibsqlQueryBuilder,
       searchIndexOnImport: "disabled",
     });

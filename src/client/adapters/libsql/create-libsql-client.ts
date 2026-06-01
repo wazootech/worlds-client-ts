@@ -4,7 +4,10 @@ import { Client } from "@/client/client.ts";
 import type { ClientInterface } from "@/client/client.ts";
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
 import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
-import { LibsqlSearchIndex } from "@/client/adapters/libsql/search-index/mod.ts";
+import {
+  LibsqlSearchIndex,
+  LibsqlSearchIndexProjector,
+} from "@/client/adapters/libsql/search-index/mod.ts";
 import { createLibsqlPersistHooks } from "@/client/adapters/libsql/create-libsql-persist-hooks.ts";
 
 import type { LibsqlClientBaseOptions } from "./libsql-client-base-options.ts";
@@ -42,10 +45,16 @@ export async function createLibsqlClient(
     textSplitter,
   });
 
-  const persistHooks = createLibsqlPersistHooks({
+  const searchIndexProjector = new LibsqlSearchIndexProjector({
     ...options,
     libsqlQueryBuilder: queryBuilder,
     textSplitter,
+  });
+
+  const persistHooks = createLibsqlPersistHooks({
+    ...options,
+    libsqlQueryBuilder: queryBuilder,
+    searchIndexProjector,
   });
 
   const libsqlRdfjsStore = new LibsqlRdfjsStore({
