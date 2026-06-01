@@ -41,8 +41,6 @@ export function createDenokvClient(
     searchIndex,
     readSource: denokvRdfjsStore as unknown as rdfjs.Store,
     commitHandler: persistHooks.commitHandler,
-    beforeImport: persistHooks.beforeImport,
-    afterImport: persistHooks.afterImport,
     queryEngine: options.queryEngine,
   });
 }

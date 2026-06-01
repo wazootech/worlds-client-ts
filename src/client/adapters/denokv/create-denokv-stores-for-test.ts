@@ -37,10 +37,6 @@ export function createDenokvStoresForTest(
     transactionFactory: () =>
       createBufferedQuadTransaction({
         commitHandler: persistHooks.commitHandler,
-        importLifecycle: {
-          beforeImport: persistHooks.beforeImport,
-          afterImport: persistHooks.afterImport,
-        },
       }),
   });
 

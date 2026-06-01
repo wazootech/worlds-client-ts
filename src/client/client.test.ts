@@ -13,7 +13,7 @@ const queryEngine = new QueryEngine();
 
 function createTestClient(store: Store): Client {
   return new Client({
-    quadStore: new RdfjsQuadStore(store),
+    quadStore: new RdfjsQuadStore({ store }),
     sparqlEngine: new ComunicaSparqlEngine({
       queryEngine,
       readSource: store,
@@ -76,7 +76,7 @@ Deno.test("Client.sparql delegates to sparqlEngine.execute", async () => {
 Deno.test("Client.sparql rejects when sparqlEngine is not configured", async () => {
   const store = new Store();
   const client = new Client({
-    quadStore: new RdfjsQuadStore(store),
+    quadStore: new RdfjsQuadStore({ store }),
     searchIndex: new RdfjsSearchIndex(store),
   });
 
@@ -110,7 +110,7 @@ Deno.test("Client.import rejects when quadStore is not configured", async () => 
 
 Deno.test("Client.search rejects when searchIndex is not configured", async () => {
   const client = new Client({
-    quadStore: new RdfjsQuadStore(new Store()),
+    quadStore: new RdfjsQuadStore({ store: new Store() }),
   });
 
   await assertRejects(
@@ -174,7 +174,7 @@ Deno.test("Client.reindex delegates to searchIndex.reindex", async () => {
 Deno.test("Client - import delivers immediate search hits", async () => {
   const store = new Store();
   const client = new Client({
-    quadStore: new RdfjsQuadStore(store),
+    quadStore: new RdfjsQuadStore({ store }),
     searchIndex: new RdfjsSearchIndex(store),
   });
 
@@ -202,7 +202,7 @@ Deno.test("Client - preloaded store is shared with the client", async () => {
   );
 
   const client = new Client({
-    quadStore: new RdfjsQuadStore(store),
+    quadStore: new RdfjsQuadStore({ store }),
     searchIndex: new RdfjsSearchIndex(store),
   });
 
@@ -214,7 +214,7 @@ Deno.test("Client - preloaded store is shared with the client", async () => {
 Deno.test("Client - queryEngine enables SELECT queries", async () => {
   const store = new Store();
   const client = new Client({
-    quadStore: new RdfjsQuadStore(store),
+    quadStore: new RdfjsQuadStore({ store }),
     searchIndex: new RdfjsSearchIndex(store),
     sparqlEngine: new ComunicaSparqlEngine({
       queryEngine,

@@ -11,7 +11,7 @@ if (import.meta.main) {
   const store = new Store();
   const queryEngine = new QueryEngine();
   const client = new Client({
-    quadStore: new RdfjsQuadStore(store),
+    quadStore: new RdfjsQuadStore({ store }),
     searchIndex: new RdfjsSearchIndex(store),
     sparqlEngine: new ComunicaSparqlEngine({ queryEngine, readSource: store }),
   });

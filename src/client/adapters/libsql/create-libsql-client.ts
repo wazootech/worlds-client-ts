@@ -56,8 +56,6 @@ export async function createLibsqlClient(
     searchIndex,
     readSource: libsqlRdfjsStore as unknown as rdfjs.Store,
     commitHandler: persistHooks.commitHandler,
-    beforeImport: persistHooks.beforeImport,
-    afterImport: persistHooks.afterImport,
     queryEngine: options.queryEngine,
   });
 }

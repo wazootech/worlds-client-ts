@@ -7,8 +7,6 @@ import {
 
 export interface DenokvPersistHooks {
   commitHandler: CommitHandler;
-  beforeImport: () => void;
-  afterImport: () => Promise<void>;
 }
 
 export interface DenokvPersistHooksOptions extends CommitPatchToDenokvOptions {
@@ -24,10 +22,11 @@ export function createDenokvPersistHooks(
   return {
     commitHandler: async (patch, context) => {
       await commitPatchToDenokv(patch, dependencies, context);
-    },
-    beforeImport: () => {},
-    afterImport: async (): Promise<void> => {
-      if (searchIndexOnImport === "deferred" && dependencies.reindex) {
+
+      const isImport = context?.importMode !== undefined;
+      if (
+        isImport && searchIndexOnImport === "deferred" && dependencies.reindex
+      ) {
         await dependencies.reindex();
       }
     },

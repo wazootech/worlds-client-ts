@@ -2,7 +2,6 @@ import { assertEquals } from "@std/assert";
 import { DataFactory, Store } from "n3";
 import type { QuadStoreInterface } from "./quad-store-interface.ts";
 import { RdfjsQuadStore } from "@/client/adapters/rdfjs/rdfjs-quad-store.ts";
-import type { ImportLifecycle } from "@/client/import-lifecycle/mod.ts";
 
 const { namedNode, literal, quad } = DataFactory;
 
@@ -94,24 +93,6 @@ export function registerQuadStoreContractTests(
 registerQuadStoreContractTests({
   label: "RdfjsQuadStore",
   setup: () => ({
-    store: new RdfjsQuadStore(new Store()),
+    store: new RdfjsQuadStore({ store: new Store() }),
   }),
-});
-
-Deno.test("RdfjsQuadStore - importLifecycle hooks fire around import", async () => {
-  const events: string[] = [];
-  const lifecycle: ImportLifecycle = {
-    beforeImport: () => events.push("before"),
-    afterImport: () => {
-      events.push("after");
-      return Promise.resolve();
-    },
-  };
-  const store = new RdfjsQuadStore({
-    store: new Store(),
-    importLifecycle: lifecycle,
-  });
-
-  await store.import({ source: { kind: "quads", quads: [q1] } });
-  assertEquals(events, ["before", "after"]);
 });

@@ -11,12 +11,6 @@ import { createLibsqlSearchIndexRebuilder } from "../../search-index/rebuild-lib
 export interface LibsqlPersistHooks {
   /** commitHandler persists buffered patches to LibSQL. */
   commitHandler: CommitHandler;
-
-  /** beforeImport runs before import writes quads. */
-  beforeImport: () => void;
-
-  /** afterImport runs after import persistence completes. */
-  afterImport: () => Promise<void>;
 }
 
 /**
@@ -54,12 +48,8 @@ export function createLibsqlPersistHooks(
         },
         context,
       );
-    },
 
-    beforeImport: () => {},
-
-    afterImport: async (): Promise<void> => {
-      if (searchIndexOnImport === "deferred") {
+      if (isImport && searchIndexOnImport === "deferred") {
         await reindex();
       }
     },

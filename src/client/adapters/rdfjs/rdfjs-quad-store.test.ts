@@ -21,7 +21,7 @@ Deno.test("RdfjsQuadStore.import - merge mode combines quads without deleting ex
   const store = new Store();
   store.add(q1);
 
-  await new RdfjsQuadStore(store).import({
+  await new RdfjsQuadStore({ store }).import({
     mode: "merge",
     source: {
       kind: "quads",
@@ -38,7 +38,7 @@ Deno.test("RdfjsQuadStore.import - replace mode wipes existing data before impor
   const store = new Store();
   store.add(q1);
 
-  await new RdfjsQuadStore(store).import({
+  await new RdfjsQuadStore({ store }).import({
     mode: "replace",
     source: {
       kind: "quads",
@@ -57,7 +57,7 @@ Deno.test("RdfjsQuadStore.import - source: dataset handles DatasetCore objects",
   sourceDataset.add(q1);
   sourceDataset.add(q2);
 
-  await new RdfjsQuadStore(targetStore).import({
+  await new RdfjsQuadStore({ store: targetStore }).import({
     source: {
       kind: "dataset",
       dataset: sourceDataset,
@@ -71,7 +71,7 @@ Deno.test("RdfjsQuadStore.import - source: serialized parses Turtle successfully
   const store = new Store();
   const turtle = `<http://example.org/s3> <http://example.org/p3> "value" .`;
 
-  await new RdfjsQuadStore(store).import({
+  await new RdfjsQuadStore({ store }).import({
     source: {
       kind: "serialized",
       data: turtle,
@@ -86,7 +86,7 @@ Deno.test("RdfjsQuadStore.import - source: serialized defaults to N-Quads", asyn
   const store = new Store();
   const nQuads =
     `<http://example.org/s4> <http://example.org/p4> <http://example.org/o4> <http://example.org/g4> .`;
-  await new RdfjsQuadStore(store).import({
+  await new RdfjsQuadStore({ store }).import({
     source: { kind: "serialized", data: nQuads },
   });
   assertEquals(store.size, 1);
@@ -95,7 +95,7 @@ Deno.test("RdfjsQuadStore.import - source: serialized defaults to N-Quads", asyn
 Deno.test("RdfjsQuadStore.import - replace mode combined with serialized data clears", async () => {
   const store = new Store();
   store.add(q1);
-  await new RdfjsQuadStore(store).import({
+  await new RdfjsQuadStore({ store }).import({
     mode: "replace",
     source: {
       kind: "serialized",
@@ -112,7 +112,7 @@ Deno.test("RdfjsQuadStore.import - replace mode preserves existing data when ser
   store.add(q1);
 
   await assertRejects(async () => {
-    await new RdfjsQuadStore(store).import({
+    await new RdfjsQuadStore({ store }).import({
       mode: "replace",
       source: {
         kind: "serialized",
@@ -130,7 +130,7 @@ Deno.test("RdfjsQuadStore.import - invalid serialization rejects properly", asyn
   const store = new Store();
 
   await assertRejects(async () => {
-    await new RdfjsQuadStore(store).import({
+    await new RdfjsQuadStore({ store }).import({
       source: {
         kind: "serialized",
         data: "GARBAGE SNOT@@$",
@@ -144,7 +144,7 @@ Deno.test("RdfjsQuadStore.import - omitting mode defaults to merge", async () =>
   const store = new Store();
   store.add(q1);
 
-  await new RdfjsQuadStore(store).import({
+  await new RdfjsQuadStore({ store }).import({
     source: {
       kind: "quads",
       quads: [q2],
@@ -158,7 +158,7 @@ Deno.test("RdfjsQuadStore.import - handles BlankNode subjects", async () => {
   const store = new Store();
   const bSubject = blankNode("b1");
   const q = quad(bSubject, namedNode("http://example.org/p"), literal("v"));
-  await new RdfjsQuadStore(store).import({
+  await new RdfjsQuadStore({ store }).import({
     source: { kind: "quads", quads: [q] },
   });
   assertEquals(store.size, 1);
@@ -173,7 +173,7 @@ Deno.test("RdfjsQuadStore.import - handles BlankNode objects", async () => {
     namedNode("http://example.org/p"),
     bObject,
   );
-  await new RdfjsQuadStore(store).import({
+  await new RdfjsQuadStore({ store }).import({
     source: { kind: "quads", quads: [q] },
   });
   assertEquals(store.size, 1);
@@ -189,7 +189,7 @@ Deno.test("RdfjsQuadStore.import - handles NamedNode graph context", async () =>
     literal("v"),
     graph,
   );
-  await new RdfjsQuadStore(store).import({
+  await new RdfjsQuadStore({ store }).import({
     source: { kind: "quads", quads: [q] },
   });
   assertEquals(store.size, 1);
@@ -205,7 +205,7 @@ Deno.test("RdfjsQuadStore.import - handles BlankNode graph context", async () =>
     literal("v"),
     graph,
   );
-  await new RdfjsQuadStore(store).import({
+  await new RdfjsQuadStore({ store }).import({
     source: { kind: "quads", quads: [q] },
   });
   assertEquals(store.size, 1);
@@ -216,7 +216,7 @@ Deno.test("RdfjsQuadStore.export - returns all store quads directly", async () =
   const store = new Store();
   store.add(q1);
 
-  const response = await new RdfjsQuadStore(store).export({
+  const response = await new RdfjsQuadStore({ store }).export({
     format: { kind: "quads" },
   });
 
@@ -230,7 +230,7 @@ Deno.test("RdfjsQuadStore.export - rejects invalid export format", async () => {
 
   await assertRejects(
     () =>
-      new RdfjsQuadStore(store).export(
+      new RdfjsQuadStore({ store }).export(
         {
           format: { kind: "invalid" },
         } as unknown as ExportRequest,
@@ -245,7 +245,7 @@ Deno.test("RdfjsQuadStore.import - rejects unsupported import source kind", asyn
 
   await assertRejects(
     () =>
-      new RdfjsQuadStore(store).import(
+      new RdfjsQuadStore({ store }).import(
         {
           source: { kind: "unknown" },
         } as unknown as ImportRequest,
@@ -259,34 +259,11 @@ Deno.test("RdfjsQuadStore.export - returns serialized dump", async () => {
   const store = new Store();
   store.add(q1);
 
-  const response = await new RdfjsQuadStore(store).export({
+  const response = await new RdfjsQuadStore({ store }).export({
     format: { kind: "serialized", contentType: "text/turtle" },
   });
 
   if (response.kind !== "serialized") throw new Error("Expected serialized");
   assertEquals(response.contentType, "text/turtle");
   assertEquals(response.data.includes("value1"), true);
-});
-
-Deno.test("RdfjsQuadStore.import invokes importLifecycle hooks", async () => {
-  const events: string[] = [];
-  const store = new Store();
-  const quadStore = new RdfjsQuadStore({
-    store,
-    importLifecycle: {
-      beforeImport() {
-        events.push("before");
-      },
-      afterImport() {
-        events.push("after");
-        return Promise.resolve();
-      },
-    },
-  });
-
-  await quadStore.import({
-    source: { kind: "quads", quads: [q1] },
-  });
-
-  assertEquals(events, ["before", "after"]);
 });

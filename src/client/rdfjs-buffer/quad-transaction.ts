@@ -3,7 +3,6 @@ import type {
   CommitHandler,
   PatchCommitContext,
 } from "@/client/quad-store/mod.ts";
-import type { ImportLifecycle } from "@/client/import-lifecycle/mod.ts";
 import { commitBufferedPatch } from "./commit-buffered-patch.ts";
 import { RdfjsPatchBuffer } from "./rdfjs-patch-buffer.ts";
 
@@ -31,8 +30,8 @@ export interface BufferedQuadTransactionOptions {
   /** commitHandler atomically persists buffered patches on commit(). */
   commitHandler?: CommitHandler;
 
-  /** importLifecycle runs around import commits when PatchCommitContext.importMode is set. */
-  importLifecycle?: ImportLifecycle;
+  /** fallbackCommitHandler runs when commitHandler is omitted on flush. */
+  fallbackCommitHandler?: CommitHandler;
 }
 
 /**
@@ -55,8 +54,8 @@ export function createBufferedQuadTransaction(
     async commit(context?: PatchCommitContext): Promise<void> {
       await commitBufferedPatch(patchBuffer, {
         commitHandler: options.commitHandler,
+        fallbackCommitHandler: options.fallbackCommitHandler,
         context,
-        importLifecycle: options.importLifecycle,
       });
     },
 

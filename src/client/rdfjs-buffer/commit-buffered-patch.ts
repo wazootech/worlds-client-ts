@@ -2,12 +2,6 @@ import type {
   CommitHandler,
   PatchCommitContext,
 } from "@/client/quad-store/mod.ts";
-import { isImportCommit } from "@/client/quad-store/mod.ts";
-import type { ImportLifecycle } from "@/client/import-lifecycle/mod.ts";
-import {
-  noopImportLifecycle,
-  runImportWithLifecycle,
-} from "@/client/import-lifecycle/mod.ts";
 import type { RdfjsPatchBuffer } from "./rdfjs-patch-buffer.ts";
 
 /**
@@ -22,33 +16,15 @@ export interface CommitBufferedPatchOptions {
 
   /** fallbackCommitHandler runs when commitHandler is omitted. */
   fallbackCommitHandler?: CommitHandler;
-
-  /** importLifecycle runs around import commits when context carries importMode. */
-  importLifecycle?: ImportLifecycle;
 }
 
-/**
- * commitBufferedPatch deduplicates and flushes a patch buffer, invoking import lifecycle only for import commits.
- */
 export async function commitBufferedPatch(
   patchBuffer: RdfjsPatchBuffer,
   options: CommitBufferedPatchOptions,
 ): Promise<void> {
-  const flushBody = async () => {
-    await patchBuffer.flushBuffer(
-      options.commitHandler,
-      options.context,
-      options.fallbackCommitHandler,
-    );
-  };
-
-  if (!isImportCommit(options.context)) {
-    await flushBody();
-    return;
-  }
-
-  await runImportWithLifecycle(
-    options.importLifecycle ?? noopImportLifecycle,
-    flushBody,
+  await patchBuffer.flushBuffer(
+    options.commitHandler,
+    options.context,
+    options.fallbackCommitHandler,
   );
 }
