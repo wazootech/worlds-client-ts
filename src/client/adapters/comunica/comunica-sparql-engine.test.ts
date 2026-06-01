@@ -4,6 +4,8 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import type { Quad } from "n3";
 import { DataFactory, Parser, Store } from "n3";
 import { commitPatchToLibsql } from "@/client/adapters/libsql/rdfjs-store/sync/commit-patch-to-libsql.ts";
+import type { QuadTransaction } from "@/client/rdfjs-buffer/mod.ts";
+import type * as rdfjs from "@rdfjs/types";
 import { LibsqlRdfjsStore } from "@/client/adapters/libsql/rdfjs-store/mod.ts";
 import {
   initializeLibsqlSchema,
@@ -97,7 +99,11 @@ Deno.test(
       ].join("\n");
 
       const n3Response = await executeSparql(queryEngine, n3Store, { query });
-      const kvResponse = await executeSparql(queryEngine, kvStore, { query });
+      const kvResponse = await executeSparql(
+        queryEngine,
+        kvStore as unknown as rdfjs.Store,
+        { query },
+      );
 
       if (n3Response.kind !== "select") throw new Error("Expected select");
       if (kvResponse.kind !== "select") throw new Error("Expected select");
@@ -281,10 +287,17 @@ Deno.test(
 
     const sparqlEngine = new ComunicaSparqlEngine({
       queryEngine,
-      store,
-      onVoid: () => {
-        voidInvoked = true;
-        return Promise.resolve();
+      readSource: store,
+      transactionFactory: () => {
+        return {
+          addQuad: () => {},
+          removeQuad: () => {},
+          commit: () => {
+            voidInvoked = true;
+            return Promise.resolve();
+          },
+          rollback: () => {},
+        } as unknown as QuadTransaction;
       },
     });
 
@@ -461,25 +474,24 @@ Deno.test(
     const libsqlRdfjsStore = new LibsqlRdfjsStore({
       client: databaseClient,
       queryBuilder: libsqlQueryBuilder,
-      commitHandler: async (patch) => {
-        await commitPatchToLibsql(patch, {
-          client: databaseClient,
-          textSplitter,
-          libsqlQueryBuilder,
-          skipSearchIndexProjection: true,
-        });
-      },
     });
 
     const subjectIri = "urn:libsql:entity:0";
-    libsqlRdfjsStore.addQuad(
-      DataFactory.quad(
-        DataFactory.namedNode(subjectIri),
-        DataFactory.namedNode("urn:libsql:predicate"),
-        DataFactory.literal("LibsqlRdfjsStore cardinality hint path"),
-      ),
-    );
-    await libsqlRdfjsStore.commit();
+    await commitPatchToLibsql({
+      insertions: [
+        DataFactory.quad(
+          DataFactory.namedNode(subjectIri),
+          DataFactory.namedNode("urn:libsql:predicate"),
+          DataFactory.literal("LibsqlRdfjsStore cardinality hint path"),
+        ),
+      ],
+      deletions: [],
+    }, {
+      client: databaseClient,
+      textSplitter,
+      libsqlQueryBuilder,
+      skipSearchIndexProjection: true,
+    });
 
     assertEquals(
       await libsqlRdfjsStore.countQuads(
@@ -493,7 +505,7 @@ Deno.test(
 
     const sparqlEngine = new ComunicaSparqlEngine({
       queryEngine,
-      store: libsqlRdfjsStore,
+      readSource: libsqlRdfjsStore as unknown as rdfjs.Store,
     });
     const response = await sparqlEngine.execute({
       query:
@@ -520,10 +532,17 @@ Deno.test(
     const queryEngineLocal = new QueryEngine();
     const sparqlEngine = new ComunicaSparqlEngine({
       queryEngine: queryEngineLocal,
-      store,
-      onVoid: () => {
-        commitCount++;
-        return Promise.resolve();
+      readSource: store,
+      transactionFactory: () => {
+        return {
+          addQuad: () => {},
+          removeQuad: () => {},
+          commit: () => {
+            commitCount++;
+            return Promise.resolve();
+          },
+          rollback: () => {},
+        } as unknown as QuadTransaction;
       },
     });
 
@@ -551,10 +570,17 @@ Deno.test(
     const queryEngineLocal = new QueryEngine();
     const sparqlEngine = new ComunicaSparqlEngine({
       queryEngine: queryEngineLocal,
-      store,
-      onVoid: () => {
-        commitCount++;
-        return Promise.resolve();
+      readSource: store,
+      transactionFactory: () => {
+        return {
+          addQuad: (q: rdfjs.Quad) => store.addQuad(q),
+          removeQuad: (q: rdfjs.Quad) => store.removeQuad(q),
+          commit: () => {
+            commitCount++;
+            return Promise.resolve();
+          },
+          rollback: () => {},
+        } as unknown as QuadTransaction;
       },
     });
 

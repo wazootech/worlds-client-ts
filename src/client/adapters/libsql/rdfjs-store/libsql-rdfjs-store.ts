@@ -1,18 +1,8 @@
 import type { Client } from "@libsql/client";
 import type * as rdfjs from "@rdfjs/types";
 import { Readable } from "node:stream";
-import type { EventEmitter } from "node:events";
 import type { LibsqlQueryBuilder } from "./sql/libsql-query-builder.ts";
 import { DEFAULT_LIBSQL_MATCH_PAGE_SIZE } from "./sql/libsql-query-builder.ts";
-import type {
-  CommitHandler,
-  PatchCommitContext,
-} from "@/client/quad-store/mod.ts";
-import type { ImportLifecycle } from "@/client/import-lifecycle/mod.ts";
-import {
-  commitBufferedPatch,
-  RdfjsPatchBuffer,
-} from "@/client/rdfjs-buffer/mod.ts";
 import { quadFromLibsqlRow } from "./sql/libsql-quad-row.ts";
 
 /**
@@ -25,23 +15,16 @@ export interface LibsqlRdfjsStoreOptions {
   /** queryBuilder is the LibsqlQueryBuilder. */
   queryBuilder: LibsqlQueryBuilder;
 
-  /** commitHandler atomically persists buffered patches on commit(). */
-  commitHandler?: CommitHandler;
-
-  /** importLifecycle runs around import commits when PatchCommitContext.importMode is set. */
-  importLifecycle?: ImportLifecycle;
-
   /** matchPageSize limits rows per hexastore match SQL round-trip (default 1000). */
   matchPageSize?: number;
 }
 
 /**
- * LibsqlRdfjsStore is a full RDF/JS Store implementation backed by LibSQL and hexastore covering indexes.
+ * LibsqlRdfjsStore is a stateless RDF/JS ReadSource backed by LibSQL and hexastore covering indexes.
  * All triple/quad patterns resolve via a single SQL index seek with no in-memory hydration needed.
+ * This class only implements match and countQuads. Mutative operations are handled via QuadTransaction.
  */
-export class LibsqlRdfjsStore implements rdfjs.Store {
-  private readonly patchBuffer = new RdfjsPatchBuffer();
-
+export class LibsqlRdfjsStore {
   private readonly matchPageSize: number;
 
   public constructor(
@@ -137,89 +120,5 @@ export class LibsqlRdfjsStore implements rdfjs.Store {
     }
     const countValue = firstRow.count ?? firstRow["COUNT(*)"];
     return Number(countValue ?? 0);
-  }
-
-  /**
-   * add buffers a single quad for insertion on the next commit.
-   */
-  public add(quad: rdfjs.Quad): this {
-    this.patchBuffer.add(quad);
-    return this;
-  }
-
-  /**
-   * addQuad buffers a single quad for insertion on the next commit (RDF/JS Store alias for add).
-   */
-  public addQuad(quad: rdfjs.Quad): this {
-    this.patchBuffer.addQuad(quad);
-    return this;
-  }
-
-  /**
-   * delete buffers a single quad for deletion on the next commit.
-   */
-  public delete(quad: rdfjs.Quad): this {
-    this.patchBuffer.delete(quad);
-    return this;
-  }
-
-  /**
-   * import consumes an RDF/JS Stream, buffering all quads for later commit.
-   */
-  public import(stream: rdfjs.Stream<rdfjs.Quad>): EventEmitter {
-    return this.patchBuffer.import(stream);
-  }
-
-  /**
-   * remove consumes a stream and buffers all quads from it for deletion on commit.
-   */
-  public remove(stream: rdfjs.Stream<rdfjs.Quad>): EventEmitter {
-    return this.patchBuffer.remove(stream);
-  }
-
-  /**
-   * removeMatches buffers all quads matching the given quad pattern for deletion on commit.
-   */
-  public removeMatches(
-    subject?: rdfjs.Term | null,
-    predicate?: rdfjs.Term | null,
-    object?: rdfjs.Term | null,
-    graph?: rdfjs.Term | null,
-  ): EventEmitter {
-    return this.patchBuffer.removeMatches(
-      this.match.bind(this),
-      subject,
-      predicate,
-      object,
-      graph,
-    );
-  }
-
-  /**
-   * deleteGraph buffers all quads in the named graph for deletion on commit.
-   */
-  public deleteGraph(graph: rdfjs.Term | string): EventEmitter {
-    return this.patchBuffer.deleteGraph(this.match.bind(this), graph);
-  }
-
-  /**
-   * commit atomically persists all buffered insertions and deletions through
-   * the configured CommitHandler. Deduplicates quads that appear in both
-   * buffers before invoking the handler.
-   */
-  public async commit(context?: PatchCommitContext): Promise<void> {
-    await commitBufferedPatch(this.patchBuffer, {
-      commitHandler: this.options.commitHandler,
-      context,
-      importLifecycle: this.options.importLifecycle,
-    });
-  }
-
-  /**
-   * clearBuffer discards any uncommitted insertions and deletions.
-   * Used for error recovery after a failed SPARQL UPDATE.
-   */
-  public clearBuffer(): void {
-    this.patchBuffer.clearBuffer();
   }
 }

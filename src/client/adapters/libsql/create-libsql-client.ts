@@ -13,6 +13,8 @@ import { LibsqlQuadStore } from "./quad-store/mod.ts";
 import { LibsqlRdfjsStore } from "./rdfjs-store/mod.ts";
 import { initializeLibsqlSchema } from "./rdfjs-store/sql/initialize-libsql-schema.ts";
 import { LibsqlQueryBuilder } from "./rdfjs-store/sql/libsql-query-builder.ts";
+import { createBufferedQuadTransaction } from "@/client/rdfjs-buffer/mod.ts";
+import type * as rdfjs from "@rdfjs/types";
 
 /**
  * LibsqlClientOptions configures LibSQL execution through LibsqlRdfjsStore and hexastore indexes.
@@ -56,19 +58,27 @@ export async function createLibsqlClient(
   const libsqlRdfjsStore = new LibsqlRdfjsStore({
     client: options.client,
     queryBuilder,
-    commitHandler: persistHooks.commitHandler,
-    importLifecycle,
     matchPageSize: options.matchPageSize,
   });
+
+  const transactionFactory = () => {
+    return createBufferedQuadTransaction({
+      commitHandler: persistHooks.commitHandler,
+      importLifecycle,
+    });
+  };
+
   const libsqlQuadStore = new LibsqlQuadStore({
     libsqlRdfjsStore,
+    commitHandler: persistHooks.commitHandler,
+    importLifecycle,
   });
 
   const sparqlEngine = options.queryEngine
     ? new ComunicaSparqlEngine({
       queryEngine: options.queryEngine,
-      store: libsqlRdfjsStore,
-      onVoid: () => libsqlRdfjsStore.commit(),
+      readSource: libsqlRdfjsStore as unknown as rdfjs.Store,
+      transactionFactory,
     })
     : undefined;
 

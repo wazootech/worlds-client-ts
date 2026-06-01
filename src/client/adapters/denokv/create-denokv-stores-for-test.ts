@@ -34,11 +34,11 @@ export function createDenokvStoresForTest(
     kv: options.kv,
     keyPrefix: options.keyPrefix,
     enabledHexastoreIndexes: options.enabledHexastoreIndexes,
-    commitHandler: persistHooks.commitHandler,
-    importLifecycle,
   });
   const denokvQuadStore = new DenokvQuadStore({
     denokvRdfjsStore,
+    commitHandler: persistHooks.commitHandler,
+    importLifecycle,
   });
 
   return { denokvQuadStore, denokvRdfjsStore };

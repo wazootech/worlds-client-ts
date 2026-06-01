@@ -1,18 +1,7 @@
 import type * as rdfjs from "@rdfjs/types";
 import { Readable } from "node:stream";
-import type { EventEmitter } from "node:events";
-
-import type {
-  CommitHandler,
-  PatchCommitContext,
-  Quad,
-} from "@/client/quad-store/mod.ts";
 import { toRdfjsQuad } from "@/client/quad-store/mod.ts";
-import type { ImportLifecycle } from "@/client/import-lifecycle/mod.ts";
-import {
-  commitBufferedPatch,
-  RdfjsPatchBuffer,
-} from "@/client/rdfjs-buffer/mod.ts";
+import type { Quad } from "@/client/quad-store/mod.ts";
 import {
   buildGenerationDataPrefix,
   buildPrimaryQuadKey,
@@ -45,20 +34,13 @@ export interface DenokvRdfjsStoreOptions {
    * Defaults to all supported index families.
    */
   enabledHexastoreIndexes?: readonly DenokvHexastoreIndex[];
-
-  /** commitHandler atomically persists buffered patches on commit(). */
-  commitHandler?: CommitHandler;
-
-  /** importLifecycle runs around import commits when PatchCommitContext.importMode is set. */
-  importLifecycle?: ImportLifecycle;
 }
 /**
- * DenokvRdfjsStore is an RDF/JS Store implementation backed by Deno KV.
- * It supports Comunica SPARQL by implementing match() and buffering mutations until commit().
+ * DenokvRdfjsStore is a stateless RDF/JS ReadSource backed by Deno KV.
+ * It supports Comunica SPARQL by implementing match() and countQuads().
+ * Mutative operations are handled via QuadTransaction.
  */
-export class DenokvRdfjsStore implements rdfjs.Store {
-  private readonly patchBuffer = new RdfjsPatchBuffer();
-
+export class DenokvRdfjsStore {
   public constructor(
     private readonly options: DenokvRdfjsStoreOptions,
   ) {}
@@ -266,76 +248,6 @@ export class DenokvRdfjsStore implements rdfjs.Store {
       });
       stream.on("end", () => resolve(count));
       stream.on("error", reject);
-    });
-  }
-
-  public add(quad: rdfjs.Quad): this {
-    this.patchBuffer.add(quad);
-    return this;
-  }
-
-  public addQuad(quad: rdfjs.Quad): this {
-    this.patchBuffer.addQuad(quad);
-    return this;
-  }
-
-  public addQuads(quads: rdfjs.Quad[]): this {
-    this.patchBuffer.addQuads(quads);
-    return this;
-  }
-
-  public delete(quad: rdfjs.Quad): this {
-    this.patchBuffer.delete(quad);
-    return this;
-  }
-
-  public removeQuad(quad: rdfjs.Quad): this {
-    return this.delete(quad);
-  }
-
-  public removeQuads(quads: rdfjs.Quad[]): this {
-    this.patchBuffer.removeQuads(quads);
-    return this;
-  }
-
-  public import(stream: rdfjs.Stream<rdfjs.Quad>): EventEmitter {
-    return this.patchBuffer.import(stream);
-  }
-
-  public remove(stream: rdfjs.Stream<rdfjs.Quad>): EventEmitter {
-    return this.patchBuffer.remove(stream);
-  }
-
-  public removeMatches(
-    subject?: rdfjs.Term | null,
-    predicate?: rdfjs.Term | null,
-    object?: rdfjs.Term | null,
-    graph?: rdfjs.Term | null,
-  ): EventEmitter {
-    return this.patchBuffer.removeMatches(
-      this.match.bind(this),
-      subject,
-      predicate,
-      object,
-      graph,
-    );
-  }
-
-  /**
-   * deleteGraph buffers all quads in the named graph for deletion on commit.
-   */
-  public deleteGraph(graph: rdfjs.Term | string): EventEmitter {
-    return this.patchBuffer.deleteGraph(this.match.bind(this), graph);
-  }
-
-  /**
-   * commit persists buffered insertions and deletions through the configured CommitHandler.
-   */
-  public async commit(context?: PatchCommitContext): Promise<void> {
-    await commitBufferedPatch(this.patchBuffer, {
-      commitHandler: this.options.commitHandler,
-      context,
-      importLifecycle: this.options.importLifecycle,
     });
   }
 }

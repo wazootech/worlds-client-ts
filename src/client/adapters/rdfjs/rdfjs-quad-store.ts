@@ -6,7 +6,8 @@ import type {
   QuadStoreInterface,
 } from "@/client/quad-store/mod.ts";
 import {
-  createImportCommitTarget,
+  createBufferedQuadTransaction,
+  createRdfjsStoreCommitHandler,
   exportFromRdfjsStore,
   importViaBufferedRdfjsStore,
 } from "@/client/rdfjs-buffer/mod.ts";
@@ -44,12 +45,13 @@ export class RdfjsQuadStore implements QuadStoreInterface {
   }
 
   public async import(request: ImportRequest): Promise<void> {
-    const importCommitTarget = createImportCommitTarget({
-      store: this.store,
-      importLifecycle: this.importLifecycle,
-    });
+    const commitHandler = createRdfjsStoreCommitHandler(this.store);
     await importViaBufferedRdfjsStore(request, {
-      rdfjsStore: importCommitTarget,
+      transactionFactory: () =>
+        createBufferedQuadTransaction({
+          commitHandler,
+          importLifecycle: this.importLifecycle,
+        }),
     });
   }
 

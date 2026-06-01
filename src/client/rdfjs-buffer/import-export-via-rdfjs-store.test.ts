@@ -2,7 +2,7 @@ import { assertEquals } from "@std/assert";
 import { DataFactory } from "n3";
 import type * as rdfjs from "@rdfjs/types";
 import type { PatchCommitContext } from "@/client/quad-store/commit-handler.ts";
-import type { ImportCommitTarget } from "./import-export-via-rdfjs-store.ts";
+import type { QuadTransaction } from "./quad-transaction.ts";
 import { importViaBufferedRdfjsStore } from "./import-export-via-rdfjs-store.ts";
 
 const { namedNode, literal, quad } = DataFactory;
@@ -18,40 +18,43 @@ const q2 = quad(
   literal("two"),
 );
 
-function createRecordingImportCommitTarget(): {
-  store: ImportCommitTarget;
+function createRecordingTransaction(): {
+  transactionFactory: () => QuadTransaction;
   bufferedQuads: () => rdfjs.Quad[];
   lastCommitContext: () => PatchCommitContext | undefined;
 } {
   const buffered: rdfjs.Quad[] = [];
   let lastContext: PatchCommitContext | undefined;
 
-  const store: ImportCommitTarget = {
-    addQuad(quadToAdd) {
+  const transactionFactory = (): QuadTransaction => ({
+    addQuad(quadToAdd: rdfjs.Quad) {
       buffered.push(quadToAdd);
     },
-    match() {
-      throw new Error("match not used in import runner tests");
+    removeQuad(_quadToRemove: rdfjs.Quad) {
+      // not used in these tests
     },
-    commit(context) {
+    commit(context?: PatchCommitContext) {
       lastContext = context;
       return Promise.resolve();
     },
-  };
+    rollback() {
+      buffered.length = 0;
+    },
+  });
 
   return {
-    store,
+    transactionFactory,
     bufferedQuads: () => buffered,
     lastCommitContext: () => lastContext,
   };
 }
 
 Deno.test("importViaBufferedRdfjsStore - buffers quads and commits with merge mode", async () => {
-  const recording = createRecordingImportCommitTarget();
+  const recording = createRecordingTransaction();
 
   await importViaBufferedRdfjsStore(
     { mode: "merge", source: { kind: "quads", quads: [q1, q2] } },
-    { rdfjsStore: recording.store },
+    { transactionFactory: recording.transactionFactory },
   );
 
   assertEquals(recording.bufferedQuads().length, 2);
@@ -59,22 +62,22 @@ Deno.test("importViaBufferedRdfjsStore - buffers quads and commits with merge mo
 });
 
 Deno.test("importViaBufferedRdfjsStore - defaults mode to merge", async () => {
-  const recording = createRecordingImportCommitTarget();
+  const recording = createRecordingTransaction();
 
   await importViaBufferedRdfjsStore(
     { source: { kind: "quads", quads: [q1] } },
-    { rdfjsStore: recording.store },
+    { transactionFactory: recording.transactionFactory },
   );
 
   assertEquals(recording.lastCommitContext()?.importMode, "merge");
 });
 
 Deno.test("importViaBufferedRdfjsStore - passes replace mode to commit context", async () => {
-  const recording = createRecordingImportCommitTarget();
+  const recording = createRecordingTransaction();
 
   await importViaBufferedRdfjsStore(
     { mode: "replace", source: { kind: "quads", quads: [q2] } },
-    { rdfjsStore: recording.store },
+    { transactionFactory: recording.transactionFactory },
   );
 
   assertEquals(recording.lastCommitContext()?.importMode, "replace");

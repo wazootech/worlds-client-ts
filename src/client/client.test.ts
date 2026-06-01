@@ -5,6 +5,8 @@ import { RdfjsQuadStore, RdfjsSearchIndex } from "./adapters/rdfjs/mod.ts";
 import { ComunicaSparqlEngine } from "./adapters/comunica/mod.ts";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { hashQuad } from "./quad-store/mod.ts";
+import type { QuadTransaction } from "./rdfjs-buffer/mod.ts";
+import type * as rdfjs from "@rdfjs/types";
 
 const { quad, namedNode, literal } = DataFactory;
 const queryEngine = new QueryEngine();
@@ -12,7 +14,18 @@ const queryEngine = new QueryEngine();
 function createTestClient(store: Store): Client {
   return new Client({
     quadStore: new RdfjsQuadStore(store),
-    sparqlEngine: new ComunicaSparqlEngine({ queryEngine, store }),
+    sparqlEngine: new ComunicaSparqlEngine({
+      queryEngine,
+      readSource: store,
+      transactionFactory: () => {
+        return {
+          addQuad: (q: rdfjs.Quad) => store.addQuad(q),
+          removeQuad: (q: rdfjs.Quad) => store.removeQuad(q),
+          commit: () => Promise.resolve(),
+          rollback: () => {},
+        } as unknown as QuadTransaction;
+      },
+    }),
     searchIndex: new RdfjsSearchIndex(store),
   });
 }
@@ -203,7 +216,18 @@ Deno.test("Client - queryEngine enables SELECT queries", async () => {
   const client = new Client({
     quadStore: new RdfjsQuadStore(store),
     searchIndex: new RdfjsSearchIndex(store),
-    sparqlEngine: new ComunicaSparqlEngine({ queryEngine, store }),
+    sparqlEngine: new ComunicaSparqlEngine({
+      queryEngine,
+      readSource: store,
+      transactionFactory: () => {
+        return {
+          addQuad: (q: rdfjs.Quad) => store.addQuad(q),
+          removeQuad: (q: rdfjs.Quad) => store.removeQuad(q),
+          commit: () => Promise.resolve(),
+          rollback: () => {},
+        } as unknown as QuadTransaction;
+      },
+    }),
   });
 
   await client.import({

@@ -6,35 +6,41 @@ import type {
 } from "@/client/quad-store/mod.ts";
 import {
   exportFromRdfjsStore,
-  type ImportCommitTarget,
   importViaBufferedRdfjsStore,
+  type RdfjsExportSource,
 } from "./import-export-via-rdfjs-store.ts";
+import type { QuadTransaction } from "./quad-transaction.ts";
 
 /**
  * BufferedRdfjsQuadStoreOptions configures BufferedRdfjsQuadStore dependencies.
  */
 export interface BufferedRdfjsQuadStoreOptions {
-  /** rdfjsStore is the committing RDF/JS store receiving buffered import mutations. */
-  rdfjsStore: ImportCommitTarget;
+  /** transactionFactory creates a QuadTransaction for atomic imports. */
+  transactionFactory: () => QuadTransaction;
+
+  /** readSource provides a stream of quads for exports. */
+  readSource: RdfjsExportSource;
 }
 
 /**
- * BufferedRdfjsQuadStore implements QuadStoreInterface over an ImportCommitTarget.
+ * BufferedRdfjsQuadStore implements QuadStoreInterface over a transaction factory and read source.
  */
 export class BufferedRdfjsQuadStore implements QuadStoreInterface {
-  private readonly rdfjsStore: ImportCommitTarget;
+  private readonly transactionFactory: () => QuadTransaction;
+  private readonly readSource: RdfjsExportSource;
 
   public constructor(options: BufferedRdfjsQuadStoreOptions) {
-    this.rdfjsStore = options.rdfjsStore;
+    this.transactionFactory = options.transactionFactory;
+    this.readSource = options.readSource;
   }
 
   public async import(request: ImportRequest): Promise<void> {
     await importViaBufferedRdfjsStore(request, {
-      rdfjsStore: this.rdfjsStore,
+      transactionFactory: this.transactionFactory,
     });
   }
 
   public async export(request: ExportRequest): Promise<ExportResponse> {
-    return await exportFromRdfjsStore(this.rdfjsStore, request);
+    return await exportFromRdfjsStore(this.readSource, request);
   }
 }

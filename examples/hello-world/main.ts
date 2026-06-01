@@ -6,6 +6,8 @@ import {
 } from "@worlds/client/adapters/rdfjs";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { Store } from "n3";
+import type { QuadTransaction } from "@worlds/client/rdfjs-buffer";
+import type * as rdfjs from "@rdfjs/types";
 
 if (import.meta.main) {
   const store = new Store();
@@ -13,7 +15,18 @@ if (import.meta.main) {
   const client = new Client({
     quadStore: new RdfjsQuadStore(store),
     searchIndex: new RdfjsSearchIndex(store),
-    sparqlEngine: new ComunicaSparqlEngine({ queryEngine, store }),
+    sparqlEngine: new ComunicaSparqlEngine({
+      queryEngine,
+      readSource: store,
+      transactionFactory: () => {
+        return {
+          addQuad: (q: rdfjs.Quad) => store.addQuad(q),
+          removeQuad: (q: rdfjs.Quad) => store.removeQuad(q),
+          commit: () => Promise.resolve(),
+          rollback: () => {},
+        } as unknown as QuadTransaction;
+      },
+    }),
   });
 
   await client.import({

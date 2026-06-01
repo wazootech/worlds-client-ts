@@ -67,24 +67,26 @@ export interface ComunicaBinding {
   get?: (variable: string) => rdfjs.Term | undefined;
 }
 
+import { createTransactionalRdfjsStore } from "@/client/rdfjs-buffer/mod.ts";
+import type { QuadTransaction } from "@/client/rdfjs-buffer/mod.ts";
+
 /**
  * ComunicaSparqlEngineOptions are the options for ComunicaSparqlEngine.
  */
 export interface ComunicaSparqlEngineOptions {
   /**
-   * store is the RDFJS store to execute the query on.
+   * readSource is the RDFJS store to execute the query on.
    * For join cardinality hints, pass a store that implements `countQuads` (e.g. `LibsqlRdfjsStore` from `createLibsqlClient`).
    */
-  store: rdfjs.Store;
+  readSource: rdfjs.Store;
 
   /** queryEngine is the caller-provided Comunica-compatible query engine to use. */
   queryEngine: ComunicaQueryEngine;
 
   /**
-   * onVoid is an optional callback invoked after a successful void (UPDATE)
-   * query. Use it to flush a persistent store buffer or trigger side effects.
+   * transactionFactory is an optional factory to create a QuadTransaction for SPARQL UPDATEs.
    */
-  onVoid?: () => Promise<void>;
+  transactionFactory?: () => QuadTransaction;
 }
 
 /**
@@ -97,17 +99,33 @@ export class ComunicaSparqlEngine implements SparqlEngineInterface {
   ) {}
 
   public async execute(request: SparqlRequest): Promise<SparqlResponse> {
-    const response = await executeSparql(
-      this.options.queryEngine,
-      this.options.store,
-      request,
-    );
+    let tx: QuadTransaction | undefined;
+    let storeForQuery: rdfjs.Store = this.options.readSource;
 
-    if (response.kind === "void") {
-      await this.options.onVoid?.();
+    if (this.options.transactionFactory) {
+      tx = this.options.transactionFactory();
+      storeForQuery = createTransactionalRdfjsStore(
+        this.options.readSource,
+        tx,
+      );
     }
 
-    return response;
+    try {
+      const response = await executeSparql(
+        this.options.queryEngine,
+        storeForQuery,
+        request,
+      );
+
+      if (response.kind === "void") {
+        await tx?.commit();
+      }
+
+      return response;
+    } catch (error) {
+      tx?.rollback();
+      throw error;
+    }
   }
 }
 

@@ -1,5 +1,5 @@
 import type * as rdfjs from "@rdfjs/types";
-import type { PatchCommitContext } from "@/client/quad-store/commit-handler.ts";
+
 import type {
   ExportRequest,
   ExportResponse,
@@ -11,35 +11,18 @@ import {
   materializeImportQuads,
 } from "@/client/quad-store/rdf-formats.ts";
 
-/**
- * ImportCommitTarget is the minimal surface needed for durable buffered import and export.
- */
-export interface ImportCommitTarget {
-  /** addQuad buffers a quad until commit. */
-  addQuad(quad: rdfjs.Quad): void;
-
-  /** match streams quads for a pattern (used by export). */
-  match(
-    subject?: rdfjs.Term | null,
-    predicate?: rdfjs.Term | null,
-    object?: rdfjs.Term | null,
-    graph?: rdfjs.Term | null,
-  ): rdfjs.Stream<rdfjs.Quad>;
-
-  /** commit persists buffered mutations to durable storage. */
-  commit(context?: PatchCommitContext): Promise<void>;
-}
+import type { QuadTransaction } from "./quad-transaction.ts";
 
 /**
- * ImportViaBufferedRdfjsStoreOptions configures durable import over a committing rdfjs.Store.
+ * ImportViaBufferedRdfjsStoreOptions configures durable import over a QuadTransaction.
  */
 export interface ImportViaBufferedRdfjsStoreOptions {
-  /** rdfjsStore receives buffered quads and persists on commit. */
-  rdfjsStore: ImportCommitTarget;
+  /** transactionFactory creates a new QuadTransaction for the import. */
+  transactionFactory: () => QuadTransaction;
 }
 
 /**
- * importViaBufferedRdfjsStore materializes import quads, buffers them on rdfjsStore, and commits once.
+ * importViaBufferedRdfjsStore materializes import quads, buffers them on a transaction, and commits once.
  */
 export async function importViaBufferedRdfjsStore(
   request: ImportRequest,
@@ -48,11 +31,16 @@ export async function importViaBufferedRdfjsStore(
   const mode = request.mode ?? "merge";
   const quads = await materializeImportQuads(request.source);
 
-  for (const quad of quads) {
-    options.rdfjsStore.addQuad(quad);
+  const tx = options.transactionFactory();
+  try {
+    for (const quad of quads) {
+      tx.addQuad(quad);
+    }
+    await tx.commit({ importMode: mode });
+  } catch (error) {
+    tx.rollback();
+    throw error;
   }
-
-  await options.rdfjsStore.commit({ importMode: mode });
 }
 
 /**
