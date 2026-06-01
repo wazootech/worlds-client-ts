@@ -1,5 +1,5 @@
 import type * as rdfjs from "@rdfjs/types";
-import type { Patch, PatchCommitContext } from "@/client/quad-store/mod.ts";
+import type { Patch, TransactionContext } from "@/client/quad-store/mod.ts";
 import { isReplaceImportCommit } from "@/client/quad-store/mod.ts";
 import { hashQuads } from "@/client/quad-store/mod.ts";
 
@@ -42,7 +42,7 @@ export interface CommitPatchToDenokvOptions {
 export async function commitPatchToDenokv(
   patch: Patch,
   options: CommitPatchToDenokvOptions,
-  context?: PatchCommitContext,
+  context?: TransactionContext,
 ): Promise<void> {
   const keyPrefix = options.keyPrefix ?? ["quads"];
   const enabledIndexes = options.enabledHexastoreIndexes ??

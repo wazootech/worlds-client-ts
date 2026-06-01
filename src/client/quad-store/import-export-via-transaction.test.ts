@@ -1,7 +1,7 @@
 import { assertEquals } from "@std/assert";
 import { DataFactory } from "n3";
 import type * as rdfjs from "@rdfjs/types";
-import type { PatchCommitContext } from "@/client/quad-store/commit-handler.ts";
+import type { TransactionContext } from "@/client/quad-store/transaction-context.ts";
 import { Transaction } from "./transaction.ts";
 import { importViaTransaction } from "./import-export-via-transaction.ts";
 
@@ -21,10 +21,10 @@ const q2 = quad(
 function createRecordingTransaction(): {
   createTransaction: () => Transaction;
   bufferedQuads: () => rdfjs.Quad[];
-  lastCommitContext: () => PatchCommitContext | undefined;
+  lastCommitContext: () => TransactionContext | undefined;
 } {
   const buffered: rdfjs.Quad[] = [];
-  let lastContext: PatchCommitContext | undefined;
+  let lastContext: TransactionContext | undefined;
 
   const createTransaction = (): Transaction => {
     const tx = new Transaction({

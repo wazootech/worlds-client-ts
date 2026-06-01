@@ -17,7 +17,7 @@ import {
 } from "../kv/denokv-hexastore-keys.ts";
 import { readActiveGeneration } from "../kv/denokv-dataset-generation.ts";
 
-const MAX_KV_BATCH_SIZE = 50;
+const MAX_KV_BATCH_SIZE = 10;
 
 /**
  * DenokvSearchIndexOptions provides configurations for operating direct Kv search scans.

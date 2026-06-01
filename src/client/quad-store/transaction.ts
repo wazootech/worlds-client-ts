@@ -1,10 +1,7 @@
 import type * as rdfjs from "@rdfjs/types";
 import { DataFactory } from "n3";
 import { EventEmitter } from "node:events";
-import type {
-  CommitHandler,
-  PatchCommitContext,
-} from "@/client/quad-store/mod.ts";
+import type { TransactionContext } from "@/client/quad-store/mod.ts";
 import { deduplicateBuffers } from "@/client/quad-store/mod.ts";
 
 const { namedNode } = DataFactory;
@@ -22,10 +19,16 @@ export type MatchFunction = (
  */
 export interface TransactionOptions {
   /** commit persists the deduplicated patch. */
-  commit?: CommitHandler;
+  commit?: (
+    patch: import("./patch.ts").Patch,
+    context?: TransactionContext,
+  ) => Promise<void>;
 
   /** fallbackCommit runs when commit is omitted. */
-  fallbackCommit?: CommitHandler;
+  fallbackCommit?: (
+    patch: import("./patch.ts").Patch,
+    context?: TransactionContext,
+  ) => Promise<void>;
 }
 
 /**
@@ -107,7 +110,7 @@ export class Transaction {
   }
 
   /** commit deduplicates buffers and persists through the configured commitHandler. */
-  public async commit(context?: PatchCommitContext): Promise<void> {
+  public async commit(context?: TransactionContext): Promise<void> {
     deduplicateBuffers(this.insertBuffer, this.deleteBuffer);
 
     if (this.insertBuffer.length === 0 && this.deleteBuffer.length === 0) {
@@ -139,6 +142,9 @@ export class Transaction {
   }
 }
 
+/**
+ * bridgeStreamToBuffer connects an RDF/JS quad stream to a target buffer array.
+ */
 function bridgeStreamToBuffer(
   stream: rdfjs.Stream<rdfjs.Quad>,
   targetBuffer: rdfjs.Quad[],
@@ -161,57 +167,26 @@ function bridgeStreamToBuffer(
 }
 
 /**
- * createTransactionalRdfjsStore wraps an existing rdfjs.Store with a Transaction.
- * It intercepts all mutative operations and routes them to the Transaction buffer,
- * while passing read queries (match) through to the underlying store.
- */
-export function createTransactionalRdfjsStore(
-  store: rdfjs.Store,
-  transaction: Transaction,
-): rdfjs.Store {
-  return new Proxy(store, {
-    get(target, prop, receiver) {
-      if (
-        prop === "add" ||
-        prop === "addQuad" ||
-        prop === "addQuads" ||
-        prop === "removeQuads" ||
-        prop === "delete" ||
-        prop === "removeQuad" ||
-        prop === "import" ||
-        prop === "remove" ||
-        prop === "removeMatches" ||
-        prop === "deleteGraph"
-      ) {
-        // Route mutative methods to the transaction
-        const value = Reflect.get(transaction, prop);
-        if (typeof value === "function") {
-          if (prop === "removeMatches" || prop === "deleteGraph") {
-            // These require the match function from the underlying store
-            return (...args: unknown[]) =>
-              Reflect.apply(value, transaction, [
-                target.match.bind(target),
-                ...args,
-              ]);
-          }
-          return value.bind(transaction);
-        }
-      }
-      // Pass-through read methods (match, countQuads, etc.) to the underlying store
-      return Reflect.get(target, prop, receiver);
-    },
-  });
-}
-
-/**
- * createRdfjsStoreCommitHandler returns a CommitHandler that applies Patches
+ * createRdfjsStoreCommitHandler returns a commit function that applies Patches
  * directly to an underlying rdfjs.Store by using its native add/delete/remove methods.
  * For robust usage, the underlying store should support synchronous add/delete.
  */
 export function createRdfjsStoreCommitHandler(
   store: rdfjs.Store,
-): CommitHandler {
+): (
+  patch: import("./patch.ts").Patch,
+  context?: TransactionContext,
+) => Promise<void> {
   return async (patch, context) => {
+    // If the store supports native applyPatch, use it to avoid quad-at-a-time loop overhead
+    if (
+      "applyPatch" in store &&
+      typeof (store as Record<string, unknown>).applyPatch === "function"
+    ) {
+      return (store as unknown as import("./transaction-context.ts").PatchableStore)
+        .applyPatch(patch, context);
+    }
+
     if (context?.importMode === "replace") {
       const stream = store.match(null, null, null, null);
       await new Promise<void>((resolve, reject) => {

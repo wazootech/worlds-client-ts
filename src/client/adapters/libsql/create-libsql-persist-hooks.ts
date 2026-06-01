@@ -1,4 +1,4 @@
-import type { CommitHandler } from "@/client/quad-store/mod.ts";
+import type { Patch, TransactionContext } from "@/client/quad-store/mod.ts";
 import type { LibsqlSearchIndexProjector } from "./search-index/mod.ts";
 import { commitPatchToLibsql } from "./commit-patch-to-libsql.ts";
 import type { LibsqlClientBaseOptions } from "./libsql-client-base-options.ts";
@@ -9,7 +9,7 @@ import type { LibsqlSearchQueryBuilder } from "./search-index/libsql-search-quer
  */
 export interface LibsqlPersistHooks {
   /** commit persists buffered patches to LibSQL. */
-  commit: CommitHandler;
+  commit: (patch: Patch, context?: TransactionContext) => Promise<void>;
 }
 
 /**

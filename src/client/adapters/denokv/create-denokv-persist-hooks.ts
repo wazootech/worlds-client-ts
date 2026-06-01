@@ -1,4 +1,4 @@
-import type { CommitHandler } from "@/client/quad-store/mod.ts";
+import type { Patch, TransactionContext } from "@/client/quad-store/mod.ts";
 import type { SearchIndexOnImport } from "@/client/search-index/mod.ts";
 import {
   commitPatchToDenokv,
@@ -6,7 +6,7 @@ import {
 } from "./commit-patch-to-denokv.ts";
 
 export interface DenokvPersistHooks {
-  commit: CommitHandler;
+  commit: (patch: Patch, context?: TransactionContext) => Promise<void>;
 }
 
 export interface DenokvPersistHooksOptions extends CommitPatchToDenokvOptions {

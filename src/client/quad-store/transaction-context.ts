@@ -4,32 +4,32 @@ import type { ImportMode } from "./quad-store-interface.ts";
 import type { Patch } from "./patch.ts";
 
 /**
- * PatchCommitContext carries optional metadata for a buffered commit flush.
+ * TransactionContext carries optional metadata for a buffered commit flush.
  */
-export interface PatchCommitContext {
+export interface TransactionContext {
   /** importMode signals bulk import replace semantics to durable commit handlers. */
   importMode?: ImportMode;
 }
 
 /**
- * CommitHandler atomically persists a patch of buffered insertions and deletions.
+ * PatchableStore is an RDFJS store that natively supports atomic bulk-mutations via Patches.
  */
-export type CommitHandler = (
-  patch: Patch,
-  context?: PatchCommitContext,
-) => Promise<void>;
+export interface PatchableStore extends rdfjs.Store {
+  /** applyPatch persists a patch atomically. */
+  applyPatch(patch: Patch, context?: TransactionContext): Promise<void>;
+}
 
 /**
  * isImportCommit returns true when commit context carries bulk import semantics.
  */
-export function isImportCommit(context?: PatchCommitContext): boolean {
+export function isImportCommit(context?: TransactionContext): boolean {
   return context?.importMode !== undefined;
 }
 
 /**
  * isReplaceImportCommit returns true when commit context requests replace import semantics.
  */
-export function isReplaceImportCommit(context?: PatchCommitContext): boolean {
+export function isReplaceImportCommit(context?: TransactionContext): boolean {
   return context?.importMode === "replace";
 }
 

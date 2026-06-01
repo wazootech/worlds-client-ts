@@ -1,6 +1,6 @@
 import type { Client, InStatement } from "@libsql/client";
 import type * as rdfjs from "@rdfjs/types";
-import type { Patch, PatchCommitContext } from "@/client/quad-store/mod.ts";
+import type { Patch, TransactionContext } from "@/client/quad-store/mod.ts";
 import { isReplaceImportCommit } from "@/client/quad-store/mod.ts";
 import {
   filterQuads,
@@ -56,7 +56,7 @@ async function executeReplaceImportWipe(
 export async function commitPatchToLibsql(
   patch: Patch,
   options: CommitPatchToLibsqlOptions,
-  context?: PatchCommitContext,
+  context?: TransactionContext,
 ): Promise<CommitPatchToLibsqlResult> {
   const {
     client,

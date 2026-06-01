@@ -67,7 +67,7 @@ export interface ComunicaBinding {
   get?: (variable: string) => rdfjs.Term | undefined;
 }
 
-import { createTransactionalRdfjsStore } from "@/client/quad-store/mod.ts";
+import { TransactionalRdfjsStore } from "@/client/quad-store/mod.ts";
 import type { Transaction } from "@/client/quad-store/mod.ts";
 
 /**
@@ -104,10 +104,11 @@ export class ComunicaSparqlEngine implements SparqlEngineInterface {
 
     if (this.options.createTransaction) {
       tx = this.options.createTransaction();
-      storeForQuery = createTransactionalRdfjsStore(
-        this.options.store,
-        tx,
-      );
+      storeForQuery = new TransactionalRdfjsStore({
+        readStore: this.options
+          .store as import("@/client/quad-store/transactional-rdfjs-store.ts").ReadonlyStore,
+        transaction: tx,
+      });
     }
 
     try {

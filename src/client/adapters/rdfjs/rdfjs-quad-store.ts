@@ -23,7 +23,7 @@ export interface RdfjsQuadStoreOptions {
   /** commit optionally overrides how transactions are persisted. */
   commit?: (
     patch: import("@/client/quad-store/mod.ts").Patch,
-    context?: import("@/client/quad-store/mod.ts").PatchCommitContext,
+    context?: import("@/client/quad-store/mod.ts").TransactionContext,
   ) => Promise<void>;
 }
 
