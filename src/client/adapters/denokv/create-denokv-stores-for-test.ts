@@ -6,6 +6,7 @@ import {
   createDenokvPersistHooks,
   type DenokvPersistHooksOptions,
 } from "./rdfjs-store/sync/create-denokv-persist-hooks.ts";
+import { resolveImportLifecycle } from "@/client/import-lifecycle/mod.ts";
 
 /**
  * DenokvStoresForTest bundles Deno KV quad and RDF/JS store facades for adapter tests.
@@ -25,16 +26,19 @@ export function createDenokvStoresForTest(
   options: DenokvPersistHooksOptions,
 ): DenokvStoresForTest {
   const persistHooks = createDenokvPersistHooks(options);
+  const importLifecycle = resolveImportLifecycle({
+    beforeImport: persistHooks.beforeImport,
+    afterImport: persistHooks.afterImport,
+  });
   const denokvRdfjsStore = new DenokvRdfjsStore({
     kv: options.kv,
     keyPrefix: options.keyPrefix,
     enabledHexastoreIndexes: options.enabledHexastoreIndexes,
     commitHandler: persistHooks.commitHandler,
+    importLifecycle,
   });
   const denokvQuadStore = new DenokvQuadStore({
     denokvRdfjsStore,
-    beforeImport: persistHooks.beforeImport,
-    afterImport: persistHooks.afterImport,
   });
 
   return { denokvQuadStore, denokvRdfjsStore };

@@ -1,7 +1,10 @@
 import type * as rdfjs from "@rdfjs/types";
 import type { ImportCommitTarget } from "./import-export-via-rdfjs-store.ts";
 import type { PatchCommitContext } from "@/client/quad-store/mod.ts";
-import { awaitDrainRemoveMatches } from "@/client/quad-store/mod.ts";
+import type { ImportLifecycle } from "@/client/import-lifecycle/mod.ts";
+import { createRdfjsStoreCommitHandler } from "./apply-rdfjs-patch-to-store.ts";
+import { commitBufferedPatch } from "./commit-buffered-patch.ts";
+import { RdfjsPatchBuffer } from "./rdfjs-patch-buffer.ts";
 
 /**
  * ImportCommitTargetOptions configures an in-memory ImportCommitTarget adapter.
@@ -9,6 +12,9 @@ import { awaitDrainRemoveMatches } from "@/client/quad-store/mod.ts";
 export interface ImportCommitTargetOptions {
   /** store is the underlying RDF/JS graph mutated on commit. */
   store: rdfjs.Store;
+
+  /** importLifecycle runs around import commits when PatchCommitContext.importMode is set. */
+  importLifecycle?: ImportLifecycle;
 }
 
 /**
@@ -17,11 +23,12 @@ export interface ImportCommitTargetOptions {
 export function createImportCommitTarget(
   options: ImportCommitTargetOptions,
 ): ImportCommitTarget {
-  const insertBuffer: rdfjs.Quad[] = [];
+  const patchBuffer = new RdfjsPatchBuffer();
+  const commitHandler = createRdfjsStoreCommitHandler(options.store);
 
   return {
     addQuad(quad: rdfjs.Quad): void {
-      insertBuffer.push(quad);
+      patchBuffer.addQuad(quad);
     },
 
     match(
@@ -34,15 +41,11 @@ export function createImportCommitTarget(
     },
 
     async commit(context?: PatchCommitContext): Promise<void> {
-      if (context?.importMode === "replace") {
-        await awaitDrainRemoveMatches(options.store);
-      }
-
-      for (const quad of insertBuffer) {
-        // deno-lint-ignore no-explicit-any
-        (options.store as any).addQuad(quad);
-      }
-      insertBuffer.length = 0;
+      await commitBufferedPatch(patchBuffer, {
+        commitHandler,
+        context,
+        importLifecycle: options.importLifecycle,
+      });
     },
   };
 }

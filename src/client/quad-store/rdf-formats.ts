@@ -123,7 +123,8 @@ export async function exportQuadsResponse(
 
 /**
  * awaitDrainRemoveMatches waits for removeMatches(null, null, null, null) to finish.
- * Used by in-memory replace import commits; durable backends honor PatchCommitContext.importMode in persistPatch.
+ * Used by createRdfjsStoreCommitHandler for replace import commits; durable backends
+ * honor isReplaceImportCommit in commitPatchToLibsql and commitPatchToDenokv.
  */
 export function awaitDrainRemoveMatches(
   store: rdfjs.Store,

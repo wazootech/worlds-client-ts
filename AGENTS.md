@@ -345,16 +345,17 @@ assembling `new Client` manually.
 Custom assembly uses `new Client` with `ClientOptions`; wire
 `LibsqlSearchIndex`, `createLibsqlPersistHooks`, and suffixed stores directly
 when you need warm-start control beyond `createLibsqlClient`. Durable backends
-share buffer → `commit()` → `persistPatch` for import and SPARQL UPDATE; all
-quad stores run `ImportLifecycle` (`beforeImport` / `afterImport`) around
-`import` via `importViaBufferedRdfjsStore`, which always commits with
-`PatchCommitContext.importMode`. Replace import: LibSQL wipes `quads`/`chunks`
-in `commitPatchToLibsql`; Deno KV generation-swap in `commitPatchToDenokv`. Do
-not reintroduce pre-commit `onReplace` drains on the shared import helper.
-`createLibsqlPersistHooks` and `createDenokvPersistHooks` apply
-`searchIndexOnImport` via flat `commitHandler`, `beforeImport`, and
-`afterImport`. LibSQL defers built-in chunk projection via
-`searchIndexOnImport: "deferred"`; Deno KV supports the same defer hooks for
+share buffer → `commit()` → `commitBufferedPatch` → `persistPatch` for import
+and SPARQL UPDATE; import commits run `ImportLifecycle` (`beforeImport` /
+`afterImport`) inside `commitBufferedPatch` when `PatchCommitContext.importMode`
+is set. `importViaBufferedRdfjsStore` materializes quads and calls
+`rdfjsStore.commit({ importMode })`. Replace import: LibSQL wipes
+`quads`/`chunks` in `commitPatchToLibsql`; Deno KV generation-swap in
+`commitPatchToDenokv`. Do not reintroduce pre-commit `onReplace` drains on the
+shared import helper. `createLibsqlPersistHooks` and `createDenokvPersistHooks`
+apply `searchIndexOnImport` via flat `commitHandler`, `beforeImport`, and
+`afterImport` wired onto `*RdfjsStore`. LibSQL defers built-in chunk projection
+via `searchIndexOnImport: "deferred"`; Deno KV supports the same defer hooks for
 external search indexes via
 `createDenokvPersistHooks({ searchIndexOnImport: "deferred", reindex })`.
 

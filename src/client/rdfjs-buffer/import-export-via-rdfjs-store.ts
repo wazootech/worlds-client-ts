@@ -6,10 +6,6 @@ import type {
   ImportRequest,
 } from "@/client/quad-store/quad-store-interface.ts";
 import {
-  type ImportLifecycle,
-  runImportWithLifecycle,
-} from "@/client/import-lifecycle/mod.ts";
-import {
   collectQuadsFromStream,
   exportQuadsResponse,
   materializeImportQuads,
@@ -47,19 +43,16 @@ export interface ImportViaBufferedRdfjsStoreOptions {
  */
 export async function importViaBufferedRdfjsStore(
   request: ImportRequest,
-  importLifecycle: ImportLifecycle,
   options: ImportViaBufferedRdfjsStoreOptions,
 ): Promise<void> {
-  await runImportWithLifecycle(importLifecycle, async () => {
-    const mode = request.mode ?? "merge";
-    const quads = await materializeImportQuads(request.source);
+  const mode = request.mode ?? "merge";
+  const quads = await materializeImportQuads(request.source);
 
-    for (const quad of quads) {
-      options.rdfjsStore.addQuad(quad);
-    }
+  for (const quad of quads) {
+    options.rdfjsStore.addQuad(quad);
+  }
 
-    await options.rdfjsStore.commit({ importMode: mode });
-  });
+  await options.rdfjsStore.commit({ importMode: mode });
 }
 
 /**

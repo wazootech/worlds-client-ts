@@ -8,7 +8,11 @@ import type {
   CommitHandler,
   PatchCommitContext,
 } from "@/client/quad-store/mod.ts";
-import { RdfjsPatchBuffer } from "@/client/rdfjs-buffer/mod.ts";
+import type { ImportLifecycle } from "@/client/import-lifecycle/mod.ts";
+import {
+  commitBufferedPatch,
+  RdfjsPatchBuffer,
+} from "@/client/rdfjs-buffer/mod.ts";
 import { quadFromLibsqlRow } from "./sql/libsql-quad-row.ts";
 
 /**
@@ -23,6 +27,9 @@ export interface LibsqlRdfjsStoreOptions {
 
   /** commitHandler atomically persists buffered patches on commit(). */
   commitHandler?: CommitHandler;
+
+  /** importLifecycle runs around import commits when PatchCommitContext.importMode is set. */
+  importLifecycle?: ImportLifecycle;
 
   /** matchPageSize limits rows per hexastore match SQL round-trip (default 1000). */
   matchPageSize?: number;
@@ -201,7 +208,11 @@ export class LibsqlRdfjsStore implements rdfjs.Store {
    * buffers before invoking the handler.
    */
   public async commit(context?: PatchCommitContext): Promise<void> {
-    await this.patchBuffer.flushBuffer(this.options.commitHandler, context);
+    await commitBufferedPatch(this.patchBuffer, {
+      commitHandler: this.options.commitHandler,
+      context,
+      importLifecycle: this.options.importLifecycle,
+    });
   }
 
   /**

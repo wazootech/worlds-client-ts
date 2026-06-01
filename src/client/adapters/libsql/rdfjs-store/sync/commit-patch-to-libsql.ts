@@ -6,6 +6,7 @@ import type {
 import { chunkQuads } from "@/client/search-index/quad-chunker/mod.ts";
 import type * as rdfjs from "@rdfjs/types";
 import type { Patch, PatchCommitContext } from "@/client/quad-store/mod.ts";
+import { isReplaceImportCommit } from "@/client/quad-store/mod.ts";
 import {
   filterQuads,
   fromRdfjsTerm,
@@ -128,7 +129,7 @@ export async function commitPatchToLibsql(
   );
   const statements: InStatement[] = [];
 
-  if (context?.importMode === "replace") {
+  if (isReplaceImportCommit(context)) {
     await executeReplaceImportWipe(
       client,
       libsqlQueryBuilder,

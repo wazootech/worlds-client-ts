@@ -4,7 +4,6 @@ import type * as rdfjs from "@rdfjs/types";
 import type { PatchCommitContext } from "@/client/quad-store/commit-handler.ts";
 import type { ImportCommitTarget } from "./import-export-via-rdfjs-store.ts";
 import { importViaBufferedRdfjsStore } from "./import-export-via-rdfjs-store.ts";
-import { noopImportLifecycle } from "@/client/import-lifecycle/mod.ts";
 
 const { namedNode, literal, quad } = DataFactory;
 
@@ -52,7 +51,6 @@ Deno.test("importViaBufferedRdfjsStore - buffers quads and commits with merge mo
 
   await importViaBufferedRdfjsStore(
     { mode: "merge", source: { kind: "quads", quads: [q1, q2] } },
-    noopImportLifecycle,
     { rdfjsStore: recording.store },
   );
 
@@ -65,7 +63,6 @@ Deno.test("importViaBufferedRdfjsStore - defaults mode to merge", async () => {
 
   await importViaBufferedRdfjsStore(
     { source: { kind: "quads", quads: [q1] } },
-    noopImportLifecycle,
     { rdfjsStore: recording.store },
   );
 
@@ -77,7 +74,6 @@ Deno.test("importViaBufferedRdfjsStore - passes replace mode to commit context",
 
   await importViaBufferedRdfjsStore(
     { mode: "replace", source: { kind: "quads", quads: [q2] } },
-    noopImportLifecycle,
     { rdfjsStore: recording.store },
   );
 

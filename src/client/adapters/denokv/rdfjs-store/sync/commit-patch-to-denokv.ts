@@ -1,5 +1,6 @@
 import type * as rdfjs from "@rdfjs/types";
 import type { Patch, PatchCommitContext } from "@/client/quad-store/mod.ts";
+import { isReplaceImportCommit } from "@/client/quad-store/mod.ts";
 import { hashQuads } from "@/client/quad-store/mod.ts";
 
 import {
@@ -44,7 +45,7 @@ export async function commitPatchToDenokv(
   const enabledIndexes = options.enabledHexastoreIndexes ??
     DEFAULT_DENOKV_HEXASTORE_INDEXES;
 
-  if (context?.importMode === "replace") {
+  if (isReplaceImportCommit(context)) {
     await commitReplaceImportPatch(
       patch,
       options.kv,

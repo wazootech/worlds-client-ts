@@ -23,11 +23,11 @@
 - Renamed `rebuildSearchIndex` → **`reindex`**; `RebuildSearchIndexRequest` /
   `RebuildSearchIndexResponse` → `ReindexRequest` / `ReindexResponse`. RDF/JS
   and Deno KV `reindex()` succeed as documented no-ops.
-- **`ImportLifecycle`** (`beforeImport` / `afterImport`) wraps every
-  `QuadStoreInterface.import` via `importViaBufferedRdfjsStore`. Durable
-  `*QuadStore` options take optional flat `beforeImport` / `afterImport`
-  callbacks (not a bundled sync object). Import and SPARQL UPDATE both buffer
-  patches through `commit()` → `commitPatchTo*`. Replace import: LibSQL wipes
+- **`ImportLifecycle`** (`beforeImport` / `afterImport`) runs on import commits
+  via `commitBufferedPatch` when `PatchCommitContext.importMode` is set. Durable
+  factories wire flat `beforeImport` / `afterImport` onto `*RdfjsStore` (not
+  `*QuadStore`). Import and SPARQL UPDATE both buffer patches through `commit()`
+  → `commitBufferedPatch` → `commitPatchTo*`. Replace import: LibSQL wipes
   `quads`/`chunks` in `commitPatchToLibsql`; Deno KV generation-swap in
   `commitPatchToDenokv`. `createLibsqlPersistHooks` and
   `createDenokvPersistHooks` return
@@ -35,8 +35,8 @@
   }` and map `searchIndexOnImport`
   for projection and deferred reindex.
 - Renamed **`commit-sync`** → **`import-lifecycle`** (root barrel export).
-  Removed **`CommitSyncState`**; use flat `commitHandler` on `*RdfjsStore` and
-  `beforeImport` / `afterImport` on `*QuadStore`.
+  Removed **`CommitSyncState`**; use flat `commitHandler` and optional
+  `importLifecycle` on `*RdfjsStore`.
 - Renamed **`createLibsqlCommitSync`** → **`createLibsqlPersistHooks`**;
   **`createDenokvCommitSync`** → **`createDenokvPersistHooks`**.
 - Renamed **`BufferedRdfjsPatchState`** → **`RdfjsPatchBuffer`**;

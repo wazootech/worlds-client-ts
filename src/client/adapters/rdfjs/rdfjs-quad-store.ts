@@ -11,10 +11,7 @@ import {
   importViaBufferedRdfjsStore,
 } from "@/client/rdfjs-buffer/mod.ts";
 import type { ImportLifecycle } from "@/client/import-lifecycle/mod.ts";
-import {
-  noopImportLifecycle,
-  resolveImportLifecycle,
-} from "@/client/import-lifecycle/mod.ts";
+import { noopImportLifecycle } from "@/client/import-lifecycle/mod.ts";
 
 /**
  * RdfjsQuadStoreOptions configures RdfjsQuadStore dependencies.
@@ -23,13 +20,7 @@ export interface RdfjsQuadStoreOptions {
   /** store is the underlying RDF/JS graph. */
   store: rdfjs.Store;
 
-  /** beforeImport runs before import writes quads (optional). */
-  beforeImport?: () => void;
-
-  /** afterImport runs after import persistence completes (optional). */
-  afterImport?: () => Promise<void>;
-
-  /** importLifecycle is shorthand for beforeImport and afterImport (optional). */
+  /** importLifecycle runs before and after import (defaults to noop). */
   importLifecycle?: ImportLifecycle;
 }
 
@@ -39,38 +30,27 @@ export interface RdfjsQuadStoreOptions {
  */
 export class RdfjsQuadStore implements QuadStoreInterface {
   private readonly store: rdfjs.Store;
-  private readonly beforeImport?: () => void;
-  private readonly afterImport?: () => Promise<void>;
+  private readonly importLifecycle: ImportLifecycle;
 
-  public constructor(store: rdfjs.Store);
-  public constructor(options: RdfjsQuadStoreOptions);
-  public constructor(
-    storeOrOptions: rdfjs.Store | RdfjsQuadStoreOptions,
-    importLifecycle?: ImportLifecycle,
-  ) {
+  public constructor(storeOrOptions: rdfjs.Store | RdfjsQuadStoreOptions) {
     if (isRdfjsQuadStoreOptions(storeOrOptions)) {
       this.store = storeOrOptions.store;
-      this.beforeImport = storeOrOptions.beforeImport ??
-        storeOrOptions.importLifecycle?.beforeImport;
-      this.afterImport = storeOrOptions.afterImport ??
-        storeOrOptions.importLifecycle?.afterImport;
+      this.importLifecycle = storeOrOptions.importLifecycle ??
+        noopImportLifecycle;
     } else {
       this.store = storeOrOptions;
-      this.beforeImport = importLifecycle?.beforeImport;
-      this.afterImport = importLifecycle?.afterImport;
+      this.importLifecycle = noopImportLifecycle;
     }
   }
 
   public async import(request: ImportRequest): Promise<void> {
-    const importCommitTarget = createImportCommitTarget({ store: this.store });
-    await importViaBufferedRdfjsStore(
-      request,
-      resolveImportLifecycle({
-        beforeImport: this.beforeImport ?? noopImportLifecycle.beforeImport,
-        afterImport: this.afterImport ?? noopImportLifecycle.afterImport,
-      }),
-      { rdfjsStore: importCommitTarget },
-    );
+    const importCommitTarget = createImportCommitTarget({
+      store: this.store,
+      importLifecycle: this.importLifecycle,
+    });
+    await importViaBufferedRdfjsStore(request, {
+      rdfjsStore: importCommitTarget,
+    });
   }
 
   public async export(request: ExportRequest): Promise<ExportResponse> {

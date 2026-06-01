@@ -179,16 +179,18 @@ Deno.test("DenokvQuadStore.import invokes import hooks", async () => {
     const denokvRdfjsStore = new DenokvRdfjsStore({
       kv,
       commitHandler: persistHooks.commitHandler,
+      importLifecycle: {
+        beforeImport() {
+          events.push("before");
+        },
+        afterImport() {
+          events.push("after");
+          return Promise.resolve();
+        },
+      },
     });
     const quadStore = new DenokvQuadStore({
       denokvRdfjsStore,
-      beforeImport() {
-        events.push("before");
-      },
-      afterImport() {
-        events.push("after");
-        return Promise.resolve();
-      },
     });
 
     await quadStore.import({

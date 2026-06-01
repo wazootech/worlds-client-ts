@@ -8,7 +8,11 @@ import type {
   Quad,
 } from "@/client/quad-store/mod.ts";
 import { toRdfjsQuad } from "@/client/quad-store/mod.ts";
-import { RdfjsPatchBuffer } from "@/client/rdfjs-buffer/mod.ts";
+import type { ImportLifecycle } from "@/client/import-lifecycle/mod.ts";
+import {
+  commitBufferedPatch,
+  RdfjsPatchBuffer,
+} from "@/client/rdfjs-buffer/mod.ts";
 import {
   buildGenerationDataPrefix,
   buildPrimaryQuadKey,
@@ -44,6 +48,9 @@ export interface DenokvRdfjsStoreOptions {
 
   /** commitHandler atomically persists buffered patches on commit(). */
   commitHandler?: CommitHandler;
+
+  /** importLifecycle runs around import commits when PatchCommitContext.importMode is set. */
+  importLifecycle?: ImportLifecycle;
 }
 /**
  * DenokvRdfjsStore is an RDF/JS Store implementation backed by Deno KV.
@@ -325,6 +332,10 @@ export class DenokvRdfjsStore implements rdfjs.Store {
    * commit persists buffered insertions and deletions through the configured CommitHandler.
    */
   public async commit(context?: PatchCommitContext): Promise<void> {
-    await this.patchBuffer.flushBuffer(this.options.commitHandler, context);
+    await commitBufferedPatch(this.patchBuffer, {
+      commitHandler: this.options.commitHandler,
+      context,
+      importLifecycle: this.options.importLifecycle,
+    });
   }
 }

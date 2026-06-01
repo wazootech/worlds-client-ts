@@ -26,13 +26,15 @@ async function createLibsqlQuadStoreForTest(): Promise<{
     client,
     queryBuilder: testLibsqlQueryBuilder,
     commitHandler: persistHooks.commitHandler,
+    importLifecycle: {
+      beforeImport: persistHooks.beforeImport,
+      afterImport: persistHooks.afterImport,
+    },
   });
   return {
     client,
     store: new LibsqlQuadStore({
       libsqlRdfjsStore,
-      beforeImport: persistHooks.beforeImport,
-      afterImport: persistHooks.afterImport,
     }),
   };
 }

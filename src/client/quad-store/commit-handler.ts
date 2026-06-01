@@ -20,6 +20,20 @@ export type CommitHandler = (
 ) => Promise<void>;
 
 /**
+ * isImportCommit returns true when commit context carries bulk import semantics.
+ */
+export function isImportCommit(context?: PatchCommitContext): boolean {
+  return context?.importMode !== undefined;
+}
+
+/**
+ * isReplaceImportCommit returns true when commit context requests replace import semantics.
+ */
+export function isReplaceImportCommit(context?: PatchCommitContext): boolean {
+  return context?.importMode === "replace";
+}
+
+/**
  * deduplicateBuffers removes quads that appear in both insert and delete buffers.
  */
 export function deduplicateBuffers(
