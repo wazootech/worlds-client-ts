@@ -1,4 +1,4 @@
-import { createAdapterClient } from "@/client/rdfjs-buffer/mod.ts";
+import { createClient } from "@/client/rdfjs-buffer/mod.ts";
 import type { ClientInterface } from "@/client/client.ts";
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
 
@@ -37,10 +37,10 @@ export function createDenokvClient(
     keyPrefix: options.keyPrefix,
   });
 
-  return createAdapterClient({
+  return createClient({
     searchIndex,
-    readSource: denokvRdfjsStore as unknown as rdfjs.Store,
-    commitHandler: persistHooks.commitHandler,
+    store: denokvRdfjsStore as unknown as rdfjs.Store,
+    commit: persistHooks.commit,
     queryEngine: options.queryEngine,
   });
 }

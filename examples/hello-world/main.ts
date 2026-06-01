@@ -13,7 +13,7 @@ if (import.meta.main) {
   const client = new Client({
     quadStore: new RdfjsQuadStore({ store }),
     searchIndex: new RdfjsSearchIndex(store),
-    sparqlEngine: new ComunicaSparqlEngine({ queryEngine, readSource: store }),
+    sparqlEngine: new ComunicaSparqlEngine({ queryEngine, store: store }),
   });
 
   await client.import({

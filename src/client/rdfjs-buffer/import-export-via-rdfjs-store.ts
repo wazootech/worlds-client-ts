@@ -11,14 +11,14 @@ import {
   materializeImportQuads,
 } from "@/client/quad-store/rdf-formats.ts";
 
-import type { QuadTransaction } from "./quad-transaction.ts";
+import type { QuadTransaction } from "./transaction.ts";
 
 /**
  * ImportViaBufferedRdfjsStoreOptions configures durable import over a QuadTransaction.
  */
 export interface ImportViaBufferedRdfjsStoreOptions {
-  /** transactionFactory creates a new QuadTransaction for the import. */
-  transactionFactory: () => QuadTransaction;
+  /** createTransaction creates a new QuadTransaction for the import. */
+  createTransaction: () => QuadTransaction;
 }
 
 /**
@@ -31,7 +31,7 @@ export async function importViaBufferedRdfjsStore(
   const mode = request.mode ?? "merge";
   const quads = await materializeImportQuads(request.source);
 
-  const tx = options.transactionFactory();
+  const tx = options.createTransaction();
   try {
     for (const quad of quads) {
       tx.addQuad(quad);

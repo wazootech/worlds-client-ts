@@ -8,14 +8,14 @@ import type { RdfjsPatchBuffer } from "./rdfjs-patch-buffer.ts";
  * CommitBufferedPatchOptions configures a shared buffered patch flush.
  */
 export interface CommitBufferedPatchOptions {
-  /** commitHandler persists the deduplicated patch. */
-  commitHandler?: CommitHandler;
+  /** commit persists the deduplicated patch. */
+  commit?: CommitHandler;
 
   /** context carries optional import mode metadata for commit handlers. */
   context?: PatchCommitContext;
 
-  /** fallbackCommitHandler runs when commitHandler is omitted. */
-  fallbackCommitHandler?: CommitHandler;
+  /** fallbackCommit runs when commit is omitted. */
+  fallbackCommit?: CommitHandler;
 }
 
 export async function commitBufferedPatch(
@@ -23,8 +23,8 @@ export async function commitBufferedPatch(
   options: CommitBufferedPatchOptions,
 ): Promise<void> {
   await patchBuffer.flushBuffer(
-    options.commitHandler,
+    options.commit,
     options.context,
-    options.fallbackCommitHandler,
+    options.fallbackCommit,
   );
 }

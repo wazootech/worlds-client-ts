@@ -1,6 +1,6 @@
 import type * as rdfjs from "@rdfjs/types";
 import { EventEmitter } from "node:events";
-import type { QuadTransaction } from "./quad-transaction.ts";
+import type { QuadTransaction } from "./transaction.ts";
 import type { RdfjsExportSource } from "./import-export-via-rdfjs-store.ts";
 
 /**

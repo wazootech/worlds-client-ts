@@ -2,7 +2,7 @@ import { assertEquals } from "@std/assert";
 import { DataFactory } from "n3";
 import type * as rdfjs from "@rdfjs/types";
 import type { PatchCommitContext } from "@/client/quad-store/commit-handler.ts";
-import type { QuadTransaction } from "./quad-transaction.ts";
+import type { QuadTransaction } from "./transaction.ts";
 import { importViaBufferedRdfjsStore } from "./import-export-via-rdfjs-store.ts";
 
 const { namedNode, literal, quad } = DataFactory;
@@ -19,14 +19,14 @@ const q2 = quad(
 );
 
 function createRecordingTransaction(): {
-  transactionFactory: () => QuadTransaction;
+  createTransaction: () => QuadTransaction;
   bufferedQuads: () => rdfjs.Quad[];
   lastCommitContext: () => PatchCommitContext | undefined;
 } {
   const buffered: rdfjs.Quad[] = [];
   let lastContext: PatchCommitContext | undefined;
 
-  const transactionFactory = (): QuadTransaction => ({
+  const createTransaction = (): QuadTransaction => ({
     addQuad(quadToAdd: rdfjs.Quad) {
       buffered.push(quadToAdd);
     },
@@ -43,7 +43,7 @@ function createRecordingTransaction(): {
   });
 
   return {
-    transactionFactory,
+    createTransaction,
     bufferedQuads: () => buffered,
     lastCommitContext: () => lastContext,
   };
@@ -54,7 +54,7 @@ Deno.test("importViaBufferedRdfjsStore - buffers quads and commits with merge mo
 
   await importViaBufferedRdfjsStore(
     { mode: "merge", source: { kind: "quads", quads: [q1, q2] } },
-    { transactionFactory: recording.transactionFactory },
+    { createTransaction: recording.createTransaction },
   );
 
   assertEquals(recording.bufferedQuads().length, 2);
@@ -66,7 +66,7 @@ Deno.test("importViaBufferedRdfjsStore - defaults mode to merge", async () => {
 
   await importViaBufferedRdfjsStore(
     { source: { kind: "quads", quads: [q1] } },
-    { transactionFactory: recording.transactionFactory },
+    { createTransaction: recording.createTransaction },
   );
 
   assertEquals(recording.lastCommitContext()?.importMode, "merge");
@@ -77,7 +77,7 @@ Deno.test("importViaBufferedRdfjsStore - passes replace mode to commit context",
 
   await importViaBufferedRdfjsStore(
     { mode: "replace", source: { kind: "quads", quads: [q2] } },
-    { transactionFactory: recording.transactionFactory },
+    { createTransaction: recording.createTransaction },
   );
 
   assertEquals(recording.lastCommitContext()?.importMode, "replace");

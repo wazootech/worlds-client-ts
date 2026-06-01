@@ -2,7 +2,7 @@ import type * as rdfjs from "@rdfjs/types";
 
 import {
   BufferedRdfjsQuadStore,
-  createBufferedQuadTransaction,
+  createTransaction,
 } from "@/client/rdfjs-buffer/mod.ts";
 import { DenokvRdfjsStore } from "./rdfjs-store/mod.ts";
 import {
@@ -33,10 +33,10 @@ export function createDenokvStoresForTest(
     enabledHexastoreIndexes: options.enabledHexastoreIndexes,
   });
   const denokvQuadStore = new BufferedRdfjsQuadStore({
-    readSource: denokvRdfjsStore as unknown as rdfjs.Store,
-    transactionFactory: () =>
-      createBufferedQuadTransaction({
-        commitHandler: persistHooks.commitHandler,
+    store: denokvRdfjsStore as unknown as rdfjs.Store,
+    createTransaction: () =>
+      createTransaction({
+        commit: persistHooks.commit,
       }),
   });
 

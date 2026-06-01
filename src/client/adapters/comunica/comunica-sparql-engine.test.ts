@@ -287,8 +287,8 @@ Deno.test(
 
     const sparqlEngine = new ComunicaSparqlEngine({
       queryEngine,
-      readSource: store,
-      transactionFactory: () => {
+      store: store,
+      createTransaction: () => {
         return {
           addQuad: () => {},
           removeQuad: () => {},
@@ -505,7 +505,7 @@ Deno.test(
 
     const sparqlEngine = new ComunicaSparqlEngine({
       queryEngine,
-      readSource: libsqlRdfjsStore as unknown as rdfjs.Store,
+      store: libsqlRdfjsStore as unknown as rdfjs.Store,
     });
     const response = await sparqlEngine.execute({
       query:
@@ -532,8 +532,8 @@ Deno.test(
     const queryEngineLocal = new QueryEngine();
     const sparqlEngine = new ComunicaSparqlEngine({
       queryEngine: queryEngineLocal,
-      readSource: store,
-      transactionFactory: () => {
+      store: store,
+      createTransaction: () => {
         return {
           addQuad: () => {},
           removeQuad: () => {},
@@ -570,8 +570,8 @@ Deno.test(
     const queryEngineLocal = new QueryEngine();
     const sparqlEngine = new ComunicaSparqlEngine({
       queryEngine: queryEngineLocal,
-      readSource: store,
-      transactionFactory: () => {
+      store: store,
+      createTransaction: () => {
         return {
           addQuad: (q: rdfjs.Quad) => store.addQuad(q),
           removeQuad: (q: rdfjs.Quad) => store.removeQuad(q),

@@ -6,7 +6,7 @@ import {
 } from "./commit-patch-to-denokv.ts";
 
 export interface DenokvPersistHooks {
-  commitHandler: CommitHandler;
+  commit: CommitHandler;
 }
 
 export interface DenokvPersistHooksOptions extends CommitPatchToDenokvOptions {
@@ -20,7 +20,7 @@ export function createDenokvPersistHooks(
   const searchIndexOnImport = dependencies.searchIndexOnImport ?? "incremental";
 
   return {
-    commitHandler: async (patch, context) => {
+    commit: async (patch, context) => {
       await commitPatchToDenokv(patch, dependencies, context);
 
       const isImport = context?.importMode !== undefined;

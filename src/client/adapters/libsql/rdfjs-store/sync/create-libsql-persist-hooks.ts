@@ -9,8 +9,8 @@ import { createLibsqlSearchIndexRebuilder } from "../../search-index/rebuild-lib
  * LibsqlPersistHooks bundles commitHandler and import lifecycle callbacks for LibSQL clients.
  */
 export interface LibsqlPersistHooks {
-  /** commitHandler persists buffered patches to LibSQL. */
-  commitHandler: CommitHandler;
+  /** commit persists buffered patches to LibSQL. */
+  commit: CommitHandler;
 }
 
 /**
@@ -34,7 +34,7 @@ export function createLibsqlPersistHooks(
   const searchIndexOnImport = dependencies.searchIndexOnImport ?? "incremental";
 
   return {
-    commitHandler: async (patch, context) => {
+    commit: async (patch, context) => {
       const isImport = context?.importMode !== undefined;
       const skipSearchIndexProjection =
         dependencies.searchIndexOnImport === "disabled" ||

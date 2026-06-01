@@ -6,7 +6,7 @@ import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
 import { ComunicaSparqlEngine } from "@/client/adapters/comunica/mod.ts";
 import type * as rdfjs from "@rdfjs/types";
 import { BufferedRdfjsQuadStore } from "./buffered-rdfjs-quad-store.ts";
-import { createBufferedQuadTransaction } from "./quad-transaction.ts";
+import { createTransaction } from "./transaction.ts";
 
 /**
  * AdapterClientOptions provides all the concrete subsystems needed to automatically
@@ -17,12 +17,12 @@ export interface AdapterClientOptions {
   searchIndex: SearchIndexInterface;
 
   /** The read-only, durable RDF/JS Store source (e.g. LibsqlRdfjsStore or DenokvRdfjsStore). */
-  readSource: rdfjs.Store;
+  store: rdfjs.Store;
 
   /** The handler that accepts flushed patches to write them safely to the backend. */
-  commitHandler: CommitHandler;
+  commit: CommitHandler;
 
-  /** An optional Comunica query engine enabling SPARQL queries across the readSource. */
+  /** An optional Comunica query engine enabling SPARQL queries across the store. */
   queryEngine?: ComunicaQueryEngine;
 }
 
@@ -35,25 +35,25 @@ export interface AdapterClientOptions {
  * the QuadStoreInterface for client.import(), and seamlessly hooks up Comunica to
  * execute SPARQL updates via a bridged transactionFactory.
  */
-export function createAdapterClient(
+export function createClient(
   options: AdapterClientOptions,
 ): ClientInterface {
-  const transactionFactory = () => {
-    return createBufferedQuadTransaction({
-      commitHandler: options.commitHandler,
-    });
-  };
-
   const quadStore = new BufferedRdfjsQuadStore({
-    readSource: options.readSource,
-    transactionFactory,
+    store: options.store,
+    createTransaction: () =>
+      createTransaction({
+        commit: options.commit,
+      }),
   });
 
   const sparqlEngine = options.queryEngine
     ? new ComunicaSparqlEngine({
       queryEngine: options.queryEngine,
-      readSource: options.readSource,
-      transactionFactory,
+      store: options.store,
+      createTransaction: () =>
+        createTransaction({
+          commit: options.commit,
+        }),
     })
     : undefined;
 
@@ -63,3 +63,5 @@ export function createAdapterClient(
     sparqlEngine,
   });
 }
+
+// TODO: Please consider alternate names for readSource, transactionFactory, createAdapterClient, createBufferedQuadTransaction, commitHandler

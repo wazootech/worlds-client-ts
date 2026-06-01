@@ -16,8 +16,8 @@ function createTestClient(store: Store): Client {
     quadStore: new RdfjsQuadStore({ store }),
     sparqlEngine: new ComunicaSparqlEngine({
       queryEngine,
-      readSource: store,
-      transactionFactory: () => {
+      store: store,
+      createTransaction: () => {
         return {
           addQuad: (q: rdfjs.Quad) => store.addQuad(q),
           removeQuad: (q: rdfjs.Quad) => store.removeQuad(q),
@@ -218,8 +218,8 @@ Deno.test("Client - queryEngine enables SELECT queries", async () => {
     searchIndex: new RdfjsSearchIndex(store),
     sparqlEngine: new ComunicaSparqlEngine({
       queryEngine,
-      readSource: store,
-      transactionFactory: () => {
+      store: store,
+      createTransaction: () => {
         return {
           addQuad: (q: rdfjs.Quad) => store.addQuad(q),
           removeQuad: (q: rdfjs.Quad) => store.removeQuad(q),

@@ -27,17 +27,17 @@ export interface QuadTransaction {
  * BufferedQuadTransactionOptions configures an in-memory QuadTransaction adapter.
  */
 export interface BufferedQuadTransactionOptions {
-  /** commitHandler atomically persists buffered patches on commit(). */
-  commitHandler?: CommitHandler;
+  /** commit atomically persists buffered patches on commit(). */
+  commit?: CommitHandler;
 
-  /** fallbackCommitHandler runs when commitHandler is omitted on flush. */
-  fallbackCommitHandler?: CommitHandler;
+  /** fallbackCommit runs when commit is omitted on flush. */
+  fallbackCommit?: CommitHandler;
 }
 
 /**
  * createBufferedQuadTransaction buffers quads until commit, exposing explicit transaction boundaries.
  */
-export function createBufferedQuadTransaction(
+export function createTransaction(
   options: BufferedQuadTransactionOptions,
 ): QuadTransaction {
   const patchBuffer = new RdfjsPatchBuffer();
@@ -53,8 +53,8 @@ export function createBufferedQuadTransaction(
 
     async commit(context?: PatchCommitContext): Promise<void> {
       await commitBufferedPatch(patchBuffer, {
-        commitHandler: options.commitHandler,
-        fallbackCommitHandler: options.fallbackCommitHandler,
+        commit: options.commit,
+        fallbackCommit: options.fallbackCommit,
         context,
       });
     },

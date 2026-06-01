@@ -75,18 +75,18 @@ import type { QuadTransaction } from "@/client/rdfjs-buffer/mod.ts";
  */
 export interface ComunicaSparqlEngineOptions {
   /**
-   * readSource is the RDFJS store to execute the query on.
+   * store is the RDFJS store to execute the query on.
    * For join cardinality hints, pass a store that implements `countQuads` (e.g. `LibsqlRdfjsStore` from `createLibsqlClient`).
    */
-  readSource: rdfjs.Store;
+  store: rdfjs.Store;
 
   /** queryEngine is the caller-provided Comunica-compatible query engine to use. */
   queryEngine: ComunicaQueryEngine;
 
   /**
-   * transactionFactory is an optional factory to create a QuadTransaction for SPARQL UPDATEs.
+   * createTransaction is an optional factory to create a QuadTransaction for SPARQL UPDATEs.
    */
-  transactionFactory?: () => QuadTransaction;
+  createTransaction?: () => QuadTransaction;
 }
 
 /**
@@ -100,12 +100,12 @@ export class ComunicaSparqlEngine implements SparqlEngineInterface {
 
   public async execute(request: SparqlRequest): Promise<SparqlResponse> {
     let tx: QuadTransaction | undefined;
-    let storeForQuery: rdfjs.Store = this.options.readSource;
+    let storeForQuery: rdfjs.Store = this.options.store;
 
-    if (this.options.transactionFactory) {
-      tx = this.options.transactionFactory();
+    if (this.options.createTransaction) {
+      tx = this.options.createTransaction();
       storeForQuery = createTransactionalRdfjsStore(
-        this.options.readSource,
+        this.options.store,
         tx,
       );
     }

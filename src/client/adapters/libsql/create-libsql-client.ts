@@ -1,5 +1,5 @@
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { createAdapterClient } from "@/client/rdfjs-buffer/mod.ts";
+import { createClient } from "@/client/rdfjs-buffer/mod.ts";
 
 import type { ClientInterface } from "@/client/client.ts";
 import type { ComunicaQueryEngine } from "@/client/adapters/comunica/mod.ts";
@@ -52,10 +52,10 @@ export async function createLibsqlClient(
     matchPageSize: options.matchPageSize,
   });
 
-  return createAdapterClient({
+  return createClient({
     searchIndex,
-    readSource: libsqlRdfjsStore as unknown as rdfjs.Store,
-    commitHandler: persistHooks.commitHandler,
+    store: libsqlRdfjsStore as unknown as rdfjs.Store,
+    commit: persistHooks.commit,
     queryEngine: options.queryEngine,
   });
 }
