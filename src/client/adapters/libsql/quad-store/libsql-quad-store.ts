@@ -1,11 +1,5 @@
-import {
-  exportFromRdfjsStore,
-  type ExportRequest,
-  type ExportResponse,
-  type ImportRequest,
-  importViaBufferedRdfjsStore,
-  type QuadStoreInterface,
-} from "@/client/quad-store/mod.ts";
+import { BufferedRdfjsQuadStore } from "@/client/rdfjs-buffer/mod.ts";
+
 import type { LibsqlRdfjsStore } from "../rdfjs-store/mod.ts";
 
 /**
@@ -19,21 +13,8 @@ export interface LibsqlQuadStoreOptions {
 /**
  * LibsqlQuadStore implements QuadStoreInterface over LibsqlRdfjsStore.
  */
-export class LibsqlQuadStore implements QuadStoreInterface {
-  public constructor(
-    private readonly options: LibsqlQuadStoreOptions,
-  ) {}
-
-  public async import(request: ImportRequest): Promise<void> {
-    await importViaBufferedRdfjsStore(request, {
-      rdfjsStore: this.options.libsqlRdfjsStore,
-    });
-  }
-
-  public async export(request: ExportRequest): Promise<ExportResponse> {
-    return await exportFromRdfjsStore(
-      this.options.libsqlRdfjsStore,
-      request,
-    );
+export class LibsqlQuadStore extends BufferedRdfjsQuadStore {
+  public constructor(options: LibsqlQuadStoreOptions) {
+    super({ rdfjsStore: options.libsqlRdfjsStore });
   }
 }

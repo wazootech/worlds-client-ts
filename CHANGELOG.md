@@ -93,9 +93,9 @@ const memoryClient = new Client({
   `libsql-query-builder.ts`). `rebuildLibsqlSearchIndexFromQuads` now
   keyset-pages via `buildMatchQuadsQuery` with `filterQuads` in TypeScript for
   include/exclude.
-- Durable `LibsqlQuadStore` and `DenokvQuadStore` share
-  `importViaBufferedRdfjsStore` / `exportFromRdfjsStore` from
-  `@/client/quad-store`.
+- Durable `LibsqlQuadStore` and `DenokvQuadStore` extend shared
+  `BufferedRdfjsQuadStore` (`@worlds/client/rdfjs-buffer`), delegating import
+  and export to `importViaBufferedRdfjsStore` / `exportFromRdfjsStore`.
 - LibSQL SPARQL is configured by passing a Comunica `queryEngine` directly into
   adapter options (no `createSparqlEngine` callback or factory helper).
 - Deno KV SPARQL reads through a KV-backed RDF/JS store (no per-query N3

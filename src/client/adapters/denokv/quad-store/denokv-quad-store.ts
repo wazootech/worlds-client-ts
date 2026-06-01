@@ -1,11 +1,4 @@
-import {
-  exportFromRdfjsStore,
-  type ExportRequest,
-  type ExportResponse,
-  type ImportRequest,
-  importViaBufferedRdfjsStore,
-  type QuadStoreInterface,
-} from "@/client/quad-store/mod.ts";
+import { BufferedRdfjsQuadStore } from "@/client/rdfjs-buffer/mod.ts";
 
 import type { DenokvRdfjsStore } from "../rdfjs-store/mod.ts";
 
@@ -20,21 +13,8 @@ export interface DenokvQuadStoreOptions {
 /**
  * DenokvQuadStore implements QuadStoreInterface over DenokvRdfjsStore.
  */
-export class DenokvQuadStore implements QuadStoreInterface {
-  public constructor(
-    private readonly options: DenokvQuadStoreOptions,
-  ) {}
-
-  public async import(request: ImportRequest): Promise<void> {
-    await importViaBufferedRdfjsStore(request, {
-      rdfjsStore: this.options.denokvRdfjsStore,
-    });
-  }
-
-  public async export(request: ExportRequest): Promise<ExportResponse> {
-    return await exportFromRdfjsStore(
-      this.options.denokvRdfjsStore,
-      request,
-    );
+export class DenokvQuadStore extends BufferedRdfjsQuadStore {
+  public constructor(options: DenokvQuadStoreOptions) {
+    super({ rdfjsStore: options.denokvRdfjsStore });
   }
 }

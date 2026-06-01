@@ -56,10 +56,15 @@ export async function importViaBufferedRdfjsStore(
 }
 
 /**
+ * RdfjsExportSource is the minimal RDF/JS surface required for quad export.
+ */
+export type RdfjsExportSource = Pick<rdfjs.Store, "match">;
+
+/**
  * exportFromRdfjsStore streams all quads from an RDF/JS store and serializes the export response.
  */
 export async function exportFromRdfjsStore(
-  rdfjsStore: rdfjs.Store,
+  rdfjsStore: RdfjsExportSource,
   request: ExportRequest,
 ): Promise<ExportResponse> {
   const stream = rdfjsStore.match(null, null, null, null);
