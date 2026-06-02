@@ -324,8 +324,8 @@ latency during query execution at scale.
 
 Hexastore indexes are provisioned at schema init. **`createLibsqlClient`**
 ([`create-libsql-client.ts`](src/client/adapters/libsql/create-libsql-client.ts))
-— `LibsqlRdfjsStore` + `LibsqlQuadStore` + hexastore indexes; pass `queryEngine`
-to enable SPARQL. `LibsqlRdfjsStore.match` keyset-pages by `quads.id`
+— `LibsqlRdfjsStore` + `LibsqlQuadStore` + quad indexes; pass `queryEngine` to
+enable SPARQL. `LibsqlRdfjsStore.match` keyset-pages by `quads.id`
 (`matchPageSize`, default 1000). Optional `countQuads` supplies Comunica join
 cardinality hints. Use `await createLibsqlClient({ client, queryEngine })`.
 
@@ -362,9 +362,9 @@ external search indexes via
 - **Long-running (Fly.io, DigitalOcean, 24/7 Deno):** one `Client` at process
   boot. See [`examples/libsql-hello-world`](examples/libsql-hello-world).
 
-Use `benchmarks/sparql-hexastore-perf-libsql.bench.ts` and
-`benchmarks/sparql-hexastore-perf-denokv.bench.ts` (requires `--unstable-kv`) to
-compare LibSQL and Denokv hexastore execute on the same harness;
+Use `benchmarks/sparql-perf-libsql.bench.ts` and
+`benchmarks/sparql-perf-denokv.bench.ts` (requires `--unstable-kv`) to compare
+LibSQL and Denokv hexastore execute on the same harness;
 [`benchmarks/README.md`](benchmarks/README.md) and
 [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69)
 document post-preload methodology. Historical hydrate+N3 vs libsql crossover:
@@ -534,7 +534,7 @@ Keep AI tool descriptions and system prompts aligned with
 
 ### Choosing a LibSQL topology
 
-LibSQL uses hexastore indexes at schema init. SPARQL runs on `LibsqlRdfjsStore`
+LibSQL uses quad indexes at schema init. SPARQL runs on `LibsqlRdfjsStore`
 (hexastore) with no full N3 hydration per request. Client import/export uses
 `LibsqlQuadStore`.
 

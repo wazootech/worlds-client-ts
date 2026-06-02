@@ -114,7 +114,7 @@ Deno.bench({
 
 // -----------------------------------------------------------------------------
 // BENCHMARK GROUP 2: Full graph export (durable read)
-// Measures client.export() over the hexastore — not N3 hydration.
+// Measures client.export() over the quad index — not N3 hydration.
 // -----------------------------------------------------------------------------
 
 Deno.bench({

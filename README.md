@@ -99,7 +99,7 @@ for structured traversal and reasoning.
 | `quad-store`             | `@worlds/client/quad-store`             | Import/export API, patch types, RDF formats                 |
 | `rdfjs-buffer`           | `@worlds/client/quad-store`             | Shared patch buffering and import flush (topology-agnostic) |
 | `import-lifecycle`       | `@worlds/client` (root barrel)          | Import lifecycle hooks around durable commits               |
-| `adapters/*/rdfjs-store` | `@worlds/client/adapters/libsql` (etc.) | Durable `*RdfjsStore` hexastore + backend sync              |
+| `adapters/*/rdfjs-store` | `@worlds/client/adapters/libsql` (etc.) | Durable `*RdfjsStore` quad index + backend sync             |
 
 Do not confuse `@worlds/client/quad-store` with adapter `rdfjs-store/` folders —
 they are different layers. Durable import flow: `Client.import` → `*QuadStore` →
@@ -111,14 +111,14 @@ Regenerate merged API doc JSON with `deno task doc:json` (writes gitignored
 
 ## Adapters
 
-| Adapter               | Best for                                  | Persistence          | SPARQL                             |
-| :-------------------- | :---------------------------------------- | :------------------- | :--------------------------------- |
-| RDF/JS (in-memory N3) | Dev, tests, demos                         | None (in-memory)     | Comunica over N3 `Store`           |
-| LibSQL                | Production default (search + bulk load)   | SQLite / Turso Cloud | LibsqlRdfjsStore hexastore indexes |
-| Deno KV               | Deno-native, warm graph, selective SPARQL | Deno KV store        | DenokvRdfjsStore hexastore indexes |
+| Adapter               | Best for                                  | Persistence          | SPARQL                        |
+| :-------------------- | :---------------------------------------- | :------------------- | :---------------------------- |
+| RDF/JS (in-memory N3) | Dev, tests, demos                         | None (in-memory)     | Comunica over N3 `Store`      |
+| LibSQL                | Production default (search + bulk load)   | SQLite / Turso Cloud | LibsqlRdfjsStore quad indexes |
+| Deno KV               | Deno-native, warm graph, selective SPARQL | Deno KV store        | DenokvRdfjsStore quad indexes |
 
 **Choosing LibSQL vs Deno KV:** LibSQL is the default for hybrid FTS/vector
-search and faster cold hexastore preload at scale. Deno KV can be faster on
+search and faster cold quad index preload at scale. Deno KV can be faster on
 selective SPARQL execute after preload in long-lived or cached processes —
 compare backends in [benchmarks/README.md](benchmarks/README.md) and
 [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69).
@@ -188,14 +188,14 @@ seeded LibSQL world.
 
 ## Advanced
 
-**Choosing a LibSQL topology**: hexastore default (historical N3 hydrate path
+**Choosing a LibSQL topology**: quad index default (historical N3 hydrate path
 removed; in-memory N3 via RDF/JS adapter), warm containers, SPARQL query shape
 at scale, and bulk import strategies. [-> AGENTS.md](AGENTS.md)
 
 **Agent integration**: search-then-SPARQL two-hop pattern for LLM tool use with
 hybrid retrieval. [-> AGENTS.md](AGENTS.md)
 
-**Benchmarks**: local-only performance captures, hexastore perf methodology
+**Benchmarks**: local-only performance captures, quad index perf methodology
 (LibSQL + Denokv), and regression policy.
 [-> benchmarks/README.md](benchmarks/README.md)
 

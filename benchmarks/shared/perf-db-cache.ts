@@ -5,12 +5,12 @@ import { DenokvRdfjsStore } from "@worlds/client/adapters/denokv";
 import { SYNTHETIC_CORPUS_VERSION } from "./synthetic-data.ts";
 
 /**
- * BENCH_LIBSQL_SCHEMA_VERSION bumps when LibSQL hexastore schema or perf fixture layout changes.
+ * BENCH_LIBSQL_SCHEMA_VERSION bumps when LibSQL quad index schema or perf fixture layout changes.
  */
 export const BENCH_LIBSQL_SCHEMA_VERSION = 1;
 
 /**
- * BENCH_DENOKV_HEXASTORE_SCHEMA_VERSION bumps when Denokv hexastore layout relevant to perf fixtures changes.
+ * BENCH_DENOKV_HEXASTORE_SCHEMA_VERSION bumps when Denokv quad index layout relevant to perf fixtures changes.
  */
 export const BENCH_DENOKV_HEXASTORE_SCHEMA_VERSION = 1;
 
@@ -24,7 +24,7 @@ const BENCHMARKS_ROOT = path.fromFileUrl(new URL("../..", import.meta.url));
 export const DEFAULT_HEXASTORE_PERF_CACHE_DIR = path.join(
   BENCHMARKS_ROOT,
   ".cache",
-  "hexastore-perf-large",
+  "perf-large",
 );
 
 /** HexastorePerfFixtureChecksumInputsBase lists manifest fields shared across backends. */
@@ -42,7 +42,7 @@ interface HexastorePerfFixtureChecksumInputsBase {
  */
 export interface LibsqlHexastorePerfFixtureChecksumInputs
   extends HexastorePerfFixtureChecksumInputsBase {
-  /** backend labels the hexastore wiring. */
+  /** backend labels the quad index wiring. */
   backend: "libsqlStore";
   /** benchLibsqlSchemaVersion tracks LibSQL schema revisions relevant to perf fixtures. */
   benchLibsqlSchemaVersion: number;
@@ -53,9 +53,9 @@ export interface LibsqlHexastorePerfFixtureChecksumInputs
  */
 export interface DenokvHexastorePerfFixtureChecksumInputs
   extends HexastorePerfFixtureChecksumInputsBase {
-  /** backend labels the hexastore wiring. */
+  /** backend labels the quad index wiring. */
   backend: "denokvStore";
-  /** benchDenokvHexastoreSchemaVersion tracks Denokv hexastore revisions relevant to perf fixtures. */
+  /** benchDenokvHexastoreSchemaVersion tracks Denokv quad index revisions relevant to perf fixtures. */
   benchDenokvHexastoreSchemaVersion: number;
 }
 
@@ -80,7 +80,7 @@ export type HexastorePerfFixtureManifest =
  * LibsqlHexastorePerfDbCachePaths locates the SQLite file and JSON sidecar for a cached libsql fixture.
  */
 export interface LibsqlHexastorePerfDbCachePaths {
-  /** backend labels the hexastore wiring. */
+  /** backend labels the quad index wiring. */
   backend: "libsqlStore";
   /** databasePath is the absolute path to the LibSQL SQLite file. */
   databasePath: string;
@@ -94,7 +94,7 @@ export interface LibsqlHexastorePerfDbCachePaths {
  * DenokvHexastorePerfDbCachePaths locates the on-disk KV directory and JSON sidecar for a cached denokv fixture.
  */
 export interface DenokvHexastorePerfDbCachePaths {
-  /** backend labels the hexastore wiring. */
+  /** backend labels the quad index wiring. */
   backend: "denokvStore";
   /** kvDirectoryPath is the absolute path passed to Deno.openKv for a file-backed database. */
   kvDirectoryPath: string;

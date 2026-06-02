@@ -10,7 +10,7 @@ import { buildSearchResultId } from "@/client/search-index/build-search-result-i
 import { filterQuads, isTextualLiteral } from "@/client/quad-store/mod.ts";
 import type { Quad } from "@/client/quad-store/mod.ts";
 import { toRdfjsQuad } from "@/client/quad-store/mod.ts";
-import { buildGenerationDataPrefix } from "@/client/adapters/denokv/kv/denokv-hexastore-keys.ts";
+import { buildGenerationDataPrefix } from "@/client/adapters/denokv/kv/denokv-keys.ts";
 import { readActiveGeneration } from "@/client/adapters/denokv/kv/denokv-dataset-generation.ts";
 
 /**

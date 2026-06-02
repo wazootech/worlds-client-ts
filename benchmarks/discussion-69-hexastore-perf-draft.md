@@ -38,8 +38,8 @@ load). Import/preload dominates cold start: LibSQL is much faster at scale (e.g.
 
 For end-to-end **time to first useful SPARQL query**, **LibSQL wins** unless
 Denokv reuses an on-disk fixture (`BENCH_REUSE_DB=1` on large benches via
-`deno task bench:hexastore-perf-large-denokv:reuse`) or a long-lived process
-that already imported the corpus.
+`deno task bench:sparql-perf-large-denokv:reuse`) or a long-lived process that
+already imported the corpus.
 
 ## Execute (selective SPARQL avg)
 
@@ -54,6 +54,6 @@ that already imported the corpus.
 ## Commands
 
 ```bash
-deno task bench:hexastore-perf-libsql
-deno task bench:hexastore-perf-denokv
+deno task bench:sparql-perf-libsql
+deno task bench:sparql-perf-denokv
 ```

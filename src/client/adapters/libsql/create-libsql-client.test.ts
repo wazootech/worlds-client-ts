@@ -24,7 +24,7 @@ Deno.test(
           quad(
             namedNode("urn:entity:hex"),
             namedNode("urn:label"),
-            literal("hexastore client"),
+            literal("persistent client"),
           ),
         ],
       },

@@ -19,7 +19,7 @@ import { RdfjsQuadStore } from "@/client/adapters/rdfjs/rdfjs-quad-store.ts";
 import { Transaction } from "@/client/quad-store/mod.ts";
 
 /**
- * LibsqlClientOptions configures LibSQL execution through LibsqlRdfjsStore and hexastore indexes.
+ * LibsqlClientOptions configures LibSQL execution through LibsqlRdfjsStore and quad indexes.
  */
 export interface LibsqlClientOptions extends LibsqlClientBaseOptions {
   /** queryEngine optionally enables built-in Comunica SPARQL over LibsqlRdfjsStore. */
@@ -27,7 +27,7 @@ export interface LibsqlClientOptions extends LibsqlClientBaseOptions {
 }
 
 /**
- * createLibsqlClient synthesizes a Client for LibsqlRdfjsStore hexastore indexes.
+ * createLibsqlClient synthesizes a Client for LibsqlRdfjsStore quad indexes.
  */
 export async function createLibsqlClient(
   options: LibsqlClientOptions,

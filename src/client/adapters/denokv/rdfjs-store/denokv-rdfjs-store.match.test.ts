@@ -4,7 +4,7 @@ import { DataFactory } from "n3";
 import { generateSyntheticQuads } from "../../../../../benchmarks/shared/synthetic-data.ts";
 import { collectQuadsFromStream } from "@/client/quad-store/mod.ts";
 import { seedDenokvQuadsForTest } from "@/client/adapters/denokv/create-denokv-stores-for-test.ts";
-import { DEFAULT_DENOKV_HEXASTORE_INDEXES } from "@/client/adapters/denokv/kv/denokv-hexastore-index-set.ts";
+import { DEFAULT_DENOKV_QUAD_INDEXES } from "@/client/adapters/denokv/kv/denokv-index-set.ts";
 import { DenokvRdfjsStore } from "@/client/adapters/denokv/rdfjs-store/mod.ts";
 import { buildBestMatchSelector } from "@/client/adapters/denokv/kv/denokv-match-selector.ts";
 
@@ -20,10 +20,10 @@ function collectMatch(
   return collectQuadsFromStream(store.match(subject, predicate, object, graph));
 }
 
-Deno.test("DEFAULT_DENOKV_HEXASTORE_INDEXES - enables all seven quad-native families", () => {
-  assertEquals(DEFAULT_DENOKV_HEXASTORE_INDEXES.length, 7);
+Deno.test("DEFAULT_DENOKV_QUAD_INDEXES - enables all seven quad-native families", () => {
+  assertEquals(DEFAULT_DENOKV_QUAD_INDEXES.length, 7);
   assertEquals(
-    [...DEFAULT_DENOKV_HEXASTORE_INDEXES],
+    [...DEFAULT_DENOKV_QUAD_INDEXES],
     ["spog", "sopg", "psog", "posg", "ospg", "opsg", "gspo"],
   );
 });
@@ -288,7 +288,7 @@ Deno.test(
 
       const store = new DenokvRdfjsStore({
         kv,
-        enabledHexastoreIndexes: ["opsg"],
+        enabledQuadIndexes: ["opsg"],
       });
       const results = await collectMatch(
         store,
@@ -322,7 +322,7 @@ Deno.test(
 
       const store = new DenokvRdfjsStore({
         kv,
-        enabledHexastoreIndexes: ["psog"],
+        enabledQuadIndexes: ["psog"],
       });
       const results = await collectMatch(
         store,
@@ -398,7 +398,7 @@ Deno.test(
 Deno.test("buildBestMatchSelector - fully unbound pattern uses primary quads prefix", () => {
   const selector = buildBestMatchSelector(
     ["quads", "g", 0],
-    DEFAULT_DENOKV_HEXASTORE_INDEXES,
+    DEFAULT_DENOKV_QUAD_INDEXES,
     { subject: null, predicate: null, object: null, graph: null },
   );
   assertEquals(selector, { prefix: ["quads", "g", 0, "quads"] });
@@ -452,7 +452,7 @@ Deno.test(
 
       const store = new DenokvRdfjsStore({
         kv,
-        enabledHexastoreIndexes: ["spog"],
+        enabledQuadIndexes: ["spog"],
       });
       const results = await collectMatch(
         store,

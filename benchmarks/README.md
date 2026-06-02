@@ -5,7 +5,7 @@ regression gate; compare results manually on the same OS and Deno version.
 
 | Resource                                                                       | Purpose                                                        |
 | :----------------------------------------------------------------------------- | :------------------------------------------------------------- |
-| [Discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69) | Canonical post-preload SPARQL hexastore perf write-up          |
+| [Discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69) | Canonical post-preload SPARQL quad index perf write-up         |
 | [Discussion #45](https://github.com/wazootech/worlds-client-ts/discussions/45) | Historical hydrate+N3 vs libsql crossover (pre-preload)        |
 | [#68](https://github.com/wazootech/worlds-client-ts/issues/68)                 | Millions-of-quads production guidance (README + query helpers) |
 
@@ -25,7 +25,7 @@ a substitute for re-running on your machine.
 - `*.bench.ts` — runnable benchmarks (`deno bench` discovers these at the repo
   root of `benchmarks/`, not under `shared/`).
 - [`shared/`](shared/) — helpers imported by benches (`synthetic-data.ts`,
-  `sparql-hexastore-perf-shared.ts`).
+  `sparql-perf-shared.ts`).
 
 ## Run all benchmarks
 
@@ -39,28 +39,28 @@ Or directly:
 deno bench --allow-all --unstable-kv benchmarks/
 ```
 
-### SPARQL hexastore performance (LibSQL + Denokv)
+### SPARQL quad index performance (LibSQL + Denokv)
 
-The LibSQL bench is the production-default hexastore execute harness. The Denokv
-bench runs the **same** preload + selective SPARQL execute methodology against
-`DenokvRdfjsStore` — useful for Deno-native comparisons; not the default when
-you need hybrid search or fast cold bulk load (see tables below and discussion
-#69).
+The LibSQL bench is the production-default quad index execute harness. The
+Denokv bench runs the **same** preload + selective SPARQL execute methodology
+against `DenokvRdfjsStore` — useful for Deno-native comparisons; not the default
+when you need hybrid search or fast cold bulk load (see tables below and
+discussion #69).
 
 LibSQL:
 
 ```bash
-deno bench --allow-all benchmarks/sparql-hexastore-perf-libsql.bench.ts
+deno bench --allow-all benchmarks/sparql-perf-libsql.bench.ts
 # or
-deno task bench:hexastore-perf-libsql
+deno task bench:sparql-perf-libsql
 ```
 
 Deno KV (requires `--unstable-kv`):
 
 ```bash
-deno bench --allow-all --unstable-kv benchmarks/sparql-hexastore-perf-denokv.bench.ts
+deno bench --allow-all --unstable-kv benchmarks/sparql-perf-denokv.bench.ts
 # or
-deno task bench:hexastore-perf-denokv
+deno task bench:sparql-perf-denokv
 ```
 
 **Standard (1k–50k):** separate execute-only benches per backend (`libsqlStore`,
@@ -74,15 +74,15 @@ opt-in — it is slow on both backends and not the production hot path:
 ```bash
 # .env or shell
 BENCH_HEXASTORE_PERF_FULL_SCAN=1
-deno task bench:hexastore-perf-libsql:full-scan
-deno task bench:hexastore-perf-denokv:full-scan
+deno task bench:sparql-perf-libsql:full-scan
+deno task bench:sparql-perf-denokv:full-scan
 ```
 
 Large benches use the same env via `:full-scan` tasks:
 
 ```bash
-deno task bench:hexastore-perf-large-libsql:full-scan
-deno task bench:hexastore-perf-large-denokv:full-scan
+deno task bench:sparql-perf-large-libsql:full-scan
+deno task bench:sparql-perf-large-denokv:full-scan
 ```
 
 **Large (100k–1M):** separate libsql and denokv large benches
@@ -100,39 +100,39 @@ Apps that need `search()` at scale use normal import with inline indexing
 each import), or `searchIndexOnImport: "disabled"` plus `await client.reindex()`
 once after bulk load.
 
-### SPARQL hexastore perf at 100k–1M (opt-in, local only)
+### SPARQL quad index perf at 100k–1M (opt-in, local only)
 
 [#76](https://github.com/wazootech/worlds-client-ts/issues/76). Not part of
 `deno task bench` — preload can take a long time and needs ample RAM (16 GB+ for
 1M libsqlStore preload).
 
 ```bash
-deno task bench:hexastore-perf-large-libsql
+deno task bench:sparql-perf-large-libsql
 ```
 
 Or with a larger V8 heap if preload OOMs:
 
 ```bash
-deno bench --allow-all --v8-flags=--max-old-space-size=8192 benchmarks/sparql-hexastore-perf-large-libsql.bench.ts
+deno bench --allow-all --v8-flags=--max-old-space-size=8192 benchmarks/sparql-perf-large-libsql.bench.ts
 ```
 
-Deno KV large hexastore perf (opt-in; `--unstable-kv`):
+Deno KV large quad index perf (opt-in; `--unstable-kv`):
 
 ```bash
-deno task bench:hexastore-perf-large-denokv
+deno task bench:sparql-perf-large-denokv
 ```
 
 Or:
 
 ```bash
-deno bench --allow-all --unstable-kv --v8-flags=--max-old-space-size=8192 benchmarks/sparql-hexastore-perf-large-denokv.bench.ts
+deno bench --allow-all --unstable-kv --v8-flags=--max-old-space-size=8192 benchmarks/sparql-perf-large-denokv.bench.ts
 ```
 
 Module load logs `console.time` lines per scale (`generate`, then each backend).
 Only `sparqlEngine.execute()` is timed inside `Deno.bench`. Paste results into
 [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69).
 
-For full import + search preload timing (not the hexastore perf execute table),
+For full import + search preload timing (not the quad index perf execute table),
 use `searchIndexOnImport: "deferred"` on a dedicated bulk-load client (quads
 first, search index rebuilt after import), or `searchIndexOnImport: "disabled"`
 followed by `await client.reindex()` when you want quads and search repair as
@@ -141,25 +141,25 @@ separate timed steps.
 #### Reusing large fixtures (dev only)
 
 Opt-in file cache for **large libsqlStore and denokvStore** preload
-(`BENCH_REUSE_DB=1`). The first run imports into
-`benchmarks/.cache/hexastore-perf-large/` (`libsqlStore-{n}.db` or
-`denokvStore-{n}/`); later runs open cached storage and skip import when the
-manifest checksum matches (corpus version, backend schema version, quad count,
-quads-only import). `Deno.bench` still measures `execute()` only.
+(`BENCH_REUSE_DB=1`). The first run imports into `benchmarks/.cache/perf-large/`
+(`libsqlStore-{n}.db` or `denokvStore-{n}/`); later runs open cached storage and
+skip import when the manifest checksum matches (corpus version, backend schema
+version, quad count, quads-only import). `Deno.bench` still measures `execute()`
+only.
 
 ```bash
 # shell or .env
 BENCH_REUSE_DB=1
-deno task bench:hexastore-perf-large-libsql:reuse
-deno task bench:hexastore-perf-large-denokv:reuse
+deno task bench:sparql-perf-large-libsql:reuse
+deno task bench:sparql-perf-large-denokv:reuse
 ```
 
 Published baselines in the table below use default `:memory:` unless labeled
 **file cache**. File-backed execute can differ slightly from `:memory:` (OS page
-cache). Invalidate cache: delete `benchmarks/.cache/hexastore-perf-large/` or
-bump `SYNTHETIC_CORPUS_VERSION`, `BENCH_LIBSQL_SCHEMA_VERSION`, or
+cache). Invalidate cache: delete `benchmarks/.cache/perf-large/` or bump
+`SYNTHETIC_CORPUS_VERSION`, `BENCH_LIBSQL_SCHEMA_VERSION`, or
 `BENCH_DENOKV_HEXASTORE_SCHEMA_VERSION` in
-[`shared/hexastore-perf-db-cache.ts`](shared/hexastore-perf-db-cache.ts) and
+[`shared/perf-db-cache.ts`](shared/perf-db-cache.ts) and
 [`shared/synthetic-data.ts`](shared/synthetic-data.ts). Override directory:
 `BENCH_DB_CACHE_DIR`.
 
@@ -173,11 +173,11 @@ create a fresh database per iteration and use `warmup: 5`, `n: 50`.
   only.
 - Large **p99** gaps vs **avg** on older runs usually meant per-iteration import
   and GC between timed slices, not multi-second SPARQL alone. After preload,
-  hexastore perf p99 should stay within a few× of avg.
+  quad index perf p99 should stay within a few× of avg.
 - Optional GC trace (local only):
 
   ```bash
-  deno bench --allow-all --v8-flags=--trace-gc benchmarks/sparql-hexastore-perf-libsql.bench.ts
+  deno bench --allow-all --v8-flags=--trace-gc benchmarks/sparql-perf-libsql.bench.ts
   ```
 
 **Production (millions of quads):** default to
@@ -249,14 +249,14 @@ now uses the `FullGraphExport` group name.
 | 1k    | 2.0 ms          | 287 µs              |
 | 10k   | 13.0 ms         | 182 µs              |
 
-### Standard hexastore perf (libsql vs denokv, selective)
+### Standard quad index perf (libsql vs denokv, selective)
 
 Captured **2026-05-27** on **Deno 2.8.0 (Windows x86_64)**. Preload is untimed
 (`console.time` at module load); execute is `Deno.bench` avg only. Paste updates
 into
 [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69) —
-draft in
-[`discussion-69-hexastore-perf-draft.md`](discussion-69-hexastore-perf-draft.md).
+draft in [`discussion-69-perf-draft.md`](discussion-69-quad
+index-perf-draft.md).
 
 **Preload** (`searchIndexOnImport: "disabled"` on LibSQL; kv-toolbox
 `batchedAtomic()` on Denokv):
@@ -273,8 +273,8 @@ draft in
 Import/preload dominates cold start — LibSQL is much faster at scale (e.g. 50k
 quads: 4.4 s vs 229 s). For end-to-end time to first useful SPARQL query,
 **LibSQL wins** unless Denokv reuses an on-disk fixture (`BENCH_REUSE_DB=1`,
-e.g. `deno task bench:hexastore-perf-large-denokv:reuse`) or a long-lived
-process that already imported the corpus.
+e.g. `deno task bench:sparql-perf-large-denokv:reuse`) or a long-lived process
+that already imported the corpus.
 
 **Execute** (selective — `SELECT ?p ?o WHERE { <urn:entity:0> ?p ?o }`):
 
@@ -289,27 +289,27 @@ process that already imported the corpus.
 **Memory:** not measured by `deno bench`. For peak working set during preload,
 watch the process in Task Manager (Windows) or use OS tooling
 (`/usr/bin/time -v` on Linux) in a one-off run — expect Denokv `:memory:` to
-hold more keys per quad (seven index families) than LibSQL hexastore for the
+hold more keys per quad (seven index families) than LibSQL quad index for the
 same corpus.
 
-Historical **hydrate+N3** rows (pre-hexastore-only preload) are not comparable
+Historical **hydrate+N3** rows (pre-quad index-only preload) are not comparable
 to the table above; see
 [discussion #45](https://github.com/wazootech/worlds-client-ts/discussions/45).
 
-### `sparql-hexastore-perf-libsql.bench.ts` (execute only, preloaded)
+### `sparql-perf-libsql.bench.ts` (execute only, preloaded)
 
-Registers **selective** benches by default. See standard hexastore perf table
+Registers **selective** benches by default. See standard quad index perf table
 above.
 
-### `sparql-hexastore-perf-denokv.bench.ts` (execute only, preloaded)
+### `sparql-perf-denokv.bench.ts` (execute only, preloaded)
 
-Same harness as LibSQL; requires `--unstable-kv`. See standard hexastore perf
+Same harness as LibSQL; requires `--unstable-kv`. See standard quad index perf
 table above.
 
-### `sparql-hexastore-perf-large-libsql.bench.ts` (execute only, preloaded)
+### `sparql-perf-large-libsql.bench.ts` (execute only, preloaded)
 
 Captured on **Deno 2.8.0 (Windows x86_64)** via
-`deno task bench:hexastore-perf-large-libsql`
+`deno task bench:sparql-perf-large-libsql`
 (`--v8-flags=--max-old-space-size=8192`). **libsqlStore only**,
 `searchIndexOnImport: "disabled"` (quads-only preload; no hydrate+N3, no
 FTS/chunk build during import).
@@ -342,13 +342,13 @@ comparable to the row above.
 - Open a **new issue** with pasted before/after `deno bench` output.
 - Link
   [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69)
-  when SPARQL hexastore perf numbers change.
+  when SPARQL quad index perf numbers change.
 
 ```bash
 deno task bench
 ```
 
-## SPARQL hexastore perf results template
+## SPARQL quad index perf results template
 
 Paste into
 [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69)

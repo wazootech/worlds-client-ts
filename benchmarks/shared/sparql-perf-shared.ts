@@ -14,13 +14,13 @@ import {
   resolveHexastorePerfDbCachePaths,
   tryResolveHexastorePerfCacheHit,
   writeHexastorePerfFixtureManifest,
-} from "./hexastore-perf-db-cache.ts";
+} from "./perf-db-cache.ts";
 import { generateSyntheticQuads } from "./synthetic-data.ts";
 
 /** selectiveSubjectIri is the grounded subject for subject-bound SPARQL benchmarks. */
 export const selectiveSubjectIri = "urn:entity:0";
 
-/** selectiveSparqlQuery exercises a subject-bound BGP (hexastore-friendly). */
+/** selectiveSparqlQuery exercises a subject-bound BGP (quad index-friendly). */
 export const selectiveSparqlQuery =
   `SELECT ?p ?o WHERE { <${selectiveSubjectIri}> ?p ?o }`;
 
@@ -30,7 +30,7 @@ export const fullScanSparqlQuery =
 
 const sharedQueryEngine = new QueryEngine();
 
-/** SparqlQueryShape labels the SPARQL hexastore perf query patterns. */
+/** SparqlQueryShape labels the SPARQL quad index perf query patterns. */
 export type SparqlQueryShape = "selective" | "fullScan";
 
 /** standardHexastorePerfQueryShapes is the default dev iteration set (subject-bound only). */
@@ -45,7 +45,7 @@ export const allHexastorePerfQueryShapes = [
 ] as const satisfies readonly SparqlQueryShape[];
 
 /**
- * resolveHexastorePerfQueryShapes returns query shapes for hexastore perf bench registration.
+ * resolveHexastorePerfQueryShapes returns query shapes for quad index perf bench registration.
  */
 export function resolveHexastorePerfQueryShapes(): readonly SparqlQueryShape[] {
   return isBenchHexastorePerfFullScanEnabled()
@@ -53,15 +53,15 @@ export function resolveHexastorePerfQueryShapes(): readonly SparqlQueryShape[] {
     : standardHexastorePerfQueryShapes;
 }
 
-/** SparqlBackend labels the hexastore wiring under test. */
+/** SparqlBackend labels the quad index wiring under test. */
 export type SparqlBackend = "libsqlStore" | "denokvStore";
 
-/** libsqlHexastorePerfBackends targets the production LibsqlRdfjsStore hexastore path. */
+/** libsqlHexastorePerfBackends targets the production LibsqlRdfjsStore quad index path. */
 export const libsqlHexastorePerfBackends = [
   "libsqlStore",
 ] as const satisfies readonly SparqlBackend[];
 
-/** denokvHexastorePerfBackends targets the Deno KV hexastore RDF/JS store path. */
+/** denokvHexastorePerfBackends targets the Deno KV quad index RDF/JS store path. */
 export const denokvHexastorePerfBackends = [
   "denokvStore",
 ] as const satisfies readonly SparqlBackend[];
@@ -77,7 +77,7 @@ export interface PreloadedSparqlFixture {
 }
 
 /**
- * PreloadSparqlHexastorePerfOptions configures hexastore perf module preload behavior.
+ * PreloadSparqlHexastorePerfOptions configures quad index perf module preload behavior.
  */
 export interface PreloadSparqlHexastorePerfOptions {
   /** reuseFileCache enables on-disk fixtures for libsqlStore and denokvStore when BENCH_REUSE_DB=1. */
@@ -95,7 +95,7 @@ interface LibsqlHexastoreFixtureResult {
 }
 
 /**
- * sparqlEngineCacheKey builds a stable map key for preloaded hexastore perf fixtures.
+ * sparqlEngineCacheKey builds a stable map key for preloaded quad index perf fixtures.
  */
 export function sparqlEngineCacheKey(
   backend: SparqlBackend,
@@ -105,7 +105,7 @@ export function sparqlEngineCacheKey(
 }
 
 /**
- * sparqlQueryForShape returns the SPARQL string for a hexastore perf query shape.
+ * sparqlQueryForShape returns the SPARQL string for a quad index perf query shape.
  */
 export function sparqlQueryForShape(queryShape: SparqlQueryShape): string {
   return queryShape === "selective"
@@ -304,7 +304,9 @@ export async function preloadSparqlHexastorePerfFixtures(
 ): Promise<Map<string, PreloadedSparqlFixture>> {
   const preloadedSparqlEngines = new Map<string, PreloadedSparqlFixture>();
 
-  console.log(`Pre-populating SPARQL hexastore perf engines (${logPrefix})...`);
+  console.log(
+    `Pre-populating SPARQL quad index perf engines (${logPrefix})...`,
+  );
 
   for (const quadCount of perfScales) {
     const corpusGenerationLabel = `${logPrefix} generate ${quadCount} quads`;
@@ -333,7 +335,7 @@ export async function preloadSparqlHexastorePerfFixtures(
     }
   }
 
-  console.log(`SPARQL hexastore perf engines ready (${logPrefix}).`);
+  console.log(`SPARQL quad index perf engines ready (${logPrefix}).`);
   return preloadedSparqlEngines;
 }
 
@@ -352,7 +354,7 @@ export function registerSparqlHexastorePerfUnloadCleanup(
 }
 
 /**
- * registerSparqlHexastorePerfBenchmarks registers execute-only hexastore perf Deno.bench entries.
+ * registerSparqlHexastorePerfBenchmarks registers execute-only quad index perf Deno.bench entries.
  */
 export function registerSparqlHexastorePerfBenchmarks(
   perfScales: readonly number[],

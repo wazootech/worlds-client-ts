@@ -5,7 +5,7 @@ import type { EmbeddingService } from "@/client/search-index/embedding-service/m
 import type { TextSplitterInterface } from "@/client/search-index/quad-chunker/mod.ts";
 
 /**
- * LibsqlClientBaseOptions lists configuration shared by hexastore LibSQL client factories.
+ * LibsqlClientBaseOptions lists configuration shared by quad index LibSQL client factories.
  */
 export interface LibsqlClientBaseOptions extends QuadFilter {
   /** client is the underlying LibSQL client pointing to the database. */
@@ -26,7 +26,7 @@ export interface LibsqlClientBaseOptions extends QuadFilter {
   vectorDimensions?: number;
 
   /**
-   * matchPageSize limits rows per LibsqlRdfjsStore.match SQL round-trip on hexastore reads (default 1000).
+   * matchPageSize limits rows per LibsqlRdfjsStore.match SQL round-trip on reads (default 1000).
    */
   matchPageSize?: number;
 

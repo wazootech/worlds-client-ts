@@ -10,7 +10,7 @@ import {
   resolveHexastorePerfDbCachePaths,
   validateCachedLibsqlHexastorePerfDatabase,
   writeHexastorePerfFixtureManifest,
-} from "./hexastore-perf-db-cache.ts";
+} from "./perf-db-cache.ts";
 import { generateSyntheticQuads } from "./synthetic-data.ts";
 
 async function importCorpusIntoLibsqlHexastoreForTest(

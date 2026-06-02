@@ -1,14 +1,14 @@
 import type * as rdfjs from "@rdfjs/types";
 
-import { termKeyParts } from "./denokv-hexastore-keys.ts";
-import type { DenokvHexastoreIndex } from "./denokv-hexastore-index-set.ts";
+import { termKeyParts } from "./denokv-keys.ts";
+import type { DenokvQuadIndex } from "./denokv-index-set.ts";
 
 /**
  * buildBestMatchSelector returns the narrowest KV list prefix for a quad pattern.
  */
 export function buildBestMatchSelector(
   scopedDataPrefix: Deno.KvKey,
-  enabledIndexes: readonly DenokvHexastoreIndex[],
+  enabledIndexes: readonly DenokvQuadIndex[],
   pattern: {
     subject: rdfjs.Term | null;
     predicate: rdfjs.Term | null;
@@ -137,7 +137,7 @@ export function buildBestMatchSelector(
  */
 export function buildBestMatchCursor(
   scopedDataPrefix: Deno.KvKey,
-  enabledIndexes: readonly DenokvHexastoreIndex[],
+  enabledIndexes: readonly DenokvQuadIndex[],
   pattern: {
     subject: rdfjs.Term | null;
     predicate: rdfjs.Term | null;

@@ -32,7 +32,7 @@ export function createDenokvClient(
   const denokvRdfjsStore = new DenokvRdfjsStore({
     kv: options.kv,
     keyPrefix: options.keyPrefix,
-    enabledHexastoreIndexes: options.enabledHexastoreIndexes,
+    enabledQuadIndexes: options.enabledQuadIndexes,
   });
 
   const searchIndex = new DenokvSearchIndex({

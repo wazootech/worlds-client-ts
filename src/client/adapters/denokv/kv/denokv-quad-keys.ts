@@ -5,8 +5,8 @@ import {
   buildIndexKey,
   buildPrimaryQuadKey,
   termKeyParts,
-} from "./denokv-hexastore-keys.ts";
-import type { DenokvHexastoreIndex } from "./denokv-hexastore-index-set.ts";
+} from "./denokv-keys.ts";
+import type { DenokvQuadIndex } from "./denokv-index-set.ts";
 
 /**
  * MaterializeQuadKeysOptions configures key materialization for one quad.
@@ -16,7 +16,7 @@ export interface MaterializeQuadKeysOptions {
   scopedDataPrefix: Deno.KvKey;
 
   /** enabledIndexes lists which secondary index families to write. */
-  enabledIndexes: readonly DenokvHexastoreIndex[];
+  enabledIndexes: readonly DenokvQuadIndex[];
 
   /** storedQuad is the RDF quad being persisted. */
   storedQuad: rdfjs.Quad;

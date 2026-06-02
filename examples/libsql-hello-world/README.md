@@ -17,7 +17,7 @@ This example demonstrates:
   FTS5 matching and TF.js Universal Sentence Encoder (USE) vector semantic
   similarity.
 - **SPARQL query optimization**: Grounded, selective subject-bound SPARQL query
-  structures optimized for edge database hexastore indices, contrasted against
+  structures optimized for edge database quad index indices, contrasted against
   full-scan unbound queries.
 
 ## Prerequisites
@@ -62,4 +62,4 @@ SELECT ?property ?object WHERE { <urn:demo:entity:0> ?property ?object }
 ```
 
 Grounded patterns allow `LibsqlRdfjsStore` to resolve the triples in logarithmic
-time via hexastore indices instead of executing slow sequential scans.
+time via quad index indices instead of executing slow sequential scans.

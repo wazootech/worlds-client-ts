@@ -1,22 +1,29 @@
+import { isBenchReuseDbEnabled } from "./shared/perf-db-cache.ts";
 import {
   libsqlHexastorePerfBackends,
   preloadSparqlHexastorePerfFixtures,
   registerSparqlHexastorePerfBenchmarks,
   registerSparqlHexastorePerfUnloadCleanup,
-} from "./shared/sparql-hexastore-perf-shared.ts";
+} from "./shared/sparql-perf-shared.ts";
 
-/** standardPerfScales are corpus sizes for LibSQL hexastore SPARQL execute benchmarks. */
-const standardPerfScales = [1_000, 5_000, 10_000, 25_000, 50_000] as const;
+/** largePerfScales extend quad index perf evidence to 100k-1M ([#76](https://github.com/wazootech/worlds-client-ts/issues/76)). */
+const largePerfScales = [
+  100_000,
+  250_000,
+  500_000,
+  1_000_000,
+] as const;
 
 const preloadedSparqlEngines = await preloadSparqlHexastorePerfFixtures(
-  standardPerfScales,
-  "standard libsql",
+  largePerfScales,
+  "large libsql",
   libsqlHexastorePerfBackends,
+  { reuseFileCache: isBenchReuseDbEnabled() },
 );
 
 registerSparqlHexastorePerfUnloadCleanup(preloadedSparqlEngines);
 registerSparqlHexastorePerfBenchmarks(
-  standardPerfScales,
+  largePerfScales,
   preloadedSparqlEngines,
   libsqlHexastorePerfBackends,
 );

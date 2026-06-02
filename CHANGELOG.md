@@ -103,12 +103,12 @@ const memoryClient = new Client({
 - Deno KV `import({ mode: "replace" })` uses an atomic dataset-generation
   pointer instead of prefix-wide deletes; `match()`, `export`, and search scan
   the active generation only.
-- Deno KV hexastore `match()` routing is covered by LibSQL-aligned integration
+- Deno KV quad index `match()` routing is covered by LibSQL-aligned integration
   tests (predicate-, object-, and graph-first patterns).
 - Deno KV `replace` garbage-collects orphaned generation keys, adds `idx_sopg`
   (subject+object) index family, and exposes `countQuads` on `DenokvRdfjsStore`
   for Comunica cardinality hints.
-- Deno KV hexastore defaults to **seven** quad-native index families (`psog`,
+- Deno KV quad index defaults to **seven** quad-native index families (`psog`,
   `opsg` added for full S-P-O-G coverage); re-import or `replace` to backfill
   index keys on existing KV data.
 
@@ -310,6 +310,6 @@ const client = new Client(await createLibsqlClientOptions({ client: db }));
 ### Examples
 
 - Merged `examples/libsql-hello-world` into
-  `examples/libsql-long-running/hexastore.ts`.
+  `examples/libsql-long-running/quad index.ts`.
 - Split LibSQL deployment examples into `libsql-long-running` and
-  `libsql-n3-warm-container`, each with `hexastore.ts` and `n3.ts`.
+  `libsql-n3-warm-container`, each with `quad index.ts` and `n3.ts`.

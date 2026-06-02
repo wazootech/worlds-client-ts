@@ -2,7 +2,7 @@ import { createDenokvClient } from "@worlds/client/adapters/denokv";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
 if (import.meta.main) {
-  const kv = await Deno.openKv(":memory:");
+  using kv = await Deno.openKv(":memory:");
   const queryEngine = new QueryEngine();
   const client = createDenokvClient({ kv, queryEngine });
 
@@ -23,6 +23,4 @@ if (import.meta.main) {
     query: `SELECT ?s ?p ?o WHERE { ?s ?p ?o }`,
   });
   console.log(JSON.stringify(sparqlResponse, null, 2));
-
-  kv.close();
 }

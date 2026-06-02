@@ -28,7 +28,7 @@ export function createDenokvStoresForTest(
   const denokvRdfjsStore = new DenokvRdfjsStore({
     kv: options.kv,
     keyPrefix: options.keyPrefix,
-    enabledHexastoreIndexes: options.enabledHexastoreIndexes,
+    enabledQuadIndexes: options.enabledQuadIndexes,
   });
   const denokvQuadStore = new RdfjsQuadStore({
     store: denokvRdfjsStore as unknown as rdfjs.Store,
@@ -48,7 +48,7 @@ export async function seedDenokvQuadsForTest(
   quads: rdfjs.Quad[],
   options?: Pick<
     DenokvPersistHooksOptions,
-    "keyPrefix" | "enabledHexastoreIndexes"
+    "keyPrefix" | "enabledQuadIndexes"
   >,
 ): Promise<void> {
   const { denokvQuadStore } = createDenokvStoresForTest({ kv, ...options });

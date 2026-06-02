@@ -10,7 +10,7 @@ import { createLibsqlClient } from "@/client/adapters/libsql/create-libsql-clien
 const { quad, namedNode, literal } = DataFactory;
 const queryEngine = new QueryEngine();
 
-const expectedHexastoreIndexNames = [
+const expectedIndexNames = [
   "idx_quads_spog",
   "idx_quads_sopg",
   "idx_quads_pso",
@@ -26,12 +26,12 @@ interface LibsqlClientFixture {
 }
 
 const libsqlClientFixtures: LibsqlClientFixture[] = [
-  { label: "hexastore", createClient: createLibsqlClient },
+  { label: "quad-index", createClient: createLibsqlClient },
 ];
 
 for (const fixture of libsqlClientFixtures) {
   Deno.test(
-    `${fixture.label} - initializeSchema provisions all hexastore indexes`,
+    `${fixture.label} - initializeSchema provisions all quad indexes`,
     async () => {
       const databaseClient = createClient({ url: ":memory:" });
 
@@ -41,11 +41,11 @@ for (const fixture of libsqlClientFixtures) {
         "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'quads'",
       );
       const indexNames = indexResultSet.rows.map((row) => String(row.name));
-      for (const expectedName of expectedHexastoreIndexNames) {
+      for (const expectedName of expectedIndexNames) {
         assertEquals(
           indexNames.includes(expectedName),
           true,
-          `missing hexastore index: ${expectedName}`,
+          `missing quad index: ${expectedName}`,
         );
       }
 

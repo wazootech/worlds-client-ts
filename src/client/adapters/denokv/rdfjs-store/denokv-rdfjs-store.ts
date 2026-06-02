@@ -5,11 +5,11 @@ import type { Quad } from "@/client/quad-store/mod.ts";
 import {
   buildGenerationDataPrefix,
   buildPrimaryQuadKey,
-} from "@/client/adapters/denokv/kv/denokv-hexastore-keys.ts";
+} from "@/client/adapters/denokv/kv/denokv-keys.ts";
 import {
-  DEFAULT_DENOKV_HEXASTORE_INDEXES,
-  type DenokvHexastoreIndex,
-} from "@/client/adapters/denokv/kv/denokv-hexastore-index-set.ts";
+  DEFAULT_DENOKV_QUAD_INDEXES,
+  type DenokvQuadIndex,
+} from "@/client/adapters/denokv/kv/denokv-index-set.ts";
 import { readActiveGeneration } from "@/client/adapters/denokv/kv/denokv-dataset-generation.ts";
 import {
   buildBestMatchCursor,
@@ -30,15 +30,15 @@ export interface DenokvRdfjsStoreOptions {
   keyPrefix?: Deno.KvKey;
 
   /**
-   * enabledHexastoreIndexes controls which KV secondary-index families are materialized.
+   * enabledQuadIndexes controls which KV secondary-index families are materialized.
    * Defaults to all supported index families.
    */
-  enabledHexastoreIndexes?: readonly DenokvHexastoreIndex[];
+  enabledQuadIndexes?: readonly DenokvQuadIndex[];
 }
 /**
  * DenokvRdfjsStore is a stateless RDF/JS ReadSource backed by Deno KV.
  * It supports Comunica SPARQL by implementing match() and countQuads().
- * Mutative operations are handled via QuadTransaction.
+ * Mutative operations are handled via the TransactionalRdfjsStore wrapper.
  */
 export class DenokvRdfjsStore {
   public constructor(
@@ -52,8 +52,8 @@ export class DenokvRdfjsStore {
     graph?: rdfjs.Term | null,
   ): rdfjs.Stream<rdfjs.Quad> {
     const keyPrefix = this.options.keyPrefix ?? ["quads"];
-    const enabledIndexes = this.options.enabledHexastoreIndexes ??
-      DEFAULT_DENOKV_HEXASTORE_INDEXES;
+    const enabledIndexes = this.options.enabledQuadIndexes ??
+      DEFAULT_DENOKV_QUAD_INDEXES;
 
     const pattern = {
       subject: subject ?? null,

@@ -18,12 +18,12 @@ export interface LibsqlRdfjsStoreOptions {
 
   /** queryBuilder is the LibsqlQueryBuilder. */
 
-  /** matchPageSize limits rows per hexastore match SQL round-trip (default 1000). */
+  /** matchPageSize limits rows per match SQL round-trip (default 1000). */
   matchPageSize?: number;
 }
 
 /**
- * LibsqlRdfjsStore is a stateless RDF/JS ReadSource backed by LibSQL and hexastore covering indexes.
+ * LibsqlRdfjsStore is a stateless RDF/JS ReadSource backed by LibSQL and quad covering indexes.
  * All triple/quad patterns resolve via a single SQL index seek with no in-memory hydration needed.
  * This class only implements match and countQuads. Mutative operations are handled via QuadTransaction.
  */
@@ -40,7 +40,7 @@ export class LibsqlRdfjsStore {
 
   /**
    * match returns a stream of quads matching the given quad pattern.
-   * Automatically selects the optimal hexastore covering index based on
+   * Automatically selects the optimal quad index covering index based on
    * which pattern positions are bound. Reads are keyset-paged by quad id.
    */
   public match(

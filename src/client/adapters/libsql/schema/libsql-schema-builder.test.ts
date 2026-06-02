@@ -4,8 +4,8 @@ import { LibsqlSchemaBuilder } from "./libsql-schema-builder.ts";
 
 const testSchemaBuilder = new LibsqlSchemaBuilder(32);
 
-Deno.test("buildHexastoreIndexes - returns 7 covering index DDL statements", () => {
-  const indexes = testSchemaBuilder.buildHexastoreIndexes();
+Deno.test("buildIndexes - returns 7 covering index DDL statements", () => {
+  const indexes = testSchemaBuilder.buildIndexes();
   assertEquals(indexes.length, 7);
 
   const subjectFirstQuadPatternIndex = indexes.find((s: string) =>
@@ -53,16 +53,16 @@ Deno.test("buildHexastoreIndexes - returns 7 covering index DDL statements", () 
   );
 });
 
-Deno.test("buildHexastoreIndexes - indexes are idempotent (CREATE IF NOT EXISTS)", async () => {
+Deno.test("buildIndexes - indexes are idempotent (CREATE IF NOT EXISTS)", async () => {
   const db = createClient({ url: ":memory:" });
   await db.execute(testSchemaBuilder.buildLibsqlQuadsTable());
 
-  for (const ddl of testSchemaBuilder.buildHexastoreIndexes()) {
+  for (const ddl of testSchemaBuilder.buildIndexes()) {
     await db.execute(ddl);
   }
 
   // Second pass must not throw
-  for (const ddl of testSchemaBuilder.buildHexastoreIndexes()) {
+  for (const ddl of testSchemaBuilder.buildIndexes()) {
     await db.execute(ddl);
   }
 

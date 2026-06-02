@@ -24,11 +24,11 @@ export class LibsqlSchemaBuilder {
   }
 
   /**
-   * buildHexastoreIndexes returns DDL for 7 covering composite indexes on the quads table
+   * buildIndexes returns DDL for 7 covering composite indexes on the quads table
    * (six subject-predicate-object-graph index orders + GPSO for graph-scoped access) enabling any quad pattern
    * to be resolved via a single index seek.
    */
-  public buildHexastoreIndexes(): string[] {
+  public buildIndexes(): string[] {
     return [
       "CREATE INDEX IF NOT EXISTS idx_quads_spog ON quads(s, p, o, g)",
       "CREATE INDEX IF NOT EXISTS idx_quads_sopg ON quads(s, o, p, g)",

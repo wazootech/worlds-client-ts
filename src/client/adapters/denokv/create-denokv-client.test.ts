@@ -58,7 +58,7 @@ Deno.test(
 );
 
 Deno.test(
-  "createDenokvClient - queryEngine SPARQL reads hexastore from Deno KV",
+  "createDenokvClient - queryEngine SPARQL reads from Deno KV",
   async () => {
     const kv = await Deno.openKv(":memory:");
     try {

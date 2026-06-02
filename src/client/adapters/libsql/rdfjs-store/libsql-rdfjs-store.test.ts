@@ -21,7 +21,7 @@ function createTestLibsqlRdfjsStore(
 
 async function setupSchema(db: ReturnType<typeof createClient>): Promise<void> {
   await db.execute(testLibsqlSchemaBuilder.buildLibsqlQuadsTable());
-  for (const ddl of testLibsqlSchemaBuilder.buildHexastoreIndexes()) {
+  for (const ddl of testLibsqlSchemaBuilder.buildIndexes()) {
     await db.execute(ddl);
   }
 }

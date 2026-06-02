@@ -8,11 +8,11 @@ import {
   garbageCollectOrphanedGenerations,
   readActiveGeneration,
 } from "./kv/denokv-dataset-generation.ts";
-import { buildGenerationDataPrefix } from "./kv/denokv-hexastore-keys.ts";
+import { buildGenerationDataPrefix } from "./kv/denokv-keys.ts";
 import {
-  DEFAULT_DENOKV_HEXASTORE_INDEXES,
-  type DenokvHexastoreIndex,
-} from "./kv/denokv-hexastore-index-set.ts";
+  DEFAULT_DENOKV_QUAD_INDEXES,
+  type DenokvQuadIndex,
+} from "./kv/denokv-index-set.ts";
 import {
   type BatchedAtomicOperation,
   commitBatchedKvMutations,
@@ -30,14 +30,14 @@ export interface CommitPatchToDenokvOptions {
   keyPrefix?: Deno.KvKey;
 
   /**
-   * enabledHexastoreIndexes controls which KV secondary-index families are materialized.
+   * enabledQuadIndexes controls which KV secondary-index families are materialized.
    * Defaults to all supported index families.
    */
-  enabledHexastoreIndexes?: readonly DenokvHexastoreIndex[];
+  enabledQuadIndexes?: readonly DenokvQuadIndex[];
 }
 
 /**
- * commitPatchToDenokv persists insertions and deletions to Deno KV primary and hexastore indexes.
+ * commitPatchToDenokv persists insertions and deletions to Deno KV primary and quad indexes.
  */
 export async function commitPatchToDenokv(
   patch: Patch,
@@ -45,8 +45,8 @@ export async function commitPatchToDenokv(
   context?: TransactionContext,
 ): Promise<void> {
   const keyPrefix = options.keyPrefix ?? ["quads"];
-  const enabledIndexes = options.enabledHexastoreIndexes ??
-    DEFAULT_DENOKV_HEXASTORE_INDEXES;
+  const enabledIndexes = options.enabledQuadIndexes ??
+    DEFAULT_DENOKV_QUAD_INDEXES;
 
   if (isReplaceImportCommit(context)) {
     await commitReplaceImportPatch(
@@ -70,7 +70,7 @@ async function commitReplaceImportPatch(
   patch: Patch,
   kv: Deno.Kv,
   keyPrefix: Deno.KvKey,
-  enabledIndexes: readonly DenokvHexastoreIndex[],
+  enabledIndexes: readonly DenokvQuadIndex[],
 ): Promise<void> {
   const generationId = await bumpDatasetGeneration(kv, keyPrefix);
   const scopedDataPrefix = buildGenerationDataPrefix(keyPrefix, generationId);
@@ -95,7 +95,7 @@ async function commitIncrementalPatch(
   patch: Patch,
   kv: Deno.Kv,
   keyPrefix: Deno.KvKey,
-  enabledIndexes: readonly DenokvHexastoreIndex[],
+  enabledIndexes: readonly DenokvQuadIndex[],
 ): Promise<void> {
   if (patch.insertions.length === 0 && patch.deletions.length === 0) {
     return;
@@ -137,7 +137,7 @@ async function commitIncrementalPatch(
 
 async function buildKvInsertMutations(
   scopedDataPrefix: Deno.KvKey,
-  enabledIndexes: readonly DenokvHexastoreIndex[],
+  enabledIndexes: readonly DenokvQuadIndex[],
   quads: readonly rdfjs.Quad[],
 ): Promise<Array<{ key: Deno.KvKey; value: unknown }>> {
   if (quads.length === 0) {

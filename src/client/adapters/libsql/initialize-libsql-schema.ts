@@ -11,7 +11,7 @@ export async function initializeLibsqlSchema(
   schemaBuilder: LibsqlSchemaBuilder,
 ): Promise<void> {
   await databaseClient.execute(schemaBuilder.buildLibsqlQuadsTable());
-  for (const ddl of schemaBuilder.buildHexastoreIndexes()) {
+  for (const ddl of schemaBuilder.buildIndexes()) {
     await databaseClient.execute(ddl);
   }
   await databaseClient.execute(schemaBuilder.buildLibsqlChunksTable());

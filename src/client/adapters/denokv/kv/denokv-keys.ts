@@ -4,7 +4,7 @@ import { DataFactory } from "n3";
 const { namedNode } = DataFactory;
 
 /**
- * DenokvHexastoreKeyNamespace is the set of fixed key segments used by the KV hexastore layout.
+ * DenokvHexastoreKeyNamespace is the set of fixed key segments used by the KV quad index layout.
  */
 export type DenokvHexastoreKeyNamespace =
   | "idx_spog"
@@ -64,7 +64,7 @@ export function normalizeGraphTerm(graph: rdfjs.Term | string): rdfjs.Term {
 }
 
 /**
- * buildIndexKey returns the KV key for a hexastore secondary index pointer row.
+ * buildIndexKey returns the KV key for a quad index secondary index pointer row.
  */
 export function buildIndexKey(
   scopedDataPrefix: Deno.KvKey,

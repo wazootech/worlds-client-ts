@@ -15,14 +15,14 @@ import { batchedAtomic } from "@kitsonk/kv-toolbox/batched_atomic";
  * **Large transactions** — kv-toolbox
  * [`batchedAtomic()`](https://github.com/kitsonk/kv-toolbox/blob/main/batched_atomic.ts)
  * queues checks and mutations, then splits them across as many `atomic.commit()` calls as needed
- * so callers do not hit key-size or mutation limits during bulk hexastore writes.
+ * so callers do not hit key-size or mutation limits during bulk quad index writes.
  *
  * Hexastore secondary index keys embed RDF term parts for `match()` routing. Long literals
  * inflate *key* byte size (not value size); `batchedAtomic()` addresses that at commit time.
  * Shortening keys (hashed term segments) would be a separate schema change.
  */
 
-/** BatchedKvAtomic is the kv-toolbox atomic queue used for hexastore bulk writes. */
+/** BatchedKvAtomic is the kv-toolbox atomic queue used for quad index bulk writes. */
 export type BatchedAtomicOperation = ReturnType<typeof batchedAtomic>;
 export type BatchedKvAtomic = BatchedAtomicOperation;
 
