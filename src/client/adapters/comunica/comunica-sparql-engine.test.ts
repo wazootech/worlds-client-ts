@@ -191,20 +191,25 @@ Deno.test("Same SPARQL query works on bnodes vs processed (canonicalized + subje
       const processed = new Store();
 
       for (const statement of canonicalStatements) {
-        const [q] = parser.parse(statement) as Quad[];
-        if (!q) continue;
+        const [parsedQuad] = parser.parse(statement) as Quad[];
+        if (!parsedQuad) continue;
 
         // Subject skolemization
-        const subject = q.subject.termType === "BlankNode"
+        const subject = parsedQuad.subject.termType === "BlankNode"
           ? DataFactory.namedNode(
             `urn:worlds:quad:${
               encodeBase64Url(new TextEncoder().encode(statement))
             }`,
           )
-          : q.subject;
+          : parsedQuad.subject;
 
         processed.addQuad(
-          DataFactory.quad(subject, q.predicate, q.object, q.graph),
+          DataFactory.quad(
+            subject,
+            parsedQuad.predicate,
+            parsedQuad.object,
+            parsedQuad.graph,
+          ),
         );
       }
 
@@ -568,8 +573,8 @@ Deno.test(
         return new Transaction({
           commit: (patch) => {
             commitCount++;
-            for (const q of patch.insertions) store.addQuad(q);
-            for (const q of patch.deletions) store.removeQuad(q);
+            for (const quad of patch.insertions) store.addQuad(quad);
+            for (const quad of patch.deletions) store.removeQuad(quad);
             return Promise.resolve();
           },
         });

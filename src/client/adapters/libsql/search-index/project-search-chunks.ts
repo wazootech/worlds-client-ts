@@ -8,7 +8,7 @@ import type * as rdfjs from "@rdfjs/types";
 import { hashQuads } from "@/client/quad-store/mod.ts";
 import type { LibsqlClientBaseOptions } from "@/client/adapters/libsql/libsql-client-base-options.ts";
 import type { LibsqlSearchQueryBuilder } from "./libsql-search-query-builder.ts";
-import { buildSelectLabelLiteralsForSubjects } from "../quad-store/libsql-quad-query-builder.ts";
+import { buildSelectLabelLiteralsForSubjects } from "@/client/adapters/libsql/quad-store/libsql-quad-query-builder.ts";
 
 import {
   buildChunkFtsValue,

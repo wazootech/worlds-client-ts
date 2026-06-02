@@ -5,12 +5,12 @@ import { readActiveGeneration } from "./kv/denokv-dataset-generation.ts";
 
 const { namedNode, literal, quad } = DataFactory;
 
-const q1 = quad(
+const fixtureQuad1 = quad(
   namedNode("http://example.org/s1"),
   namedNode("http://example.org/p1"),
   literal("value1"),
 );
-const q2 = quad(
+const fixtureQuad2 = quad(
   namedNode("http://example.org/s2"),
   namedNode("http://example.org/p2"),
   literal("value2"),
@@ -22,7 +22,7 @@ Deno.test("commitPatchToDenokv - incremental insert persists readable quad", asy
 
   try {
     await commitPatchToDenokv(
-      { insertions: [q1], deletions: [] },
+      { insertions: [fixtureQuad1], deletions: [] },
       { kv, keyPrefix },
     );
 
@@ -45,11 +45,11 @@ Deno.test("commitPatchToDenokv - incremental delete removes prior quad keys", as
 
   try {
     await commitPatchToDenokv(
-      { insertions: [q1], deletions: [] },
+      { insertions: [fixtureQuad1], deletions: [] },
       { kv, keyPrefix },
     );
     await commitPatchToDenokv(
-      { insertions: [], deletions: [q1] },
+      { insertions: [], deletions: [fixtureQuad1] },
       { kv, keyPrefix },
     );
 
@@ -74,14 +74,14 @@ Deno.test(
 
     try {
       await commitPatchToDenokv(
-        { insertions: [q1], deletions: [] },
+        { insertions: [fixtureQuad1], deletions: [] },
         { kv, keyPrefix },
       );
 
       const generationBeforeReplace = await readActiveGeneration(kv, keyPrefix);
 
       await commitPatchToDenokv(
-        { insertions: [q2], deletions: [] },
+        { insertions: [fixtureQuad2], deletions: [] },
         { kv, keyPrefix },
         { importMode: "replace" },
       );

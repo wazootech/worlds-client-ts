@@ -68,7 +68,7 @@ export interface ComunicaBinding {
 }
 
 import { TransactionalRdfjsStore } from "@/client/quad-store/mod.ts";
-import type { Transaction } from "@/client/quad-store/mod.ts";
+import type { ReadonlyStore, Transaction } from "@/client/quad-store/mod.ts";
 
 /**
  * ComunicaSparqlEngineOptions are the options for ComunicaSparqlEngine.
@@ -106,7 +106,7 @@ export class ComunicaSparqlEngine implements SparqlEngineInterface {
       tx = this.options.createTransaction();
       storeForQuery = new TransactionalRdfjsStore({
         readStore: this.options
-          .store as import("@/client/quad-store/transactional-rdfjs-store.ts").ReadonlyStore,
+          .store as ReadonlyStore,
         transaction: tx,
       });
     }
@@ -194,12 +194,12 @@ export async function executeSparql(
               ),
             );
         }
-      } catch (err) {
-        reject(err);
+      } catch (error) {
+        reject(error);
       }
-    }).catch((err) => {
+    }).catch((error) => {
       clearTimer();
-      reject(err);
+      reject(error);
     });
   });
 }
@@ -239,10 +239,10 @@ async function handleBindings(
       }
     };
 
-    const onError = (err: unknown) => {
+    const onError = (error: unknown) => {
       if (!finished) {
         finished = true;
-        reject(err);
+        reject(error);
       }
     };
 

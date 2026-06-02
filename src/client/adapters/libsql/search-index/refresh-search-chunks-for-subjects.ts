@@ -1,7 +1,7 @@
 import type * as rdfjs from "@rdfjs/types";
 
 import { isTextualLiteral } from "@/client/quad-store/mod.ts";
-import { buildSelectTextualLiteralQuadsForSubjects } from "../quad-store/libsql-quad-query-builder.ts";
+import { buildSelectTextualLiteralQuadsForSubjects } from "@/client/adapters/libsql/quad-store/libsql-quad-query-builder.ts";
 import type { ProjectSearchChunksOptions } from "@/client/adapters/libsql/search-index/project-search-chunks.ts";
 import { refreshSearchChunksForQuads } from "@/client/adapters/libsql/search-index/project-search-chunks.ts";
 import { quadFromLibsqlRow } from "@/client/adapters/libsql/libsql-quad-row.ts";

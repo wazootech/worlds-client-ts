@@ -7,12 +7,12 @@ import { importViaTransaction } from "./import-export-via-transaction.ts";
 
 const { namedNode, literal, quad } = DataFactory;
 
-const q1 = quad(
+const fixtureQuad1 = quad(
   namedNode("http://example.org/s1"),
   namedNode("http://example.org/p1"),
   literal("one"),
 );
-const q2 = quad(
+const fixtureQuad2 = quad(
   namedNode("http://example.org/s2"),
   namedNode("http://example.org/p2"),
   literal("two"),
@@ -31,8 +31,8 @@ function createRecordingTransaction(): {
       commit: (patch, context) => {
         lastContext = context;
         // push insertions
-        for (const q of patch.insertions) {
-          buffered.push(q);
+        for (const quad of patch.insertions) {
+          buffered.push(quad);
         }
         return Promise.resolve();
       },
@@ -51,7 +51,10 @@ Deno.test("importViaTransaction - buffers quads and commits with merge mode", as
   const recording = createRecordingTransaction();
 
   await importViaTransaction(
-    { mode: "merge", source: { kind: "quads", quads: [q1, q2] } },
+    {
+      mode: "merge",
+      source: { kind: "quads", quads: [fixtureQuad1, fixtureQuad2] },
+    },
     { createTransaction: recording.createTransaction },
   );
 
@@ -63,7 +66,7 @@ Deno.test("importViaTransaction - defaults mode to merge", async () => {
   const recording = createRecordingTransaction();
 
   await importViaTransaction(
-    { source: { kind: "quads", quads: [q1] } },
+    { source: { kind: "quads", quads: [fixtureQuad1] } },
     { createTransaction: recording.createTransaction },
   );
 
@@ -74,7 +77,7 @@ Deno.test("importViaTransaction - passes replace mode to commit context", async 
   const recording = createRecordingTransaction();
 
   await importViaTransaction(
-    { mode: "replace", source: { kind: "quads", quads: [q2] } },
+    { mode: "replace", source: { kind: "quads", quads: [fixtureQuad2] } },
     { createTransaction: recording.createTransaction },
   );
 

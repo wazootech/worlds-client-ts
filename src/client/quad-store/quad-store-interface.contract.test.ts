@@ -5,12 +5,12 @@ import { RdfjsQuadStore } from "@/client/adapters/rdfjs/rdfjs-quad-store.ts";
 
 const { namedNode, literal, quad } = DataFactory;
 
-const q1 = quad(
+const fixtureQuad1 = quad(
   namedNode("http://example.org/s1"),
   namedNode("http://example.org/p1"),
   literal("value1"),
 );
-const q2 = quad(
+const fixtureQuad2 = quad(
   namedNode("http://example.org/s2"),
   namedNode("http://example.org/p2"),
   literal("value2"),
@@ -49,11 +49,11 @@ export function registerQuadStoreContractTests(
     try {
       await store.import({
         mode: "merge",
-        source: { kind: "quads", quads: [q1] },
+        source: { kind: "quads", quads: [fixtureQuad1] },
       });
       await store.import({
         mode: "merge",
-        source: { kind: "quads", quads: [q2] },
+        source: { kind: "quads", quads: [fixtureQuad2] },
       });
 
       const response = await store.export({ format: { kind: "quads" } });
@@ -71,11 +71,11 @@ export function registerQuadStoreContractTests(
     try {
       await store.import({
         mode: "merge",
-        source: { kind: "quads", quads: [q1] },
+        source: { kind: "quads", quads: [fixtureQuad1] },
       });
       await store.import({
         mode: "replace",
-        source: { kind: "quads", quads: [q2] },
+        source: { kind: "quads", quads: [fixtureQuad2] },
       });
 
       const response = await store.export({ format: { kind: "quads" } });
@@ -83,7 +83,7 @@ export function registerQuadStoreContractTests(
         throw new Error("Expected quads response");
       }
       assertEquals(response.quads.length, 1);
-      assertEquals(response.quads[0].subject.value, q2.subject.value);
+      assertEquals(response.quads[0].subject.value, fixtureQuad2.subject.value);
     } finally {
       if (cleanup) await cleanup();
     }

@@ -8,7 +8,7 @@ import { quadFromLibsqlRow } from "@/client/adapters/libsql/libsql-quad-row.ts";
 import {
   buildMatchQuadsQuery,
   DEFAULT_LIBSQL_MATCH_PAGE_SIZE,
-} from "../quad-store/libsql-quad-query-builder.ts";
+} from "@/client/adapters/libsql/quad-store/libsql-quad-query-builder.ts";
 
 /**
  * RebuildLibsqlSearchIndexFromQuadsResult reports how many quads and chunk rows were processed.

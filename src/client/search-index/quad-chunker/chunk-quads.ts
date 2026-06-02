@@ -49,7 +49,7 @@ export async function chunkQuads(
   preComputedIds?: string[],
 ): Promise<ChunkRowPayload[]> {
   // Filter valid candidates from the stream using the centralized domain validator
-  const candidates = quads.filter((q) => isTextualLiteral(q.object));
+  const candidates = quads.filter((quad) => isTextualLiteral(quad.object));
 
   if (candidates.length === 0) {
     return [];
@@ -64,9 +64,9 @@ export async function chunkQuads(
     }
   } else {
     idByQuad = new Map();
-    const hashPromises = candidates.map(async (q) => ({
-      quad: q,
-      id: await hashQuad(q),
+    const hashPromises = candidates.map(async (quad) => ({
+      quad: quad,
+      id: await hashQuad(quad),
     }));
     const resolved = await Promise.all(hashPromises);
     for (const { quad, id } of resolved) {
@@ -75,12 +75,12 @@ export async function chunkQuads(
   }
 
   // Prepare batched components and associated correlation vectors.
-  const texts = candidates.map((q) => q.object.value);
-  const metadatas = candidates.map((q) => ({
-    quad_id: idByQuad.get(q)!,
-    subject: q.subject.value,
-    predicate: q.predicate.value,
-    graph: q.graph.value,
+  const texts = candidates.map((quad) => quad.object.value);
+  const metadatas = candidates.map((quad) => ({
+    quad_id: idByQuad.get(quad)!,
+    subject: quad.subject.value,
+    predicate: quad.predicate.value,
+    graph: quad.graph.value,
   }));
 
   // Execute collective chunking via engine injection.

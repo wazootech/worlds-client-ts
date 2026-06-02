@@ -5,7 +5,7 @@ import { DataFactory } from "n3";
 import type * as rdfjs from "@rdfjs/types";
 import { collectQuadsFromStream } from "@/client/quad-store/mod.ts";
 import { LibsqlRdfjsStore } from "./mod.ts";
-import { testLibsqlSchemaBuilder } from "../libsql-test-fixtures.ts";
+import { testLibsqlSchemaBuilder } from "@/client/adapters/libsql/libsql-test-fixtures.ts";
 
 const { namedNode, literal, blankNode } = DataFactory;
 
@@ -120,8 +120,8 @@ Deno.test("LibsqlRdfjsStore.match - by subject only returns matching quads", asy
   );
 
   assertEquals(results.length, 2);
-  for (const q of results) {
-    assertEquals(q.subject.value, "urn:a");
+  for (const quad of results) {
+    assertEquals(quad.subject.value, "urn:a");
   }
 });
 
@@ -138,8 +138,8 @@ Deno.test("LibsqlRdfjsStore.match - by predicate only uses PSO index", async () 
   );
 
   assertEquals(results.length, 2);
-  for (const q of results) {
-    assertEquals(q.predicate.value, "urn:target");
+  for (const quad of results) {
+    assertEquals(quad.predicate.value, "urn:target");
   }
 });
 

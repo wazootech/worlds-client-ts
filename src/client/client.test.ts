@@ -18,8 +18,8 @@ function createTestClient(store: Store): Client {
       createTransaction: () => {
         return new Transaction({
           commit: (patch: Patch) => {
-            for (const q of patch.insertions) store.addQuad(q);
-            for (const q of patch.deletions) store.removeQuad(q);
+            for (const quad of patch.insertions) store.addQuad(quad);
+            for (const quad of patch.deletions) store.removeQuad(quad);
             return Promise.resolve();
           },
         });
@@ -221,8 +221,8 @@ Deno.test("Client - queryEngine enables SELECT queries", async () => {
       createTransaction: () => {
         return new Transaction({
           commit: (patch: Patch) => {
-            for (const q of patch.insertions) store.addQuad(q);
-            for (const q of patch.deletions) store.removeQuad(q);
+            for (const quad of patch.insertions) store.addQuad(quad);
+            for (const quad of patch.deletions) store.removeQuad(quad);
             return Promise.resolve();
           },
         });
