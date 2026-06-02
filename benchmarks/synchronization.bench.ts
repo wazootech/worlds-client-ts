@@ -26,10 +26,7 @@ function generateBatchPayload(count: number) {
   return bulkQuads;
 }
 
-// -----------------------------------------------------------------------------
-// INTENDED USAGE: TRANSACTION CONSOLIDATION BENCHMARKS
-// Benchmarks the performance scaling of consolidated transactional batch imports.
-// -----------------------------------------------------------------------------
+// Measures the performance scaling of consolidated transactional batch imports.
 
 Deno.bench({
   name: "Sync: Consolidated Batch Commit (10 Quads)",
