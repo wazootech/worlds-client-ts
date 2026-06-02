@@ -13,7 +13,7 @@ export type SerializedExportRequest = Omit<ExportRequest, "format"> & {
 /**
  * createExportRdfTool creates an AI SDK tool for exporting data from the knowledge base.
  *
- * @param client The Worlds ClientInterface instance.
+ * @param client The Worlds Client instance.
  * @returns An AI SDK tool for exporting data from the knowledge base.
  */
 export function createExportRdfTool(client: ClientInterface) {

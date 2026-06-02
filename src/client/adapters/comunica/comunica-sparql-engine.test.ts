@@ -3,11 +3,14 @@ import { createClient } from "@libsql/client";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import type { Quad } from "n3";
 import { DataFactory, Parser, Store } from "n3";
+import { commitPatchToLibsql } from "@/client/adapters/libsql/commit-patch-to-libsql.ts";
+import { Transaction } from "@/client/quad-store/mod.ts";
+import type * as rdfjs from "@rdfjs/types";
+import { LibsqlRdfjsStore } from "@/client/adapters/libsql/rdfjs-store/mod.ts";
 import {
-  commitPatchToLibsql,
   initializeLibsqlSchema,
-  LibsqlQueryBuilder,
-  LibsqlStore,
+  LibsqlSchemaBuilder,
+  LibsqlSearchQueryBuilder,
 } from "@/client/adapters/libsql/mod.ts";
 import { canonize } from "rdf-canonize";
 import { encodeBase64Url } from "@std/encoding/base64url";
@@ -21,8 +24,7 @@ import {
   ComunicaSparqlEngine,
   executeSparql,
 } from "./comunica-sparql-engine.ts";
-import { DenokvQuadStore } from "@/client/adapters/denokv/denokv-quad-store.ts";
-import { DenokvRdfjsStore } from "@/client/adapters/denokv/denokv-rdfjs-store.ts";
+import { createDenokvStoresForTest } from "@/client/adapters/denokv/create-denokv-stores-for-test.ts";
 
 const queryEngine = new QueryEngine();
 
@@ -81,13 +83,16 @@ Deno.test(
 
       const n3Store = new Store(quads);
 
-      const quadStore = new DenokvQuadStore({ kv });
-      await quadStore.import({
+      const { denokvQuadStore, denokvRdfjsStore: kvStore } =
+        createDenokvStoresForTest(
+          {
+            kv,
+          },
+        );
+      await denokvQuadStore.import({
         mode: "merge",
         source: { kind: "quads", quads },
       });
-
-      const kvStore = new DenokvRdfjsStore({ kv });
 
       const query = [
         "SELECT ?s ?p ?o WHERE { ?s ?p ?o }",
@@ -95,7 +100,11 @@ Deno.test(
       ].join("\n");
 
       const n3Response = await executeSparql(queryEngine, n3Store, { query });
-      const kvResponse = await executeSparql(queryEngine, kvStore, { query });
+      const kvResponse = await executeSparql(
+        queryEngine,
+        kvStore as unknown as rdfjs.Store,
+        { query },
+      );
 
       if (n3Response.kind !== "select") throw new Error("Expected select");
       if (kvResponse.kind !== "select") throw new Error("Expected select");
@@ -182,20 +191,25 @@ Deno.test("Same SPARQL query works on bnodes vs processed (canonicalized + subje
       const processed = new Store();
 
       for (const statement of canonicalStatements) {
-        const [q] = parser.parse(statement) as Quad[];
-        if (!q) continue;
+        const [parsedQuad] = parser.parse(statement) as Quad[];
+        if (!parsedQuad) continue;
 
         // Subject skolemization
-        const subject = q.subject.termType === "BlankNode"
+        const subject = parsedQuad.subject.termType === "BlankNode"
           ? DataFactory.namedNode(
             `urn:worlds:quad:${
               encodeBase64Url(new TextEncoder().encode(statement))
             }`,
           )
-          : q.subject;
+          : parsedQuad.subject;
 
         processed.addQuad(
-          DataFactory.quad(subject, q.predicate, q.object, q.graph),
+          DataFactory.quad(
+            subject,
+            parsedQuad.predicate,
+            parsedQuad.object,
+            parsedQuad.graph,
+          ),
         );
       }
 
@@ -279,10 +293,14 @@ Deno.test(
 
     const sparqlEngine = new ComunicaSparqlEngine({
       queryEngine,
-      store,
-      onVoid: () => {
-        voidInvoked = true;
-        return Promise.resolve();
+      store: store,
+      createTransaction: () => {
+        return new Transaction({
+          commit: () => {
+            voidInvoked = true;
+            return Promise.resolve();
+          },
+        });
       },
     });
 
@@ -447,40 +465,37 @@ function createNonBooleanAskEngine(): ComunicaQueryEngine {
 }
 
 Deno.test(
-  "ComunicaSparqlEngine - LibsqlStore countQuads supports selective SPARQL",
+  "ComunicaSparqlEngine - LibsqlRdfjsStore countQuads supports selective SPARQL",
   async () => {
     const databaseClient = createClient({ url: ":memory:" });
-    const libsqlQueryBuilder = new LibsqlQueryBuilder(32);
-    await initializeLibsqlSchema(databaseClient, libsqlQueryBuilder);
+    const libsqlQueryBuilder = new LibsqlSearchQueryBuilder(32);
+    await initializeLibsqlSchema(databaseClient, new LibsqlSchemaBuilder(32));
 
     const textSplitter = new RecursiveCharacterTextSplitter({
       chunkSize: 1000,
     });
-    const libsqlStore = new LibsqlStore({
+    const libsqlRdfjsStore = new LibsqlRdfjsStore({
       client: databaseClient,
-      queryBuilder: libsqlQueryBuilder,
-      commitHandler: async (patch) => {
-        await commitPatchToLibsql(patch, {
-          client: databaseClient,
-          textSplitter,
-          libsqlQueryBuilder,
-          skipSearchIndexProjection: true,
-        });
-      },
     });
 
     const subjectIri = "urn:libsql:entity:0";
-    libsqlStore.addQuad(
-      DataFactory.quad(
-        DataFactory.namedNode(subjectIri),
-        DataFactory.namedNode("urn:libsql:predicate"),
-        DataFactory.literal("LibsqlStore cardinality hint path"),
-      ),
-    );
-    await libsqlStore.commit();
+    await commitPatchToLibsql({
+      insertions: [
+        DataFactory.quad(
+          DataFactory.namedNode(subjectIri),
+          DataFactory.namedNode("urn:libsql:predicate"),
+          DataFactory.literal("LibsqlRdfjsStore cardinality hint path"),
+        ),
+      ],
+      deletions: [],
+    }, {
+      client: databaseClient,
+      textSplitter,
+      searchQueryBuilder: libsqlQueryBuilder,
+    });
 
     assertEquals(
-      await libsqlStore.countQuads(
+      await libsqlRdfjsStore.countQuads(
         DataFactory.namedNode(subjectIri),
         null,
         null,
@@ -491,7 +506,7 @@ Deno.test(
 
     const sparqlEngine = new ComunicaSparqlEngine({
       queryEngine,
-      store: libsqlStore,
+      store: libsqlRdfjsStore as unknown as rdfjs.Store,
     });
     const response = await sparqlEngine.execute({
       query:
@@ -504,7 +519,79 @@ Deno.test(
     assertEquals(response.data.results.bindings.length, 1);
     assertEquals(
       response.data.results.bindings[0]?.object?.value,
-      "LibsqlStore cardinality hint path",
+      "LibsqlRdfjsStore cardinality hint path",
     );
+  },
+);
+
+Deno.test(
+  "ComunicaSparqlEngine - does NOT commit on read-only SELECT",
+  async () => {
+    let commitCount = 0;
+    const store = new Store();
+
+    const queryEngineLocal = new QueryEngine();
+    const sparqlEngine = new ComunicaSparqlEngine({
+      queryEngine: queryEngineLocal,
+      store: store,
+      createTransaction: () => {
+        return new Transaction({
+          commit: () => {
+            commitCount++;
+            return Promise.resolve();
+          },
+        });
+      },
+    });
+
+    store.addQuad(
+      DataFactory.namedNode("https://example.com/s"),
+      DataFactory.namedNode("https://example.com/p"),
+      DataFactory.namedNode("https://example.com/o"),
+    );
+
+    const response = await sparqlEngine.execute({
+      query: "SELECT ?s ?p ?o WHERE { ?s ?p ?o }",
+    });
+
+    assertEquals(response.kind, "select");
+    assertEquals(commitCount, 0, "Should not commit on read-only queries");
+  },
+);
+
+Deno.test(
+  "ComunicaSparqlEngine - COMMITS on mutating SPARQL UPDATE",
+  async () => {
+    let commitCount = 0;
+    const store = new Store();
+
+    const queryEngineLocal = new QueryEngine();
+    const sparqlEngine = new ComunicaSparqlEngine({
+      queryEngine: queryEngineLocal,
+      store: store,
+      createTransaction: () => {
+        return new Transaction({
+          commit: (patch) => {
+            commitCount++;
+            for (const quad of patch.insertions) store.addQuad(quad);
+            for (const quad of patch.deletions) store.removeQuad(quad);
+            return Promise.resolve();
+          },
+        });
+      },
+    });
+
+    const response = await sparqlEngine.execute({
+      query:
+        `INSERT DATA { <https://example.com/s> <https://example.com/p> <https://example.com/o> }`,
+    });
+
+    assertEquals(response.kind, "void");
+    assertEquals(
+      commitCount,
+      1,
+      "Should commit exactly once on mutating updates",
+    );
+    assertEquals(store.size, 1);
   },
 );

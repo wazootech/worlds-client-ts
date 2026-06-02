@@ -1,4 +1,3 @@
-import type { ClientInterface } from "./client-interface.ts";
 import type {
   ExportRequest,
   ExportResponse,
@@ -11,69 +10,108 @@ import type {
   SparqlResponse,
 } from "./sparql-engine/mod.ts";
 import type {
-  RebuildSearchIndexRequest,
-  RebuildSearchIndexResponse,
+  ReindexRequest,
+  ReindexResponse,
   SearchIndexInterface,
   SearchRequest,
   SearchResponse,
 } from "./search-index/mod.ts";
 
 /**
- * Adapter details the aggregate internal subsystems powering active execution.
+ * ClientInterface is the public contract for the Worlds API.
  */
-export interface Adapter {
+export interface ClientInterface {
   /**
-   * quadStore manages the ingestion and extraction of triple/quad data.
+   * import imports data into the Worlds API.
+   * @param request The import request body.
+   * @returns A promise that resolves when import completes.
    */
-  quadStore: QuadStoreInterface;
+  import(request: ImportRequest): Promise<void>;
 
   /**
-   * sparqlEngine evaluates declarative queries and updates against the graph.
+   * export exports data from the Worlds API.
+   * @param request The export request body.
+   * @returns A promise that resolves to the export response.
    */
-  sparqlEngine?: SparqlEngineInterface;
+  export(request: ExportRequest): Promise<ExportResponse>;
 
   /**
-   * searchIndex enables high-performance keyword search across the graph literals.
+   * sparql executes a SPARQL query or update against the RDF store.
+   * @param request The SPARQL request body.
+   * @returns A promise that resolves to the SPARQL response.
    */
-  searchIndex: SearchIndexInterface;
+  sparql(request: SparqlRequest): Promise<SparqlResponse>;
+
+  /**
+   * search searches the RDF store for the given query.
+   * @param request The search request body.
+   * @returns A promise that resolves to the search response.
+   */
+  search(request: SearchRequest): Promise<SearchResponse>;
+
+  /**
+   * reindex rebuilds the derived search index from durable quads.
+   * On scan topologies, reindex is a documented, safe no-op.
+   * @param request optional include/exclude scope and read page size.
+   * @returns A promise that resolves to processed quad and chunk row counts.
+   */
+  reindex(request?: ReindexRequest): Promise<ReindexResponse>;
 }
 
 /**
- * Client is the standard gateway client for the Worlds API.
- * It aggregates the specialized capabilities for data persistence,
- * declarative querying, and fuzzy searching.
+ * ClientOptions wires quad, SPARQL, and search facades for custom assembly and tests.
+ */
+export interface ClientOptions {
+  /** quadStore manages the ingestion and extraction of triple/quad data. */
+  quadStore?: QuadStoreInterface;
+
+  /** sparqlEngine evaluates declarative queries and updates against the graph. */
+  sparqlEngine?: SparqlEngineInterface;
+
+  /** searchIndex enables high-performance keyword search across the graph literals. */
+  searchIndex?: SearchIndexInterface;
+}
+
+/**
+ * Client synthesizes a Worlds API facade from wired quad, SPARQL, and search subsystems.
  */
 export class Client implements ClientInterface {
-  public constructor(protected readonly adapter: Adapter) {}
+  public constructor(
+    private readonly options: ClientOptions,
+  ) {}
 
-  public async import(request: ImportRequest): Promise<void> {
-    return await this.adapter.quadStore.import(request);
+  public import(request: ImportRequest): Promise<void> {
+    if (!this.options.quadStore) {
+      throw new Error("Quad store is not configured.");
+    }
+    return this.options.quadStore.import(request);
   }
 
-  public async export(request: ExportRequest): Promise<ExportResponse> {
-    return await this.adapter.quadStore.export(request);
+  public export(request: ExportRequest): Promise<ExportResponse> {
+    if (!this.options.quadStore) {
+      throw new Error("Quad store is not configured.");
+    }
+    return this.options.quadStore.export(request);
   }
 
   public async sparql(request: SparqlRequest): Promise<SparqlResponse> {
-    if (!this.adapter.sparqlEngine) {
+    if (!this.options.sparqlEngine) {
       throw new Error("SPARQL engine is not configured.");
     }
-
-    return await this.adapter.sparqlEngine.execute(request);
+    return await this.options.sparqlEngine.execute(request);
   }
 
-  public async search(request: SearchRequest): Promise<SearchResponse> {
-    return await this.adapter.searchIndex.search(request);
-  }
-
-  public async rebuildSearchIndex(
-    request?: RebuildSearchIndexRequest,
-  ): Promise<RebuildSearchIndexResponse> {
-    if (!this.adapter.searchIndex.rebuildSearchIndex) {
-      throw new Error(
-        "search index rebuild is only supported for LibSQL-backed clients",
-      );
+  public search(request: SearchRequest): Promise<SearchResponse> {
+    if (!this.options.searchIndex) {
+      throw new Error("Search index is not configured.");
     }
-    return await this.adapter.searchIndex.rebuildSearchIndex(request);
+    return this.options.searchIndex.search(request);
+  }
+
+  public reindex(request?: ReindexRequest): Promise<ReindexResponse> {
+    if (!this.options.searchIndex) {
+      throw new Error("Search index is not configured.");
+    }
+    return this.options.searchIndex.reindex(request);
   }
 }

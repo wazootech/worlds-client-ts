@@ -67,13 +67,16 @@ export interface ComunicaBinding {
   get?: (variable: string) => rdfjs.Term | undefined;
 }
 
+import { TransactionalRdfjsStore } from "@/client/quad-store/mod.ts";
+import type { ReadonlyStore, Transaction } from "@/client/quad-store/mod.ts";
+
 /**
  * ComunicaSparqlEngineOptions are the options for ComunicaSparqlEngine.
  */
 export interface ComunicaSparqlEngineOptions {
   /**
    * store is the RDFJS store to execute the query on.
-   * For join cardinality hints, pass a store that implements `countQuads` (e.g. `LibsqlStore` from `createLibsqlAdapter`).
+   * For join cardinality hints, pass a store that implements `countQuads` (e.g. `LibsqlRdfjsStore` from `createLibsqlClient`).
    */
   store: rdfjs.Store;
 
@@ -81,10 +84,9 @@ export interface ComunicaSparqlEngineOptions {
   queryEngine: ComunicaQueryEngine;
 
   /**
-   * onVoid is an optional callback invoked after a successful void (UPDATE)
-   * query. Use it to flush a persistent store buffer or trigger side effects.
+   * createTransaction is an optional factory to create a Transaction for SPARQL UPDATEs.
    */
-  onVoid?: () => Promise<void>;
+  createTransaction?: () => Transaction;
 }
 
 /**
@@ -97,17 +99,34 @@ export class ComunicaSparqlEngine implements SparqlEngineInterface {
   ) {}
 
   public async execute(request: SparqlRequest): Promise<SparqlResponse> {
-    const response = await executeSparql(
-      this.options.queryEngine,
-      this.options.store,
-      request,
-    );
+    let tx: Transaction | undefined;
+    let storeForQuery: rdfjs.Store = this.options.store;
 
-    if (response.kind === "void") {
-      await this.options.onVoid?.();
+    if (this.options.createTransaction) {
+      tx = this.options.createTransaction();
+      storeForQuery = new TransactionalRdfjsStore({
+        readStore: this.options
+          .store as ReadonlyStore,
+        transaction: tx,
+      });
     }
 
-    return response;
+    try {
+      const response = await executeSparql(
+        this.options.queryEngine,
+        storeForQuery,
+        request,
+      );
+
+      if (response.kind === "void") {
+        await tx?.commit();
+      }
+
+      return response;
+    } catch (error) {
+      tx?.rollback();
+      throw error;
+    }
   }
 }
 
@@ -175,12 +194,12 @@ export async function executeSparql(
               ),
             );
         }
-      } catch (err) {
-        reject(err);
+      } catch (error) {
+        reject(error);
       }
-    }).catch((err) => {
+    }).catch((error) => {
       clearTimer();
-      reject(err);
+      reject(error);
     });
   });
 }
@@ -220,10 +239,10 @@ async function handleBindings(
       }
     };
 
-    const onError = (err: unknown) => {
+    const onError = (error: unknown) => {
       if (!finished) {
         finished = true;
-        reject(err);
+        reject(error);
       }
     };
 

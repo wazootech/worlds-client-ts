@@ -11,17 +11,20 @@ the client-side edge semantic environments:
 ### Graph store
 
 The in-memory RDF surface used by adapters and Comunica. Production LibSQL and
-Deno KV paths query **persistent hexastore** stores (`LibsqlStore`,
+Deno KV paths query **persistent hexastore** stores (`LibsqlRdfjsStore`,
 `DenokvRdfjsStore`) without hydrating a full N3 mirror per request. The RDF/JS
 adapter still uses `N3.Store` for local development and tests.
 
-### Hydration
+### Durable reads vs in-memory N3
 
-For **RDF/JS** and historical **libsql-n3** topologies, hydration bootstrapped
-an ephemeral `N3.Store` from durable quads. **Production LibSQL and Denokv**
-skip that path: SPARQL and search read through persistent stores directly. Deno
-KV lazy reads still fetch quads from KV on demand without a process-wide N3
-mirror.
+**Production LibSQL and Deno KV** factories wire hexastore `*RdfjsStore`
+implementations only — Comunica SPARQL and search read durable indexes directly,
+with no per-query N3 mirror. **In-memory RDF/JS** (`RdfjsQuadStore` over
+`N3.Store`) is the intentional local-dev and test topology. Historical
+**libsql-n3** (hydrate durable quads into N3, then query) was removed from the
+package; see [CHANGELOG.md](CHANGELOG.md) and
+[discussion #45](https://github.com/wazootech/worlds-client-ts/discussions/45)
+for crossover methodology only.
 
 ### Synchronization
 
@@ -121,9 +124,9 @@ mathematical brevity.
    `@/client/adapters/libsql/mod.ts`.
 2. **Same domain folder.** `./file.ts` or `./subfolder/mod.ts` for siblings and
    children.
-3. **Nested folder, parent barrel.** `@/client/adapters/libsql/mod.ts` or
-   `@/client/adapters/libsql/store/mod.ts` from `libsql/search/` or
-   `libsql/sync/` — not `../` and not `@worlds/client/...`.
+3. **Nested folder, parent barrel.** `@/client/adapters/libsql/mod.ts` from
+   `libsql/search-index/` or `libsql/rdfjs-store/sync/` — not `../` and not
+   `@worlds/client/...`.
 
 Never use parent-relative `../` to reach another domain. Never import
 `@worlds/client/...` anywhere under `src/`.
@@ -157,9 +160,13 @@ would cycle — e.g. `chunk-quads.ts` uses `@/client/quad-store/mod.ts`, not
 
 When adding a new importable subpath, add it to `exports` in `deno.json` for
 `@worlds/client/...` consumers. Mirror the file path under `@/client/...` for
-in-repo imports (no duplicate `@worlds/client/*` entries in `imports`). Under
-`adapters/libsql/`, use `store/`, `search/`, and `sync/` subfolders (each with a
-`mod.ts` barrel); keep shared options and factories at the libsql root.
+in-repo imports (no duplicate `@worlds/client/*` entries in `imports`). Shared
+topology-agnostic patch buffering lives in `rdfjs-buffer/` (export
+`@worlds/client/quad-store`); durable adapter `*RdfjsStore` implementations live
+under `adapters/*/rdfjs-store/`. Under durable adapters, keep seam subfolders
+for `quad-store/`, `search-index/`, and `rdfjs-store/` (each with a `mod.ts`
+barrel). Internal SQL, KV, and sync helpers live under the seam that owns them;
+factories remain at the adapter root.
 
 ### No inline imports
 
@@ -283,6 +290,24 @@ green-passing integration pipeline runs:
   - **Packaging:** JSR strips `links` and `exclude` from `deno.json`; the
     vendored `jsonld-context-parser` redirect is local-only (see below).
 
+## Store naming conventions
+
+Public graph persistence facades must use explicit suffixes:
+
+- **`*RdfjsStore`** — implements `rdfjs.Store` (e.g. `LibsqlRdfjsStore`,
+  `DenokvRdfjsStore`). File name: `rdfjs-store/libsql-rdfjs-store.ts`.
+- **`*QuadStore`** — implements `QuadStoreInterface` (e.g. `LibsqlQuadStore`,
+  `DenokvQuadStore`, in-memory `RdfjsQuadStore`). File name:
+  `quad-store/libsql-quad-store.ts`.
+- **No bare `*Store`** names on public graph classes (`LibsqlStore`,
+  `DenokvStore`).
+
+LibSQL: `client.import` → `LibsqlQuadStore` → `LibsqlRdfjsStore.commit()`. Deno
+KV: `client.import` → `DenokvQuadStore` (native KV bulk path). Both use
+`*RdfjsStore` for Comunica SPARQL. Advanced assembly uses explicit
+`new Client({ quadStore, searchIndex, sparqlEngine? })` with the suffixed
+stores.
+
 ## Architectural system map
 
 To maintain absolute alignment and prevent context drift, all development must
@@ -297,58 +322,90 @@ latency during query execution at scale.
 
 ### LibSQL client entry point (hexastore)
 
-Hexastore indexes are provisioned at schema init. **`createLibsqlAdapter`**
-([`create-libsql-adapter.ts`](src/client/adapters/libsql/create-libsql-adapter.ts))
-— `LibsqlStore` + hexastore indexes; pass `queryEngine` to enable SPARQL.
-`LibsqlStore.match` keyset-pages by `quads.id` (`matchPageSize`, default 1000).
-Optional `countQuads` supplies Comunica join cardinality hints. Wrap with
-`new Client(await createLibsqlAdapter(...))`.
+Hexastore indexes are provisioned at schema init. **`createLibsqlClient`**
+([`create-libsql-client.ts`](src/client/adapters/libsql/create-libsql-client.ts))
+— `LibsqlRdfjsStore` + `LibsqlQuadStore` + quad indexes; pass `queryEngine` to
+enable SPARQL. `LibsqlRdfjsStore.match` keyset-pages by `quads.id`
+(`matchPageSize`, default 1000). Optional `countQuads` supplies Comunica join
+cardinality hints. Use `await createLibsqlClient({ client, queryEngine })`.
 
 ### Client lifecycle (runtime)
 
-Canonical construction: `new Client(await createXAdapter(...))`. Do not
-reintroduce `createXClient` one-line wrappers.
+**In-memory:**
+`new Client({ quadStore: new RdfjsQuadStore(store), searchIndex: new RdfjsSearchIndex(store), sparqlEngine? })`
+with an N3 `Store`.
 
-For standard Comunica SPARQL, pass a Comunica `queryEngine` into the adapter
-options (e.g. `createLibsqlAdapter({ queryEngine })`).
+**Durable:** `await createLibsqlClient(...)` / `createDenokvClient(...)` —
+factories return `ClientInterface` instances (`new Client` internally).
+
+For standard Comunica SPARQL, pass a Comunica `queryEngine` into factory options
+(e.g. `createLibsqlClient({ queryEngine })`) or wire `ComunicaSparqlEngine` when
+assembling `new Client` manually.
+
+Custom assembly uses `new Client` with `ClientOptions`; wire
+`LibsqlSearchIndex`, `createLibsqlPersistHooks`, and suffixed stores directly
+when you need warm-start control beyond `createLibsqlClient`. Durable backends
+share buffer → `commit()` → `commitBufferedPatch` → `persistPatch` for import
+and SPARQL UPDATE; import commits run `ImportLifecycle` (`beforeImport` /
+`afterImport`) inside `commitBufferedPatch` when `PatchCommitContext.importMode`
+is set. `importViaBufferedRdfjsStore` materializes quads and calls
+`rdfjsStore.commit({ importMode })`. Replace import: LibSQL wipes
+`quads`/`chunks` in `commitPatchToLibsql`; Deno KV generation-swap in
+`commitPatchToDenokv`. Do not reintroduce pre-commit `onReplace` drains on the
+shared import helper. `createLibsqlPersistHooks` and `createDenokvPersistHooks`
+apply `searchIndexOnImport` via flat `commitHandler`, `beforeImport`, and
+`afterImport` wired onto `*RdfjsStore`. LibSQL defers built-in chunk projection
+via `searchIndexOnImport: "deferred"`; Deno KV supports the same defer hooks for
+external search indexes via
+`createDenokvPersistHooks({ searchIndexOnImport: "deferred", reindex })`.
 
 - **Long-running (Fly.io, DigitalOcean, 24/7 Deno):** one `Client` at process
-  boot. See [`examples/libsql-long-running`](examples/libsql-long-running).
+  boot. See [`examples/libsql-hello-world`](examples/libsql-hello-world).
 
-Use `benchmarks/sparql-hexastore-perf-libsql.bench.ts` and
-`benchmarks/sparql-hexastore-perf-denokv.bench.ts` (requires `--unstable-kv`) to
-compare LibSQL and Denokv hexastore execute on the same harness;
+Use `benchmarks/sparql-perf-libsql.bench.ts` and
+`benchmarks/sparql-perf-denokv.bench.ts` (requires `--unstable-kv`) to compare
+LibSQL and Denokv hexastore execute on the same harness;
 [`benchmarks/README.md`](benchmarks/README.md) and
 [discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69)
 document post-preload methodology. Historical hydrate+N3 vs libsql crossover:
 [discussion #45](https://github.com/wazootech/worlds-client-ts/discussions/45).
 Scale guidance for very large graphs:
 [#68](https://github.com/wazootech/worlds-client-ts/issues/68). SPARQL
-query-shape examples are inlined in `examples/libsql-sparql-scale`; see README
+query-shape examples are inlined in `examples/libsql-hello-world`; see README
 **Scale and SPARQL query shape**.
 
 ### Decoupled store lifecycle via dependency injection
 
-To support high-throughput, serverless container warm-starts, the instantiation
-and hydration of the Graph Store are fully externalized from the generalized
-`Client` factory. The caller injects an initialized `Store` directly, allowing
-trivial container-level caching across sequential HTTP invocations.
+To support high-throughput, serverless container warm-starts, graph store
+construction is fully externalized from the generalized `Client` factory. The
+caller injects initialized `quadStore` / `searchIndex` (and optional
+`sparqlEngine`) directly, allowing trivial container-level caching across
+sequential HTTP invocations.
 
 ### Sterile orchestration via adapters
 
 All active instrumentation (proxies, observers, and transactional mutation
-queues) is isolated strictly inside adapters (e.g. `createLibsqlAdapter`). The
-generalized `Client` is kept completely agnostic and sterile, accepting
-pre-composed adapter options ready for constructor injection.
+queues) is isolated strictly inside adapters (e.g. `createLibsqlClient`). The
+`ClientInterface` contract is the portable API; `Client` and durable factories
+wire topology-specific stores behind it.
 
-### Production deployment recommendation
+### Topology decision (LibSQL vs Deno KV vs in-memory)
 
-For production deployments and scale, the recommended topology is LibSQL-backed
-infrastructure through `createLibsqlAdapter` + `Client`, especially Turso Cloud.
-RDFJS-backed and Deno KV-backed search/index topologies, including deployments
-centered on `RdfjsSearchIndex` and `DenokvSearchIndex`, are appropriate for
-local development, tests, and constrained single-process demos, but they are not
-the recommended production path.
+**Production default:** `createLibsqlClient` when you need hybrid FTS/vector
+search, Turso/SQLite operations, and fast cold hexastore preload at scale (see
+[`benchmarks/README.md`](benchmarks/README.md) and
+[discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69)).
+
+**Consider Deno KV** when Deno Deploy / KV is fixed, the graph is warm or
+preloaded (`BENCH_REUSE_DB`-style reuse), and the hot path is subject-bound
+SPARQL execute — benchmarks show faster post-preload execute at 10k+ quads vs
+LibSQL, but much slower cold import/preload.
+
+**Avoid Deno KV for** cold large imports, hybrid search at scale, and workloads
+needing FTS5 + vectors (`DenokvSearchIndex` is O(N) scan).
+
+**In-memory RDF/JS:** `new Client` + `RdfjsQuadStore` / `RdfjsSearchIndex` for
+tests, local dev, and single-process demos only.
 
 ### Resilient hybrid search with vectorless fallbacks
 
@@ -431,7 +488,7 @@ Built-in label predicates (`rdfs:label`, `skos:prefLabel`, `schema:name`) are
 always indexed. Extend with `labelPredicates` on adapter options:
 
 ```typescript
-await createLibsqlAdapter({
+await createLibsqlClient({
   client: db,
   labelPredicates: ["http://example.org/customLabel"],
 });
@@ -445,7 +502,7 @@ alias tokens in `fts_value`.
 After a schema upgrade or bulk ontology import, rebuild all search chunks:
 
 ```typescript
-await client.rebuildSearchIndex({
+await client.reindex({
   include: { graphs: ["http://example.org/ontology"] },
 });
 ```
@@ -477,8 +534,9 @@ Keep AI tool descriptions and system prompts aligned with
 
 ### Choosing a LibSQL topology
 
-LibSQL uses hexastore indexes at schema init. SPARQL runs on `LibsqlStore`
-(hexastore) with no full N3 hydration per request.
+LibSQL uses quad indexes at schema init. SPARQL runs on `LibsqlRdfjsStore`
+(hexastore) with no full N3 hydration per request. Client import/export uses
+`LibsqlQuadStore`.
 
 ### SPARQL query shape at scale
 
@@ -486,10 +544,10 @@ At millions of quads, pick the topology at integration time.
 
 | Concern         | Production default                                                                                                           |
 | :-------------- | :--------------------------------------------------------------------------------------------------------------------------- |
-| LibSQL topology | `createLibsqlAdapter` with hexastore `LibsqlStore`, no full N3 mirror per request                                            |
+| LibSQL topology | `createLibsqlClient` with `LibsqlRdfjsStore` + `LibsqlQuadStore`, no full N3 mirror per request                              |
 | Hot-path SPARQL | Bind at least one term (subject, predicate, or object). Subject-bound property lookups match hexastore perf selective shapes |
 | Avoid at scale  | Unbound `?s ?p ?o` (even with `LIMIT`) on libsqlStore; fullScan degrades to hundreds of ms as quads grow                     |
-| Cardinality     | `LibsqlStore.countQuads` is used by Comunica when hexastore SPARQL is wired (no extra adapter config)                        |
+| Cardinality     | `LibsqlRdfjsStore.countQuads` is used by Comunica when hexastore SPARQL is wired (no extra adapter config)                   |
 
 Query helpers (same shapes as benchmarks):
 
@@ -502,8 +560,8 @@ const devScanQuery =
 
 ### Warm container patterns
 
-- **Serverless / edge (warm isolate):** build `Adapter` or `Client` once in
-  module scope per isolate; reuse across HTTP requests.
+- **Serverless / edge (warm isolate):** build one `Client` once in module scope
+  per isolate; reuse across HTTP requests.
 - **Long-running (Fly.io, DigitalOcean, 24/7 Deno):** one `Client` at process
   boot. LibSQL does not require N3 hydration; build one `Client` per
   process/isolate and reuse it across requests.
@@ -514,10 +572,13 @@ const devScanQuery =
 | :----------------------------------- | :------------------------------------------------------------------------------- |
 | `searchIndexOnImport: "incremental"` | Default. Chunks each quad on commit (inline FTS/vector projection).              |
 | `searchIndexOnImport: "deferred"`    | Persists quads on each import, rebuilds FTS/vector chunks in one pass afterward. |
-| `searchIndexOnImport: "disabled"`    | Skips chunking entirely. Call `client.rebuildSearchIndex()` before searching.    |
+| `searchIndexOnImport: "disabled"`    | Skips chunking entirely. Call `client.reindex()` before searching.               |
 
 Use `"deferred"` or `"disabled"` for SPARQL-only bulk loads or large initial
-imports where indexing can happen once at the end.
+imports where indexing can happen once at the end. On LibSQL, `reindex()`
+rebuilds FTS/vector chunks; on Deno KV and in-memory RDF/JS `reindex()` is
+typically a safe no-op unless you supply an external `reindex` hook on patch
+sync.
 
 ### Benchmark references
 

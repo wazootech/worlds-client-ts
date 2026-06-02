@@ -22,9 +22,9 @@ export interface AiSdkToolsOptions {
 }
 
 /**
- * createTools creates AI SDK compatible tools that interact with a Worlds ClientInterface.
+ * createTools creates AI SDK compatible tools that interact with a Worlds Client.
  *
- * @param client The Worlds ClientInterface instance.
+ * @param client The Worlds Client instance.
  * @param options Configuration options for the provided tools.
  * @returns An object containing the AI SDK tools.
  */

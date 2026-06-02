@@ -10,7 +10,7 @@ import { SEARCH_WORLD_TOOL_DESCRIPTION } from "./agent-tool-descriptions.ts";
 /**
  * createSearchWorldTool creates an AI SDK tool for searching the knowledge base.
  *
- * @param client The Worlds ClientInterface instance.
+ * @param client The Worlds Client instance.
  * @returns An AI SDK tool for searching the knowledge base.
  */
 export function createSearchWorldTool(client: ClientInterface) {

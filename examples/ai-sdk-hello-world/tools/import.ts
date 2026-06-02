@@ -13,7 +13,7 @@ export type SerializedImportRequest = Omit<ImportRequest, "source"> & {
 /**
  * createImportRdfTool creates an AI SDK tool for importing data into the knowledge base.
  *
- * @param client The Worlds ClientInterface instance.
+ * @param client The Worlds Client instance.
  * @returns An AI SDK tool for importing data into the knowledge base.
  */
 export function createImportRdfTool(client: ClientInterface) {

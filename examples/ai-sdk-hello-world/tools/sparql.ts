@@ -18,7 +18,7 @@ export interface ExecuteSparqlOptions {
 /**
  * createExecuteSparqlTool creates an AI SDK tool for executing SPARQL queries against the knowledge base.
  *
- * @param client The Worlds ClientInterface instance.
+ * @param client The Worlds Client instance.
  * @param options Configuration options for the tool.
  * @returns An AI SDK tool for executing SPARQL queries against the knowledge base.
  */

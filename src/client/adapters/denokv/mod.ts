@@ -1,5 +1,5 @@
-export * from "./denokv-quad-store.ts";
-export * from "./create-denokv-adapter.ts";
-export * from "./denokv-search-index.ts";
-export * from "./denokv-rdfjs-store.ts";
-export * from "./denokv-hexastore-index-set.ts";
+export type { DenokvClientOptions } from "./create-denokv-client.ts";
+export { createDenokvClient } from "./create-denokv-client.ts";
+export { DenokvRdfjsStore } from "./rdfjs-store/mod.ts";
+
+export { DenokvSearchIndex } from "./search-index/mod.ts";

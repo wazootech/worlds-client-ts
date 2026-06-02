@@ -35,14 +35,23 @@ deno add jsr:@worlds/client
 
 ```typescript
 import { Client } from "@worlds/client";
-import { createRdfjsAdapter } from "@worlds/client/adapters/rdfjs";
+import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import {
+  RdfjsQuadStore,
+  RdfjsSearchIndex,
+} from "@worlds/client/adapters/rdfjs";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
+import { Store } from "n3";
 
-const client = new Client(
-  createRdfjsAdapter({
+const store = new Store();
+const client = new Client({
+  quadStore: new RdfjsQuadStore(store),
+  searchIndex: new RdfjsSearchIndex(store),
+  sparqlEngine: new ComunicaSparqlEngine({
     queryEngine: new QueryEngine(),
+    store,
   }),
-);
+});
 
 await client.import({
   source: {
@@ -64,8 +73,9 @@ console.log(sparqlResponse);
 ```
 
 > [!TIP]
-> For production, use the LibSQL adapter with Turso Cloud. See
-> [Adapters](#adapters) below.
+> For production search and scale, use LibSQL with Turso Cloud. Deno KV can win
+> on selective post-preload SPARQL in warm Deno deployments — see
+> [Adapters](#adapters) and [benchmarks](benchmarks/README.md).
 
 ## Core concepts
 
@@ -78,70 +88,99 @@ with vector similarity via an embedding service and quad chunker.
 **SPARQL engine**: Evaluates declarative queries and updates against the graph
 for structured traversal and reasoning.
 
+## Module layout
+
+`Client` is the portable facade; durable backends assemble it via
+`createLibsqlClient` or `createDenokvClient`. Shared modules sit under
+`src/client/`:
+
+| Module                   | Export                                  | Role                                                        |
+| :----------------------- | :-------------------------------------- | :---------------------------------------------------------- |
+| `quad-store`             | `@worlds/client/quad-store`             | Import/export API, patch types, RDF formats                 |
+| `rdfjs-buffer`           | `@worlds/client/quad-store`             | Shared patch buffering and import flush (topology-agnostic) |
+| `import-lifecycle`       | `@worlds/client` (root barrel)          | Import lifecycle hooks around durable commits               |
+| `adapters/*/rdfjs-store` | `@worlds/client/adapters/libsql` (etc.) | Durable `*RdfjsStore` quad index + backend sync             |
+
+Do not confuse `@worlds/client/quad-store` with adapter `rdfjs-store/` folders —
+they are different layers. Durable import flow: `Client.import` → `*QuadStore` →
+`importViaBufferedRdfjsStore` → `*RdfjsStore.commit` → adapter `commitPatchTo*`.
+
+Regenerate merged API doc JSON with `deno task doc:json` (writes gitignored
+`docs/api.json`). Agent prompts, scale guidance, and coding rules:
+[AGENTS.md](AGENTS.md).
+
 ## Adapters
 
-| Adapter | Best for                      | Persistence          | SPARQL                            |
-| :------ | :---------------------------- | :------------------- | :-------------------------------- |
-| RDFJS   | Dev, tests, demos             | None (in-memory)     | Via Comunica over N3 store        |
-| LibSQL  | Production, scale             | SQLite / Turso Cloud | Hexastore indexes on LibsqlStore  |
-| Deno KV | Prototyping, constrained edge | Deno KV store        | Via Comunica over KV-backed store |
+| Adapter               | Best for                                  | Persistence          | SPARQL                        |
+| :-------------------- | :---------------------------------------- | :------------------- | :---------------------------- |
+| RDF/JS (in-memory N3) | Dev, tests, demos                         | None (in-memory)     | Comunica over N3 `Store`      |
+| LibSQL                | Production default (search + bulk load)   | SQLite / Turso Cloud | LibsqlRdfjsStore quad indexes |
+| Deno KV               | Deno-native, warm graph, selective SPARQL | Deno KV store        | DenokvRdfjsStore quad indexes |
 
-### RDFJS (in-memory)
+**Choosing LibSQL vs Deno KV:** LibSQL is the default for hybrid FTS/vector
+search and faster cold quad index preload at scale. Deno KV can be faster on
+selective SPARQL execute after preload in long-lived or cached processes —
+compare backends in [benchmarks/README.md](benchmarks/README.md) and
+[discussion #69](https://github.com/wazootech/worlds-client-ts/discussions/69).
+
+### RDF/JS (in-memory N3)
 
 ```typescript
 import { Client } from "@worlds/client";
-import { createRdfjsAdapter } from "@worlds/client/adapters/rdfjs";
+import { ComunicaSparqlEngine } from "@worlds/client/adapters/comunica";
+import {
+  RdfjsQuadStore,
+  RdfjsSearchIndex,
+} from "@worlds/client/adapters/rdfjs";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
+import { Store } from "n3";
 
-const client = new Client(
-  createRdfjsAdapter({
+const store = new Store();
+const client = new Client({
+  quadStore: new RdfjsQuadStore(store),
+  searchIndex: new RdfjsSearchIndex(store),
+  sparqlEngine: new ComunicaSparqlEngine({
     queryEngine: new QueryEngine(),
+    store,
   }),
-);
+});
 ```
 
-### LibSQL (production)
+### LibSQL (production default)
 
 ```typescript
-import { Client } from "@worlds/client";
-import { createLibsqlAdapter } from "@worlds/client/adapters/libsql";
+import { createLibsqlClient } from "@worlds/client/adapters/libsql";
 import { createClient } from "@libsql/client";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
 const db = createClient({ url: "file:./worlds.db" });
-const client = new Client(
-  await createLibsqlAdapter({
-    client: db,
-    queryEngine: new QueryEngine(),
-  }),
-);
+const client = await createLibsqlClient({
+  client: db,
+  queryEngine: new QueryEngine(),
+});
 ```
 
-### Deno KV (prototyping)
+### Deno KV (Deno-native durable)
 
 ```typescript
-import { Client } from "@worlds/client";
-import { createDenokvAdapter } from "@worlds/client/adapters/denokv";
+import { createDenokvClient } from "@worlds/client/adapters/denokv";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 
 const kv = await Deno.openKv();
-const client = new Client(
-  createDenokvAdapter({
-    kv,
-    queryEngine: new QueryEngine(),
-  }),
-);
+const client = createDenokvClient({
+  kv,
+  queryEngine: new QueryEngine(),
+});
 ```
 
 ## Examples
 
-| Example                                             | Description                                    | Command                                           |
-| :-------------------------------------------------- | :--------------------------------------------- | :------------------------------------------------ |
-| [Hello world](examples/hello-world)                 | In-memory graph with search                    | `deno task example:hello-world`                   |
-| [LibSQL hexastore](examples/libsql-long-running)    | Production hexastore for long-running services | `deno task example:libsql-long-running:hexastore` |
-| [LibSQL SPARQL scale](examples/libsql-sparql-scale) | Subject-bound vs capped-scan query shapes      | `deno task example:libsql-sparql-scale`           |
-| [Deno KV](examples/denokv-hello-world)              | KV-backed SPARQL + search                      | `deno task example:denokv-hello-world`            |
-| [AI SDK](examples/ai-sdk-hello-world)               | Vercel AI SDK tools with Gemini                | `deno task example:ai-sdk-hello-world`            |
+| Example                                | Description                            | Command                                |
+| :------------------------------------- | :------------------------------------- | :------------------------------------- |
+| [Hello world](examples/hello-world)    | In-memory graph with search            | `deno task example:hello-world`        |
+| [LibSQL](examples/libsql-hello-world)  | LibSQL hybrid search + SPARQL at scale | `deno task example:libsql-hello-world` |
+| [Deno KV](examples/denokv-hello-world) | KV-backed SPARQL + search              | `deno task example:denokv-hello-world` |
+| [AI SDK](examples/ai-sdk-hello-world)  | Vercel AI SDK tools with Gemini        | `deno task example:ai-sdk-hello-world` |
 
 The [agent eval harness](https://github.com/wazootech/worlds-client-evals) lives
 in a separate repository and runs deterministic assertion checks against a
@@ -149,14 +188,14 @@ seeded LibSQL world.
 
 ## Advanced
 
-**Choosing a LibSQL topology**: hexastore vs N3 hydration, warm containers,
-SPARQL query shape at scale, and bulk import strategies.
-[-> AGENTS.md](AGENTS.md)
+**Choosing a LibSQL topology**: quad index default (historical N3 hydrate path
+removed; in-memory N3 via RDF/JS adapter), warm containers, SPARQL query shape
+at scale, and bulk import strategies. [-> AGENTS.md](AGENTS.md)
 
 **Agent integration**: search-then-SPARQL two-hop pattern for LLM tool use with
 hybrid retrieval. [-> AGENTS.md](AGENTS.md)
 
-**Benchmarks**: local-only performance captures, hexastore perf methodology
+**Benchmarks**: local-only performance captures, quad index perf methodology
 (LibSQL + Denokv), and regression policy.
 [-> benchmarks/README.md](benchmarks/README.md)
 

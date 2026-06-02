@@ -1,10 +1,11 @@
 import type { Client as LibsqlClient } from "@libsql/client";
 import type { QuadFilter } from "@/client/quad-store/mod.ts";
+import type { SearchIndexOnImport } from "@/client/search-index/mod.ts";
 import type { EmbeddingService } from "@/client/search-index/embedding-service/mod.ts";
 import type { TextSplitterInterface } from "@/client/search-index/quad-chunker/mod.ts";
 
 /**
- * LibsqlClientBaseOptions lists configuration shared by hydrated-N3 and hexastore LibSQL clients.
+ * LibsqlClientBaseOptions lists configuration shared by quad index LibSQL client factories.
  */
 export interface LibsqlClientBaseOptions extends QuadFilter {
   /** client is the underlying LibSQL client pointing to the database. */
@@ -25,7 +26,7 @@ export interface LibsqlClientBaseOptions extends QuadFilter {
   vectorDimensions?: number;
 
   /**
-   * matchPageSize limits rows per LibsqlStore.match SQL round-trip on hexastore reads (default 1000).
+   * matchPageSize limits rows per LibsqlRdfjsStore.match SQL round-trip on reads (default 1000).
    */
   matchPageSize?: number;
 
@@ -39,7 +40,7 @@ export interface LibsqlClientBaseOptions extends QuadFilter {
    *
    * - `"incremental"` (default when omitted): chunks each quad on commit.
    * - `"deferred"`: persists quads on each import, rebuilds FTS/vector chunks in one pass afterward.
-   * - `"disabled"`: skips chunking entirely; caller calls `Client.rebuildSearchIndex()` before searching.
+   * - `"disabled"`: skips chunking entirely; caller calls `client.reindex()` before searching.
    */
-  searchIndexOnImport?: "incremental" | "deferred" | "disabled";
+  searchIndexOnImport?: SearchIndexOnImport;
 }
