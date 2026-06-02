@@ -14,13 +14,7 @@ import {
   buildSelectExistingQuadIds,
   buildWipeAllGraphDataStatements,
 } from "./quad-store/libsql-quad-query-builder.ts";
-import {
-  DEFAULT_MAX_LOOKUP_CHUNK_SIZE,
-  DEFAULT_MAX_WRITE_BATCH_SIZE,
-  executeWriteBatches,
-  flushStagedStatements,
-  stageInStatements,
-} from "./libsql-batch-executor.ts";
+import { LibsqlBatchExecutor } from "./libsql-batch-executor.ts";
 import { resolveLabelPredicates } from "./search-index/search-chunk-fts.ts";
 import type { LibsqlSearchQueryBuilder } from "./search-index/libsql-search-query-builder.ts";
 
@@ -45,8 +39,9 @@ async function executeReplaceImportWipe(
   client: Client,
   writeBatchSize: number,
 ): Promise<void> {
-  const wipeStatements = buildWipeAllGraphDataStatements();
-  await executeWriteBatches(client, wipeStatements, writeBatchSize);
+  const executor = new LibsqlBatchExecutor({ client, writeBatchSize });
+  await executor.stage(buildWipeAllGraphDataStatements());
+  await executor.flush();
 }
 
 /**
@@ -66,9 +61,10 @@ export async function commitPatchToLibsql(
     exclude,
     searchQueryBuilder,
   } = options;
-  const lookupChunkSize = maxLookupChunkSize ?? DEFAULT_MAX_LOOKUP_CHUNK_SIZE;
-  const writeBatchSize = maxWriteBatchSize ?? DEFAULT_MAX_WRITE_BATCH_SIZE;
-  const statements: InStatement[] = [];
+  const lookupChunkSize = maxLookupChunkSize ?? 800; // default lookup chunk size
+  const writeBatchSize = maxWriteBatchSize ?? 500; // default write batch size
+
+  const batchExecutor = new LibsqlBatchExecutor({ client, writeBatchSize });
 
   if (isReplaceImportCommit(context)) {
     await executeReplaceImportWipe(
@@ -90,15 +86,11 @@ export async function commitPatchToLibsql(
       deletionQuadIds.add(quadId);
     }
     if (computedDeletionQuadIds.length > 0) {
-      await stageInStatements(
-        client,
-        statements,
-        buildDeletionStatementsChunked(
-          computedDeletionQuadIds,
-          searchQueryBuilder,
-          lookupChunkSize,
-        ),
-        writeBatchSize,
+      await stageDeletionStatementsChunked(
+        batchExecutor,
+        computedDeletionQuadIds,
+        searchQueryBuilder,
+        lookupChunkSize,
       );
     }
   }
@@ -126,37 +118,28 @@ export async function commitPatchToLibsql(
 
     if (novelQuadIds.length > 0) {
       // Ensure relational clean slate for new items
-      await stageInStatements(
-        client,
-        statements,
-        buildDeletionStatementsChunked(
-          novelQuadIds,
-          searchQueryBuilder,
-          lookupChunkSize,
-        ),
-        writeBatchSize,
+      await stageDeletionStatementsChunked(
+        batchExecutor,
+        novelQuadIds,
+        searchQueryBuilder,
+        lookupChunkSize,
       );
 
       // Stage Fact Decompositions (Relational Index)
-      await stageInStatements(
-        client,
-        statements,
+      await batchExecutor.stage(
         buildRelationalStatements(
           novelInsertions,
           novelQuadIds,
         ),
-        writeBatchSize,
       );
     }
   }
 
-  // 3. Flush any remaining staged writes (chunked to respect driver/SQLite limits)
-  if (statements.length > 0) {
-    try {
-      await flushStagedStatements(client, statements, writeBatchSize);
-    } catch (cause) {
-      throw new Error("failed to execute sync batch", { cause });
-    }
+  // 3. Flush any remaining staged writes
+  try {
+    await batchExecutor.flush();
+  } catch (cause) {
+    throw new Error("failed to execute sync batch", { cause });
   }
 
   const resolvedLabelPredicates = resolveLabelPredicates(
@@ -191,22 +174,18 @@ function buildDeletionStatements(
 }
 
 /**
- * buildDeletionStatementsChunked splits large quad id sets so each IN clause stays within SQLite variable limits.
+ * stageDeletionStatementsChunked slices large quad id sets and eagerly streams them to the executor.
  */
-function buildDeletionStatementsChunked(
+async function stageDeletionStatementsChunked(
+  executor: LibsqlBatchExecutor,
   quadIds: string[],
   queryBuilder: LibsqlSearchQueryBuilder,
   chunkSize: number,
-): InStatement[] {
-  const statements: InStatement[] = [];
+): Promise<void> {
   for (let index = 0; index < quadIds.length; index += chunkSize) {
     const quadIdBatch = quadIds.slice(index, index + chunkSize);
-    const subStatements = buildDeletionStatements(quadIdBatch, queryBuilder);
-    for (const stmt of subStatements) {
-      statements.push(stmt);
-    }
+    await executor.stage(buildDeletionStatements(quadIdBatch, queryBuilder));
   }
-  return statements;
 }
 
 /**

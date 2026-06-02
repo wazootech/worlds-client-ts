@@ -10,58 +10,61 @@ export const DEFAULT_MAX_WRITE_BATCH_SIZE = 500;
 export const STAGING_FLUSH_THRESHOLD = 10_000;
 
 /**
- * appendInStatements appends statements without spread (large patches overflow the call stack).
+ * LibsqlBatchExecutorOptions defines the configuration for the batch executor.
  */
-export function appendInStatements(
-  target: InStatement[],
-  source: readonly InStatement[],
-): void {
-  const sourceLength = source.length;
-  for (let index = 0; index < sourceLength; index++) {
-    target.push(source[index]!);
-  }
+export interface LibsqlBatchExecutorOptions {
+  /** client is the LibSQL client connection used for executing writes. */
+  client: Client;
+
+  /** writeBatchSize limits statements per LibSQL write batch. */
+  writeBatchSize: number;
 }
 
 /**
- * executeWriteBatches runs LibSQL write batches in fixed-size slices.
+ * LibsqlBatchExecutor encapsulates statement buffering and chunked execution for LibSQL.
+ * It prevents memory blowouts by eagerly flushing when the staging buffer reaches the threshold.
  */
-export async function executeWriteBatches(
-  client: Client,
-  statements: InStatement[],
-  batchSize: number,
-): Promise<void> {
-  for (let index = 0; index < statements.length; index += batchSize) {
-    const statementBatch = statements.slice(index, index + batchSize);
-    await client.batch(statementBatch, "write");
-  }
-}
+export class LibsqlBatchExecutor {
+  private readonly statements: InStatement[] = [];
 
-/**
- * flushStagedStatements executes and clears staged write statements when the threshold is reached.
- */
-export async function flushStagedStatements(
-  client: Client,
-  statements: InStatement[],
-  writeBatchSize: number,
-): Promise<void> {
-  if (statements.length === 0) {
-    return;
-  }
-  await executeWriteBatches(client, statements, writeBatchSize);
-  statements.length = 0;
-}
+  public constructor(private readonly options: LibsqlBatchExecutorOptions) {}
 
-/**
- * stageInStatements appends statements and flushes when the staging buffer grows too large.
- */
-export async function stageInStatements(
-  client: Client,
-  statements: InStatement[],
-  source: readonly InStatement[],
-  writeBatchSize: number,
-): Promise<void> {
-  appendInStatements(statements, source);
-  if (statements.length >= STAGING_FLUSH_THRESHOLD) {
-    await flushStagedStatements(client, statements, writeBatchSize);
+  /**
+   * stage appends statements and flushes eagerly when the staging buffer grows too large.
+   */
+  public async stage(source: readonly InStatement[]): Promise<void> {
+    const sourceLength = source.length;
+    for (let index = 0; index < sourceLength; index++) {
+      this.statements.push(source[index]!);
+      if (this.statements.length >= STAGING_FLUSH_THRESHOLD) {
+        await this.flush();
+      }
+    }
+  }
+
+  /**
+   * flush executes and clears all currently staged write statements.
+   */
+  public async flush(): Promise<void> {
+    if (this.statements.length === 0) {
+      return;
+    }
+
+    const { client, writeBatchSize } = this.options;
+
+    // Execute write batches in fixed-size slices
+    for (
+      let index = 0;
+      index < this.statements.length;
+      index += writeBatchSize
+    ) {
+      const statementBatch = this.statements.slice(
+        index,
+        index + writeBatchSize,
+      );
+      await client.batch(statementBatch, "write");
+    }
+
+    this.statements.length = 0;
   }
 }

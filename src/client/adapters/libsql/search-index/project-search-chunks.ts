@@ -14,12 +14,7 @@ import {
   buildChunkFtsValue,
   resolveLabelPredicates,
 } from "./search-chunk-fts.ts";
-import {
-  appendInStatements,
-  DEFAULT_MAX_LOOKUP_CHUNK_SIZE,
-  DEFAULT_MAX_WRITE_BATCH_SIZE,
-  flushStagedStatements,
-} from "@/client/adapters/libsql/libsql-batch-executor.ts";
+import { LibsqlBatchExecutor } from "@/client/adapters/libsql/libsql-batch-executor.ts";
 
 export interface ProjectSearchChunksOptions extends LibsqlClientBaseOptions {
   textSplitter: TextSplitterInterface;
@@ -47,14 +42,14 @@ export async function projectSearchChunks(
   );
 
   if (chunkStatements.length > 0) {
-    const writeBatchSize = options.maxWriteBatchSize ??
-      DEFAULT_MAX_WRITE_BATCH_SIZE;
+    const writeBatchSize = options.maxWriteBatchSize ?? 500;
     try {
-      await flushStagedStatements(
-        options.client,
-        chunkStatements,
+      const executor = new LibsqlBatchExecutor({
+        client: options.client,
         writeBatchSize,
-      );
+      });
+      await executor.stage(chunkStatements);
+      await executor.flush();
     } catch (cause) {
       throw new Error("failed to execute search chunk sync batch", { cause });
     }
@@ -73,10 +68,8 @@ export async function refreshSearchChunksForQuads(
     return 0;
   }
 
-  const lookupChunkSize = options.maxLookupChunkSize ??
-    DEFAULT_MAX_LOOKUP_CHUNK_SIZE;
-  const writeBatchSize = options.maxWriteBatchSize ??
-    DEFAULT_MAX_WRITE_BATCH_SIZE;
+  const lookupChunkSize = options.maxLookupChunkSize ?? 800;
+  const writeBatchSize = options.maxWriteBatchSize ?? 500;
   const resolvedLabelPredicates = resolveLabelPredicates(
     options.labelPredicates,
   );
@@ -89,23 +82,21 @@ export async function refreshSearchChunksForQuads(
     resolvedLabelPredicates,
   );
 
-  const statements: InStatement[] = [];
-  appendInStatements(
-    statements,
-    buildChunkDeletionStatementsChunked(
-      quadIds,
-      options.searchQueryBuilder,
-      lookupChunkSize,
-    ),
-  );
-  appendInStatements(statements, chunkInsertStatements);
-
-  if (statements.length === 0) {
-    return 0;
-  }
+  const executor = new LibsqlBatchExecutor({
+    client: options.client,
+    writeBatchSize,
+  });
 
   try {
-    await flushStagedStatements(options.client, statements, writeBatchSize);
+    await executor.stage(
+      buildChunkDeletionStatementsChunked(
+        quadIds,
+        options.searchQueryBuilder,
+        lookupChunkSize,
+      ),
+    );
+    await executor.stage(chunkInsertStatements);
+    await executor.flush();
   } catch (cause) {
     throw new Error("failed to refresh search chunks", { cause });
   }
@@ -178,8 +169,7 @@ async function buildVectorChunkStatements(
     return [];
   }
 
-  const lookupChunkSize = options.maxLookupChunkSize ??
-    DEFAULT_MAX_LOOKUP_CHUNK_SIZE;
+  const lookupChunkSize = options.maxLookupChunkSize ?? 800;
   const uniqueSubjects = Array.from(
     new Set(chunks.map((chunk) => chunk.subject)),
   );
