@@ -1,21 +1,12 @@
 {
   "version": "5",
   "specifiers": {
-    "jsr:@deno/kv-utils@~0.1.4": "0.1.4",
-    "jsr:@kitsonk/kv-toolbox@0.31": "0.31.0",
-    "jsr:@std/assert@1": "1.0.19",
     "jsr:@std/assert@^1.0.19": "1.0.19",
-    "jsr:@std/bytes@1": "1.0.6",
-    "jsr:@std/bytes@^1.0.3": "1.0.6",
-    "jsr:@std/crypto@1.1": "1.1.0",
-    "jsr:@std/encoding@1": "1.0.10",
     "jsr:@std/encoding@^1.0.10": "1.0.10",
-    "jsr:@std/encoding@^1.0.5": "1.0.10",
-    "jsr:@std/fs@*": "1.0.23",
     "jsr:@std/fs@^1.0.23": "1.0.23",
     "jsr:@std/internal@^1.0.12": "1.0.14",
-    "jsr:@std/media-types@1": "1.1.0",
-    "jsr:@std/path@^1.1.4": "1.1.4",
+    "jsr:@std/internal@^1.0.14": "1.0.14",
+    "jsr:@std/path@^1.1.4": "1.1.5",
     "npm:@ai-sdk/google@^3.0.78": "3.0.78_zod@4.4.3",
     "npm:@comunica/query-sparql-rdfjs-lite@*": "5.2.2",
     "npm:@comunica/query-sparql-rdfjs-lite@^5.2.2": "5.2.2",
@@ -32,35 +23,11 @@
     "npm:zod@^4.4.3": "4.4.3"
   },
   "jsr": {
-    "@deno/kv-utils@0.1.4": {
-      "integrity": "119a768c8a9b1af76552b48e78457cd2fb38cc97c10b3a57cf65efe47ff9ca1a",
-      "dependencies": [
-        "jsr:@std/bytes@^1.0.3",
-        "jsr:@std/encoding@^1.0.5"
-      ]
-    },
-    "@kitsonk/kv-toolbox@0.31.0": {
-      "integrity": "cf2c62dad83234b2472f2525e23dbd5d998407afa60bf24bdd315c538abe2663",
-      "dependencies": [
-        "jsr:@deno/kv-utils",
-        "jsr:@std/assert@1",
-        "jsr:@std/bytes@1",
-        "jsr:@std/crypto",
-        "jsr:@std/encoding@1",
-        "jsr:@std/media-types"
-      ]
-    },
     "@std/assert@1.0.19": {
       "integrity": "eaada96ee120cb980bc47e040f82814d786fe8162ecc53c91d8df60b8755991e",
       "dependencies": [
-        "jsr:@std/internal"
+        "jsr:@std/internal@^1.0.12"
       ]
-    },
-    "@std/bytes@1.0.6": {
-      "integrity": "f6ac6adbd8ccd99314045f5703e23af0a68d7f7e58364b47d2c7f408aeb5820a"
-    },
-    "@std/crypto@1.1.0": {
-      "integrity": "b8d6d0a6377a32b213af2661ed7bf1062d94feac0c57def5526a8e74a95c3ec8"
     },
     "@std/encoding@1.0.10": {
       "integrity": "8783c6384a2d13abd5e9e87a7ae0520a30e9f56aeeaa3bdf910a3eaaf5c811a1"
@@ -68,7 +35,7 @@
     "@std/fs@1.0.23": {
       "integrity": "3ecbae4ce4fee03b180fa710caff36bb5adb66631c46a6460aaad49515565a37",
       "dependencies": [
-        "jsr:@std/internal",
+        "jsr:@std/internal@^1.0.12",
         "jsr:@std/path"
       ]
     },
@@ -78,13 +45,10 @@
     "@std/internal@1.0.14": {
       "integrity": "291516b3d4c35024d6ffbc0a9df5bf4c64116e05b50012cf846710152d2ffdf7"
     },
-    "@std/media-types@1.1.0": {
-      "integrity": "c9d093f0c05c3512932b330e3cc1fe1d627b301db33a4c2c2185c02471d6eaa4"
-    },
-    "@std/path@1.1.4": {
-      "integrity": "1d2d43f39efb1b42f0b1882a25486647cb851481862dc7313390b2bb044314b5",
+    "@std/path@1.1.5": {
+      "integrity": "ccea00982ea28c36becaf6e62f855406c76a8c32d462f66f415bbb7d83a271bc",
       "dependencies": [
-        "jsr:@std/internal"
+        "jsr:@std/internal@^1.0.14"
       ]
     }
   },
@@ -4048,7 +4012,6 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@kitsonk/kv-toolbox@0.31",
       "jsr:@std/assert@^1.0.19",
       "jsr:@std/encoding@^1.0.10",
       "jsr:@std/fs@^1.0.23",
