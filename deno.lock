@@ -2,6 +2,7 @@
   "version": "5",
   "specifiers": {
     "jsr:@std/assert@^1.0.19": "1.0.19",
+    "jsr:@std/async@^1.0.10": "1.3.0",
     "jsr:@std/encoding@^1.0.10": "1.0.10",
     "jsr:@std/fs@^1.0.23": "1.0.23",
     "jsr:@std/internal@^1.0.12": "1.0.14",
@@ -28,6 +29,9 @@
       "dependencies": [
         "jsr:@std/internal@^1.0.12"
       ]
+    },
+    "@std/async@1.3.0": {
+      "integrity": "80485538a4f7baaa46bfe2246168069e02ed142b9f9079cd164f43bb060ad9e9"
     },
     "@std/encoding@1.0.10": {
       "integrity": "8783c6384a2d13abd5e9e87a7ae0520a30e9f56aeeaa3bdf910a3eaaf5c811a1"
@@ -4013,6 +4017,7 @@
   "workspace": {
     "dependencies": [
       "jsr:@std/assert@^1.0.19",
+      "jsr:@std/async@^1.0.10",
       "jsr:@std/encoding@^1.0.10",
       "jsr:@std/fs@^1.0.23",
       "jsr:@std/path@^1.1.4",

@@ -73,7 +73,13 @@ function estimateSize(value: unknown): number {
 // BatchedAtomicOperation — native replacement for kv-toolbox batchedAtomic
 // ---------------------------------------------------------------------------
 
+import { pooledMap } from "@std/async/pool";
+
 type MutateMethod = "set" | "delete";
+
+interface CommitTask {
+  mutations: Array<{ method: MutateMethod; args: unknown[] }>;
+}
 
 /** BatchedAtomicOperation is a native atomic queue for quad index bulk writes. */
 export class BatchedAtomicOperation {
@@ -126,76 +132,89 @@ export class BatchedAtomicOperation {
       return [];
     }
 
-    const results: Array<
-      Promise<Deno.KvCommitResult | Deno.KvCommitError>
-    > = [];
+    // First build all isolated task batches in memory.
+    const tasks: CommitTask[] = [];
+    let currentTaskMutations: Array<{ method: MutateMethod; args: unknown[] }> =
+      [];
     let mutations = 0;
     let payloadBytes = 0;
     let keyBytes = 0;
-    let operation = this.#kv.atomic();
-    let hasCheck = false;
 
-    while (this.#queue.length > 0) {
-      const entry = this.#queue.shift()!;
+    for (const entry of this.#queue) {
       const { method, args } = entry;
+      let entryKeyLen = 0;
+      let entryValLen = 0;
 
       switch (method) {
         case "set": {
-          mutations++;
           const [key, value] = args as [Deno.KvKey, unknown];
-          const keyLen = estimateSize(key);
-          keyBytes += keyLen;
-          payloadBytes += keyLen + estimateSize(value);
+          entryKeyLen = estimateSize(key);
+          entryValLen = estimateSize(value);
           break;
         }
         case "delete": {
-          mutations++;
           const [key] = args as [Deno.KvKey];
-          const keyLen = estimateSize(key);
-          keyBytes += keyLen;
-          payloadBytes += keyLen;
+          entryKeyLen = estimateSize(key);
           break;
         }
       }
 
       if (
-        mutations > this.#maxMutations ||
-        payloadBytes > this.#maxPayloadBytes ||
-        keyBytes > this.#maxKeyBytes
+        mutations + 1 > this.#maxMutations ||
+        payloadBytes + entryKeyLen + entryValLen > this.#maxPayloadBytes ||
+        keyBytes + entryKeyLen > this.#maxKeyBytes
       ) {
-        const rp = operation.commit();
-        results.push(rp);
-        if (hasCheck) {
-          const result = await rp;
-          if (!result.ok) {
-            continue;
-          }
+        if (currentTaskMutations.length > 0) {
+          tasks.push({ mutations: currentTaskMutations });
+          currentTaskMutations = [];
         }
         mutations = 0;
         payloadBytes = 0;
         keyBytes = 0;
-        operation = this.#kv.atomic();
-        hasCheck = false;
       }
 
-      switch (method) {
-        case "set": {
-          const [key, value] = args as [Deno.KvKey, unknown];
-          operation.set(key, value);
-          break;
-        }
-        case "delete": {
-          const [key] = args as [Deno.KvKey];
-          operation.delete(key);
-          break;
-        }
-      }
+      currentTaskMutations.push(entry);
+      mutations++;
+      payloadBytes += entryKeyLen + entryValLen;
+      keyBytes += entryKeyLen;
     }
 
-    // Flush remaining operations.
-    const rp = operation.commit();
-    results.push(rp);
-    return Promise.all(results);
+    if (currentTaskMutations.length > 0) {
+      tasks.push({ mutations: currentTaskMutations });
+    }
+
+    // Execute batches concurrently using pooledMap up to a target concurrency pool (e.g. 4 parallel writes)
+    const concurrency = 4;
+    const resultsIterator = pooledMap(
+      concurrency,
+      tasks,
+      async (task) => {
+        const operation = this.#kv.atomic();
+        for (const entry of task.mutations) {
+          const { method, args } = entry;
+          switch (method) {
+            case "set": {
+              const [key, value] = args as [Deno.KvKey, unknown];
+              operation.set(key, value);
+              break;
+            }
+            case "delete": {
+              const [key] = args as [Deno.KvKey];
+              operation.delete(key);
+              break;
+            }
+          }
+        }
+        return await operation.commit();
+      },
+    );
+
+    const finalResults: (Deno.KvCommitResult | Deno.KvCommitError)[] = [];
+    for await (const result of resultsIterator) {
+      finalResults.push(result);
+    }
+
+    return finalResults;
   }
 }
 
