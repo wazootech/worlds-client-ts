@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: denoland/setup-deno@v2
+        with:
+          cache: true
+          deno-version-file: .tool-versions
+      - name: Install dependencies
+        run: deno ci
+      - name: Run CI checks
+        run: deno task ci
+      - name: Publish dry run
+        run: deno task publish:dry
