@@ -30,16 +30,20 @@
         "type": "object",
         "properties": {
           "name": {
-            "type": "string"
+            "type": "string",
+            "description": "Resource name in the form worlds/<uid>, e.g. worlds/w_a1b2c3d4."
           },
           "uid": {
-            "type": "string"
+            "type": "string",
+            "description": "Unique world identifier, e.g. w_<uuid>."
           },
           "displayName": {
-            "type": "string"
+            "type": "string",
+            "description": "User-facing display name for the world. Set on creation or update."
           },
           "state": {
-            "type": "string"
+            "type": "string",
+            "description": "Lifecycle state: active, deleted, or suspended. Deleted worlds enter a 30-day grace period before permanent purge."
           },
           "storage": {
             "type": "string",
@@ -50,28 +54,36 @@
             "description": "Storage backend for the world. libsql-per-world provisions a dedicated per-world Turso/LibSQL database; legacy-shared-libsql points at a shared legacy store."
           },
           "embeddingModel": {
-            "type": "string"
+            "type": "string",
+            "description": "Embedding model identifier used for vector search indexing, e.g. openai/text-embedding-3-small."
           },
           "chunkSize": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Maximum number of RDF quads per chunk when indexing for vector search."
           },
           "topK": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Default number of top search results to return when the caller does not override."
           },
           "minScore": {
-            "type": "number"
+            "type": "number",
+            "description": "Default minimum relevance score (0–1) for search results. Results below this threshold are omitted."
           },
           "createTime": {
-            "type": "string"
+            "type": "string",
+            "description": "ISO 8601 timestamp when the world was created."
           },
           "updateTime": {
-            "type": "string"
+            "type": "string",
+            "description": "ISO 8601 timestamp when the world was last updated."
           },
           "deleteTime": {
-            "type": "string"
+            "type": "string",
+            "description": "ISO 8601 timestamp when the world was soft-deleted. Null if not deleted."
           },
           "expireTime": {
-            "type": "string"
+            "type": "string",
+            "description": "ISO 8601 timestamp when the world will be permanently purged after the grace period. Null if not scheduled for purge."
           }
         },
         "required": [
@@ -92,25 +104,30 @@
         "type": "object",
         "properties": {
           "displayName": {
-            "type": "string"
+            "type": "string",
+            "description": "User-facing display name for the new world."
           },
           "embeddingModel": {
-            "type": "string"
+            "type": "string",
+            "description": "Embedding model to use for vector search. Defaults to the platform default."
           },
           "chunkSize": {
             "type": "integer",
             "minimum": 0,
-            "exclusiveMinimum": true
+            "exclusiveMinimum": true,
+            "description": "Maximum quads per chunk for vector search indexing. Defaults to the platform default."
           },
           "topK": {
             "type": "integer",
             "minimum": 0,
-            "exclusiveMinimum": true
+            "exclusiveMinimum": true,
+            "description": "Default number of top results for search queries against this world."
           },
           "minScore": {
             "type": "number",
             "minimum": 0,
-            "maximum": 1
+            "maximum": 1,
+            "description": "Default minimum relevance score (0–1) for search results in this world."
           }
         }
       },
@@ -119,25 +136,30 @@
         "properties": {
           "displayName": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "New display name for the world."
           },
           "embeddingModel": {
-            "type": "string"
+            "type": "string",
+            "description": "New embedding model. Changing this triggers a reindex of existing data."
           },
           "chunkSize": {
             "type": "integer",
             "minimum": 0,
-            "exclusiveMinimum": true
+            "exclusiveMinimum": true,
+            "description": "New chunk size for vector search indexing."
           },
           "topK": {
             "type": "integer",
             "minimum": 0,
-            "exclusiveMinimum": true
+            "exclusiveMinimum": true,
+            "description": "New default top-K for search queries."
           },
           "minScore": {
             "type": "number",
             "minimum": 0,
-            "maximum": 1
+            "maximum": 1,
+            "description": "New default minimum score threshold for search results."
           }
         }
       },
@@ -148,16 +170,19 @@
             "type": "object",
             "properties": {
               "quads": {
-                "type": "integer"
+                "type": "integer",
+                "description": "Number of RDF quads successfully imported."
               },
               "chunks": {
-                "type": "integer"
+                "type": "integer",
+                "description": "Number of vector search chunks created from the imported quads."
               }
             },
             "required": [
               "quads",
               "chunks"
-            ]
+            ],
+            "description": "Imported quad and chunk counts."
           }
         },
         "required": [
@@ -169,11 +194,13 @@
         "properties": {
           "data": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "RDF payload to import. The format must match the contentType field."
           },
           "contentType": {
             "type": "string",
-            "default": "text/turtle"
+            "default": "text/turtle",
+            "description": "MIME type of the import payload. Supported values: text/turtle, application/n-quads, application/n-triples, application/trig, application/ld+json. Defaults to text/turtle."
           }
         },
         "required": [
@@ -187,10 +214,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Quad"
-            }
+            },
+            "description": "Page of exported RDF quads."
           },
           "nextOffset": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Offset for the next page. Omit this field when there are no more results."
           }
         },
         "required": [
@@ -201,16 +230,20 @@
         "type": "object",
         "properties": {
           "subject": {
-            "type": "string"
+            "type": "string",
+            "description": "RDF subject URI."
           },
           "predicate": {
-            "type": "string"
+            "type": "string",
+            "description": "RDF predicate URI."
           },
           "object": {
-            "type": "string"
+            "type": "string",
+            "description": "RDF object URI or literal value."
           },
           "graph": {
-            "type": "string"
+            "type": "string",
+            "description": "Named graph URI. Null when the quad belongs to the default graph."
           }
         },
         "required": [
@@ -223,19 +256,24 @@
         "type": "object",
         "properties": {
           "subject": {
-            "type": "string"
+            "type": "string",
+            "description": "RDF subject URI identifying the matched resource, e.g. https://example.org/entity/42."
           },
           "predicate": {
-            "type": "string"
+            "type": "string",
+            "description": "RDF predicate URI describing the relationship, e.g. http://schema.org/name."
           },
           "graph": {
-            "type": "string"
+            "type": "string",
+            "description": "Named graph URI the quad belongs to. Null when the world uses a default graph."
           },
           "content": {
-            "type": "string"
+            "type": "string",
+            "description": "Text content extracted from the matched quad, used for display and snippet generation."
           },
           "score": {
-            "type": "number"
+            "type": "number",
+            "description": "Relevance score from the search engine (0–1). Higher scores indicate better matches. Null for fallback LIKE search results."
           }
         },
         "required": [
@@ -248,23 +286,27 @@
         "properties": {
           "query": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Natural language or keyword search query to find matching content in the world."
           },
           "limit": {
             "type": "integer",
             "minimum": 0,
             "exclusiveMinimum": true,
-            "default": 20
+            "default": 20,
+            "description": "Maximum number of results to return. Defaults to 20. The response is capped at this value after ranking."
           },
           "topK": {
             "type": "integer",
             "minimum": 0,
-            "exclusiveMinimum": true
+            "exclusiveMinimum": true,
+            "description": "Override the world's default top-K for vector similarity search. Higher values improve recall at the cost of latency."
           },
           "minScore": {
             "type": "number",
             "minimum": 0,
-            "maximum": 1
+            "maximum": 1,
+            "description": "Override the world's minimum relevance score. Results below this threshold are omitted."
           }
         },
         "required": [
@@ -276,7 +318,8 @@
         "properties": {
           "query": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "SPARQL 1.1 query string. Supports SELECT, ASK, and SPARQL UPDATE (INSERT/DELETE). SELECT results are limited by the server-configured maximum."
           }
         },
         "required": [
@@ -287,23 +330,29 @@
         "type": "object",
         "properties": {
           "uid": {
-            "type": "string"
+            "type": "string",
+            "description": "Unique identifier for the created API key."
           },
           "token": {
-            "type": "string"
+            "type": "string",
+            "description": "The full bearer token (wzw format). Displayed once on creation — store it securely."
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "description": "Human-readable label for the key."
           },
           "namespace": {
-            "type": "string"
+            "type": "string",
+            "description": "Namespace the key is scoped to."
           },
           "worldId": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "World ID the key is scoped to, or null if the key has namespace-wide access."
           },
           "createTime": {
-            "type": "string"
+            "type": "string",
+            "description": "ISO 8601 timestamp when the key was created."
           }
         },
         "required": [
@@ -320,13 +369,16 @@
         "properties": {
           "namespace": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Namespace to scope the API key to. Required. The key can only access worlds within this namespace."
           },
           "worldId": {
-            "type": "string"
+            "type": "string",
+            "description": "Optional world ID to scope the key to a single world. Omit to allow access to all worlds in the namespace."
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "description": "Human-readable label for the key. Helps identify keys in the list."
           },
           "scopes": {
             "type": "array",
@@ -348,25 +400,31 @@
         "type": "object",
         "properties": {
           "uid": {
-            "type": "string"
+            "type": "string",
+            "description": "Unique identifier for the API key."
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "description": "Human-readable label for the key."
           },
           "namespace": {
-            "type": "string"
+            "type": "string",
+            "description": "Namespace the key is scoped to."
           },
           "worldId": {
-            "type": "string"
+            "type": "string",
+            "description": "World ID the key is scoped to, or absent for namespace-wide keys."
           },
           "scopes": {
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "description": "Granted scopes, e.g. [\"data:read\", \"data:write\"]."
           },
           "createTime": {
-            "type": "string"
+            "type": "string",
+            "description": "ISO 8601 timestamp when the key was created."
           }
         },
         "required": [
@@ -389,6 +447,7 @@
         ],
         "operationId": "getHealth",
         "summary": "Get health",
+        "description": "Liveness probe. Returns 200 when the service can reach its database; 503 when the database is unreachable.",
         "x-mint": {
           "metadata": {
             "title": "Get health"
@@ -451,6 +510,7 @@
         ],
         "operationId": "listWorlds",
         "summary": "List worlds",
+        "description": "List all worlds accessible to the authenticated token. Admin tokens see all worlds; namespace-scoped tokens see only their namespace's worlds.",
         "x-mint": {
           "metadata": {
             "title": "List worlds"
@@ -491,6 +551,7 @@
         ],
         "operationId": "createWorld",
         "summary": "Create world",
+        "description": "Create a new world. Provisions a dedicated per-world LibSQL database and initializes the search and vector indexes.",
         "x-mint": {
           "metadata": {
             "title": "Create world"
@@ -622,6 +683,7 @@
         ],
         "operationId": "getWorld",
         "summary": "Get world",
+        "description": "Retrieve a single world by its unique identifier. Returns the full WorldResource including state, storage backend, and search configuration.",
         "x-mint": {
           "metadata": {
             "title": "Get world"
@@ -693,6 +755,7 @@
         ],
         "operationId": "updateWorld",
         "summary": "Update world",
+        "description": "Update a world's display name, embedding model, or search configuration. Changing the embedding model triggers a reindex.",
         "x-mint": {
           "metadata": {
             "title": "Update world"
@@ -804,6 +867,7 @@
         ],
         "operationId": "deleteWorld",
         "summary": "Delete world",
+        "description": "Soft-delete a world. The world enters a 30-day grace period during which it can be restored via undelete. After the grace period, the world is permanently purged.",
         "x-mint": {
           "metadata": {
             "title": "Delete world"
@@ -870,6 +934,7 @@
         ],
         "operationId": "undeleteWorld",
         "summary": "Undelete world",
+        "description": "Restore a soft-deleted world within its 30-day grace period. Returns the restored WorldResource. Fails if the grace period has expired.",
         "x-mint": {
           "metadata": {
             "title": "Undelete world"
@@ -973,6 +1038,7 @@
         ],
         "operationId": "suspendWorld",
         "summary": "Suspend world",
+        "description": "Suspend a world, temporarily blocking all read and write operations. The world can be resumed later without data loss.",
         "x-mint": {
           "metadata": {
             "title": "Suspend world"
@@ -1046,6 +1112,7 @@
         ],
         "operationId": "resumeWorld",
         "summary": "Resume world",
+        "description": "Resume a suspended world, restoring full read and write access.",
         "x-mint": {
           "metadata": {
             "title": "Resume world"
@@ -1119,6 +1186,7 @@
         ],
         "operationId": "deleteNamespaceWorlds",
         "summary": "Mark all worlds for a namespace deleted (account deletion)",
+        "description": "Admin-only. Soft-deletes all worlds in a namespace and revokes all API keys for that namespace. Used for account deletion workflows.",
         "x-mint": {
           "metadata": {
             "title": "Delete namespace worlds"
@@ -1202,6 +1270,7 @@
         ],
         "operationId": "purgeWorlds",
         "summary": "Run purge sweep on demand",
+        "description": "Admin-only. Triggers the purge sweep to permanently delete all worlds whose 30-day grace period has expired. Normally runs on a schedule; this endpoint forces an immediate sweep.",
         "x-mint": {
           "metadata": {
             "title": "Run purge sweep on demand"
@@ -1275,6 +1344,7 @@
         ],
         "operationId": "importWorld",
         "summary": "Import graph data",
+        "description": "Import RDF data into a world. Accepts Turtle, N-Quads, N-Triples, TriG, or JSON-LD payloads. Quads are stored in the world's LibSQL database and indexed for vector search.",
         "x-mint": {
           "metadata": {
             "title": "Import graph data"
@@ -1358,6 +1428,7 @@
         ],
         "operationId": "exportWorld",
         "summary": "Export graph data",
+        "description": "Export RDF quads from a world. Supports JSON (RDF/JSON array), Turtle, TriG, and JSON-LD output formats. Use the limit and offset query parameters for pagination.",
         "x-mint": {
           "metadata": {
             "title": "Export graph data"
@@ -1382,25 +1453,31 @@
           {
             "schema": {
               "type": "string",
-              "default": "application/json"
+              "default": "application/json",
+              "description": "Export format. Supported: application/json (RDF/JSON array), text/turtle (Turtle), application/trig (TriG), application/ld+json (JSON-LD). Defaults to application/json."
             },
             "required": false,
+            "description": "Export format. Supported: application/json (RDF/JSON array), text/turtle (Turtle), application/trig (TriG), application/ld+json (JSON-LD). Defaults to application/json.",
             "name": "format",
             "in": "query"
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Maximum number of quads to return in this page."
             },
             "required": false,
+            "description": "Maximum number of quads to return in this page.",
             "name": "limit",
             "in": "query"
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Pagination offset. Use the nextOffset value from the previous response."
             },
             "required": false,
+            "description": "Pagination offset. Use the nextOffset value from the previous response.",
             "name": "offset",
             "in": "query"
           }
@@ -1486,6 +1563,7 @@
         ],
         "operationId": "searchWorld",
         "summary": "Search world",
+        "description": "Full-text and vector similarity search across a world's graph data. Returns ranked results with subject, predicate, content, and relevance score. Falls back to LIKE-based search if the vector index is unavailable.",
         "x-mint": {
           "metadata": {
             "title": "Search world"
@@ -1583,6 +1661,7 @@
         ],
         "operationId": "sparqlNoWorld",
         "summary": "SPARQL without world",
+        "description": "Always returns 400. Use POST /worlds/{id}/sparql to execute a SPARQL query against a specific world.",
         "x-mint": {
           "metadata": {
             "title": "SPARQL without world"
@@ -1634,6 +1713,7 @@
         ],
         "operationId": "sparqlWorld",
         "summary": "Execute SPARQL query",
+        "description": "Execute a SPARQL 1.1 query (SELECT, ASK, or UPDATE) against a world's RDF graph. SELECT results are limited by the server-configured maximum. Queries time out after the configured limit.",
         "x-mint": {
           "metadata": {
             "title": "Execute SPARQL query"
@@ -1717,6 +1797,7 @@
         ],
         "operationId": "createApiKey",
         "summary": "Create API key",
+        "description": "Create a new API key scoped to a namespace and optionally a single world. The token is returned once on creation and cannot be retrieved again.",
         "x-mint": {
           "metadata": {
             "title": "Create API key"
@@ -1816,6 +1897,7 @@
         ],
         "operationId": "listApiKeys",
         "summary": "List API keys",
+        "description": "List all active (non-revoked) API keys. Optionally filter by namespace. Admin-only.",
         "x-mint": {
           "metadata": {
             "title": "List API keys"
@@ -1829,9 +1911,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Filter API keys by namespace."
             },
             "required": false,
+            "description": "Filter API keys by namespace.",
             "name": "namespace",
             "in": "query"
           }
@@ -1898,6 +1982,7 @@
         ],
         "operationId": "deleteApiKey",
         "summary": "Revoke API key",
+        "description": "Permanently revoke an API key. The key immediately loses all access. This action cannot be undone.",
         "x-mint": {
           "metadata": {
             "title": "Revoke API key"
@@ -1906,9 +1991,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Unique identifier of the API key to revoke."
             },
             "required": true,
+            "description": "Unique identifier of the API key to revoke.",
             "name": "keyId",
             "in": "path"
           }
@@ -1987,6 +2074,7 @@
         ],
         "operationId": "reindexWorld",
         "summary": "Reindex world vector & FTS indexes",
+        "description": "Rebuild the vector and full-text search indexes for a world from its stored RDF quads. Use after changing the embedding model or to repair search quality.",
         "x-mint": {
           "metadata": {
             "title": "Reindex world vector & FTS indexes"
