@@ -20,11 +20,15 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 
 /**
  * Get health
+ *
+ * Liveness probe. Returns 200 when the service can reach its database; 503 when the database is unreachable.
  */
 export const getHealth = <ThrowOnError extends boolean = false>(options?: Options<GetHealthData, ThrowOnError>): RequestResult<GetHealthResponses, GetHealthErrors, ThrowOnError> => (options?.client ?? client).get<GetHealthResponses, GetHealthErrors, ThrowOnError>({ url: '/health', ...options });
 
 /**
  * List worlds
+ *
+ * List all worlds accessible to the authenticated token. Admin tokens see all worlds; namespace-scoped tokens see only their namespace's worlds.
  */
 export const listWorlds = <ThrowOnError extends boolean = false>(options?: Options<ListWorldsData, ThrowOnError>): RequestResult<ListWorldsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListWorldsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -34,6 +38,8 @@ export const listWorlds = <ThrowOnError extends boolean = false>(options?: Optio
 
 /**
  * Create world
+ *
+ * Create a new world. Allocates a new world_uid in the shared D1 database and initializes the search and vector indexes.
  */
 export const createWorld = <ThrowOnError extends boolean = false>(options: Options<CreateWorldData, ThrowOnError>): RequestResult<CreateWorldResponses, CreateWorldErrors, ThrowOnError> => (options.client ?? client).post<CreateWorldResponses, CreateWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -47,6 +53,8 @@ export const createWorld = <ThrowOnError extends boolean = false>(options: Optio
 
 /**
  * Delete world
+ *
+ * Soft-delete a world. The world enters a 30-day grace period during which it can be restored via undelete. After the grace period, the world is permanently purged.
  */
 export const deleteWorld = <ThrowOnError extends boolean = false>(options: Options<DeleteWorldData, ThrowOnError>): RequestResult<DeleteWorldResponses, DeleteWorldErrors, ThrowOnError> => (options.client ?? client).delete<DeleteWorldResponses, DeleteWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -56,6 +64,8 @@ export const deleteWorld = <ThrowOnError extends boolean = false>(options: Optio
 
 /**
  * Get world
+ *
+ * Retrieve a single world by its unique identifier. Returns the full WorldResource including state, storage backend, and search configuration.
  */
 export const getWorld = <ThrowOnError extends boolean = false>(options: Options<GetWorldData, ThrowOnError>): RequestResult<GetWorldResponses, GetWorldErrors, ThrowOnError> => (options.client ?? client).get<GetWorldResponses, GetWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -65,6 +75,8 @@ export const getWorld = <ThrowOnError extends boolean = false>(options: Options<
 
 /**
  * Update world
+ *
+ * Update a world's display name, embedding model, or search configuration. Changing the embedding model triggers a reindex.
  */
 export const updateWorld = <ThrowOnError extends boolean = false>(options: Options<UpdateWorldData, ThrowOnError>): RequestResult<UpdateWorldResponses, UpdateWorldErrors, ThrowOnError> => (options.client ?? client).patch<UpdateWorldResponses, UpdateWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -78,6 +90,8 @@ export const updateWorld = <ThrowOnError extends boolean = false>(options: Optio
 
 /**
  * Undelete world
+ *
+ * Restore a soft-deleted world within its 30-day grace period. Returns the restored WorldResource. Fails if the grace period has expired.
  */
 export const undeleteWorld = <ThrowOnError extends boolean = false>(options: Options<UndeleteWorldData, ThrowOnError>): RequestResult<UndeleteWorldResponses, UndeleteWorldErrors, ThrowOnError> => (options.client ?? client).post<UndeleteWorldResponses, UndeleteWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -87,6 +101,8 @@ export const undeleteWorld = <ThrowOnError extends boolean = false>(options: Opt
 
 /**
  * Suspend world
+ *
+ * Suspend a world, temporarily blocking all read and write operations. The world can be resumed later without data loss.
  */
 export const suspendWorld = <ThrowOnError extends boolean = false>(options: Options<SuspendWorldData, ThrowOnError>): RequestResult<SuspendWorldResponses, SuspendWorldErrors, ThrowOnError> => (options.client ?? client).post<SuspendWorldResponses, SuspendWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -96,6 +112,8 @@ export const suspendWorld = <ThrowOnError extends boolean = false>(options: Opti
 
 /**
  * Resume world
+ *
+ * Resume a suspended world, restoring full read and write access.
  */
 export const resumeWorld = <ThrowOnError extends boolean = false>(options: Options<ResumeWorldData, ThrowOnError>): RequestResult<ResumeWorldResponses, ResumeWorldErrors, ThrowOnError> => (options.client ?? client).post<ResumeWorldResponses, ResumeWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -105,6 +123,8 @@ export const resumeWorld = <ThrowOnError extends boolean = false>(options: Optio
 
 /**
  * Mark all worlds for a namespace deleted (account deletion)
+ *
+ * Admin-only. Soft-deletes all worlds in a namespace and revokes all API keys for that namespace. Used for account deletion workflows.
  */
 export const deleteNamespaceWorlds = <ThrowOnError extends boolean = false>(options: Options<DeleteNamespaceWorldsData, ThrowOnError>): RequestResult<DeleteNamespaceWorldsResponses, DeleteNamespaceWorldsErrors, ThrowOnError> => (options.client ?? client).post<DeleteNamespaceWorldsResponses, DeleteNamespaceWorldsErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -114,6 +134,8 @@ export const deleteNamespaceWorlds = <ThrowOnError extends boolean = false>(opti
 
 /**
  * Run purge sweep on demand
+ *
+ * Admin-only. Triggers the purge sweep to permanently delete all worlds whose 30-day grace period has expired. Normally runs on a schedule; this endpoint forces an immediate sweep.
  */
 export const purgeWorlds = <ThrowOnError extends boolean = false>(options?: Options<PurgeWorldsData, ThrowOnError>): RequestResult<PurgeWorldsResponses, PurgeWorldsErrors, ThrowOnError> => (options?.client ?? client).post<PurgeWorldsResponses, PurgeWorldsErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -123,6 +145,8 @@ export const purgeWorlds = <ThrowOnError extends boolean = false>(options?: Opti
 
 /**
  * Import graph data
+ *
+ * Import RDF data into a world. Accepts Turtle, N-Quads, N-Triples, TriG, or JSON-LD payloads. Quads are stored in the world's Cloudflare D1 database and indexed for vector search.
  */
 export const importWorld = <ThrowOnError extends boolean = false>(options: Options<ImportWorldData, ThrowOnError>): RequestResult<ImportWorldResponses, ImportWorldErrors, ThrowOnError> => (options.client ?? client).post<ImportWorldResponses, ImportWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -136,6 +160,8 @@ export const importWorld = <ThrowOnError extends boolean = false>(options: Optio
 
 /**
  * Export graph data
+ *
+ * Export RDF quads from a world. Supports JSON (RDF/JSON array), Turtle, TriG, and JSON-LD output formats. Use the limit and offset query parameters for pagination.
  */
 export const exportWorld = <ThrowOnError extends boolean = false>(options: Options<ExportWorldData, ThrowOnError>): RequestResult<ExportWorldResponses, ExportWorldErrors, ThrowOnError> => (options.client ?? client).get<ExportWorldResponses, ExportWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -145,6 +171,8 @@ export const exportWorld = <ThrowOnError extends boolean = false>(options: Optio
 
 /**
  * Search world
+ *
+ * Full-text and vector similarity search across a world's graph data. Returns ranked results with subject, predicate, content, and relevance score. Falls back to LIKE-based search if the vector index is unavailable.
  */
 export const searchWorld = <ThrowOnError extends boolean = false>(options: Options<SearchWorldData, ThrowOnError>): RequestResult<SearchWorldResponses, SearchWorldErrors, ThrowOnError> => (options.client ?? client).post<SearchWorldResponses, SearchWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -158,6 +186,8 @@ export const searchWorld = <ThrowOnError extends boolean = false>(options: Optio
 
 /**
  * SPARQL without world
+ *
+ * Always returns 400. Use POST /worlds/{id}/sparql to execute a SPARQL query against a specific world.
  */
 export const sparqlNoWorld = <ThrowOnError extends boolean = false>(options?: Options<SparqlNoWorldData, ThrowOnError>): RequestResult<unknown, SparqlNoWorldErrors, ThrowOnError> => (options?.client ?? client).post<unknown, SparqlNoWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -167,6 +197,8 @@ export const sparqlNoWorld = <ThrowOnError extends boolean = false>(options?: Op
 
 /**
  * Execute SPARQL query
+ *
+ * Execute a SPARQL 1.1 query (SELECT, ASK, or UPDATE) against a world's RDF graph. SELECT results are limited by the server-configured maximum. Queries time out after the configured limit.
  */
 export const sparqlWorld = <ThrowOnError extends boolean = false>(options: Options<SparqlWorldData, ThrowOnError>): RequestResult<SparqlWorldResponses, SparqlWorldErrors, ThrowOnError> => (options.client ?? client).post<SparqlWorldResponses, SparqlWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -180,6 +212,8 @@ export const sparqlWorld = <ThrowOnError extends boolean = false>(options: Optio
 
 /**
  * List API keys
+ *
+ * List all active (non-revoked) API keys. Optionally filter by namespace. Admin-only.
  */
 export const listApiKeys = <ThrowOnError extends boolean = false>(options?: Options<ListApiKeysData, ThrowOnError>): RequestResult<ListApiKeysResponses, ListApiKeysErrors, ThrowOnError> => (options?.client ?? client).get<ListApiKeysResponses, ListApiKeysErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -189,6 +223,8 @@ export const listApiKeys = <ThrowOnError extends boolean = false>(options?: Opti
 
 /**
  * Create API key
+ *
+ * Create a new API key scoped to a namespace and optionally a single world. The token is returned once on creation and cannot be retrieved again.
  */
 export const createApiKey = <ThrowOnError extends boolean = false>(options: Options<CreateApiKeyData, ThrowOnError>): RequestResult<CreateApiKeyResponses, CreateApiKeyErrors, ThrowOnError> => (options.client ?? client).post<CreateApiKeyResponses, CreateApiKeyErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -202,6 +238,8 @@ export const createApiKey = <ThrowOnError extends boolean = false>(options: Opti
 
 /**
  * Revoke API key
+ *
+ * Permanently revoke an API key. The key immediately loses all access. This action cannot be undone.
  */
 export const deleteApiKey = <ThrowOnError extends boolean = false>(options: Options<DeleteApiKeyData, ThrowOnError>): RequestResult<DeleteApiKeyResponses, DeleteApiKeyErrors, ThrowOnError> => (options.client ?? client).delete<DeleteApiKeyResponses, DeleteApiKeyErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -211,6 +249,8 @@ export const deleteApiKey = <ThrowOnError extends boolean = false>(options: Opti
 
 /**
  * Reindex world vector & FTS indexes
+ *
+ * Rebuild the vector and full-text search indexes for a world from its stored RDF quads. Use after changing the embedding model or to repair search quality.
  */
 export const reindexWorld = <ThrowOnError extends boolean = false>(options: Options<ReindexWorldData, ThrowOnError>): RequestResult<ReindexWorldResponses, ReindexWorldErrors, ThrowOnError> => (options.client ?? client).post<ReindexWorldResponses, ReindexWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
