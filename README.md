@@ -11,7 +11,7 @@
   <a href="https://deepwiki.com/wazootech/worlds-client-ts"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki" /></a>
 </p>
 
-TypeScript client for the Worlds data-plane API at `worlds-api.wazoo.dev`.
+TypeScript client for the Worlds data-plane API at `data.wazoo.dev`.
 
 This package is generated from the canonical Worlds API OpenAPI document
 (committed in `openapi/openapi.json`). Use it for data-plane operations against
@@ -34,7 +34,7 @@ npx jsr add @worlds/client
 import { createClient, searchWorld } from "@worlds/client";
 
 const client = createClient({
-  baseUrl: "https://worlds-api.wazoo.dev",
+  baseUrl: "https://data.wazoo.dev",
   auth: process.env.WORLDS_DATA_PLANE_TOKEN,
 });
 
@@ -58,7 +58,7 @@ deno task ci
 Run `deno task sync:openapi` to refresh `openapi/openapi.json`. By default it
 reads the checked-in snapshot at `../worlds-api/openapi/openapi.json` (a sibling
 checkout of the Worlds API repo). Set
-`WORLDS_API_OPENAPI_URL=https://worlds-api.wazoo.dev/openapi.json` to sync from
+`WORLDS_API_OPENAPI_URL=https://data.wazoo.dev/openapi.json` to sync from
 a deployed API. CI runs `deno task openapi:check` so spec drift fails the build.
 
 Run `deno task generate` to regenerate `src/generated/` from the synced spec via

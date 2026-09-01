@@ -19,7 +19,7 @@ const source = Deno.env.get("WORLDS_API_OPENAPI_SOURCE") ??
   Deno.env.get("WORLDS_API_OPENAPI_URL") ??
   (existsSync(siblingSnapshot)
     ? "../worlds-api/openapi/openapi.json"
-    : "https://worlds-api.wazoo.dev/openapi.json");
+    : "https://data.wazoo.dev/openapi.json");
 
 const spec = await loadSpec(source);
 const next = `${JSON.stringify(spec, null, 2)}\n`;
