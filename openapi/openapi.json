@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "https://worlds-api.wazoo.dev",
+      "url": "https://data.wazoo.dev",
       "description": "Worlds API"
     }
   ],
@@ -48,10 +48,9 @@
           "storage": {
             "type": "string",
             "enum": [
-              "libsql-per-world",
-              "legacy-shared-libsql"
+              "d1"
             ],
-            "description": "Storage backend for the world. libsql-per-world provisions a dedicated per-world Turso/LibSQL database; legacy-shared-libsql points at a shared legacy store."
+            "description": "Storage backend for the world. All worlds share a single Cloudflare D1 database, separated by world_uid."
           },
           "embeddingModel": {
             "type": "string",
@@ -551,7 +550,7 @@
         ],
         "operationId": "createWorld",
         "summary": "Create world",
-        "description": "Create a new world. Provisions a dedicated per-world LibSQL database and initializes the search and vector indexes.",
+        "description": "Create a new world. Allocates a new world_uid in the shared D1 database and initializes the search and vector indexes.",
         "x-mint": {
           "metadata": {
             "title": "Create world"
@@ -585,66 +584,6 @@
           },
           "400": {
             "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Organization database limit reached",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Provisioning failed",
             "content": {
               "application/json": {
                 "schema": {
@@ -1344,7 +1283,7 @@
         ],
         "operationId": "importWorld",
         "summary": "Import graph data",
-        "description": "Import RDF data into a world. Accepts Turtle, N-Quads, N-Triples, TriG, or JSON-LD payloads. Quads are stored in the world's LibSQL database and indexed for vector search.",
+        "description": "Import RDF data into a world. Accepts Turtle, N-Quads, N-Triples, TriG, or JSON-LD payloads. Quads are stored in the world's Cloudflare D1 database and indexed for vector search.",
         "x-mint": {
           "metadata": {
             "title": "Import graph data"

@@ -13,4 +13,4 @@ import type { ClientOptions as ClientOptions2 } from './types.gen.ts';
  */
 export type CreateClientConfig<T extends ClientOptions = ClientOptions2> = (override?: Config<ClientOptions & T>) => Config<Required<ClientOptions> & T>;
 
-export const client: Client = createClient(createConfig<ClientOptions2>({ baseUrl: 'https://worlds-api.wazoo.dev' }));
+export const client: Client = createClient(createConfig<ClientOptions2>({ baseUrl: 'https://data.wazoo.dev' }));
