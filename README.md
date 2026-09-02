@@ -57,7 +57,8 @@ deno task ci
 
 Run `deno task sync:openapi` to refresh `openapi/openapi.json`. By default it
 reads the checked-in snapshot at `../worlds-api/openapi/openapi.json` (a sibling
-checkout of the Worlds API repo). Set
+checkout of the Worlds API repo). In CI (no sibling checkout) it falls back to
+the committed snapshot on worlds-api `main` via raw.githubusercontent.com. Set
 `WORLDS_API_OPENAPI_URL=https://data.wazoo.dev/openapi.json` to sync from a
 deployed API. CI runs `deno task openapi:check` so spec drift fails the build.
 
