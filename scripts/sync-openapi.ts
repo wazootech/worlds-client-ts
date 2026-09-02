@@ -2,9 +2,10 @@
 // canonical source is the committed snapshot in the worlds-api repo
 // (openapi/openapi.json), which the Worlds API CI keeps drift-free. Sources,
 // in order: WORLDS_API_OPENAPI_SOURCE, WORLDS_API_OPENAPI_URL (deployed
-// document), the sibling worlds-api checkout, then the raw GitHub snapshot.
-// Pass --check to fail when the committed snapshot is stale (used by CI
-// instead of rewriting it).
+// document, e.g. https://data.wazoo.dev/openapi.json), the sibling worlds-api
+// checkout, then the raw GitHub snapshot of worlds-api main. Pass --check to
+// fail when the committed snapshot is stale (used by CI instead of rewriting
+// it).
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
@@ -19,7 +20,7 @@ const source = Deno.env.get("WORLDS_API_OPENAPI_SOURCE") ??
   Deno.env.get("WORLDS_API_OPENAPI_URL") ??
   (existsSync(siblingSnapshot)
     ? "../worlds-api/openapi/openapi.json"
-    : "https://data.wazoo.dev/openapi.json");
+    : "https://raw.githubusercontent.com/wazootech/worlds-api/main/openapi/openapi.json");
 
 const spec = await loadSpec(source);
 const next = `${JSON.stringify(spec, null, 2)}\n`;

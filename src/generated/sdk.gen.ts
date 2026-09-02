@@ -172,7 +172,7 @@ export const exportWorld = <ThrowOnError extends boolean = false>(options: Optio
 /**
  * Search world
  *
- * Full-text and vector similarity search across a world's graph data. Returns ranked results with subject, predicate, content, and relevance score. Falls back to LIKE-based search if the vector index is unavailable.
+ * Full-text and vector similarity search across a world's graph data. Returns ranked results with id, subject, predicate, content, score, and scoreType on the normalized 0–1 scale, plus the mode that actually ran. Falls back to LIKE-based search if the primary engine is unavailable.
  */
 export const searchWorld = <ThrowOnError extends boolean = false>(options: Options<SearchWorldData, ThrowOnError>): RequestResult<SearchWorldResponses, SearchWorldErrors, ThrowOnError> => (options.client ?? client).post<SearchWorldResponses, SearchWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
