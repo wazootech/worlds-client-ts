@@ -162,7 +162,22 @@ export type Quad = {
     graph?: string;
 };
 
+export type SearchResponse = {
+    /**
+     * Ranked search results, best first.
+     */
+    results: Array<SearchResult>;
+    /**
+     * Search mode that actually ran: keyword (full-text), semantic (vector), hybrid (both), or fallback (LIKE) when the primary engine is unavailable.
+     */
+    mode: 'semantic' | 'keyword' | 'hybrid' | 'fallback';
+};
+
 export type SearchResult = {
+    /**
+     * Stable deterministic identifier for the matched quad and text (shared across backends), used for ranked-list evaluation and deduplication.
+     */
+    id: string;
     /**
      * RDF subject URI identifying the matched resource, e.g. https://example.org/entity/42.
      */
@@ -172,17 +187,21 @@ export type SearchResult = {
      */
     predicate: string;
     /**
-     * Named graph URI the quad belongs to. Null when the world uses a default graph.
+     * Named graph URI the quad belongs to. Absent when the world uses a default graph.
      */
     graph?: string;
     /**
-     * Text content extracted from the matched quad, used for display and snippet generation.
+     * Text content of the matched quad, used for display and snippet generation. The single text field replacing the legacy object field.
      */
-    content?: string;
+    content: string;
     /**
-     * Relevance score from the search engine (0–1). Higher scores indicate better matches. Null for fallback LIKE search results.
+     * Relevance score from the search engine on the normalized 0–1 scale (1.0 = best). Null for fallback LIKE search results.
      */
-    score?: number;
+    score: number | null;
+    /**
+     * Scoring family the score expresses: rrf (reciprocal rank fusion, normalized), cosine (vector similarity), or unranked (fallback results carry no ordering meaning).
+     */
+    scoreType: 'rrf' | 'cosine' | 'unranked';
 };
 
 export type SearchRequest = {
@@ -191,17 +210,54 @@ export type SearchRequest = {
      */
     query: string;
     /**
-     * Maximum number of results to return. Defaults to 20. The response is capped at this value after ranking.
+     * Maximum number of results to return (1–100). Defaults to 20. The response is capped at this value after ranking; the engine's internal candidate pool is at least this large.
      */
     limit?: number;
     /**
-     * Override the world's default top-K for vector similarity search. Higher values improve recall at the cost of latency.
-     */
-    topK?: number;
-    /**
-     * Override the world's minimum relevance score. Results below this threshold are omitted.
+     * Override the world's minimum relevance score on the normalized 0–1 scale (1.0 = best). Results below this threshold are omitted after ranking.
      */
     minScore?: number;
+    filter?: SearchFilter;
+};
+
+/**
+ * Include/exclude quad filters applied before ranking (SDK QuadFilter semantics).
+ */
+export type SearchFilter = {
+    /**
+     * Include allowlist: only quads matching these exact subject/predicate/graph values are candidates.
+     */
+    include?: {
+        /**
+         * Only match quads whose subject is in this list. Applied before ranking.
+         */
+        subjects?: Array<string>;
+        /**
+         * Only match quads whose predicate is in this list. Applied before ranking.
+         */
+        predicates?: Array<string>;
+        /**
+         * Only match quads whose graph is in this list. Applied before ranking.
+         */
+        graphs?: Array<string>;
+    };
+    /**
+     * Exclude denylist: quads matching these exact subject/predicate/graph values are not candidates.
+     */
+    exclude?: {
+        /**
+         * Exclude quads whose subject is in this list. Applied before ranking.
+         */
+        subjects?: Array<string>;
+        /**
+         * Exclude quads whose predicate is in this list. Applied before ranking.
+         */
+        predicates?: Array<string>;
+        /**
+         * Exclude quads whose graph is in this list. Applied before ranking.
+         */
+        graphs?: Array<string>;
+    };
 };
 
 export type SparqlRequest = {
@@ -771,10 +827,7 @@ export type SearchWorldResponses = {
     /**
      * Search results
      */
-    200: {
-        results: Array<SearchResult>;
-        mode?: string;
-    };
+    200: SearchResponse;
 };
 
 export type SearchWorldResponse = SearchWorldResponses[keyof SearchWorldResponses];

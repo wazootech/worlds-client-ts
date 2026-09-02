@@ -251,9 +251,39 @@
           "object"
         ]
       },
+      "SearchResponse": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchResult"
+            },
+            "description": "Ranked search results, best first."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "semantic",
+              "keyword",
+              "hybrid",
+              "fallback"
+            ],
+            "description": "Search mode that actually ran: keyword (full-text), semantic (vector), hybrid (both), or fallback (LIKE) when the primary engine is unavailable."
+          }
+        },
+        "required": [
+          "results",
+          "mode"
+        ]
+      },
       "SearchResult": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable deterministic identifier for the matched quad and text (shared across backends), used for ranked-list evaluation and deduplication."
+          },
           "subject": {
             "type": "string",
             "description": "RDF subject URI identifying the matched resource, e.g. https://example.org/entity/42."
@@ -264,20 +294,34 @@
           },
           "graph": {
             "type": "string",
-            "description": "Named graph URI the quad belongs to. Null when the world uses a default graph."
+            "description": "Named graph URI the quad belongs to. Absent when the world uses a default graph."
           },
           "content": {
             "type": "string",
-            "description": "Text content extracted from the matched quad, used for display and snippet generation."
+            "description": "Text content of the matched quad, used for display and snippet generation. The single text field replacing the legacy object field."
           },
           "score": {
             "type": "number",
-            "description": "Relevance score from the search engine (0–1). Higher scores indicate better matches. Null for fallback LIKE search results."
+            "nullable": true,
+            "description": "Relevance score from the search engine on the normalized 0–1 scale (1.0 = best). Null for fallback LIKE search results."
+          },
+          "scoreType": {
+            "type": "string",
+            "enum": [
+              "rrf",
+              "cosine",
+              "unranked"
+            ],
+            "description": "Scoring family the score expresses: rrf (reciprocal rank fusion, normalized), cosine (vector similarity), or unranked (fallback results carry no ordering meaning)."
           }
         },
         "required": [
+          "id",
           "subject",
-          "predicate"
+          "predicate",
+          "content",
+          "score",
+          "scoreType"
         ]
       },
       "SearchRequest": {
@@ -290,27 +334,84 @@
           },
           "limit": {
             "type": "integer",
-            "minimum": 0,
-            "exclusiveMinimum": true,
+            "minimum": 1,
+            "maximum": 100,
             "default": 20,
-            "description": "Maximum number of results to return. Defaults to 20. The response is capped at this value after ranking."
-          },
-          "topK": {
-            "type": "integer",
-            "minimum": 0,
-            "exclusiveMinimum": true,
-            "description": "Override the world's default top-K for vector similarity search. Higher values improve recall at the cost of latency."
+            "description": "Maximum number of results to return (1–100). Defaults to 20. The response is capped at this value after ranking; the engine's internal candidate pool is at least this large."
           },
           "minScore": {
             "type": "number",
             "minimum": 0,
             "maximum": 1,
-            "description": "Override the world's minimum relevance score. Results below this threshold are omitted."
+            "description": "Override the world's minimum relevance score on the normalized 0–1 scale (1.0 = best). Results below this threshold are omitted after ranking."
+          },
+          "filter": {
+            "$ref": "#/components/schemas/SearchFilter"
           }
         },
         "required": [
           "query"
         ]
+      },
+      "SearchFilter": {
+        "type": "object",
+        "properties": {
+          "include": {
+            "type": "object",
+            "properties": {
+              "subjects": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Only match quads whose subject is in this list. Applied before ranking."
+              },
+              "predicates": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Only match quads whose predicate is in this list. Applied before ranking."
+              },
+              "graphs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Only match quads whose graph is in this list. Applied before ranking."
+              }
+            },
+            "description": "Include allowlist: only quads matching these exact subject/predicate/graph values are candidates."
+          },
+          "exclude": {
+            "type": "object",
+            "properties": {
+              "subjects": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Exclude quads whose subject is in this list. Applied before ranking."
+              },
+              "predicates": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Exclude quads whose predicate is in this list. Applied before ranking."
+              },
+              "graphs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Exclude quads whose graph is in this list. Applied before ranking."
+              }
+            },
+            "description": "Exclude denylist: quads matching these exact subject/predicate/graph values are not candidates."
+          }
+        },
+        "description": "Include/exclude quad filters applied before ranking (SDK QuadFilter semantics)."
       },
       "SparqlRequest": {
         "type": "object",
@@ -1502,7 +1603,7 @@
         ],
         "operationId": "searchWorld",
         "summary": "Search world",
-        "description": "Full-text and vector similarity search across a world's graph data. Returns ranked results with subject, predicate, content, and relevance score. Falls back to LIKE-based search if the vector index is unavailable.",
+        "description": "Full-text and vector similarity search across a world's graph data. Returns ranked results with id, subject, predicate, content, score, and scoreType on the normalized 0–1 scale, plus the mode that actually ran. Falls back to LIKE-based search if the primary engine is unavailable.",
         "x-mint": {
           "metadata": {
             "title": "Search world"
@@ -1541,21 +1642,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "results": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/SearchResult"
-                      }
-                    },
-                    "mode": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "results"
-                  ]
+                  "$ref": "#/components/schemas/SearchResponse"
                 }
               }
             }
