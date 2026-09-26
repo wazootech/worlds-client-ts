@@ -39,7 +39,7 @@ export const listWorlds = <ThrowOnError extends boolean = false>(options?: Optio
 /**
  * Create world
  *
- * Create a new world. Allocates a new world_uid in the shared D1 database and initializes the search and vector indexes.
+ * Create a new world. Allocates a new world_id in the shared D1 database and initializes the search and vector indexes.
  */
 export const createWorld = <ThrowOnError extends boolean = false>(options: Options<CreateWorldData, ThrowOnError>): RequestResult<CreateWorldResponses, CreateWorldErrors, ThrowOnError> => (options.client ?? client).post<CreateWorldResponses, CreateWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],

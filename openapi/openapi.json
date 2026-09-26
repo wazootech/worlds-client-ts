@@ -50,7 +50,7 @@
             "enum": [
               "d1"
             ],
-            "description": "Storage backend for the world. All worlds share a single Cloudflare D1 database, separated by world_uid."
+            "description": "Storage backend for the world. All worlds share a single Cloudflare D1 database, separated by world_id."
           },
           "embeddingModel": {
             "type": "string",
@@ -651,7 +651,7 @@
         ],
         "operationId": "createWorld",
         "summary": "Create world",
-        "description": "Create a new world. Allocates a new world_uid in the shared D1 database and initializes the search and vector indexes.",
+        "description": "Create a new world. Allocates a new world_id in the shared D1 database and initializes the search and vector indexes.",
         "x-mint": {
           "metadata": {
             "title": "Create world"
@@ -738,10 +738,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_uid, e.g. w_<uuid>."
+              "description": "The canonical world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_uid, e.g. w_<uuid>.",
+            "description": "The canonical world_id, e.g. w_<uuid>.",
             "name": "id",
             "in": "path"
           }
@@ -810,10 +810,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_uid, e.g. w_<uuid>."
+              "description": "The canonical world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_uid, e.g. w_<uuid>.",
+            "description": "The canonical world_id, e.g. w_<uuid>.",
             "name": "id",
             "in": "path"
           }
@@ -922,10 +922,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_uid, e.g. w_<uuid>."
+              "description": "The canonical world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_uid, e.g. w_<uuid>.",
+            "description": "The canonical world_id, e.g. w_<uuid>.",
             "name": "id",
             "in": "path"
           }
@@ -989,10 +989,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_uid, e.g. w_<uuid>."
+              "description": "The canonical world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_uid, e.g. w_<uuid>.",
+            "description": "The canonical world_id, e.g. w_<uuid>.",
             "name": "id",
             "in": "path"
           }
@@ -1093,10 +1093,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_uid, e.g. w_<uuid>."
+              "description": "The canonical world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_uid, e.g. w_<uuid>.",
+            "description": "The canonical world_id, e.g. w_<uuid>.",
             "name": "id",
             "in": "path"
           }
@@ -1167,10 +1167,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_uid, e.g. w_<uuid>."
+              "description": "The canonical world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_uid, e.g. w_<uuid>.",
+            "description": "The canonical world_id, e.g. w_<uuid>.",
             "name": "id",
             "in": "path"
           }
@@ -1399,10 +1399,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_uid, e.g. w_<uuid>."
+              "description": "The canonical world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_uid, e.g. w_<uuid>.",
+            "description": "The canonical world_id, e.g. w_<uuid>.",
             "name": "id",
             "in": "path"
           }
@@ -1483,10 +1483,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_uid, e.g. w_<uuid>."
+              "description": "The canonical world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_uid, e.g. w_<uuid>.",
+            "description": "The canonical world_id, e.g. w_<uuid>.",
             "name": "id",
             "in": "path"
           },
@@ -1618,10 +1618,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_uid, e.g. w_<uuid>."
+              "description": "The canonical world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_uid, e.g. w_<uuid>.",
+            "description": "The canonical world_id, e.g. w_<uuid>.",
             "name": "id",
             "in": "path"
           }
@@ -1754,10 +1754,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_uid, e.g. w_<uuid>."
+              "description": "The canonical world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_uid, e.g. w_<uuid>.",
+            "description": "The canonical world_id, e.g. w_<uuid>.",
             "name": "id",
             "in": "path"
           }
@@ -2115,10 +2115,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_uid, e.g. w_<uuid>."
+              "description": "The canonical world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_uid, e.g. w_<uuid>.",
+            "description": "The canonical world_id, e.g. w_<uuid>.",
             "name": "id",
             "in": "path"
           }

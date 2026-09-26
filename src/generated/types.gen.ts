@@ -22,7 +22,7 @@ export type WorldResource = {
      */
     state: string;
     /**
-     * Storage backend for the world. All worlds share a single Cloudflare D1 database, separated by world_uid.
+     * Storage backend for the world. All worlds share a single Cloudflare D1 database, separated by world_id.
      */
     storage: 'd1';
     /**
@@ -422,7 +422,7 @@ export type DeleteWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical world_uid, e.g. w_<uuid>.
+         * The canonical world_id, e.g. w_<uuid>.
          */
         id: string;
     };
@@ -457,7 +457,7 @@ export type GetWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical world_uid, e.g. w_<uuid>.
+         * The canonical world_id, e.g. w_<uuid>.
          */
         id: string;
     };
@@ -492,7 +492,7 @@ export type UpdateWorldData = {
     body: UpdateWorldRequest;
     path: {
         /**
-         * The canonical world_uid, e.g. w_<uuid>.
+         * The canonical world_id, e.g. w_<uuid>.
          */
         id: string;
     };
@@ -536,7 +536,7 @@ export type UndeleteWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical world_uid, e.g. w_<uuid>.
+         * The canonical world_id, e.g. w_<uuid>.
          */
         id: string;
     };
@@ -580,7 +580,7 @@ export type SuspendWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical world_uid, e.g. w_<uuid>.
+         * The canonical world_id, e.g. w_<uuid>.
          */
         id: string;
     };
@@ -615,7 +615,7 @@ export type ResumeWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical world_uid, e.g. w_<uuid>.
+         * The canonical world_id, e.g. w_<uuid>.
          */
         id: string;
     };
@@ -718,7 +718,7 @@ export type ImportWorldData = {
     body: ImportRequest;
     path: {
         /**
-         * The canonical world_uid, e.g. w_<uuid>.
+         * The canonical world_id, e.g. w_<uuid>.
          */
         id: string;
     };
@@ -753,7 +753,7 @@ export type ExportWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical world_uid, e.g. w_<uuid>.
+         * The canonical world_id, e.g. w_<uuid>.
          */
         id: string;
     };
@@ -801,7 +801,7 @@ export type SearchWorldData = {
     body: SearchRequest;
     path: {
         /**
-         * The canonical world_uid, e.g. w_<uuid>.
+         * The canonical world_id, e.g. w_<uuid>.
          */
         id: string;
     };
@@ -857,7 +857,7 @@ export type SparqlWorldData = {
     body: SparqlRequest;
     path: {
         /**
-         * The canonical world_uid, e.g. w_<uuid>.
+         * The canonical world_id, e.g. w_<uuid>.
          */
         id: string;
     };
@@ -1010,7 +1010,7 @@ export type ReindexWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical world_uid, e.g. w_<uuid>.
+         * The canonical world_id, e.g. w_<uuid>.
          */
         id: string;
     };
