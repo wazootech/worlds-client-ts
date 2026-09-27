@@ -31,11 +31,11 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "Resource name in the form worlds/<uid>, e.g. worlds/w_a1b2c3d4."
+            "description": "Resource name in the form worlds/<worldId>, e.g. worlds/w_a1b2c3d4."
           },
-          "uid": {
+          "worldId": {
             "type": "string",
-            "description": "Unique world identifier, e.g. w_<uuid>."
+            "description": "Canonical world identifier, e.g. w_<uuid>."
           },
           "displayName": {
             "type": "string",
@@ -87,7 +87,7 @@
         },
         "required": [
           "name",
-          "uid",
+          "worldId",
           "displayName",
           "state",
           "storage",
@@ -429,7 +429,7 @@
       "ApiKeyCreateResponse": {
         "type": "object",
         "properties": {
-          "uid": {
+          "apiKeyId": {
             "type": "string",
             "description": "Unique identifier for the created API key."
           },
@@ -456,7 +456,7 @@
           }
         },
         "required": [
-          "uid",
+          "apiKeyId",
           "token",
           "name",
           "namespace",
@@ -499,7 +499,7 @@
       "ApiKeyResource": {
         "type": "object",
         "properties": {
-          "uid": {
+          "apiKeyId": {
             "type": "string",
             "description": "Unique identifier for the API key."
           },
@@ -528,7 +528,7 @@
           }
         },
         "required": [
-          "uid",
+          "apiKeyId",
           "name",
           "namespace",
           "scopes",
@@ -586,6 +586,77 @@
                       "type": "string",
                       "enum": [
                         "degraded"
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "security": [],
+        "tags": [
+          "Health"
+        ],
+        "operationId": "getReadiness",
+        "summary": "Get readiness",
+        "description": "Readiness probe. Returns 200 only when the control-plane schema has the canonical columns.",
+        "x-mint": {
+          "metadata": {
+            "title": "Get readiness"
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Service is ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ready"
+                      ]
+                    },
+                    "schema": {
+                      "type": "string",
+                      "enum": [
+                        "canonical"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "schema"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service is not ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "not_ready"
                       ]
                     },
                     "error": {
@@ -716,7 +787,7 @@
         }
       }
     },
-    "/worlds/{id}": {
+    "/worlds/{worldId}": {
       "get": {
         "tags": [
           "Worlds"
@@ -738,11 +809,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "description": "The canonical worldId stored as world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The canonical worldId stored as world_id, e.g. w_<uuid>.",
+            "name": "worldId",
             "in": "path"
           }
         ],
@@ -810,11 +881,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "description": "The canonical worldId stored as world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The canonical worldId stored as world_id, e.g. w_<uuid>.",
+            "name": "worldId",
             "in": "path"
           }
         ],
@@ -922,11 +993,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "description": "The canonical worldId stored as world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The canonical worldId stored as world_id, e.g. w_<uuid>.",
+            "name": "worldId",
             "in": "path"
           }
         ],
@@ -967,7 +1038,7 @@
         }
       }
     },
-    "/worlds/{id}/undelete": {
+    "/worlds/{worldId}/undelete": {
       "post": {
         "tags": [
           "Worlds"
@@ -989,11 +1060,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "description": "The canonical worldId stored as world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The canonical worldId stored as world_id, e.g. w_<uuid>.",
+            "name": "worldId",
             "in": "path"
           }
         ],
@@ -1071,7 +1142,7 @@
         }
       }
     },
-    "/worlds/{id}/suspend": {
+    "/worlds/{worldId}/suspend": {
       "post": {
         "tags": [
           "Worlds"
@@ -1093,11 +1164,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "description": "The canonical worldId stored as world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The canonical worldId stored as world_id, e.g. w_<uuid>.",
+            "name": "worldId",
             "in": "path"
           }
         ],
@@ -1145,7 +1216,7 @@
         }
       }
     },
-    "/worlds/{id}/resume": {
+    "/worlds/{worldId}/resume": {
       "post": {
         "tags": [
           "Worlds"
@@ -1167,11 +1238,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "description": "The canonical worldId stored as world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The canonical worldId stored as world_id, e.g. w_<uuid>.",
+            "name": "worldId",
             "in": "path"
           }
         ],
@@ -1377,7 +1448,7 @@
         }
       }
     },
-    "/worlds/{id}/import": {
+    "/worlds/{worldId}/import": {
       "post": {
         "tags": [
           "ImportExport"
@@ -1399,11 +1470,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "description": "The canonical worldId stored as world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The canonical worldId stored as world_id, e.g. w_<uuid>.",
+            "name": "worldId",
             "in": "path"
           }
         ],
@@ -1461,7 +1532,7 @@
         }
       }
     },
-    "/worlds/{id}/export": {
+    "/worlds/{worldId}/export": {
       "get": {
         "tags": [
           "ImportExport"
@@ -1483,11 +1554,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "description": "The canonical worldId stored as world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The canonical worldId stored as world_id, e.g. w_<uuid>.",
+            "name": "worldId",
             "in": "path"
           },
           {
@@ -1596,7 +1667,7 @@
         }
       }
     },
-    "/worlds/{id}/search": {
+    "/worlds/{worldId}/search": {
       "post": {
         "tags": [
           "Search"
@@ -1618,11 +1689,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "description": "The canonical worldId stored as world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The canonical worldId stored as world_id, e.g. w_<uuid>.",
+            "name": "worldId",
             "in": "path"
           }
         ],
@@ -1687,7 +1758,7 @@
         ],
         "operationId": "sparqlNoWorld",
         "summary": "SPARQL without world",
-        "description": "Always returns 400. Use POST /worlds/{id}/sparql to execute a SPARQL query against a specific world.",
+        "description": "Always returns 400. Use POST /worlds/{worldId}/sparql to execute a SPARQL query against a specific world.",
         "x-mint": {
           "metadata": {
             "title": "SPARQL without world"
@@ -1732,7 +1803,7 @@
         }
       }
     },
-    "/worlds/{id}/sparql": {
+    "/worlds/{worldId}/sparql": {
       "post": {
         "tags": [
           "SPARQL"
@@ -1754,11 +1825,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "description": "The canonical worldId stored as world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The canonical worldId stored as world_id, e.g. w_<uuid>.",
+            "name": "worldId",
             "in": "path"
           }
         ],
@@ -2001,7 +2072,7 @@
         }
       }
     },
-    "/api-keys/{keyId}": {
+    "/api-keys/{apiKeyId}": {
       "delete": {
         "tags": [
           "APIKeys"
@@ -2022,7 +2093,7 @@
             },
             "required": true,
             "description": "Unique identifier of the API key to revoke.",
-            "name": "keyId",
+            "name": "apiKeyId",
             "in": "path"
           }
         ],
@@ -2093,7 +2164,7 @@
         }
       }
     },
-    "/worlds/{id}/reindex": {
+    "/worlds/{worldId}/reindex": {
       "post": {
         "tags": [
           "Reindex"
@@ -2115,11 +2186,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "description": "The canonical worldId stored as world_id, e.g. w_<uuid>."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The canonical worldId stored as world_id, e.g. w_<uuid>.",
+            "name": "worldId",
             "in": "path"
           }
         ],
