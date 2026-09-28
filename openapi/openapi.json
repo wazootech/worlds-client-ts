@@ -29,13 +29,9 @@
       "WorldResource": {
         "type": "object",
         "properties": {
-          "name": {
-            "type": "string",
-            "description": "Resource name in the form worlds/<id>, e.g. worlds/w_<uuid>."
-          },
           "id": {
             "type": "string",
-            "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i",
+            "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
             "description": "Immutable ID minted by worlds-api, e.g. w_<uuid>."
           },
           "displayName": {
@@ -87,7 +83,6 @@
           }
         },
         "required": [
-          "name",
           "id",
           "displayName",
           "state",
@@ -454,6 +449,7 @@
           "worldId": {
             "type": "string",
             "nullable": true,
+            "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
             "description": "World ID the key is scoped to, or null if the key has namespace-wide access."
           },
           "createTime": {
@@ -480,7 +476,7 @@
           },
           "worldId": {
             "type": "string",
-            "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i",
+            "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
             "description": "Optional world ID to scope the key to a single world. Omit to allow access to all worlds in the namespace."
           },
           "name": {
@@ -520,6 +516,7 @@
           },
           "worldId": {
             "type": "string",
+            "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
             "description": "World ID the key is scoped to, or absent for namespace-wide keys."
           },
           "scopes": {
@@ -816,7 +813,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i",
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
               "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
@@ -889,7 +886,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i",
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
               "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
@@ -1002,7 +999,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i",
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
               "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
@@ -1070,7 +1067,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i",
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
               "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
@@ -1175,7 +1172,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i",
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
               "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
@@ -1250,7 +1247,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i",
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
               "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
@@ -1483,7 +1480,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i",
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
               "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
@@ -1568,7 +1565,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i",
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
               "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
@@ -1704,7 +1701,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i",
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
               "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
@@ -1841,7 +1838,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i",
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
               "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
@@ -2203,7 +2200,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i",
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
               "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,

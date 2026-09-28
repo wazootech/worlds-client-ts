@@ -6,10 +6,6 @@ export type ClientOptions = {
 
 export type WorldResource = {
     /**
-     * Resource name in the form worlds/<id>, e.g. worlds/w_<uuid>.
-     */
-    name: string;
-    /**
      * Immutable ID minted by worlds-api, e.g. w_<uuid>.
      */
     id: string;
