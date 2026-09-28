@@ -6,13 +6,13 @@ export type ClientOptions = {
 
 export type WorldResource = {
     /**
-     * Resource name in the form worlds/<worldId>, e.g. worlds/w_a1b2c3d4.
+     * Resource name in the form worlds/<id>, e.g. worlds/w_<uuid>.
      */
     name: string;
     /**
-     * Canonical world identifier, e.g. w_<uuid>.
+     * Immutable ID minted by worlds-api, e.g. w_<uuid>.
      */
-    worldId: string;
+    id: string;
     /**
      * User-facing display name for the world. Set on creation or update.
      */
@@ -145,6 +145,10 @@ export type ExportQuadsResponse = {
 
 export type Quad = {
     /**
+     * Stable content-addressed identifier for this RDF quad.
+     */
+    id: string;
+    /**
      * RDF subject URI.
      */
     subject: string;
@@ -271,7 +275,7 @@ export type ApiKeyCreateResponse = {
     /**
      * Unique identifier for the created API key.
      */
-    apiKeyId: string;
+    id: string;
     /**
      * The full bearer token (wzw format). Displayed once on creation — store it securely.
      */
@@ -317,7 +321,7 @@ export type ApiKeyResource = {
     /**
      * Unique identifier for the API key.
      */
-    apiKeyId: string;
+    id: string;
     /**
      * Human-readable label for the key.
      */
@@ -453,7 +457,7 @@ export type DeleteWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical worldId stored as world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUID.
          */
         worldId: string;
     };
@@ -488,7 +492,7 @@ export type GetWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical worldId stored as world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUID.
          */
         worldId: string;
     };
@@ -523,7 +527,7 @@ export type UpdateWorldData = {
     body: UpdateWorldRequest;
     path: {
         /**
-         * The canonical worldId stored as world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUID.
          */
         worldId: string;
     };
@@ -567,7 +571,7 @@ export type UndeleteWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical worldId stored as world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUID.
          */
         worldId: string;
     };
@@ -611,7 +615,7 @@ export type SuspendWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical worldId stored as world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUID.
          */
         worldId: string;
     };
@@ -646,7 +650,7 @@ export type ResumeWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical worldId stored as world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUID.
          */
         worldId: string;
     };
@@ -749,7 +753,7 @@ export type ImportWorldData = {
     body: ImportRequest;
     path: {
         /**
-         * The canonical worldId stored as world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUID.
          */
         worldId: string;
     };
@@ -784,7 +788,7 @@ export type ExportWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical worldId stored as world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUID.
          */
         worldId: string;
     };
@@ -832,7 +836,7 @@ export type SearchWorldData = {
     body: SearchRequest;
     path: {
         /**
-         * The canonical worldId stored as world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUID.
          */
         worldId: string;
     };
@@ -888,7 +892,7 @@ export type SparqlWorldData = {
     body: SparqlRequest;
     path: {
         /**
-         * The canonical worldId stored as world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUID.
          */
         worldId: string;
     };
@@ -1041,7 +1045,7 @@ export type ReindexWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical worldId stored as world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUID.
          */
         worldId: string;
     };
