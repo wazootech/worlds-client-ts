@@ -29,13 +29,10 @@
       "WorldResource": {
         "type": "object",
         "properties": {
-          "name": {
+          "id": {
             "type": "string",
-            "description": "Resource name in the form worlds/<uid>, e.g. worlds/w_a1b2c3d4."
-          },
-          "uid": {
-            "type": "string",
-            "description": "Unique world identifier, e.g. w_<uuid>."
+            "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "description": "Immutable ID minted by worlds-api, e.g. w_<uuid>."
           },
           "displayName": {
             "type": "string",
@@ -86,8 +83,7 @@
           }
         },
         "required": [
-          "name",
-          "uid",
+          "id",
           "displayName",
           "state",
           "storage",
@@ -228,6 +224,10 @@
       "Quad": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable content-addressed identifier for this RDF quad."
+          },
           "subject": {
             "type": "string",
             "description": "RDF subject URI."
@@ -246,6 +246,7 @@
           }
         },
         "required": [
+          "id",
           "subject",
           "predicate",
           "object"
@@ -429,7 +430,7 @@
       "ApiKeyCreateResponse": {
         "type": "object",
         "properties": {
-          "uid": {
+          "id": {
             "type": "string",
             "description": "Unique identifier for the created API key."
           },
@@ -448,6 +449,7 @@
           "worldId": {
             "type": "string",
             "nullable": true,
+            "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
             "description": "World ID the key is scoped to, or null if the key has namespace-wide access."
           },
           "createTime": {
@@ -456,7 +458,7 @@
           }
         },
         "required": [
-          "uid",
+          "id",
           "token",
           "name",
           "namespace",
@@ -474,6 +476,7 @@
           },
           "worldId": {
             "type": "string",
+            "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
             "description": "Optional world ID to scope the key to a single world. Omit to allow access to all worlds in the namespace."
           },
           "name": {
@@ -499,7 +502,7 @@
       "ApiKeyResource": {
         "type": "object",
         "properties": {
-          "uid": {
+          "id": {
             "type": "string",
             "description": "Unique identifier for the API key."
           },
@@ -513,6 +516,7 @@
           },
           "worldId": {
             "type": "string",
+            "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
             "description": "World ID the key is scoped to, or absent for namespace-wide keys."
           },
           "scopes": {
@@ -528,7 +532,7 @@
           }
         },
         "required": [
-          "uid",
+          "id",
           "name",
           "namespace",
           "scopes",
@@ -586,6 +590,77 @@
                       "type": "string",
                       "enum": [
                         "degraded"
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "security": [],
+        "tags": [
+          "Health"
+        ],
+        "operationId": "getReadiness",
+        "summary": "Get readiness",
+        "description": "Readiness probe. Returns 200 only when the control-plane schema has the canonical columns.",
+        "x-mint": {
+          "metadata": {
+            "title": "Get readiness"
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Service is ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ready"
+                      ]
+                    },
+                    "schema": {
+                      "type": "string",
+                      "enum": [
+                        "canonical"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "schema"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service is not ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "not_ready"
                       ]
                     },
                     "error": {
@@ -716,7 +791,7 @@
         }
       }
     },
-    "/worlds/{id}": {
+    "/worlds/{worldId}": {
       "get": {
         "tags": [
           "Worlds"
@@ -738,11 +813,12 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The world-api-minted world ID, a w_ prefix and UUID.",
+            "name": "worldId",
             "in": "path"
           }
         ],
@@ -810,11 +886,12 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The world-api-minted world ID, a w_ prefix and UUID.",
+            "name": "worldId",
             "in": "path"
           }
         ],
@@ -922,11 +999,12 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The world-api-minted world ID, a w_ prefix and UUID.",
+            "name": "worldId",
             "in": "path"
           }
         ],
@@ -967,7 +1045,7 @@
         }
       }
     },
-    "/worlds/{id}/undelete": {
+    "/worlds/{worldId}/undelete": {
       "post": {
         "tags": [
           "Worlds"
@@ -989,11 +1067,12 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The world-api-minted world ID, a w_ prefix and UUID.",
+            "name": "worldId",
             "in": "path"
           }
         ],
@@ -1071,7 +1150,7 @@
         }
       }
     },
-    "/worlds/{id}/suspend": {
+    "/worlds/{worldId}/suspend": {
       "post": {
         "tags": [
           "Worlds"
@@ -1093,11 +1172,12 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The world-api-minted world ID, a w_ prefix and UUID.",
+            "name": "worldId",
             "in": "path"
           }
         ],
@@ -1145,7 +1225,7 @@
         }
       }
     },
-    "/worlds/{id}/resume": {
+    "/worlds/{worldId}/resume": {
       "post": {
         "tags": [
           "Worlds"
@@ -1167,11 +1247,12 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The world-api-minted world ID, a w_ prefix and UUID.",
+            "name": "worldId",
             "in": "path"
           }
         ],
@@ -1377,7 +1458,7 @@
         }
       }
     },
-    "/worlds/{id}/import": {
+    "/worlds/{worldId}/import": {
       "post": {
         "tags": [
           "ImportExport"
@@ -1399,11 +1480,12 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The world-api-minted world ID, a w_ prefix and UUID.",
+            "name": "worldId",
             "in": "path"
           }
         ],
@@ -1461,7 +1543,7 @@
         }
       }
     },
-    "/worlds/{id}/export": {
+    "/worlds/{worldId}/export": {
       "get": {
         "tags": [
           "ImportExport"
@@ -1483,11 +1565,12 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The world-api-minted world ID, a w_ prefix and UUID.",
+            "name": "worldId",
             "in": "path"
           },
           {
@@ -1596,7 +1679,7 @@
         }
       }
     },
-    "/worlds/{id}/search": {
+    "/worlds/{worldId}/search": {
       "post": {
         "tags": [
           "Search"
@@ -1618,11 +1701,12 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The world-api-minted world ID, a w_ prefix and UUID.",
+            "name": "worldId",
             "in": "path"
           }
         ],
@@ -1687,7 +1771,7 @@
         ],
         "operationId": "sparqlNoWorld",
         "summary": "SPARQL without world",
-        "description": "Always returns 400. Use POST /worlds/{id}/sparql to execute a SPARQL query against a specific world.",
+        "description": "Always returns 400. Use POST /worlds/{worldId}/sparql to execute a SPARQL query against a specific world.",
         "x-mint": {
           "metadata": {
             "title": "SPARQL without world"
@@ -1732,7 +1816,7 @@
         }
       }
     },
-    "/worlds/{id}/sparql": {
+    "/worlds/{worldId}/sparql": {
       "post": {
         "tags": [
           "SPARQL"
@@ -1754,11 +1838,12 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The world-api-minted world ID, a w_ prefix and UUID.",
+            "name": "worldId",
             "in": "path"
           }
         ],
@@ -2001,7 +2086,7 @@
         }
       }
     },
-    "/api-keys/{keyId}": {
+    "/api-keys/{apiKeyId}": {
       "delete": {
         "tags": [
           "APIKeys"
@@ -2022,7 +2107,7 @@
             },
             "required": true,
             "description": "Unique identifier of the API key to revoke.",
-            "name": "keyId",
+            "name": "apiKeyId",
             "in": "path"
           }
         ],
@@ -2093,7 +2178,7 @@
         }
       }
     },
-    "/worlds/{id}/reindex": {
+    "/worlds/{worldId}/reindex": {
       "post": {
         "tags": [
           "Reindex"
@@ -2115,11 +2200,12 @@
           {
             "schema": {
               "type": "string",
-              "description": "The canonical world_id, e.g. w_<uuid>."
+              "pattern": "^w_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "description": "The world-api-minted world ID, a w_ prefix and UUID."
             },
             "required": true,
-            "description": "The canonical world_id, e.g. w_<uuid>.",
-            "name": "id",
+            "description": "The world-api-minted world ID, a w_ prefix and UUID.",
+            "name": "worldId",
             "in": "path"
           }
         ],

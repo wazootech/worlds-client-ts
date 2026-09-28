@@ -40,7 +40,7 @@ const client = createClient({
 
 const response = await searchWorld({
   client,
-  path: { id: "w_<world-uid>" },
+  path: { worldId: "w_<world-id>" },
   body: { query: "explores" },
 });
 
