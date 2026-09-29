@@ -55,6 +55,12 @@ const response = await searchWorld({
 console.log(response.data?.results);
 ```
 
+## World identity
+
+The Worlds API mints each ID as `w_<UUIDv4>`. `createWorld` accepts no ID or
+slug; use the returned `id` for path arguments named `worldId`. `worldId` names
+a route parameter, not a second resource field.
+
 ## Development
 
 Requires Deno (version pinned in `.tool-versions`).

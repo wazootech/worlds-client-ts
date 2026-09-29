@@ -602,6 +602,70 @@
         }
       }
     },
+    "/ready": {
+      "get": {
+        "security": [],
+        "tags": [
+          "Health"
+        ],
+        "operationId": "getReadiness",
+        "summary": "Get readiness",
+        "description": "Readiness probe. Returns 200 only when D1 is reachable and its control-plane schema matches this service.",
+        "x-mint": {
+          "metadata": {
+            "title": "Get readiness"
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Service and control-plane schema are ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ready"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service is not ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "not_ready"
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/worlds": {
       "get": {
         "tags": [
@@ -2135,22 +2199,38 @@
         ],
         "responses": {
           "200": {
-            "description": "Reindex initiated successfully",
+            "description": "Reindex completed successfully",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "ok": {
-                      "type": "boolean"
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
                     },
                     "status": {
-                      "type": "string"
+                      "type": "string",
+                      "enum": [
+                        "completed"
+                      ]
+                    },
+                    "processedQuadCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "chunkRowCount": {
+                      "type": "integer",
+                      "minimum": 0
                     }
                   },
                   "required": [
                     "ok",
-                    "status"
+                    "status",
+                    "processedQuadCount",
+                    "chunkRowCount"
                   ]
                 }
               }
@@ -2158,6 +2238,36 @@
           },
           "404": {
             "description": "World database not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Reindex failed",
             "content": {
               "application/json": {
                 "schema": {

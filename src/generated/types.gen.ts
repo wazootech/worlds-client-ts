@@ -366,6 +366,36 @@ export type GetHealthResponses = {
 
 export type GetHealthResponse = GetHealthResponses[keyof GetHealthResponses];
 
+export type GetReadinessData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/ready';
+};
+
+export type GetReadinessErrors = {
+    /**
+     * Service is not ready
+     */
+    503: {
+        status: 'not_ready';
+        error: string;
+    };
+};
+
+export type GetReadinessError = GetReadinessErrors[keyof GetReadinessErrors];
+
+export type GetReadinessResponses = {
+    /**
+     * Service and control-plane schema are ready
+     */
+    200: {
+        status: 'ready';
+    };
+};
+
+export type GetReadinessResponse = GetReadinessResponses[keyof GetReadinessResponses];
+
 export type ListWorldsData = {
     body?: never;
     path?: never;
@@ -1024,17 +1054,28 @@ export type ReindexWorldErrors = {
             message: string;
         };
     };
+    /**
+     * Reindex failed
+     */
+    500: {
+        error: {
+            code: string;
+            message: string;
+        };
+    };
 };
 
 export type ReindexWorldError = ReindexWorldErrors[keyof ReindexWorldErrors];
 
 export type ReindexWorldResponses = {
     /**
-     * Reindex initiated successfully
+     * Reindex completed successfully
      */
     200: {
-        ok: boolean;
-        status: string;
+        ok: true;
+        status: 'completed';
+        processedQuadCount: number;
+        chunkRowCount: number;
     };
 };
 

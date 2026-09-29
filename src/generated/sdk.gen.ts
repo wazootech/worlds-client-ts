@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.ts';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.ts';
-import type { CreateApiKeyData, CreateApiKeyErrors, CreateApiKeyResponses, CreateWorldData, CreateWorldErrors, CreateWorldResponses, DeleteApiKeyData, DeleteApiKeyErrors, DeleteApiKeyResponses, DeleteNamespaceWorldsData, DeleteNamespaceWorldsErrors, DeleteNamespaceWorldsResponses, DeleteWorldData, DeleteWorldErrors, DeleteWorldResponses, ExportWorldData, ExportWorldErrors, ExportWorldResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetWorldData, GetWorldErrors, GetWorldResponses, ImportWorldData, ImportWorldErrors, ImportWorldResponses, ListApiKeysData, ListApiKeysErrors, ListApiKeysResponses, ListWorldsData, ListWorldsResponses, PurgeWorldsData, PurgeWorldsErrors, PurgeWorldsResponses, ReindexWorldData, ReindexWorldErrors, ReindexWorldResponses, ResumeWorldData, ResumeWorldErrors, ResumeWorldResponses, SearchWorldData, SearchWorldErrors, SearchWorldResponses, SparqlNoWorldData, SparqlNoWorldErrors, SparqlWorldData, SparqlWorldErrors, SparqlWorldResponses, SuspendWorldData, SuspendWorldErrors, SuspendWorldResponses, UndeleteWorldData, UndeleteWorldErrors, UndeleteWorldResponses, UpdateWorldData, UpdateWorldErrors, UpdateWorldResponses } from './types.gen.ts';
+import type { CreateApiKeyData, CreateApiKeyErrors, CreateApiKeyResponses, CreateWorldData, CreateWorldErrors, CreateWorldResponses, DeleteApiKeyData, DeleteApiKeyErrors, DeleteApiKeyResponses, DeleteNamespaceWorldsData, DeleteNamespaceWorldsErrors, DeleteNamespaceWorldsResponses, DeleteWorldData, DeleteWorldErrors, DeleteWorldResponses, ExportWorldData, ExportWorldErrors, ExportWorldResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetWorldData, GetWorldErrors, GetWorldResponses, ImportWorldData, ImportWorldErrors, ImportWorldResponses, ListApiKeysData, ListApiKeysErrors, ListApiKeysResponses, ListWorldsData, ListWorldsResponses, PurgeWorldsData, PurgeWorldsErrors, PurgeWorldsResponses, ReindexWorldData, ReindexWorldErrors, ReindexWorldResponses, ResumeWorldData, ResumeWorldErrors, ResumeWorldResponses, SearchWorldData, SearchWorldErrors, SearchWorldResponses, SparqlNoWorldData, SparqlNoWorldErrors, SparqlWorldData, SparqlWorldErrors, SparqlWorldResponses, SuspendWorldData, SuspendWorldErrors, SuspendWorldResponses, UndeleteWorldData, UndeleteWorldErrors, UndeleteWorldResponses, UpdateWorldData, UpdateWorldErrors, UpdateWorldResponses } from './types.gen.ts';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -24,6 +24,13 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
  * Liveness probe. Returns 200 when the service can reach its database; 503 when the database is unreachable.
  */
 export const getHealth = <ThrowOnError extends boolean = false>(options?: Options<GetHealthData, ThrowOnError>): RequestResult<GetHealthResponses, GetHealthErrors, ThrowOnError> => (options?.client ?? client).get<GetHealthResponses, GetHealthErrors, ThrowOnError>({ url: '/health', ...options });
+
+/**
+ * Get readiness
+ *
+ * Readiness probe. Returns 200 only when D1 is reachable and its control-plane schema matches this service.
+ */
+export const getReadiness = <ThrowOnError extends boolean = false>(options?: Options<GetReadinessData, ThrowOnError>): RequestResult<GetReadinessResponses, GetReadinessErrors, ThrowOnError> => (options?.client ?? client).get<GetReadinessResponses, GetReadinessErrors, ThrowOnError>({ url: '/ready', ...options });
 
 /**
  * List worlds
