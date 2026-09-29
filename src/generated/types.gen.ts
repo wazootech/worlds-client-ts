@@ -59,7 +59,23 @@ export type CreateWorldRequest = {
     /**
      * User-facing display name for the new world.
      */
-    displayName: string;
+    displayName?: string;
+    /**
+     * Embedding model to use for vector search. Defaults to the platform default.
+     */
+    embeddingModel?: string;
+    /**
+     * Maximum quads per chunk for vector search indexing. Defaults to the platform default.
+     */
+    chunkSize?: number;
+    /**
+     * Default number of top results for search queries against this world.
+     */
+    topK?: number;
+    /**
+     * Default minimum relevance score (0–1) for search results in this world.
+     */
+    minScore?: number;
 };
 
 export type UpdateWorldRequest = {
