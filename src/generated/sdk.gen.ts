@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.ts';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.ts';
-import type { CreateApiKeyData, CreateApiKeyErrors, CreateApiKeyResponses, CreateWorldData, CreateWorldErrors, CreateWorldResponses, DeleteApiKeyData, DeleteApiKeyErrors, DeleteApiKeyResponses, DeleteNamespaceWorldsData, DeleteNamespaceWorldsErrors, DeleteNamespaceWorldsResponses, DeleteWorldData, DeleteWorldErrors, DeleteWorldResponses, ExportWorldData, ExportWorldErrors, ExportWorldResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetWorldData, GetWorldErrors, GetWorldResponses, ImportWorldData, ImportWorldErrors, ImportWorldResponses, ListApiKeysData, ListApiKeysErrors, ListApiKeysResponses, ListWorldsData, ListWorldsResponses, PurgeWorldsData, PurgeWorldsErrors, PurgeWorldsResponses, ReindexWorldData, ReindexWorldErrors, ReindexWorldResponses, ResumeWorldData, ResumeWorldErrors, ResumeWorldResponses, SearchWorldData, SearchWorldErrors, SearchWorldResponses, SparqlNoWorldData, SparqlNoWorldErrors, SparqlWorldData, SparqlWorldErrors, SparqlWorldResponses, SuspendWorldData, SuspendWorldErrors, SuspendWorldResponses, UndeleteWorldData, UndeleteWorldErrors, UndeleteWorldResponses, UpdateWorldData, UpdateWorldErrors, UpdateWorldResponses } from './types.gen.ts';
+import type { CreateApiKeyData, CreateApiKeyErrors, CreateApiKeyResponses, CreateWorldData, CreateWorldErrors, CreateWorldResponses, DeleteApiKeyData, DeleteApiKeyErrors, DeleteApiKeyResponses, DeleteNamespaceWorldsData, DeleteNamespaceWorldsErrors, DeleteNamespaceWorldsResponses, DeleteWorldData, DeleteWorldErrors, DeleteWorldResponses, ExportWorldData, ExportWorldErrors, ExportWorldResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetWorldData, GetWorldErrors, GetWorldResponses, ImportWorldData, ImportWorldErrors, ImportWorldResponses, ListApiKeysData, ListApiKeysErrors, ListApiKeysResponses, ListWorldsData, ListWorldsResponses, PurgeWorldsData, PurgeWorldsErrors, PurgeWorldsResponses, ReindexWorldData, ReindexWorldErrors, ReindexWorldResponses, ResumeWorldData, ResumeWorldErrors, ResumeWorldResponses, SearchWorldData, SearchWorldErrors, SearchWorldResponses, SparqlNoWorldData, SparqlNoWorldErrors, SparqlWorldData, SparqlWorldErrors, SparqlWorldResponses, SuspendWorldData, SuspendWorldErrors, SuspendWorldResponses, UndeleteWorldData, UndeleteWorldErrors, UndeleteWorldResponses, UpdateWorldData, UpdateWorldErrors, UpdateWorldResponses } from './types.gen.ts';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -26,6 +26,13 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 export const getHealth = <ThrowOnError extends boolean = false>(options?: Options<GetHealthData, ThrowOnError>): RequestResult<GetHealthResponses, GetHealthErrors, ThrowOnError> => (options?.client ?? client).get<GetHealthResponses, GetHealthErrors, ThrowOnError>({ url: '/health', ...options });
 
 /**
+ * Get readiness
+ *
+ * Readiness probe. Returns 200 only when D1 is reachable and its control-plane schema matches this service.
+ */
+export const getReadiness = <ThrowOnError extends boolean = false>(options?: Options<GetReadinessData, ThrowOnError>): RequestResult<GetReadinessResponses, GetReadinessErrors, ThrowOnError> => (options?.client ?? client).get<GetReadinessResponses, GetReadinessErrors, ThrowOnError>({ url: '/ready', ...options });
+
+/**
  * List worlds
  *
  * List all worlds accessible to the authenticated token. Admin tokens see all worlds; namespace-scoped tokens see only their namespace's worlds.
@@ -39,7 +46,7 @@ export const listWorlds = <ThrowOnError extends boolean = false>(options?: Optio
 /**
  * Create world
  *
- * Create a new world. Allocates a new world_id in the shared D1 database and initializes the search and vector indexes.
+ * Create a new World metadata record in the shared D1 database. Worlds API mints its ID as w_<UUIDv4>; callers cannot choose the ID or a slug.
  */
 export const createWorld = <ThrowOnError extends boolean = false>(options: Options<CreateWorldData, ThrowOnError>): RequestResult<CreateWorldResponses, CreateWorldErrors, ThrowOnError> => (options.client ?? client).post<CreateWorldResponses, CreateWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -58,7 +65,7 @@ export const createWorld = <ThrowOnError extends boolean = false>(options: Optio
  */
 export const deleteWorld = <ThrowOnError extends boolean = false>(options: Options<DeleteWorldData, ThrowOnError>): RequestResult<DeleteWorldResponses, DeleteWorldErrors, ThrowOnError> => (options.client ?? client).delete<DeleteWorldResponses, DeleteWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/worlds/{id}',
+    url: '/worlds/{worldId}',
     ...options
 });
 
@@ -69,7 +76,7 @@ export const deleteWorld = <ThrowOnError extends boolean = false>(options: Optio
  */
 export const getWorld = <ThrowOnError extends boolean = false>(options: Options<GetWorldData, ThrowOnError>): RequestResult<GetWorldResponses, GetWorldErrors, ThrowOnError> => (options.client ?? client).get<GetWorldResponses, GetWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/worlds/{id}',
+    url: '/worlds/{worldId}',
     ...options
 });
 
@@ -80,7 +87,7 @@ export const getWorld = <ThrowOnError extends boolean = false>(options: Options<
  */
 export const updateWorld = <ThrowOnError extends boolean = false>(options: Options<UpdateWorldData, ThrowOnError>): RequestResult<UpdateWorldResponses, UpdateWorldErrors, ThrowOnError> => (options.client ?? client).patch<UpdateWorldResponses, UpdateWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/worlds/{id}',
+    url: '/worlds/{worldId}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -95,7 +102,7 @@ export const updateWorld = <ThrowOnError extends boolean = false>(options: Optio
  */
 export const undeleteWorld = <ThrowOnError extends boolean = false>(options: Options<UndeleteWorldData, ThrowOnError>): RequestResult<UndeleteWorldResponses, UndeleteWorldErrors, ThrowOnError> => (options.client ?? client).post<UndeleteWorldResponses, UndeleteWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/worlds/{id}/undelete',
+    url: '/worlds/{worldId}/undelete',
     ...options
 });
 
@@ -106,7 +113,7 @@ export const undeleteWorld = <ThrowOnError extends boolean = false>(options: Opt
  */
 export const suspendWorld = <ThrowOnError extends boolean = false>(options: Options<SuspendWorldData, ThrowOnError>): RequestResult<SuspendWorldResponses, SuspendWorldErrors, ThrowOnError> => (options.client ?? client).post<SuspendWorldResponses, SuspendWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/worlds/{id}/suspend',
+    url: '/worlds/{worldId}/suspend',
     ...options
 });
 
@@ -117,7 +124,7 @@ export const suspendWorld = <ThrowOnError extends boolean = false>(options: Opti
  */
 export const resumeWorld = <ThrowOnError extends boolean = false>(options: Options<ResumeWorldData, ThrowOnError>): RequestResult<ResumeWorldResponses, ResumeWorldErrors, ThrowOnError> => (options.client ?? client).post<ResumeWorldResponses, ResumeWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/worlds/{id}/resume',
+    url: '/worlds/{worldId}/resume',
     ...options
 });
 
@@ -150,7 +157,7 @@ export const purgeWorlds = <ThrowOnError extends boolean = false>(options?: Opti
  */
 export const importWorld = <ThrowOnError extends boolean = false>(options: Options<ImportWorldData, ThrowOnError>): RequestResult<ImportWorldResponses, ImportWorldErrors, ThrowOnError> => (options.client ?? client).post<ImportWorldResponses, ImportWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/worlds/{id}/import',
+    url: '/worlds/{worldId}/import',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -165,7 +172,7 @@ export const importWorld = <ThrowOnError extends boolean = false>(options: Optio
  */
 export const exportWorld = <ThrowOnError extends boolean = false>(options: Options<ExportWorldData, ThrowOnError>): RequestResult<ExportWorldResponses, ExportWorldErrors, ThrowOnError> => (options.client ?? client).get<ExportWorldResponses, ExportWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/worlds/{id}/export',
+    url: '/worlds/{worldId}/export',
     ...options
 });
 
@@ -176,7 +183,7 @@ export const exportWorld = <ThrowOnError extends boolean = false>(options: Optio
  */
 export const searchWorld = <ThrowOnError extends boolean = false>(options: Options<SearchWorldData, ThrowOnError>): RequestResult<SearchWorldResponses, SearchWorldErrors, ThrowOnError> => (options.client ?? client).post<SearchWorldResponses, SearchWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/worlds/{id}/search',
+    url: '/worlds/{worldId}/search',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -187,7 +194,7 @@ export const searchWorld = <ThrowOnError extends boolean = false>(options: Optio
 /**
  * SPARQL without world
  *
- * Always returns 400. Use POST /worlds/{id}/sparql to execute a SPARQL query against a specific world.
+ * Always returns 400. Use POST /worlds/{worldId}/sparql to execute a SPARQL query against a specific world.
  */
 export const sparqlNoWorld = <ThrowOnError extends boolean = false>(options?: Options<SparqlNoWorldData, ThrowOnError>): RequestResult<unknown, SparqlNoWorldErrors, ThrowOnError> => (options?.client ?? client).post<unknown, SparqlNoWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -202,7 +209,7 @@ export const sparqlNoWorld = <ThrowOnError extends boolean = false>(options?: Op
  */
 export const sparqlWorld = <ThrowOnError extends boolean = false>(options: Options<SparqlWorldData, ThrowOnError>): RequestResult<SparqlWorldResponses, SparqlWorldErrors, ThrowOnError> => (options.client ?? client).post<SparqlWorldResponses, SparqlWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/worlds/{id}/sparql',
+    url: '/worlds/{worldId}/sparql',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -254,6 +261,6 @@ export const deleteApiKey = <ThrowOnError extends boolean = false>(options: Opti
  */
 export const reindexWorld = <ThrowOnError extends boolean = false>(options: Options<ReindexWorldData, ThrowOnError>): RequestResult<ReindexWorldResponses, ReindexWorldErrors, ThrowOnError> => (options.client ?? client).post<ReindexWorldResponses, ReindexWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/worlds/{id}/reindex',
+    url: '/worlds/{worldId}/reindex',
     ...options
 });

@@ -1,6 +1,6 @@
 {
   "name": "@worlds/client",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "license": "MIT",
   "nodeModulesDir": "auto",
   "exports": {
@@ -33,10 +33,11 @@
     "fmt:check": "deno fmt --check",
     "lint": "deno lint",
     "check": "deno check",
+    "test": "deno test --allow-read=openapi/openapi.json",
     "publish:dry": "deno publish --dry-run --allow-dirty",
     "ci": {
-      "description": "Formats, lints, checks, and verifies the OpenAPI snapshot",
-      "dependencies": ["fmt:check", "lint", "check", "openapi:check"]
+      "description": "Formats, lints, checks, tests, and verifies the OpenAPI snapshot",
+      "dependencies": ["fmt:check", "lint", "check", "test", "openapi:check"]
     }
   }
 }
