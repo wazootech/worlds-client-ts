@@ -100,14 +100,31 @@
         "properties": {
           "displayName": {
             "type": "string",
-            "minLength": 1,
             "description": "User-facing display name for the new world."
+          },
+          "embeddingModel": {
+            "type": "string",
+            "description": "Embedding model to use for vector search. Defaults to the platform default."
+          },
+          "chunkSize": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "description": "Maximum quads per chunk for vector search indexing. Defaults to the platform default."
+          },
+          "topK": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "description": "Default number of top results for search queries against this world."
+          },
+          "minScore": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Default minimum relevance score (0–1) for search results in this world."
           }
-        },
-        "required": [
-          "displayName"
-        ],
-        "additionalProperties": false
+        }
       },
       "UpdateWorldRequest": {
         "type": "object",
