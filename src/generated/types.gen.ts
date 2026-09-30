@@ -6,13 +6,9 @@ export type ClientOptions = {
 
 export type WorldResource = {
     /**
-     * Resource name in the form worlds/<uid>, e.g. worlds/w_a1b2c3d4.
+     * Immutable World ID minted by Worlds API as `w_<UUIDv4>`.
      */
-    name: string;
-    /**
-     * Unique world identifier, e.g. w_<uuid>.
-     */
-    uid: string;
+    id: string;
     /**
      * User-facing display name for the world. Set on creation or update.
      */
@@ -370,6 +366,36 @@ export type GetHealthResponses = {
 
 export type GetHealthResponse = GetHealthResponses[keyof GetHealthResponses];
 
+export type GetReadinessData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/ready';
+};
+
+export type GetReadinessErrors = {
+    /**
+     * Service is not ready
+     */
+    503: {
+        status: 'not_ready';
+        error: string;
+    };
+};
+
+export type GetReadinessError = GetReadinessErrors[keyof GetReadinessErrors];
+
+export type GetReadinessResponses = {
+    /**
+     * Service and control-plane schema are ready
+     */
+    200: {
+        status: 'ready';
+    };
+};
+
+export type GetReadinessResponse = GetReadinessResponses[keyof GetReadinessResponses];
+
 export type ListWorldsData = {
     body?: never;
     path?: never;
@@ -422,12 +448,12 @@ export type DeleteWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUIDv4.
          */
-        id: string;
+        worldId: string;
     };
     query?: never;
-    url: '/worlds/{id}';
+    url: '/worlds/{worldId}';
 };
 
 export type DeleteWorldErrors = {
@@ -457,12 +483,12 @@ export type GetWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUIDv4.
          */
-        id: string;
+        worldId: string;
     };
     query?: never;
-    url: '/worlds/{id}';
+    url: '/worlds/{worldId}';
 };
 
 export type GetWorldErrors = {
@@ -492,12 +518,12 @@ export type UpdateWorldData = {
     body: UpdateWorldRequest;
     path: {
         /**
-         * The canonical world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUIDv4.
          */
-        id: string;
+        worldId: string;
     };
     query?: never;
-    url: '/worlds/{id}';
+    url: '/worlds/{worldId}';
 };
 
 export type UpdateWorldErrors = {
@@ -536,12 +562,12 @@ export type UndeleteWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUIDv4.
          */
-        id: string;
+        worldId: string;
     };
     query?: never;
-    url: '/worlds/{id}/undelete';
+    url: '/worlds/{worldId}/undelete';
 };
 
 export type UndeleteWorldErrors = {
@@ -580,12 +606,12 @@ export type SuspendWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUIDv4.
          */
-        id: string;
+        worldId: string;
     };
     query?: never;
-    url: '/worlds/{id}/suspend';
+    url: '/worlds/{worldId}/suspend';
 };
 
 export type SuspendWorldErrors = {
@@ -615,12 +641,12 @@ export type ResumeWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUIDv4.
          */
-        id: string;
+        worldId: string;
     };
     query?: never;
-    url: '/worlds/{id}/resume';
+    url: '/worlds/{worldId}/resume';
 };
 
 export type ResumeWorldErrors = {
@@ -718,12 +744,12 @@ export type ImportWorldData = {
     body: ImportRequest;
     path: {
         /**
-         * The canonical world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUIDv4.
          */
-        id: string;
+        worldId: string;
     };
     query?: never;
-    url: '/worlds/{id}/import';
+    url: '/worlds/{worldId}/import';
 };
 
 export type ImportWorldErrors = {
@@ -753,9 +779,9 @@ export type ExportWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUIDv4.
          */
-        id: string;
+        worldId: string;
     };
     query?: {
         /**
@@ -771,7 +797,7 @@ export type ExportWorldData = {
          */
         offset?: string;
     };
-    url: '/worlds/{id}/export';
+    url: '/worlds/{worldId}/export';
 };
 
 export type ExportWorldErrors = {
@@ -801,12 +827,12 @@ export type SearchWorldData = {
     body: SearchRequest;
     path: {
         /**
-         * The canonical world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUIDv4.
          */
-        id: string;
+        worldId: string;
     };
     query?: never;
-    url: '/worlds/{id}/search';
+    url: '/worlds/{worldId}/search';
 };
 
 export type SearchWorldErrors = {
@@ -857,12 +883,12 @@ export type SparqlWorldData = {
     body: SparqlRequest;
     path: {
         /**
-         * The canonical world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUIDv4.
          */
-        id: string;
+        worldId: string;
     };
     query?: never;
-    url: '/worlds/{id}/sparql';
+    url: '/worlds/{worldId}/sparql';
 };
 
 export type SparqlWorldErrors = {
@@ -1010,12 +1036,12 @@ export type ReindexWorldData = {
     body?: never;
     path: {
         /**
-         * The canonical world_id, e.g. w_<uuid>.
+         * The world-api-minted world ID, a w_ prefix and UUIDv4.
          */
-        id: string;
+        worldId: string;
     };
     query?: never;
-    url: '/worlds/{id}/reindex';
+    url: '/worlds/{worldId}/reindex';
 };
 
 export type ReindexWorldErrors = {
@@ -1028,17 +1054,28 @@ export type ReindexWorldErrors = {
             message: string;
         };
     };
+    /**
+     * Reindex failed
+     */
+    500: {
+        error: {
+            code: string;
+            message: string;
+        };
+    };
 };
 
 export type ReindexWorldError = ReindexWorldErrors[keyof ReindexWorldErrors];
 
 export type ReindexWorldResponses = {
     /**
-     * Reindex initiated successfully
+     * Reindex completed successfully
      */
     200: {
-        ok: boolean;
-        status: string;
+        ok: true;
+        status: 'completed';
+        processedQuadCount: number;
+        chunkRowCount: number;
     };
 };
 
