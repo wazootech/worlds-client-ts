@@ -14,3 +14,15 @@ generated from the Worlds API OpenAPI document.
 - Run `deno task sync:openapi` to refresh `openapi/openapi.json` from the Worlds
   API spec; never edit the snapshot by hand.
 - Keep package exports, generated clients, and README examples aligned.
+
+## Cross-repo impact
+
+- You are consumed as a **published package**. A merged change here is not
+  available to `wazoo-console` or `wazoo-cli` until it is published, so a
+  downstream typecheck can fail against a stale published version even when
+  every PR involved is correct. Say which published version downstream needs.
+- The OpenAPI freshness check compares against `worlds-api/main`. If it fails
+  because that snapshot predates an upstream merge, re-sync rather than editing
+  the snapshot by hand.
+- A `main` change in `worlds-api` that alters the World contract requires a
+  follow-up here before console or CLI can typecheck against it.
