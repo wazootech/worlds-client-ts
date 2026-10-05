@@ -31,16 +31,24 @@ npx jsr add @worlds/client
 ## Usage
 
 ```ts
-import { createClient, searchWorld } from "@worlds/client";
+import { createClient, createWorld, searchWorld } from "@worlds/client";
 
 const client = createClient({
   baseUrl: "https://data.wazoo.dev",
   auth: process.env.WORLDS_DATA_PLANE_TOKEN,
 });
 
+const created = await createWorld({
+  client,
+  body: { displayName: "Research" },
+});
+const worldId = created.data?.id;
+
+if (!worldId) throw new Error("World creation did not return an ID.");
+
 const response = await searchWorld({
   client,
-  path: { id: "w_<world-uid>" },
+  path: { worldId },
   body: { query: "explores" },
 });
 
