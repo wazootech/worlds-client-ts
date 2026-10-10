@@ -195,7 +195,7 @@
           "contentType": {
             "type": "string",
             "default": "text/turtle",
-            "description": "MIME type of the import payload. Supported values: text/turtle, application/n-quads, application/n-triples, application/trig, application/ld+json. Defaults to text/turtle."
+            "description": "MIME type of the import payload. Supported values: text/turtle, application/trig, application/n-triples, application/n-quads, text/n3, application/json (quad rows), text/plain or application/x-ndjson (text chunks). Defaults to text/turtle."
           }
         },
         "required": [
@@ -1453,7 +1453,7 @@
         ],
         "operationId": "importWorld",
         "summary": "Import graph data",
-        "description": "Import RDF data into a world. Accepts Turtle, N-Quads, N-Triples, TriG, or JSON-LD payloads. Quads are stored in the world's Cloudflare D1 database and indexed for vector search.",
+        "description": "Import RDF data into a world. Accepts Turtle (the default), TriG, N-Triples, N-Quads, or N3 payloads; application/json quad rows; or text/plain chunks. Quads are stored in the world's Cloudflare D1 database and indexed for vector search.",
         "x-mint": {
           "metadata": {
             "title": "Import graph data"

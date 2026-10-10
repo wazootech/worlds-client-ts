@@ -123,7 +123,7 @@ export type ImportRequest = {
      */
     data: string;
     /**
-     * MIME type of the import payload. Supported values: text/turtle, application/n-quads, application/n-triples, application/trig, application/ld+json. Defaults to text/turtle.
+     * MIME type of the import payload. Supported values: text/turtle, application/trig, application/n-triples, application/n-quads, text/n3, application/json (quad rows), text/plain or application/x-ndjson (text chunks). Defaults to text/turtle.
      */
     contentType?: string;
 };
