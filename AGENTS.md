@@ -5,6 +5,18 @@
 This repository contains the TypeScript Worlds data-plane client package,
 generated from the Worlds API OpenAPI document.
 
+## Setup
+
+Dependencies resolve through Deno (`nodeModulesDir: "auto"`); there is no
+`package.json`, so do not run `npm install`. After cloning, run:
+
+```sh
+deno install
+```
+
+CI runs `deno ci` (a frozen-lockfile install) instead. Then validate with
+`deno task ci`.
+
 ## How to work here
 
 - Treat OpenAPI synchronization and generated output as deliberate operations.
