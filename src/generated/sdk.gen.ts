@@ -153,7 +153,7 @@ export const purgeWorlds = <ThrowOnError extends boolean = false>(options?: Opti
 /**
  * Import graph data
  *
- * Import RDF data into a world. Accepts Turtle, N-Quads, N-Triples, TriG, or JSON-LD payloads. Quads are stored in the world's Cloudflare D1 database and indexed for vector search.
+ * Import RDF data into a world. Accepts Turtle (the default), TriG, N-Triples, N-Quads, or N3 payloads; application/json quad rows; or text/plain chunks. Quads are stored in the world's Cloudflare D1 database and indexed for vector search.
  */
 export const importWorld = <ThrowOnError extends boolean = false>(options: Options<ImportWorldData, ThrowOnError>): RequestResult<ImportWorldResponses, ImportWorldErrors, ThrowOnError> => (options.client ?? client).post<ImportWorldResponses, ImportWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
