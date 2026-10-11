@@ -46,7 +46,7 @@ export const listWorlds = <ThrowOnError extends boolean = false>(options?: Optio
 /**
  * Create world
  *
- * Create a new World metadata record in the shared D1 database. Worlds API mints its ID as w_<UUIDv4>; callers cannot choose the ID or a slug.
+ * Create a new World metadata record in the shared D1 database. Worlds API mints its ID as w_<ULID>; callers cannot choose the ID or a slug.
  */
 export const createWorld = <ThrowOnError extends boolean = false>(options: Options<CreateWorldData, ThrowOnError>): RequestResult<CreateWorldResponses, CreateWorldErrors, ThrowOnError> => (options.client ?? client).post<CreateWorldResponses, CreateWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -257,7 +257,7 @@ export const deleteApiKey = <ThrowOnError extends boolean = false>(options: Opti
 /**
  * Reindex world vector & FTS indexes
  *
- * Rebuild the vector and full-text search indexes for a world from its stored RDF quads. Use after changing the embedding model or to repair search quality.
+ * Rebuild the vector and full-text search indexes for a world from its stored RDF quads. Use after changing the embedding model or to repair search quality. The full-text index is always rebuilt from D1; if any vector could not be embedded, written or cleaned up, status is completed_with_vector_errors and vectorSync says what failed. Rerunning reindex repairs it.
  */
 export const reindexWorld = <ThrowOnError extends boolean = false>(options: Options<ReindexWorldData, ThrowOnError>): RequestResult<ReindexWorldResponses, ReindexWorldErrors, ThrowOnError> => (options.client ?? client).post<ReindexWorldResponses, ReindexWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],

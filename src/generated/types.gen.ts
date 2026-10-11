@@ -6,7 +6,7 @@ export type ClientOptions = {
 
 export type WorldResource = {
     /**
-     * Immutable World ID minted by Worlds API as `w_<UUIDv4>`.
+     * Immutable World ID minted by Worlds API as `w_<ULID>`.
      */
     id: string;
     /**
@@ -336,6 +336,16 @@ export type ApiKeyResource = {
     createTime: string;
 };
 
+export type VectorSyncReport = {
+    enabled: boolean;
+    attempted: number;
+    upserted: number;
+    failedUpserts: number;
+    embeddingFailures: number;
+    staleDeleteFailures: number;
+    errors: Array<string>;
+};
+
 export type GetHealthData = {
     body?: never;
     path?: never;
@@ -448,7 +458,7 @@ export type DeleteWorldData = {
     body?: never;
     path: {
         /**
-         * The world-api-minted world ID, a w_ prefix and UUIDv4.
+         * The world-api-minted world ID, a w_ prefix and a lowercase ULID.
          */
         worldId: string;
     };
@@ -483,7 +493,7 @@ export type GetWorldData = {
     body?: never;
     path: {
         /**
-         * The world-api-minted world ID, a w_ prefix and UUIDv4.
+         * The world-api-minted world ID, a w_ prefix and a lowercase ULID.
          */
         worldId: string;
     };
@@ -518,7 +528,7 @@ export type UpdateWorldData = {
     body: UpdateWorldRequest;
     path: {
         /**
-         * The world-api-minted world ID, a w_ prefix and UUIDv4.
+         * The world-api-minted world ID, a w_ prefix and a lowercase ULID.
          */
         worldId: string;
     };
@@ -562,7 +572,7 @@ export type UndeleteWorldData = {
     body?: never;
     path: {
         /**
-         * The world-api-minted world ID, a w_ prefix and UUIDv4.
+         * The world-api-minted world ID, a w_ prefix and a lowercase ULID.
          */
         worldId: string;
     };
@@ -606,7 +616,7 @@ export type SuspendWorldData = {
     body?: never;
     path: {
         /**
-         * The world-api-minted world ID, a w_ prefix and UUIDv4.
+         * The world-api-minted world ID, a w_ prefix and a lowercase ULID.
          */
         worldId: string;
     };
@@ -641,7 +651,7 @@ export type ResumeWorldData = {
     body?: never;
     path: {
         /**
-         * The world-api-minted world ID, a w_ prefix and UUIDv4.
+         * The world-api-minted world ID, a w_ prefix and a lowercase ULID.
          */
         worldId: string;
     };
@@ -744,7 +754,7 @@ export type ImportWorldData = {
     body: ImportRequest;
     path: {
         /**
-         * The world-api-minted world ID, a w_ prefix and UUIDv4.
+         * The world-api-minted world ID, a w_ prefix and a lowercase ULID.
          */
         worldId: string;
     };
@@ -779,7 +789,7 @@ export type ExportWorldData = {
     body?: never;
     path: {
         /**
-         * The world-api-minted world ID, a w_ prefix and UUIDv4.
+         * The world-api-minted world ID, a w_ prefix and a lowercase ULID.
          */
         worldId: string;
     };
@@ -827,7 +837,7 @@ export type SearchWorldData = {
     body: SearchRequest;
     path: {
         /**
-         * The world-api-minted world ID, a w_ prefix and UUIDv4.
+         * The world-api-minted world ID, a w_ prefix and a lowercase ULID.
          */
         worldId: string;
     };
@@ -883,7 +893,7 @@ export type SparqlWorldData = {
     body: SparqlRequest;
     path: {
         /**
-         * The world-api-minted world ID, a w_ prefix and UUIDv4.
+         * The world-api-minted world ID, a w_ prefix and a lowercase ULID.
          */
         worldId: string;
     };
@@ -1036,7 +1046,7 @@ export type ReindexWorldData = {
     body?: never;
     path: {
         /**
-         * The world-api-minted world ID, a w_ prefix and UUIDv4.
+         * The world-api-minted world ID, a w_ prefix and a lowercase ULID.
          */
         worldId: string;
     };
@@ -1069,13 +1079,14 @@ export type ReindexWorldError = ReindexWorldErrors[keyof ReindexWorldErrors];
 
 export type ReindexWorldResponses = {
     /**
-     * Reindex completed successfully
+     * Reindex ran. status is completed, or completed_with_vector_errors when the vector index could not be fully synced (see vectorSync).
      */
     200: {
         ok: true;
-        status: 'completed';
+        status: 'completed' | 'completed_with_vector_errors';
         processedQuadCount: number;
         chunkRowCount: number;
+        vectorSync?: VectorSyncReport;
     };
 };
 
