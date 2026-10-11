@@ -795,15 +795,15 @@ export type ExportWorldData = {
     };
     query?: {
         /**
-         * Export format. Supported: application/json (RDF/JSON array), text/turtle (Turtle), application/trig (TriG), application/ld+json (JSON-LD). Defaults to application/json.
+         * Export format. Supported: application/json (quad rows), text/plain (text chunks), application/n-quads, application/n-triples, text/turtle, application/trig, application/ld+json. Defaults to application/json.
          */
         format?: string;
         /**
-         * Maximum number of quads to return in this page.
+         * Maximum number of quads in this page (a positive integer). Honored by every format. Defaults to 1000 for application/json and text/plain; serialized RDF formats return the whole world when limit is omitted. When more data remains, the response carries an X-Next-Offset header (and nextOffset in JSON bodies).
          */
         limit?: string;
         /**
-         * Pagination offset. Use the nextOffset value from the previous response.
+         * Pagination offset (a non-negative integer). Use the X-Next-Offset header, or nextOffset in JSON bodies, from the previous response.
          */
         offset?: string;
     };
