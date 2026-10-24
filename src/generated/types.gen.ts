@@ -22,9 +22,13 @@ export type WorldResource = {
      */
     storage: 'd1';
     /**
-     * Embedding model identifier used for vector search indexing, e.g. openai/text-embedding-3-small.
+     * Embedding model identifier used for vector search indexing, e.g. openai/text-embedding-3-small or openrouter/openai/text-embedding-3-small. Values outside the allowlist (including the legacy tfjs-universal-sentence-encoder default) are reported as embeddingStatus unconfigured and search stays keyword-only.
      */
     embeddingModel: string;
+    /**
+     * Whether vector search is usable for this world. unconfigured: embeddings are not enabled or the model is not allowlisted. no_credential: the namespace has no active embedding credential for the provider of this world's model. invalid: the provider rejected the namespace credential. stale: vectors are not built for the current model; search is keyword-only until POST /worlds/{worldId}/reindex. partial: some vectors failed to sync; hybrid search covers what exists. ready: vectors are current.
+     */
+    embeddingStatus: 'unconfigured' | 'no_credential' | 'invalid' | 'stale' | 'partial' | 'ready';
     /**
      * Maximum number of RDF quads per chunk when indexing for vector search.
      */
@@ -37,6 +41,7 @@ export type WorldResource = {
      * Default minimum relevance score (0–1) for search results. Results below this threshold are omitted.
      */
     minScore: number;
+    inference?: InferenceSetting;
     /**
      * ISO 8601 timestamp when the world was created.
      */
@@ -55,15 +60,33 @@ export type WorldResource = {
     expireTime?: string;
 };
 
+/**
+ * OWL 2 RL inference setting. Omitted when never configured, which means inference is off.
+ */
+export type InferenceSetting = {
+    /**
+     * Opt the world in to OWL 2 RL materialization on write. false is the same as never setting it.
+     */
+    enabled: boolean;
+    /**
+     * Named-graph mode. per-graph (default) lists each entailed quad in the graph(s) that entail it alone; union merges all graphs and lists everything in the default graph.
+     */
+    graphs?: 'per-graph' | 'union';
+    /**
+     * Size guard (default 100000). A commit that would exceed this many asserted quads fails before writing instead of exhausting the isolate.
+     */
+    maxAssertedQuads?: number;
+};
+
 export type CreateWorldRequest = {
     /**
      * User-facing display name for the new world.
      */
     displayName?: string;
     /**
-     * Embedding model to use for vector search. Defaults to the platform default.
+     * Embedding model to use for vector search, as provider/model. Allowlist: openai/text-embedding-3-small (recommended), openai/text-embedding-3-large (pinned to 1536 dimensions), legacy openai/text-embedding-ada-002, and the same OpenAI models through OpenRouter as openrouter/openai/text-embedding-3-small and openrouter/openai/text-embedding-3-large. The model's provider decides which namespace credential is used. Defaults to the platform default, which reports embeddingStatus unconfigured until a model is chosen.
      */
-    embeddingModel?: string;
+    embeddingModel?: 'openai/text-embedding-3-small' | 'openai/text-embedding-3-large' | 'openai/text-embedding-ada-002' | 'openrouter/openai/text-embedding-3-small' | 'openrouter/openai/text-embedding-3-large';
     /**
      * Maximum quads per chunk for vector search indexing. Defaults to the platform default.
      */
@@ -76,6 +99,7 @@ export type CreateWorldRequest = {
      * Default minimum relevance score (0–1) for search results in this world.
      */
     minScore?: number;
+    inference?: InferenceSetting & unknown;
 };
 
 export type UpdateWorldRequest = {
@@ -84,9 +108,9 @@ export type UpdateWorldRequest = {
      */
     displayName?: string;
     /**
-     * New embedding model. Changing this triggers a reindex of existing data.
+     * New embedding model, as provider/model. Requires an active embedding credential, for the new model's provider, in the namespace. Changing the model marks the world stale (embeddingStatus stale): search is keyword-only until POST /worlds/{worldId}/reindex is called. It does not reindex automatically because reindexing spends the customer's provider budget.
      */
-    embeddingModel?: string;
+    embeddingModel?: 'openai/text-embedding-3-small' | 'openai/text-embedding-3-large' | 'openai/text-embedding-ada-002' | 'openrouter/openai/text-embedding-3-small' | 'openrouter/openai/text-embedding-3-large';
     /**
      * New chunk size for vector search indexing.
      */
@@ -99,6 +123,22 @@ export type UpdateWorldRequest = {
      * New default minimum score threshold for search results.
      */
     minScore?: number;
+    inference?: InferenceSetting & unknown;
+};
+
+export type VectorCleanupReport = {
+    /**
+     * Worlds of the namespace whose vectors were cleaned.
+     */
+    worlds: number;
+    attempted: number;
+    deleted: number;
+    failed: number;
+    /**
+     * True when vectors remain (a failure, or more than one request can remove). Calling the endpoint again is safe and continues; the purge sweep retries too.
+     */
+    incomplete: boolean;
+    errors: Array<string>;
 };
 
 export type ImportResponse = {
@@ -304,9 +344,9 @@ export type ApiKeyCreateRequest = {
      */
     name?: string;
     /**
-     * Optional scope grant. Defaults to ["data:read", "data:write"]. Use ["data:read"] for read-only keys.
+     * Optional scope grant. Defaults to ["data:read", "data:write"]. Use ["data:read"] for read-only keys. embeddings:admin grants management of the namespace embedding credential and is never part of the default grant.
      */
-    scopes?: Array<'data:read' | 'data:write'>;
+    scopes?: Array<'data:read' | 'data:write' | 'embeddings:admin'>;
 };
 
 export type ApiKeyResource = {
@@ -344,6 +384,64 @@ export type VectorSyncReport = {
     embeddingFailures: number;
     staleDeleteFailures: number;
     errors: Array<string>;
+};
+
+export type EmbeddingProviderList = {
+    /**
+     * One entry per provider the namespace has stored a credential for, newest first, revoked ones included.
+     */
+    providers: Array<EmbeddingCredential>;
+};
+
+export type EmbeddingCredential = {
+    /**
+     * Embedding provider.
+     */
+    provider: 'openai' | 'openrouter';
+    /**
+     * active: usable. invalid: the provider rejected the key repeatedly; rotate it. revoked: deleted; worlds fall back to keyword-only search.
+     */
+    status: 'active' | 'invalid' | 'revoked';
+    /**
+     * First 8 hex characters of the key's SHA-256, for support.
+     */
+    fingerprint: string;
+    /**
+     * Last four characters of the key.
+     */
+    last4: string;
+    /**
+     * ISO 8601 creation time.
+     */
+    createTime: string;
+    /**
+     * ISO 8601 time of the most recent rotation.
+     */
+    rotateTime?: string;
+    /**
+     * ISO 8601 time the credential was revoked.
+     */
+    revokeTime?: string;
+};
+
+export type ErrorResponse = {
+    error: {
+        /**
+         * Machine-readable error code, e.g. NOT_FOUND, INVALID_ARGUMENT, RATE_LIMITED.
+         */
+        code: string;
+        /**
+         * Human-readable error message describing what went wrong.
+         */
+        message: string;
+    };
+};
+
+export type EmbeddingCredentialRequest = {
+    /**
+     * The provider API key. Write-only: it is encrypted at rest and never returned or logged; only a fingerprint and last four characters are exposed.
+     */
+    apiKey: string;
 };
 
 export type GetHealthData = {
@@ -436,6 +534,15 @@ export type CreateWorldErrors = {
      * Bad request
      */
     400: {
+        error: {
+            code: string;
+            message: string;
+        };
+    };
+    /**
+     * embeddingModel was given but the namespace has no active embedding credential (EMBEDDING_CREDENTIAL_REQUIRED).
+     */
+    409: {
         error: {
             code: string;
             message: string;
@@ -712,6 +819,7 @@ export type DeleteNamespaceWorldsResponses = {
     200: {
         deletedWorlds: number;
         revokedKeys: number;
+        vectorCleanup?: VectorCleanupReport;
     };
 };
 
@@ -1065,6 +1173,15 @@ export type ReindexWorldErrors = {
         };
     };
     /**
+     * The namespace's daily embedding budget is exhausted (EMBEDDING_BUDGET_EXCEEDED). Nothing was reindexed or spent.
+     */
+    429: {
+        error: {
+            code: string;
+            message: string;
+        };
+    };
+    /**
      * Reindex failed
      */
     500: {
@@ -1079,15 +1196,178 @@ export type ReindexWorldError = ReindexWorldErrors[keyof ReindexWorldErrors];
 
 export type ReindexWorldResponses = {
     /**
-     * Reindex ran. status is completed, or completed_with_vector_errors when the vector index could not be fully synced (see vectorSync).
+     * Reindex ran. status is completed, completed_with_vector_errors when the vector index could not be fully synced (see vectorSync; calling again retries the failed window), or in_progress when a large world is reindexed in windows: call again until completed (continuation.remainingChunksEstimate says how much is left).
      */
     200: {
         ok: true;
-        status: 'completed' | 'completed_with_vector_errors';
+        status: 'completed' | 'completed_with_vector_errors' | 'in_progress';
         processedQuadCount: number;
         chunkRowCount: number;
         vectorSync?: VectorSyncReport;
+        continuation?: {
+            remainingChunksEstimate: number;
+        };
     };
 };
 
 export type ReindexWorldResponse = ReindexWorldResponses[keyof ReindexWorldResponses];
+
+export type ListEmbeddingProvidersData = {
+    body?: never;
+    path: {
+        namespace: string;
+    };
+    query?: never;
+    url: '/namespaces/{namespace}/embedding-providers';
+};
+
+export type ListEmbeddingProvidersErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+};
+
+export type ListEmbeddingProvidersError = ListEmbeddingProvidersErrors[keyof ListEmbeddingProvidersErrors];
+
+export type ListEmbeddingProvidersResponses = {
+    /**
+     * Credential metadata, one entry per provider
+     */
+    200: EmbeddingProviderList;
+};
+
+export type ListEmbeddingProvidersResponse = ListEmbeddingProvidersResponses[keyof ListEmbeddingProvidersResponses];
+
+export type DeleteEmbeddingProviderCredentialData = {
+    body?: never;
+    path: {
+        namespace: string;
+        /**
+         * Embedding provider whose credential this addresses. A namespace holds at most one credential per provider.
+         */
+        provider: 'openai' | 'openrouter';
+    };
+    query?: never;
+    url: '/namespaces/{namespace}/embedding-providers/{provider}';
+};
+
+export type DeleteEmbeddingProviderCredentialErrors = {
+    /**
+     * Bad request
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * No credential
+     */
+    404: ErrorResponse;
+};
+
+export type DeleteEmbeddingProviderCredentialError = DeleteEmbeddingProviderCredentialErrors[keyof DeleteEmbeddingProviderCredentialErrors];
+
+export type DeleteEmbeddingProviderCredentialResponses = {
+    /**
+     * Revoked
+     */
+    204: void;
+};
+
+export type DeleteEmbeddingProviderCredentialResponse = DeleteEmbeddingProviderCredentialResponses[keyof DeleteEmbeddingProviderCredentialResponses];
+
+export type GetEmbeddingProviderCredentialData = {
+    body?: never;
+    path: {
+        namespace: string;
+        /**
+         * Embedding provider whose credential this addresses. A namespace holds at most one credential per provider.
+         */
+        provider: 'openai' | 'openrouter';
+    };
+    query?: never;
+    url: '/namespaces/{namespace}/embedding-providers/{provider}';
+};
+
+export type GetEmbeddingProviderCredentialErrors = {
+    /**
+     * Bad request
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * No credential
+     */
+    404: ErrorResponse;
+};
+
+export type GetEmbeddingProviderCredentialError = GetEmbeddingProviderCredentialErrors[keyof GetEmbeddingProviderCredentialErrors];
+
+export type GetEmbeddingProviderCredentialResponses = {
+    /**
+     * Credential metadata
+     */
+    200: EmbeddingCredential;
+};
+
+export type GetEmbeddingProviderCredentialResponse = GetEmbeddingProviderCredentialResponses[keyof GetEmbeddingProviderCredentialResponses];
+
+export type SetEmbeddingProviderCredentialData = {
+    body: EmbeddingCredentialRequest;
+    path: {
+        namespace: string;
+        /**
+         * Embedding provider whose credential this addresses. A namespace holds at most one credential per provider.
+         */
+        provider: 'openai' | 'openrouter';
+    };
+    query?: never;
+    url: '/namespaces/{namespace}/embedding-providers/{provider}';
+};
+
+export type SetEmbeddingProviderCredentialErrors = {
+    /**
+     * Bad request
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Embeddings are not configured on this deployment
+     */
+    503: ErrorResponse;
+};
+
+export type SetEmbeddingProviderCredentialError = SetEmbeddingProviderCredentialErrors[keyof SetEmbeddingProviderCredentialErrors];
+
+export type SetEmbeddingProviderCredentialResponses = {
+    /**
+     * Credential stored; metadata only
+     */
+    200: EmbeddingCredential;
+};
+
+export type SetEmbeddingProviderCredentialResponse = SetEmbeddingProviderCredentialResponses[keyof SetEmbeddingProviderCredentialResponses];

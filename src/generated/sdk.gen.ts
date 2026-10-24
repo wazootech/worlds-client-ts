@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.ts';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.ts';
-import type { CreateApiKeyData, CreateApiKeyErrors, CreateApiKeyResponses, CreateWorldData, CreateWorldErrors, CreateWorldResponses, DeleteApiKeyData, DeleteApiKeyErrors, DeleteApiKeyResponses, DeleteNamespaceWorldsData, DeleteNamespaceWorldsErrors, DeleteNamespaceWorldsResponses, DeleteWorldData, DeleteWorldErrors, DeleteWorldResponses, ExportWorldData, ExportWorldErrors, ExportWorldResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetWorldData, GetWorldErrors, GetWorldResponses, ImportWorldData, ImportWorldErrors, ImportWorldResponses, ListApiKeysData, ListApiKeysErrors, ListApiKeysResponses, ListWorldsData, ListWorldsResponses, PurgeWorldsData, PurgeWorldsErrors, PurgeWorldsResponses, ReindexWorldData, ReindexWorldErrors, ReindexWorldResponses, ResumeWorldData, ResumeWorldErrors, ResumeWorldResponses, SearchWorldData, SearchWorldErrors, SearchWorldResponses, SparqlNoWorldData, SparqlNoWorldErrors, SparqlWorldData, SparqlWorldErrors, SparqlWorldResponses, SuspendWorldData, SuspendWorldErrors, SuspendWorldResponses, UndeleteWorldData, UndeleteWorldErrors, UndeleteWorldResponses, UpdateWorldData, UpdateWorldErrors, UpdateWorldResponses } from './types.gen.ts';
+import type { CreateApiKeyData, CreateApiKeyErrors, CreateApiKeyResponses, CreateWorldData, CreateWorldErrors, CreateWorldResponses, DeleteApiKeyData, DeleteApiKeyErrors, DeleteApiKeyResponses, DeleteEmbeddingProviderCredentialData, DeleteEmbeddingProviderCredentialErrors, DeleteEmbeddingProviderCredentialResponses, DeleteNamespaceWorldsData, DeleteNamespaceWorldsErrors, DeleteNamespaceWorldsResponses, DeleteWorldData, DeleteWorldErrors, DeleteWorldResponses, ExportWorldData, ExportWorldErrors, ExportWorldResponses, GetEmbeddingProviderCredentialData, GetEmbeddingProviderCredentialErrors, GetEmbeddingProviderCredentialResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetWorldData, GetWorldErrors, GetWorldResponses, ImportWorldData, ImportWorldErrors, ImportWorldResponses, ListApiKeysData, ListApiKeysErrors, ListApiKeysResponses, ListEmbeddingProvidersData, ListEmbeddingProvidersErrors, ListEmbeddingProvidersResponses, ListWorldsData, ListWorldsResponses, PurgeWorldsData, PurgeWorldsErrors, PurgeWorldsResponses, ReindexWorldData, ReindexWorldErrors, ReindexWorldResponses, ResumeWorldData, ResumeWorldErrors, ResumeWorldResponses, SearchWorldData, SearchWorldErrors, SearchWorldResponses, SetEmbeddingProviderCredentialData, SetEmbeddingProviderCredentialErrors, SetEmbeddingProviderCredentialResponses, SparqlNoWorldData, SparqlNoWorldErrors, SparqlWorldData, SparqlWorldErrors, SparqlWorldResponses, SuspendWorldData, SuspendWorldErrors, SuspendWorldResponses, UndeleteWorldData, UndeleteWorldErrors, UndeleteWorldResponses, UpdateWorldData, UpdateWorldErrors, UpdateWorldResponses } from './types.gen.ts';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -83,7 +83,7 @@ export const getWorld = <ThrowOnError extends boolean = false>(options: Options<
 /**
  * Update world
  *
- * Update a world's display name, embedding model, or search configuration. Changing the embedding model triggers a reindex.
+ * Update a world's display name, embedding model, or search configuration. Changing the embedding model marks the world stale (embeddingStatus stale): search runs keyword-only until POST /worlds/{worldId}/reindex is called. It does not reindex automatically, because reindexing spends the namespace's embedding budget. Setting a model requires an active embedding credential for the namespace.
  */
 export const updateWorld = <ThrowOnError extends boolean = false>(options: Options<UpdateWorldData, ThrowOnError>): RequestResult<UpdateWorldResponses, UpdateWorldErrors, ThrowOnError> => (options.client ?? client).patch<UpdateWorldResponses, UpdateWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -205,7 +205,7 @@ export const sparqlNoWorld = <ThrowOnError extends boolean = false>(options?: Op
 /**
  * Execute SPARQL query
  *
- * Execute a SPARQL 1.1 query (SELECT, ASK, or UPDATE) against a world's RDF graph. SELECT results are limited by the server-configured maximum. Queries time out after the configured limit.
+ * Execute a SPARQL 1.1 query (SELECT, ASK, or UPDATE) against a world's RDF graph. SELECT and ASK require the data:read scope; SPARQL UPDATE (INSERT, DELETE, CLEAR, DROP, and the other update forms) requires data:write, and a key without it receives 403 before the update runs. An unparseable query returns 400 INVALID_ARGUMENT. SELECT results are limited by the server-configured maximum. Queries time out after the configured limit.
  */
 export const sparqlWorld = <ThrowOnError extends boolean = false>(options: Options<SparqlWorldData, ThrowOnError>): RequestResult<SparqlWorldResponses, SparqlWorldErrors, ThrowOnError> => (options.client ?? client).post<SparqlWorldResponses, SparqlWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -257,10 +257,58 @@ export const deleteApiKey = <ThrowOnError extends boolean = false>(options: Opti
 /**
  * Reindex world vector & FTS indexes
  *
- * Rebuild the vector and full-text search indexes for a world from its stored RDF quads. Use after changing the embedding model or to repair search quality. The full-text index is always rebuilt from D1; if any vector could not be embedded, written or cleaned up, status is completed_with_vector_errors and vectorSync says what failed. Rerunning reindex repairs it.
+ * Rebuild the vector and full-text search indexes for a world from its stored RDF quads. Required after changing the embedding model (the world is stale and search is keyword-only until it completes) and useful to repair search quality. The full-text index is always rebuilt from D1; if any vector could not be embedded, written or cleaned up, status is completed_with_vector_errors and vectorSync says what failed. Rerunning reindex repairs it. Embedding spend is checked against the namespace's daily write budget first; an exhausted budget returns 429 EMBEDDING_BUDGET_EXCEEDED. Worlds with more text than EMBEDDING_REINDEX_MAX_CHUNKS are reindexed in windows across several calls: each call embeds only the next window, so no chunk is embedded twice and the world becomes ready when the last window completes.
  */
 export const reindexWorld = <ThrowOnError extends boolean = false>(options: Options<ReindexWorldData, ThrowOnError>): RequestResult<ReindexWorldResponses, ReindexWorldErrors, ThrowOnError> => (options.client ?? client).post<ReindexWorldResponses, ReindexWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/worlds/{worldId}/reindex',
     ...options
+});
+
+/**
+ * List embedding providers
+ *
+ * Lists the namespace's embedding provider credentials, newest first, revoked ones included so their status stays readable. Metadata only: no key is ever returned. Requires the embeddings:admin scope.
+ */
+export const listEmbeddingProviders = <ThrowOnError extends boolean = false>(options: Options<ListEmbeddingProvidersData, ThrowOnError>): RequestResult<ListEmbeddingProvidersResponses, ListEmbeddingProvidersErrors, ThrowOnError> => (options.client ?? client).get<ListEmbeddingProvidersResponses, ListEmbeddingProvidersErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/namespaces/{namespace}/embedding-providers',
+    ...options
+});
+
+/**
+ * Revoke embedding provider credential
+ *
+ * Revokes the namespace's credential for one provider: the ciphertext is erased and worlds on that provider's models fall back to keyword-only search (embeddingStatus no_credential). Every world on that provider's models is marked stale (worlds on another provider's models are untouched), so after a new key is set search stays keyword-only until each world is reindexed (vectors built before the revoke are never trusted again). Requires the embeddings:admin scope.
+ */
+export const deleteEmbeddingProviderCredential = <ThrowOnError extends boolean = false>(options: Options<DeleteEmbeddingProviderCredentialData, ThrowOnError>): RequestResult<DeleteEmbeddingProviderCredentialResponses, DeleteEmbeddingProviderCredentialErrors, ThrowOnError> => (options.client ?? client).delete<DeleteEmbeddingProviderCredentialResponses, DeleteEmbeddingProviderCredentialErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/namespaces/{namespace}/embedding-providers/{provider}',
+    ...options
+});
+
+/**
+ * Get embedding provider credential status
+ *
+ * Returns the metadata of the namespace's credential for one provider (status, fingerprint, last four characters, timestamps). The key itself is never returned. Requires the embeddings:admin scope.
+ */
+export const getEmbeddingProviderCredential = <ThrowOnError extends boolean = false>(options: Options<GetEmbeddingProviderCredentialData, ThrowOnError>): RequestResult<GetEmbeddingProviderCredentialResponses, GetEmbeddingProviderCredentialErrors, ThrowOnError> => (options.client ?? client).get<GetEmbeddingProviderCredentialResponses, GetEmbeddingProviderCredentialErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/namespaces/{namespace}/embedding-providers/{provider}',
+    ...options
+});
+
+/**
+ * Set embedding provider credential
+ *
+ * Store or rotate the namespace's API key for one embedding provider (bring your own key). The key is encrypted at rest with a key held only as a Worker secret and is write-only: it is never returned or logged. Requires the embeddings:admin scope (or an admin key); world-scoped tokens are refused. Returns 503 EMBEDDINGS_NOT_CONFIGURED when the deployment has no key-encryption key.
+ */
+export const setEmbeddingProviderCredential = <ThrowOnError extends boolean = false>(options: Options<SetEmbeddingProviderCredentialData, ThrowOnError>): RequestResult<SetEmbeddingProviderCredentialResponses, SetEmbeddingProviderCredentialErrors, ThrowOnError> => (options.client ?? client).put<SetEmbeddingProviderCredentialResponses, SetEmbeddingProviderCredentialErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/namespaces/{namespace}/embedding-providers/{provider}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
