@@ -695,6 +695,31 @@
           "errors"
         ]
       },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "Machine-readable error code, e.g. NOT_FOUND, INVALID_ARGUMENT, RATE_LIMITED."
+              },
+              "message": {
+                "type": "string",
+                "description": "Human-readable error message describing what went wrong."
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
       "EmbeddingProviderList": {
         "type": "object",
         "properties": {
@@ -757,31 +782,6 @@
           "fingerprint",
           "last4",
           "createTime"
-        ]
-      },
-      "ErrorResponse": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "string",
-                "description": "Machine-readable error code, e.g. NOT_FOUND, INVALID_ARGUMENT, RATE_LIMITED."
-              },
-              "message": {
-                "type": "string",
-                "description": "Human-readable error message describing what went wrong."
-              }
-            },
-            "required": [
-              "code",
-              "message"
-            ]
-          }
-        },
-        "required": [
-          "error"
         ]
       },
       "EmbeddingCredentialRequest": {
@@ -2635,6 +2635,126 @@
                   "required": [
                     "error"
                   ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/worlds/{worldId}/infer": {
+      "post": {
+        "tags": [
+          "Worlds"
+        ],
+        "operationId": "backfillWorldInference",
+        "summary": "Back-fill inference for a world's existing data",
+        "description": "Materializes OWL 2 RL inference for data a world already holds. Enabling inference on a world only reacts to later writes; call this once afterwards to cover what is stored. It reads the world's asserted quads, runs the reasoner once, clears the world's inferred quads and writes the closure. Asserted quads are never changed. It is idempotent and safe to repeat; a failure part way leaves some inferred quads, so call it again. The world must have inference enabled. A world larger than its maxAssertedQuads limit is refused before any write (422 INFERENCE_SIZE_GUARD).",
+        "x-mint": {
+          "metadata": {
+            "title": "Back-fill inference for a world's existing data"
+          }
+        },
+        "security": [
+          {
+            "bearerWorldsToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^w_[0-7][0-9a-hjkmnp-tv-z]{25}$",
+              "description": "The world-api-minted world ID, a w_ prefix and a lowercase ULID."
+            },
+            "required": true,
+            "description": "The world-api-minted world ID, a w_ prefix and a lowercase ULID.",
+            "name": "worldId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The back-fill ran.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "assertedQuads": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Asserted quads the reasoner read."
+                    },
+                    "derivedWritten": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Inferred quads stored after the back-fill."
+                    },
+                    "derivedRemoved": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Inferred quads cleared before writing the closure."
+                    },
+                    "inconsistencyCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "OWL 2 RL consistency rules the data violates. They do not block the back-fill."
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "assertedQuads",
+                    "derivedWritten",
+                    "derivedRemoved",
+                    "inconsistencyCount"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World database not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Inference is not enabled for this world (INFERENCE_NOT_ENABLED), or the database is missing the quads.derived column (INFERENCE_UNAVAILABLE).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The world has more asserted quads than its maxAssertedQuads limit (INFERENCE_SIZE_GUARD). Nothing was written.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The back-fill failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
