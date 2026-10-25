@@ -386,6 +386,19 @@ export type VectorSyncReport = {
     errors: Array<string>;
 };
 
+export type ErrorResponse = {
+    error: {
+        /**
+         * Machine-readable error code, e.g. NOT_FOUND, INVALID_ARGUMENT, RATE_LIMITED.
+         */
+        code: string;
+        /**
+         * Human-readable error message describing what went wrong.
+         */
+        message: string;
+    };
+};
+
 export type EmbeddingProviderList = {
     /**
      * One entry per provider the namespace has stored a credential for, newest first, revoked ones included.
@@ -422,19 +435,6 @@ export type EmbeddingCredential = {
      * ISO 8601 time the credential was revoked.
      */
     revokeTime?: string;
-};
-
-export type ErrorResponse = {
-    error: {
-        /**
-         * Machine-readable error code, e.g. NOT_FOUND, INVALID_ARGUMENT, RATE_LIMITED.
-         */
-        code: string;
-        /**
-         * Human-readable error message describing what went wrong.
-         */
-        message: string;
-    };
 };
 
 export type EmbeddingCredentialRequest = {
@@ -1211,6 +1211,66 @@ export type ReindexWorldResponses = {
 };
 
 export type ReindexWorldResponse = ReindexWorldResponses[keyof ReindexWorldResponses];
+
+export type BackfillWorldInferenceData = {
+    body?: never;
+    path: {
+        /**
+         * The world-api-minted world ID, a w_ prefix and a lowercase ULID.
+         */
+        worldId: string;
+    };
+    query?: never;
+    url: '/worlds/{worldId}/infer';
+};
+
+export type BackfillWorldInferenceErrors = {
+    /**
+     * World database not found
+     */
+    404: ErrorResponse;
+    /**
+     * Inference is not enabled for this world (INFERENCE_NOT_ENABLED), or the database is missing the quads.derived column (INFERENCE_UNAVAILABLE).
+     */
+    409: ErrorResponse;
+    /**
+     * The world has more asserted quads than its maxAssertedQuads limit (INFERENCE_SIZE_GUARD). Nothing was written.
+     */
+    422: ErrorResponse;
+    /**
+     * The back-fill failed
+     */
+    500: ErrorResponse;
+};
+
+export type BackfillWorldInferenceError = BackfillWorldInferenceErrors[keyof BackfillWorldInferenceErrors];
+
+export type BackfillWorldInferenceResponses = {
+    /**
+     * The back-fill ran.
+     */
+    200: {
+        ok: true;
+        /**
+         * Asserted quads the reasoner read.
+         */
+        assertedQuads: number;
+        /**
+         * Inferred quads stored after the back-fill.
+         */
+        derivedWritten: number;
+        /**
+         * Inferred quads cleared before writing the closure.
+         */
+        derivedRemoved: number;
+        /**
+         * OWL 2 RL consistency rules the data violates. They do not block the back-fill.
+         */
+        inconsistencyCount: number;
+    };
+};
+
+export type BackfillWorldInferenceResponse = BackfillWorldInferenceResponses[keyof BackfillWorldInferenceResponses];
 
 export type ListEmbeddingProvidersData = {
     body?: never;
