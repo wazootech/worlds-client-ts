@@ -301,6 +301,31 @@
           "imported"
         ]
       },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "Machine-readable error code, e.g. NOT_FOUND, INVALID_ARGUMENT, RATE_LIMITED."
+              },
+              "message": {
+                "type": "string",
+                "description": "Human-readable error message describing what went wrong."
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
       "ImportRequest": {
         "type": "object",
         "properties": {
@@ -693,31 +718,6 @@
           "embeddingFailures",
           "staleDeleteFailures",
           "errors"
-        ]
-      },
-      "ErrorResponse": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "string",
-                "description": "Machine-readable error code, e.g. NOT_FOUND, INVALID_ARGUMENT, RATE_LIMITED."
-              },
-              "message": {
-                "type": "string",
-                "description": "Human-readable error message describing what went wrong."
-              }
-            },
-            "required": [
-              "code",
-              "message"
-            ]
-          }
-        },
-        "required": [
-          "error"
         ]
       },
       "EmbeddingProviderList": {
@@ -1823,6 +1823,16 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "The namespace has used its daily database write budget (WRITE_BUDGET_EXCEEDED). Nothing was written; it resets at 00:00 UTC. Reads are unaffected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -2178,6 +2188,16 @@
                   "required": [
                     "error"
                   ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The namespace has used its daily database write budget (WRITE_BUDGET_EXCEEDED). Nothing was written; it resets at 00:00 UTC. Reads are unaffected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -2741,6 +2761,16 @@
           },
           "422": {
             "description": "The world has more asserted quads than its maxAssertedQuads limit (INFERENCE_SIZE_GUARD). Nothing was written.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The namespace has used its daily database write budget (WRITE_BUDGET_EXCEEDED). Nothing was written; it resets at 00:00 UTC.",
             "content": {
               "application/json": {
                 "schema": {
