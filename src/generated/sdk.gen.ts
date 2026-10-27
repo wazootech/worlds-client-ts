@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.ts';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.ts';
-import type { BackfillWorldInferenceData, BackfillWorldInferenceErrors, BackfillWorldInferenceResponses, CreateApiKeyData, CreateApiKeyErrors, CreateApiKeyResponses, CreateWorldData, CreateWorldErrors, CreateWorldResponses, DeleteApiKeyData, DeleteApiKeyErrors, DeleteApiKeyResponses, DeleteEmbeddingProviderCredentialData, DeleteEmbeddingProviderCredentialErrors, DeleteEmbeddingProviderCredentialResponses, DeleteNamespaceWorldsData, DeleteNamespaceWorldsErrors, DeleteNamespaceWorldsResponses, DeleteWorldData, DeleteWorldErrors, DeleteWorldResponses, ExportWorldData, ExportWorldErrors, ExportWorldResponses, GetEmbeddingProviderCredentialData, GetEmbeddingProviderCredentialErrors, GetEmbeddingProviderCredentialResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetWorldData, GetWorldErrors, GetWorldResponses, ImportWorldData, ImportWorldErrors, ImportWorldResponses, ListApiKeysData, ListApiKeysErrors, ListApiKeysResponses, ListEmbeddingProvidersData, ListEmbeddingProvidersErrors, ListEmbeddingProvidersResponses, ListWorldsData, ListWorldsResponses, PurgeWorldsData, PurgeWorldsErrors, PurgeWorldsResponses, ReindexWorldData, ReindexWorldErrors, ReindexWorldResponses, ResumeWorldData, ResumeWorldErrors, ResumeWorldResponses, SearchWorldData, SearchWorldErrors, SearchWorldResponses, SetEmbeddingProviderCredentialData, SetEmbeddingProviderCredentialErrors, SetEmbeddingProviderCredentialResponses, SparqlNoWorldData, SparqlNoWorldErrors, SparqlWorldData, SparqlWorldErrors, SparqlWorldResponses, SuspendWorldData, SuspendWorldErrors, SuspendWorldResponses, UndeleteWorldData, UndeleteWorldErrors, UndeleteWorldResponses, UpdateWorldData, UpdateWorldErrors, UpdateWorldResponses } from './types.gen.ts';
+import type { BackfillWorldInferenceData, BackfillWorldInferenceErrors, BackfillWorldInferenceResponses, ClearNamespaceWriteBudgetData, ClearNamespaceWriteBudgetErrors, ClearNamespaceWriteBudgetResponses, CreateApiKeyData, CreateApiKeyErrors, CreateApiKeyResponses, CreateWorldData, CreateWorldErrors, CreateWorldResponses, DeleteApiKeyData, DeleteApiKeyErrors, DeleteApiKeyResponses, DeleteEmbeddingProviderCredentialData, DeleteEmbeddingProviderCredentialErrors, DeleteEmbeddingProviderCredentialResponses, DeleteNamespaceWorldsData, DeleteNamespaceWorldsErrors, DeleteNamespaceWorldsResponses, DeleteWorldData, DeleteWorldErrors, DeleteWorldResponses, ExportWorldData, ExportWorldErrors, ExportWorldResponses, GetEmbeddingProviderCredentialData, GetEmbeddingProviderCredentialErrors, GetEmbeddingProviderCredentialResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetNamespaceWriteBudgetData, GetNamespaceWriteBudgetErrors, GetNamespaceWriteBudgetResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetWorldData, GetWorldErrors, GetWorldResponses, ImportWorldData, ImportWorldErrors, ImportWorldResponses, ListApiKeysData, ListApiKeysErrors, ListApiKeysResponses, ListEmbeddingProvidersData, ListEmbeddingProvidersErrors, ListEmbeddingProvidersResponses, ListWorldsData, ListWorldsResponses, PurgeWorldsData, PurgeWorldsErrors, PurgeWorldsResponses, ReindexWorldData, ReindexWorldErrors, ReindexWorldResponses, ResumeWorldData, ResumeWorldErrors, ResumeWorldResponses, SearchWorldData, SearchWorldErrors, SearchWorldResponses, SetEmbeddingProviderCredentialData, SetEmbeddingProviderCredentialErrors, SetEmbeddingProviderCredentialResponses, SetNamespaceWriteBudgetData, SetNamespaceWriteBudgetErrors, SetNamespaceWriteBudgetResponses, SparqlNoWorldData, SparqlNoWorldErrors, SparqlWorldData, SparqlWorldErrors, SparqlWorldResponses, SuspendWorldData, SuspendWorldErrors, SuspendWorldResponses, UndeleteWorldData, UndeleteWorldErrors, UndeleteWorldResponses, UpdateWorldData, UpdateWorldErrors, UpdateWorldResponses } from './types.gen.ts';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -274,6 +274,43 @@ export const backfillWorldInference = <ThrowOnError extends boolean = false>(opt
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/worlds/{worldId}/infer',
     ...options
+});
+
+/**
+ * Clear a namespace's daily write budget override
+ *
+ * Admin-only. Removes the namespace's override so it uses the deployment default again. Idempotent.
+ */
+export const clearNamespaceWriteBudget = <ThrowOnError extends boolean = false>(options: Options<ClearNamespaceWriteBudgetData, ThrowOnError>): RequestResult<ClearNamespaceWriteBudgetResponses, ClearNamespaceWriteBudgetErrors, ThrowOnError> => (options.client ?? client).delete<ClearNamespaceWriteBudgetResponses, ClearNamespaceWriteBudgetErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/admin/namespaces/{namespace}/write-budget',
+    ...options
+});
+
+/**
+ * Get a namespace's daily write budget and today's usage
+ *
+ * Admin-only. Returns the budget that applies to the namespace (its override, else the deployment default) and the D1 rows it has written today. The platform reads this to show usage against a plan.
+ */
+export const getNamespaceWriteBudget = <ThrowOnError extends boolean = false>(options: Options<GetNamespaceWriteBudgetData, ThrowOnError>): RequestResult<GetNamespaceWriteBudgetResponses, GetNamespaceWriteBudgetErrors, ThrowOnError> => (options.client ?? client).get<GetNamespaceWriteBudgetResponses, GetNamespaceWriteBudgetErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/admin/namespaces/{namespace}/write-budget',
+    ...options
+});
+
+/**
+ * Set a namespace's daily write budget
+ *
+ * Admin-only. Sets how many D1 rows the namespace may write per UTC day, overriding the deployment default. Writes (SPARQL updates, import, inference back-fill) are refused with 429 WRITE_BUDGET_EXCEEDED once the namespace has used it; reads are never refused. Used by the platform to apply a customer's plan. Takes effect within about 30 seconds across the fleet.
+ */
+export const setNamespaceWriteBudget = <ThrowOnError extends boolean = false>(options: Options<SetNamespaceWriteBudgetData, ThrowOnError>): RequestResult<SetNamespaceWriteBudgetResponses, SetNamespaceWriteBudgetErrors, ThrowOnError> => (options.client ?? client).put<SetNamespaceWriteBudgetResponses, SetNamespaceWriteBudgetErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/admin/namespaces/{namespace}/write-budget',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**

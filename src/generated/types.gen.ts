@@ -399,6 +399,37 @@ export type VectorSyncReport = {
     errors: Array<string>;
 };
 
+export type NamespaceWriteBudget = {
+    namespace: string;
+    /**
+     * The override set for this namespace, or null when it uses the default.
+     */
+    dailyRows: number | null;
+    /**
+     * The deployment default (NAMESPACE_DAILY_ROW_WRITE_BUDGET), or null when none is set.
+     */
+    defaultDailyRows: number | null;
+    /**
+     * The budget that applies now: the override, else the default. Null means no budget.
+     */
+    effectiveDailyRows: number | null;
+    /**
+     * D1 rows the namespace has written today (UTC), index writes included.
+     */
+    rowsWrittenToday: number;
+    /**
+     * The UTC day, YYYY-MM-DD.
+     */
+    day: string;
+};
+
+export type SetNamespaceWriteBudgetRequest = {
+    /**
+     * Daily D1 rows the namespace may write (UTC day). Each stored quad costs about 9 rows, and about 94 per asserted quad with inference on.
+     */
+    dailyRows: number;
+};
+
 export type EmbeddingProviderList = {
     /**
      * One entry per provider the namespace has stored a credential for, newest first, revoked ones included.
@@ -1283,6 +1314,87 @@ export type BackfillWorldInferenceResponses = {
 };
 
 export type BackfillWorldInferenceResponse = BackfillWorldInferenceResponses[keyof BackfillWorldInferenceResponses];
+
+export type ClearNamespaceWriteBudgetData = {
+    body?: never;
+    path: {
+        namespace: string;
+    };
+    query?: never;
+    url: '/admin/namespaces/{namespace}/write-budget';
+};
+
+export type ClearNamespaceWriteBudgetErrors = {
+    /**
+     * Admin key required
+     */
+    403: ErrorResponse;
+};
+
+export type ClearNamespaceWriteBudgetError = ClearNamespaceWriteBudgetErrors[keyof ClearNamespaceWriteBudgetErrors];
+
+export type ClearNamespaceWriteBudgetResponses = {
+    /**
+     * The budget now in effect
+     */
+    200: NamespaceWriteBudget;
+};
+
+export type ClearNamespaceWriteBudgetResponse = ClearNamespaceWriteBudgetResponses[keyof ClearNamespaceWriteBudgetResponses];
+
+export type GetNamespaceWriteBudgetData = {
+    body?: never;
+    path: {
+        namespace: string;
+    };
+    query?: never;
+    url: '/admin/namespaces/{namespace}/write-budget';
+};
+
+export type GetNamespaceWriteBudgetErrors = {
+    /**
+     * Admin key required
+     */
+    403: ErrorResponse;
+};
+
+export type GetNamespaceWriteBudgetError = GetNamespaceWriteBudgetErrors[keyof GetNamespaceWriteBudgetErrors];
+
+export type GetNamespaceWriteBudgetResponses = {
+    /**
+     * The namespace's budget and usage
+     */
+    200: NamespaceWriteBudget;
+};
+
+export type GetNamespaceWriteBudgetResponse = GetNamespaceWriteBudgetResponses[keyof GetNamespaceWriteBudgetResponses];
+
+export type SetNamespaceWriteBudgetData = {
+    body?: SetNamespaceWriteBudgetRequest;
+    path: {
+        namespace: string;
+    };
+    query?: never;
+    url: '/admin/namespaces/{namespace}/write-budget';
+};
+
+export type SetNamespaceWriteBudgetErrors = {
+    /**
+     * Admin key required
+     */
+    403: ErrorResponse;
+};
+
+export type SetNamespaceWriteBudgetError = SetNamespaceWriteBudgetErrors[keyof SetNamespaceWriteBudgetErrors];
+
+export type SetNamespaceWriteBudgetResponses = {
+    /**
+     * The budget now in effect
+     */
+    200: NamespaceWriteBudget;
+};
+
+export type SetNamespaceWriteBudgetResponse = SetNamespaceWriteBudgetResponses[keyof SetNamespaceWriteBudgetResponses];
 
 export type ListEmbeddingProvidersData = {
     body?: never;
