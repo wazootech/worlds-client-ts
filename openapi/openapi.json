@@ -720,6 +720,66 @@
           "errors"
         ]
       },
+      "NamespaceWriteBudget": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string"
+          },
+          "dailyRows": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "description": "The override set for this namespace, or null when it uses the default."
+          },
+          "defaultDailyRows": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "description": "The deployment default (NAMESPACE_DAILY_ROW_WRITE_BUDGET), or null when none is set."
+          },
+          "effectiveDailyRows": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "description": "The budget that applies now: the override, else the default. Null means no budget."
+          },
+          "rowsWrittenToday": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "D1 rows the namespace has written today (UTC), index writes included."
+          },
+          "day": {
+            "type": "string",
+            "description": "The UTC day, YYYY-MM-DD."
+          }
+        },
+        "required": [
+          "namespace",
+          "dailyRows",
+          "defaultDailyRows",
+          "effectiveDailyRows",
+          "rowsWrittenToday",
+          "day"
+        ]
+      },
+      "SetNamespaceWriteBudgetRequest": {
+        "type": "object",
+        "properties": {
+          "dailyRows": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000000,
+            "description": "Daily D1 rows the namespace may write (UTC day). Each stored quad costs about 9 rows, and about 94 per asserted quad with inference on."
+          }
+        },
+        "required": [
+          "dailyRows"
+        ]
+      },
       "EmbeddingProviderList": {
         "type": "object",
         "properties": {
@@ -2781,6 +2841,173 @@
           },
           "500": {
             "description": "The back-fill failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/namespaces/{namespace}/write-budget": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "getNamespaceWriteBudget",
+        "summary": "Get a namespace's daily write budget and today's usage",
+        "description": "Admin-only. Returns the budget that applies to the namespace (its override, else the deployment default) and the D1 rows it has written today. The platform reads this to show usage against a plan.",
+        "x-mint": {
+          "metadata": {
+            "title": "Get namespace write budget"
+          }
+        },
+        "security": [
+          {
+            "bearerWorldsToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "required": true,
+            "name": "namespace",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The namespace's budget and usage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NamespaceWriteBudget"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin key required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "setNamespaceWriteBudget",
+        "summary": "Set a namespace's daily write budget",
+        "description": "Admin-only. Sets how many D1 rows the namespace may write per UTC day, overriding the deployment default. Writes (SPARQL updates, import, inference back-fill) are refused with 429 WRITE_BUDGET_EXCEEDED once the namespace has used it; reads are never refused. Used by the platform to apply a customer's plan. Takes effect within about 30 seconds across the fleet.",
+        "x-mint": {
+          "metadata": {
+            "title": "Set namespace write budget"
+          }
+        },
+        "security": [
+          {
+            "bearerWorldsToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "required": true,
+            "name": "namespace",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetNamespaceWriteBudgetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The budget now in effect",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NamespaceWriteBudget"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin key required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "clearNamespaceWriteBudget",
+        "summary": "Clear a namespace's daily write budget override",
+        "description": "Admin-only. Removes the namespace's override so it uses the deployment default again. Idempotent.",
+        "x-mint": {
+          "metadata": {
+            "title": "Clear namespace write budget"
+          }
+        },
+        "security": [
+          {
+            "bearerWorldsToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "required": true,
+            "name": "namespace",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The budget now in effect",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NamespaceWriteBudget"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin key required",
             "content": {
               "application/json": {
                 "schema": {
