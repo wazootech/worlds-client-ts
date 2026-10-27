@@ -157,6 +157,19 @@ export type ImportResponse = {
     };
 };
 
+export type ErrorResponse = {
+    error: {
+        /**
+         * Machine-readable error code, e.g. NOT_FOUND, INVALID_ARGUMENT, RATE_LIMITED.
+         */
+        code: string;
+        /**
+         * Human-readable error message describing what went wrong.
+         */
+        message: string;
+    };
+};
+
 export type ImportRequest = {
     /**
      * RDF payload to import. The format must match the contentType field.
@@ -384,19 +397,6 @@ export type VectorSyncReport = {
     embeddingFailures: number;
     staleDeleteFailures: number;
     errors: Array<string>;
-};
-
-export type ErrorResponse = {
-    error: {
-        /**
-         * Machine-readable error code, e.g. NOT_FOUND, INVALID_ARGUMENT, RATE_LIMITED.
-         */
-        code: string;
-        /**
-         * Human-readable error message describing what went wrong.
-         */
-        message: string;
-    };
 };
 
 export type EmbeddingProviderList = {
@@ -880,6 +880,10 @@ export type ImportWorldErrors = {
             message: string;
         };
     };
+    /**
+     * The namespace has used its daily database write budget (WRITE_BUDGET_EXCEEDED). Nothing was written; it resets at 00:00 UTC. Reads are unaffected.
+     */
+    429: ErrorResponse;
 };
 
 export type ImportWorldError = ImportWorldErrors[keyof ImportWorldErrors];
@@ -1019,6 +1023,10 @@ export type SparqlWorldErrors = {
             message: string;
         };
     };
+    /**
+     * The namespace has used its daily database write budget (WRITE_BUDGET_EXCEEDED). Nothing was written; it resets at 00:00 UTC. Reads are unaffected.
+     */
+    429: ErrorResponse;
 };
 
 export type SparqlWorldError = SparqlWorldErrors[keyof SparqlWorldErrors];
@@ -1237,6 +1245,10 @@ export type BackfillWorldInferenceErrors = {
      * The world has more asserted quads than its maxAssertedQuads limit (INFERENCE_SIZE_GUARD). Nothing was written.
      */
     422: ErrorResponse;
+    /**
+     * The namespace has used its daily database write budget (WRITE_BUDGET_EXCEEDED). Nothing was written; it resets at 00:00 UTC.
+     */
+    429: ErrorResponse;
     /**
      * The back-fill failed
      */
