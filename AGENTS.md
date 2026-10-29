@@ -54,7 +54,7 @@ this repo's specifics:
 - `secret-scan.yml` (gitleaks) runs on every PR; `code-health.yml` fails any
   hand-written source file over 120 lines of code (300 for tests; blank,
   comment, and import lines excluded; generated code and the OpenAPI snapshot
-  are exempt; no allowlist entries) and warns about unlinked TODOs;
-  `CODEOWNERS` assigns review.
+  are exempt; no allowlist entries) and warns about unlinked TODOs; `CODEOWNERS`
+  assigns review.
 - A client change is not available downstream until it is published, and
   publishing needs approval.
