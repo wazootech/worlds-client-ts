@@ -11,6 +11,9 @@
     "@hey-api/openapi-ts": "npm:@hey-api/openapi-ts@0.98.2",
     "typescript": "npm:typescript@^5.9.2"
   },
+  "compilerOptions": {
+    "strict": true
+  },
   "publish": {
     "include": [
       "src/**/*.ts",
@@ -20,10 +23,15 @@
     ]
   },
   "fmt": {
-    "exclude": ["src/generated", "openapi/openapi.json"]
+    "exclude": [
+      "src/generated",
+      "openapi/openapi.json"
+    ]
   },
   "lint": {
-    "exclude": ["src/generated"]
+    "exclude": [
+      "src/generated"
+    ]
   },
   "tasks": {
     "sync:openapi": "deno -A scripts/sync-openapi.ts",
@@ -36,7 +44,12 @@
     "publish:dry": "deno publish --dry-run --allow-dirty",
     "ci": {
       "description": "Formats, lints, checks, and verifies the OpenAPI snapshot",
-      "dependencies": ["fmt:check", "lint", "check", "openapi:check"]
+      "dependencies": [
+        "fmt:check",
+        "lint",
+        "check",
+        "openapi:check"
+      ]
     }
   }
 }
