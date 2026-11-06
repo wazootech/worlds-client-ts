@@ -38,3 +38,20 @@ CI runs `deno ci` (a frozen-lockfile install) instead. Then validate with
   the snapshot by hand.
 - A `main` change in `worlds-api` that alters the World contract requires a
   follow-up here before console or CLI can typecheck against it.
+
+## Code health
+
+Family-wide rules live in the
+[wazootech workspace constitution](https://github.com/wazootech/workspace/blob/main/AGENTS.md#code-health-standards);
+this repo's specifics:
+
+- Before pushing, run `deno task ci` (fmt, lint, check, OpenAPI snapshot).
+- Never hand-edit `src/generated/` or `openapi/openapi.json`; regenerate them.
+  `deno task openapi:check` fails CI when the snapshot is stale.
+- `deno lint` keeps `no-explicit-any` on; generated code is excluded from fmt,
+  lint, and the code-health report.
+- Actions are pinned to commit SHAs, and CI pins Deno to `v2.9.8`.
+- `secret-scan.yml` (gitleaks) runs on every PR; `code-health.yml` only warns
+  about file length and unlinked TODOs; `CODEOWNERS` assigns review.
+- A client change is not available downstream until it is published, and
+  publishing needs approval.
