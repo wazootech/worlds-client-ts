@@ -51,7 +51,10 @@ this repo's specifics:
 - `deno lint` keeps `no-explicit-any` on; generated code is excluded from fmt,
   lint, and the code-health report.
 - Actions are pinned to commit SHAs, and CI pins Deno to `v2.9.8`.
-- `secret-scan.yml` (gitleaks) runs on every PR; `code-health.yml` only warns
-  about file length and unlinked TODOs; `CODEOWNERS` assigns review.
+- `secret-scan.yml` (gitleaks) runs on every PR; `code-health.yml` fails any
+  hand-written source file over 120 lines of code (300 for tests; blank,
+  comment, and import lines excluded; generated code and the OpenAPI snapshot
+  are exempt; no allowlist entries) and warns about unlinked TODOs; `CODEOWNERS`
+  assigns review.
 - A client change is not available downstream until it is published, and
   publishing needs approval.
