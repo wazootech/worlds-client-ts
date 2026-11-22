@@ -326,6 +326,48 @@
           "error"
         ]
       },
+      "EmbeddingFailureResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "EMBEDDING_FAILED"
+                ],
+                "description": "The embedding service failed or returned unusable vectors. Nothing was written; retrying the same request is safe."
+              },
+              "message": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "budget_exceeded",
+                  "no_credential",
+                  "auth",
+                  "rate_limited",
+                  "timeout",
+                  "provider_error",
+                  "bad_request",
+                  "bad_response"
+                ],
+                "description": "Class of the embedding failure (never provider text): no_credential, auth, rate_limited, timeout, provider_error, bad_request, or bad_response (including vectors of the wrong length)."
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "reason"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
       "ImportRequest": {
         "type": "object",
         "properties": {
@@ -1885,11 +1927,21 @@
             }
           },
           "429": {
-            "description": "The namespace has used its daily database write budget (WRITE_BUDGET_EXCEEDED). Nothing was written; it resets at 00:00 UTC. Reads are unaffected.",
+            "description": "The namespace has used its daily database write budget (WRITE_BUDGET_EXCEEDED). Nothing was written; it resets at 00:00 UTC. Reads are unaffected. A 429 EMBEDDING_BUDGET_EXCEEDED means the daily embedding budget ran out during the write; nothing was written.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The embedding service failed or returned vectors of the wrong length (EMBEDDING_FAILED; reason says which class). Nothing was written and the same request can be retried. Worlds that are not embedding-enabled (stale or no credential) are written keyword-only and never return this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmbeddingFailureResponse"
                 }
               }
             }
@@ -2253,11 +2305,21 @@
             }
           },
           "429": {
-            "description": "The namespace has used its daily database write budget (WRITE_BUDGET_EXCEEDED). Nothing was written; it resets at 00:00 UTC. Reads are unaffected.",
+            "description": "The namespace has used its daily database write budget (WRITE_BUDGET_EXCEEDED). Nothing was written; it resets at 00:00 UTC. Reads are unaffected. A 429 EMBEDDING_BUDGET_EXCEEDED means the daily embedding budget ran out during the write; nothing was written.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The embedding service failed or returned vectors of the wrong length (EMBEDDING_FAILED; reason says which class). Nothing was written and the same request can be retried. Worlds that are not embedding-enabled (stale or no credential) are written keyword-only and never return this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmbeddingFailureResponse"
                 }
               }
             }
@@ -2549,7 +2611,7 @@
         ],
         "operationId": "reindexWorld",
         "summary": "Reindex world vector & FTS indexes",
-        "description": "Rebuild the vector and full-text search indexes for a world from its stored RDF quads. Required after changing the embedding model (the world is stale and search is keyword-only until it completes) and useful to repair search quality. The full-text index is always rebuilt from D1; if any vector could not be embedded, written or cleaned up, status is completed_with_vector_errors and vectorSync says what failed. Rerunning reindex repairs it. Embedding spend is checked against the namespace's daily write budget first; an exhausted budget returns 429 EMBEDDING_BUDGET_EXCEEDED. Worlds with more text than EMBEDDING_REINDEX_MAX_CHUNKS are reindexed in windows across several calls: each call embeds only the next window, so no chunk is embedded twice and the world becomes ready when the last window completes.",
+        "description": "Rebuild the vector and full-text search indexes for a world from its stored RDF quads. Required after changing the embedding model (the world is stale and search is keyword-only until it completes) and useful to repair search quality. The full-text index is always rebuilt from D1; if any vector could not be embedded, written or cleaned up, status is completed_with_vector_errors and vectorSync says what failed. Rerunning reindex repairs it. If the embedding service fails outright (an outage, or vectors of the wrong length) the request fails with 502 EMBEDDING_FAILED instead: nothing is recorded as ready, a windowed pass keeps its cursor so calling again retries the same window, and the keyword index is unaffected. Embedding spend is checked against the namespace's daily write budget first; an exhausted budget returns 429 EMBEDDING_BUDGET_EXCEEDED. Worlds with more text than EMBEDDING_REINDEX_MAX_CHUNKS are reindexed in windows across several calls: each call embeds only the next window, so no chunk is embedded twice and the world becomes ready when the last window completes.",
         "x-mint": {
           "metadata": {
             "title": "Reindex world vector & FTS indexes"
@@ -2660,7 +2722,7 @@
             }
           },
           "429": {
-            "description": "The namespace's daily embedding budget is exhausted (EMBEDDING_BUDGET_EXCEEDED). Nothing was reindexed or spent.",
+            "description": "The namespace's daily embedding budget is exhausted (EMBEDDING_BUDGET_EXCEEDED), before or during the run. The world is not marked ready and a windowed pass keeps its cursor.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2715,6 +2777,16 @@
                   "required": [
                     "error"
                   ]
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The embedding service failed or returned vectors of the wrong length (EMBEDDING_FAILED; reason says which class). The world is never marked ready and a windowed pass keeps its cursor: call again to retry the same window. If the namespace budget runs out mid-request the response is 429 EMBEDDING_BUDGET_EXCEEDED instead.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmbeddingFailureResponse"
                 }
               }
             }

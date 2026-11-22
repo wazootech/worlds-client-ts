@@ -170,6 +170,20 @@ export type ErrorResponse = {
     };
 };
 
+export type EmbeddingFailureResponse = {
+    error: {
+        /**
+         * The embedding service failed or returned unusable vectors. Nothing was written; retrying the same request is safe.
+         */
+        code: 'EMBEDDING_FAILED';
+        message: string;
+        /**
+         * Class of the embedding failure (never provider text): no_credential, auth, rate_limited, timeout, provider_error, bad_request, or bad_response (including vectors of the wrong length).
+         */
+        reason: 'budget_exceeded' | 'no_credential' | 'auth' | 'rate_limited' | 'timeout' | 'provider_error' | 'bad_request' | 'bad_response';
+    };
+};
+
 export type ImportRequest = {
     /**
      * RDF payload to import. The format must match the contentType field.
@@ -912,9 +926,13 @@ export type ImportWorldErrors = {
         };
     };
     /**
-     * The namespace has used its daily database write budget (WRITE_BUDGET_EXCEEDED). Nothing was written; it resets at 00:00 UTC. Reads are unaffected.
+     * The namespace has used its daily database write budget (WRITE_BUDGET_EXCEEDED). Nothing was written; it resets at 00:00 UTC. Reads are unaffected. A 429 EMBEDDING_BUDGET_EXCEEDED means the daily embedding budget ran out during the write; nothing was written.
      */
     429: ErrorResponse;
+    /**
+     * The embedding service failed or returned vectors of the wrong length (EMBEDDING_FAILED; reason says which class). Nothing was written and the same request can be retried. Worlds that are not embedding-enabled (stale or no credential) are written keyword-only and never return this.
+     */
+    502: EmbeddingFailureResponse;
 };
 
 export type ImportWorldError = ImportWorldErrors[keyof ImportWorldErrors];
@@ -1055,9 +1073,13 @@ export type SparqlWorldErrors = {
         };
     };
     /**
-     * The namespace has used its daily database write budget (WRITE_BUDGET_EXCEEDED). Nothing was written; it resets at 00:00 UTC. Reads are unaffected.
+     * The namespace has used its daily database write budget (WRITE_BUDGET_EXCEEDED). Nothing was written; it resets at 00:00 UTC. Reads are unaffected. A 429 EMBEDDING_BUDGET_EXCEEDED means the daily embedding budget ran out during the write; nothing was written.
      */
     429: ErrorResponse;
+    /**
+     * The embedding service failed or returned vectors of the wrong length (EMBEDDING_FAILED; reason says which class). Nothing was written and the same request can be retried. Worlds that are not embedding-enabled (stale or no credential) are written keyword-only and never return this.
+     */
+    502: EmbeddingFailureResponse;
 };
 
 export type SparqlWorldError = SparqlWorldErrors[keyof SparqlWorldErrors];
@@ -1212,7 +1234,7 @@ export type ReindexWorldErrors = {
         };
     };
     /**
-     * The namespace's daily embedding budget is exhausted (EMBEDDING_BUDGET_EXCEEDED). Nothing was reindexed or spent.
+     * The namespace's daily embedding budget is exhausted (EMBEDDING_BUDGET_EXCEEDED), before or during the run. The world is not marked ready and a windowed pass keeps its cursor.
      */
     429: {
         error: {
@@ -1229,6 +1251,10 @@ export type ReindexWorldErrors = {
             message: string;
         };
     };
+    /**
+     * The embedding service failed or returned vectors of the wrong length (EMBEDDING_FAILED; reason says which class). The world is never marked ready and a windowed pass keeps its cursor: call again to retry the same window. If the namespace budget runs out mid-request the response is 429 EMBEDDING_BUDGET_EXCEEDED instead.
+     */
+    502: EmbeddingFailureResponse;
 };
 
 export type ReindexWorldError = ReindexWorldErrors[keyof ReindexWorldErrors];
