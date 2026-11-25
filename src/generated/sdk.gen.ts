@@ -72,7 +72,7 @@ export const deleteWorld = <ThrowOnError extends boolean = false>(options: Optio
 /**
  * Get world
  *
- * Retrieve a single world by its unique identifier. Returns the full WorldResource including state, storage backend, and search configuration.
+ * Retrieve a single world by its unique identifier. Returns the full WorldResource including state, storage backend (deprecated), and search configuration.
  */
 export const getWorld = <ThrowOnError extends boolean = false>(options: Options<GetWorldData, ThrowOnError>): RequestResult<GetWorldResponses, GetWorldErrors, ThrowOnError> => (options.client ?? client).get<GetWorldResponses, GetWorldErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],

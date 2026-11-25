@@ -19,6 +19,8 @@ export type WorldResource = {
     state: string;
     /**
      * Storage backend for the world. All worlds share a single Cloudflare D1 database, separated by world_id.
+     *
+     * @deprecated
      */
     storage: 'd1';
     /**
@@ -502,6 +504,7 @@ export type GetHealthErrors = {
      */
     503: {
         status: 'degraded';
+        gitSha: string | null;
         error: string;
     };
 };
@@ -514,6 +517,7 @@ export type GetHealthResponses = {
      */
     200: {
         status: 'ok';
+        gitSha: string | null;
     };
 };
 
