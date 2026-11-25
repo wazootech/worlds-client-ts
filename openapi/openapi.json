@@ -47,6 +47,7 @@
             "enum": [
               "d1"
             ],
+            "deprecated": true,
             "description": "Storage backend for the world. All worlds share a single Cloudflare D1 database, separated by world_id."
           },
           "embeddingModel": {
@@ -930,10 +931,15 @@
                       "enum": [
                         "ok"
                       ]
+                    },
+                    "gitSha": {
+                      "type": "string",
+                      "nullable": true
                     }
                   },
                   "required": [
-                    "status"
+                    "status",
+                    "gitSha"
                   ]
                 }
               }
@@ -952,12 +958,17 @@
                         "degraded"
                       ]
                     },
+                    "gitSha": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "error": {
                       "type": "string"
                     }
                   },
                   "required": [
                     "status",
+                    "gitSha",
                     "error"
                   ]
                 }
@@ -1181,7 +1192,7 @@
         ],
         "operationId": "getWorld",
         "summary": "Get world",
-        "description": "Retrieve a single world by its unique identifier. Returns the full WorldResource including state, storage backend, and search configuration.",
+        "description": "Retrieve a single world by its unique identifier. Returns the full WorldResource including state, storage backend (deprecated), and search configuration.",
         "x-mint": {
           "metadata": {
             "title": "Get world"
