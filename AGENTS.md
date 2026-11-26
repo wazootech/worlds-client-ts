@@ -7,23 +7,24 @@ generated from the Worlds API OpenAPI document.
 
 ## Setup
 
-Dependencies resolve through Deno (`nodeModulesDir: "auto"`); there is no
-`package.json`, so do not run `npm install`. After cloning, run:
+Dependencies resolve through Bun. `package.json` is the toolchain manifest
+(private; `jsr.json` describes the published package, and
+`scripts/check-manifests.ts` keeps the two in sync). After cloning, run:
 
 ```sh
-deno install
+bun install
 ```
 
-CI runs `deno ci` (a frozen-lockfile install) instead. Then validate with
-`deno task ci`.
+CI runs `bun install --frozen-lockfile --ignore-scripts` instead. Then validate
+with `bun run ci`.
 
 ## How to work here
 
 - Treat OpenAPI synchronization and generated output as deliberate operations.
-- Use `deno task ci` for normal validation (fmt, lint, type check, tests,
+- Use `bun run ci` for normal validation (fmt, lint, type check, tests,
   OpenAPI snapshot freshness).
-- Run `deno task generate` to regenerate the client from `openapi/openapi.json`.
-- Run `deno task sync:openapi` to refresh `openapi/openapi.json` from the Worlds
+- Run `bun run generate` to regenerate the client from `openapi/openapi.json`.
+- Run `bun run sync:openapi` to refresh `openapi/openapi.json` from the Worlds
   API spec; never edit the snapshot by hand.
 - Keep package exports, generated clients, and README examples aligned.
 
@@ -45,12 +46,12 @@ Family-wide rules live in the
 [wazootech workspace constitution](https://github.com/wazootech/workspace/blob/main/AGENTS.md#code-health-standards);
 this repo's specifics:
 
-- Before pushing, run `deno task ci` (fmt, lint, check, test, OpenAPI snapshot).
+- Before pushing, run `bun run ci` (fmt, lint, check, test, OpenAPI snapshot).
 - Never hand-edit `src/generated/` or `openapi/openapi.json`; regenerate them.
-  `deno task openapi:check` fails CI when the snapshot is stale.
-- `deno lint` keeps `no-explicit-any` on; generated code is excluded from fmt,
+  `bun run openapi:check` fails CI when the snapshot is stale.
+- `oxlint --deny-warnings` keeps `no-explicit-any` on; generated code is excluded from fmt,
   lint, and the code-health report.
-- Actions are pinned to commit SHAs, and CI pins Deno to `v2.9.8`.
+- Actions are pinned to commit SHAs, and CI runs Bun on the `1.x` line.
 - `secret-scan.yml` (gitleaks) runs on every PR; `code-health.yml` fails any
   hand-written source file over 120 lines of code (300 for tests; blank,
   comment, and import lines excluded; generated code and the OpenAPI snapshot
@@ -58,3 +59,7 @@ this repo's specifics:
   assigns review.
 - A client change is not available downstream until it is published, and
   publishing needs approval.
+- Publishing runs `bunx jsr publish` on a GitHub release. The `jsr` CLI bundles
+  its own Deno-based publisher and downloads it on first use, so a Deno install
+  is not needed; the published package is still consumable from Deno, Node, and
+  Bun, and the tests (`node:test`) run on all three.

@@ -40,7 +40,7 @@ if (previous === next) {
   console.log("openapi/openapi.json unchanged");
 } else if (checkOnly) {
   console.error(
-    "openapi/openapi.json is stale. Run `deno task sync:openapi` and commit the result.",
+    "openapi/openapi.json is stale. Run `bun run sync:openapi` and commit the result.",
   );
   process.exit(1);
 } else {
