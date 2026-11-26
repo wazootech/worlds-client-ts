@@ -1,0 +1,31 @@
+{
+  "name": "@worlds/client",
+  "private": true,
+  "type": "module",
+  "description": "Bun toolchain manifest for @worlds/client. The published package is described by jsr.json; scripts/check-manifests.ts keeps the two in sync.",
+  "packageManager": "bun@1.4.5",
+  "exports": {
+    ".": "./src/index.ts",
+    "./openapi.json": "./openapi/openapi.json"
+  },
+  "scripts": {
+    "sync:openapi": "bun scripts/sync-openapi.ts",
+    "openapi:check": "bun scripts/sync-openapi.ts --check",
+    "generate": "openapi-ts",
+    "fmt": "bun fmt --no-script",
+    "fmt:check": "bun fmt --no-script --check",
+    "lint": "oxlint --deny-warnings",
+    "check": "bun check --no-script",
+    "check:manifests": "bun scripts/check-manifests.ts",
+    "test": "bun test test/",
+    "publish:dry": "jsr publish --dry-run --allow-dirty",
+    "ci": "bun run fmt:check && bun run lint && bun run check && bun run check:manifests && bun run test && bun run openapi:check"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "0.98.2",
+    "@types/node": "^22.10.0",
+    "jsr": "0.14.3",
+    "oxlint": "1.94.0",
+    "typescript": "^5.9.2"
+  }
+}

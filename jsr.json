@@ -1,0 +1,20 @@
+{
+  "name": "@worlds/client",
+  "version": "0.8.0",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./openapi.json": "./openapi/openapi.json"
+  },
+  "compilerOptions": {
+    "strict": true
+  },
+  "publish": {
+    "include": [
+      "src/**/*.ts",
+      "openapi/openapi.json",
+      "README.md",
+      "LICENSE"
+    ]
+  }
+}
