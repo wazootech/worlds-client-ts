@@ -9,15 +9,16 @@
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const outputPath = resolve(repoRoot, "openapi/openapi.json");
-const checkOnly = Deno.args.includes("--check");
+const checkOnly = process.argv.slice(2).includes("--check");
 
 const siblingSnapshot = resolve(repoRoot, "../worlds-api/openapi/openapi.json");
-const source = Deno.env.get("WORLDS_API_OPENAPI_SOURCE") ??
-  Deno.env.get("WORLDS_API_OPENAPI_URL") ??
+const source = process.env.WORLDS_API_OPENAPI_SOURCE ??
+  process.env.WORLDS_API_OPENAPI_URL ??
   (existsSync(siblingSnapshot)
     ? "../worlds-api/openapi/openapi.json"
     : "https://raw.githubusercontent.com/wazootech/worlds-api/main/openapi/openapi.json");
@@ -40,7 +41,7 @@ if (previous === next) {
   console.error(
     "openapi/openapi.json is stale. Run `deno task sync:openapi` and commit the result.",
   );
-  Deno.exit(1);
+  process.exit(1);
 } else {
   await writeFile(outputPath, next);
   console.log("openapi/openapi.json updated");

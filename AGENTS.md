@@ -20,8 +20,8 @@ CI runs `deno ci` (a frozen-lockfile install) instead. Then validate with
 ## How to work here
 
 - Treat OpenAPI synchronization and generated output as deliberate operations.
-- Use `deno task ci` for normal validation (fmt, lint, type check, OpenAPI
-  snapshot freshness).
+- Use `deno task ci` for normal validation (fmt, lint, type check, tests,
+  OpenAPI snapshot freshness).
 - Run `deno task generate` to regenerate the client from `openapi/openapi.json`.
 - Run `deno task sync:openapi` to refresh `openapi/openapi.json` from the Worlds
   API spec; never edit the snapshot by hand.
@@ -45,7 +45,7 @@ Family-wide rules live in the
 [wazootech workspace constitution](https://github.com/wazootech/workspace/blob/main/AGENTS.md#code-health-standards);
 this repo's specifics:
 
-- Before pushing, run `deno task ci` (fmt, lint, check, OpenAPI snapshot).
+- Before pushing, run `deno task ci` (fmt, lint, check, test, OpenAPI snapshot).
 - Never hand-edit `src/generated/` or `openapi/openapi.json`; regenerate them.
   `deno task openapi:check` fails CI when the snapshot is stale.
 - `deno lint` keeps `no-explicit-any` on; generated code is excluded from fmt,
