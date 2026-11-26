@@ -49,18 +49,18 @@ console.log(response.data?.results);
 
 ## Development
 
-Requires Deno (version pinned in `.tool-versions`).
+Requires [Bun](https://bun.sh) 1.4.5 or newer.
 
 ```sh
-deno task ci
+bun run ci
 ```
 
-Run `deno task sync:openapi` to refresh `openapi/openapi.json`. By default it
+Run `bun run sync:openapi` to refresh `openapi/openapi.json`. By default it
 reads the checked-in snapshot at `../worlds-api/openapi/openapi.json` (a sibling
 checkout of the Worlds API repo). In CI (no sibling checkout) it falls back to
 the committed snapshot on worlds-api `main` via raw.githubusercontent.com. Set
 `WORLDS_API_OPENAPI_URL=https://data.wazoo.dev/openapi.json` to sync from a
-deployed API. CI runs `deno task openapi:check` so spec drift fails the build.
+deployed API. CI runs `bun run openapi:check` so spec drift fails the build.
 
-Run `deno task generate` to regenerate `src/generated/` from the synced spec via
+Run `bun run generate` to regenerate `src/generated/` from the synced spec via
 `@hey-api/openapi-ts`.

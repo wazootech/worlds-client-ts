@@ -17,7 +17,8 @@ const outputPath = resolve(repoRoot, "openapi/openapi.json");
 const checkOnly = process.argv.slice(2).includes("--check");
 
 const siblingSnapshot = resolve(repoRoot, "../worlds-api/openapi/openapi.json");
-const source = process.env.WORLDS_API_OPENAPI_SOURCE ??
+const source =
+  process.env.WORLDS_API_OPENAPI_SOURCE ??
   process.env.WORLDS_API_OPENAPI_URL ??
   (existsSync(siblingSnapshot)
     ? "../worlds-api/openapi/openapi.json"
@@ -39,7 +40,7 @@ if (previous === next) {
   console.log("openapi/openapi.json unchanged");
 } else if (checkOnly) {
   console.error(
-    "openapi/openapi.json is stale. Run `deno task sync:openapi` and commit the result.",
+    "openapi/openapi.json is stale. Run `bun run sync:openapi` and commit the result.",
   );
   process.exit(1);
 } else {
