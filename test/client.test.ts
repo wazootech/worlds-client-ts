@@ -18,9 +18,8 @@ function mockFetch(body: unknown, seen: Seen[]) {
     baseUrl: "https://worlds.test",
     auth: "secret-token",
     fetch: (input: Request | string | URL, init?: RequestInit) => {
-      const request = input instanceof Request
-        ? input
-        : new Request(input, init);
+      const request =
+        input instanceof Request ? input : new Request(input, init);
       seen.push({
         url: request.url,
         method: request.method,

@@ -17,7 +17,8 @@ const outputPath = resolve(repoRoot, "openapi/openapi.json");
 const checkOnly = process.argv.slice(2).includes("--check");
 
 const siblingSnapshot = resolve(repoRoot, "../worlds-api/openapi/openapi.json");
-const source = process.env.WORLDS_API_OPENAPI_SOURCE ??
+const source =
+  process.env.WORLDS_API_OPENAPI_SOURCE ??
   process.env.WORLDS_API_OPENAPI_URL ??
   (existsSync(siblingSnapshot)
     ? "../worlds-api/openapi/openapi.json"
